@@ -5577,13 +5577,18 @@ init();
     const ba=periodBtn(intent.periodA),bb=periodBtn(intent.periodB);
     const acts='<button class="ask-action" data-act="'+ba[0]+'" data-arg="'+escA(ba[1])+'">'+esc(ba[2])+'</button>'+
                '<button class="ask-action" data-act="'+bb[0]+'" data-arg="'+escA(bb[1])+'">'+esc(bb[2])+'</button>';
+    const hasChart=va!=null&&vb!=null;
     el.innerHTML='<div class="ask-card" style="flex-direction:column;align-items:stretch">'+
       '<div class="ask-card-q">'+esc(intent.raw)+'</div>'+
       '<div class="ask-cmp-row">'+side(intent.periodA,a)+'<div class="ask-cmp-mid">'+delta+'</div>'+side(intent.periodB,b)+'</div>'+
       '<div class="ask-card-sub">'+esc(subj+diff)+'</div>'+
+      (hasChart?vizBlock():'')+
       '<div class="ask-card-actions" style="flex-direction:row;margin-top:var(--sp-2)">'+acts+'</div>'+
     '</div>';
     el.classList.add('show'); if(typeof renderIcons==='function')renderIcons();
+    if(hasChart){
+      mountViz({type:'bar',data:{labels:[intent.periodA.label,intent.periodB.label],datasets:[{data:[va,vb],backgroundColor:[C.acc+'cc',C.purple+'cc'],borderWidth:0,borderRadius:3,maxBarThickness:64}]},options:mergeOpts(baseOpts(),{plugins:{legend:{display:false}},scales:{y:{ticks:{callback:v=>fmt(+v)}}}})},{cols:['Period',subj],rows:[[intent.periodA.label,va],[intent.periodB.label,vb]],fmt:fmt});
+    }
   }
   function renderKnowledge(res){
     const el=$('ask-answer'); if(!el)return;
@@ -5607,9 +5612,18 @@ init();
       '<div class="ask-card-val" style="color:'+(up?'var(--red)':'var(--green)')+'">'+(up?'▲':'▼')+' '+gbp(Math.abs(diff),Math.abs(diff)>=100?0:2)+'</div>'+
       '<div class="ask-card-sub">spend '+(up?'rose':'fell')+' '+Math.abs(pct).toFixed(0)+'% in '+esc(A.label)+' vs '+esc(B.label)+(contribs.length?' · biggest movers:':'')+'</div>'+
       (contribs.length?'<ul class="ask-why">'+items+'</ul>':'')+
+      (contribs.length?vizBlock():'')+
       '<div class="ask-card-actions" style="flex-direction:row;margin-top:var(--sp-2)"><button class="ask-action" data-act="'+ba[0]+'" data-arg="'+escA(ba[1])+'">'+esc(ba[2])+'</button></div>'+
     '</div>';
     el.classList.add('show'); if(typeof renderIcons==='function')renderIcons();
+    if(contribs.length){
+      let run=totB; const pts=[],bg=[],labs=[];
+      labs.push(B.label);pts.push([0,totB]);bg.push(C.muted);
+      contribs.forEach(c=>{const x=run,y=run+c.delta;labs.push(c.name);pts.push([Math.min(x,y),Math.max(x,y)]);bg.push(c.delta>=0?C.red:C.green);run=y;});
+      const other=totA-run; if(Math.abs(other)>=0.5){const x=run,y=run+other;labs.push('Other');pts.push([Math.min(x,y),Math.max(x,y)]);bg.push(other>=0?C.red:C.green);run=y;}
+      labs.push(A.label);pts.push([0,totA]);bg.push(C.muted);
+      mountViz({type:'bar',data:{labels:labs,datasets:[{data:pts,backgroundColor:bg,borderWidth:0,borderRadius:2,maxBarThickness:40}]},options:mergeOpts(baseOpts(),{plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>'£'+Math.abs(c.raw[1]-c.raw[0]).toFixed(0)}}},scales:{y:{ticks:{callback:v=>'£'+(+v).toFixed(0)}}}})},{cols:['Driver','Change (£)'],rows:contribs.map(c=>[c.name,Math.round(c.delta)]),fmt:v=>(v>=0?'+£':'−£')+Math.abs(v)});
+    }
   }
   function renderTopN(res){
     const el=$('ask-answer'); if(!el)return;
@@ -5670,6 +5684,40 @@ init();
     '</div>';
     el.classList.add('show'); if(typeof renderIcons==='function')renderIcons();
   }
+  // ── Inline answer visualisation (chart ⇄ table ⇄ CSV) ──
+  let askViz=null; // {cols:[...], rows:[[label,rawVal]], fmt}
+  function vizBlock(){
+    return '<div class="ask-viz" style="margin-top:var(--sp-3)">'+
+      '<div class="ask-viz-bar" style="display:flex;gap:4px;margin-bottom:var(--sp-2)">'+
+        '<button type="button" class="ask-viz-btn active" data-viz="chart">Chart</button>'+
+        '<button type="button" class="ask-viz-btn" data-viz="table">Table</button>'+
+        '<button type="button" class="ask-viz-btn" data-viz="csv">CSV</button>'+
+      '</div>'+
+      '<div id="ask-viz-chart" style="position:relative;height:180px"><canvas id="ask-chart"></canvas></div>'+
+      '<div id="ask-viz-table" style="display:none"></div>'+
+    '</div>';
+  }
+  function mountViz(cfg,vizData){ askViz=vizData; try{ if(typeof mkChart==='function') mkChart('ask-chart',cfg); }catch(e){} }
+  function askTableHtml(){
+    if(!askViz)return '';
+    return '<table class="ask-tbl"><thead><tr>'+askViz.cols.map(c=>'<th>'+esc(c)+'</th>').join('')+'</tr></thead><tbody>'+
+      askViz.rows.map(r=>'<tr><td>'+esc(r[0])+'</td><td style="text-align:right">'+esc(askViz.fmt?askViz.fmt(r[1]):r[1])+'</td></tr>').join('')+'</tbody></table>';
+  }
+  function askExportCsv(){
+    if(!askViz)return;
+    const lines=[askViz.cols.join(',')].concat(askViz.rows.map(r=>'"'+String(r[0]).replace(/"/g,'""')+'",'+r[1]));
+    const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([lines.join('\n')],{type:'text/csv'}));a.download='askci-answer.csv';a.click();
+  }
+  function askSetView(mode){
+    if(mode==='csv'){askExportCsv();return;}
+    const c=$('ask-viz-chart'),t=$('ask-viz-table');
+    document.querySelectorAll('.ask-viz-btn').forEach(b=>{if(b.dataset.viz!=='csv')b.classList.toggle('active',b.dataset.viz===mode);});
+    if(mode==='table'){if(t)t.innerHTML=askTableHtml();if(c)c.style.display='none';if(t)t.style.display='';}
+    else{if(c)c.style.display='';if(t)t.style.display='none';}
+  }
+  document.addEventListener('click',e=>{const b=e.target&&e.target.closest&&e.target.closest('[data-viz]');if(b)askSetView(b.dataset.viz);});
+  (function(){var s=document.createElement('style');s.textContent='.ask-viz-btn{background:var(--s2);border:1px solid var(--b2);color:var(--muted);border-radius:var(--r-sm);padding:3px 10px;font-size:var(--t-2xs);font-family:DM Mono,monospace;cursor:pointer}.ask-viz-btn.active{color:var(--text);border-color:var(--acc)}.ask-tbl{width:100%;border-collapse:collapse;font-size:var(--t-xs)}.ask-tbl th{text-align:left;color:var(--muted);font-weight:500;padding:4px 8px;border-bottom:1px solid var(--b2)}.ask-tbl td{padding:4px 8px;border-bottom:1px solid var(--b2);font-family:DM Mono,monospace}';document.head.appendChild(s);})();
+
   function render(res){
     const el=$('ask-answer'); if(!el)return;
     if(res.compare){renderCompare(res);return;}
@@ -5681,15 +5729,26 @@ init();
     const ctx=res.headline?'':context(intent,value); // entity answers carry their own headline
     const headline=esc(res.headline||(aggWord+subj+' '+where+(note?' · '+note:'')+(ctx?' · '+ctx:'')));
     const bigVal=res.bigVal!=null?esc(res.bigVal):fmt(value);
-    const sv=(series||[]).map(v=>(v==null||!isFinite(v))?0:v);
-    const spark=sv.filter(v=>v!==0).length>1?'<div class="ask-card-spark">'+sparkline(sv,C.acc,240,46)+'</div>':'';
     const acts=drillButtons(intent);
-    el.innerHTML='<div class="ask-card"><div class="ask-card-main">'+
+    const hasChart=!res.bigVal&&Array.isArray(series)&&series.filter(v=>v!=null&&isFinite(v)).length>=2;
+    const sv=(series||[]).map(v=>(v==null||!isFinite(v))?0:v);
+    const spark=(!hasChart&&sv.filter(v=>v!==0).length>1)?'<div class="ask-card-spark">'+sparkline(sv,C.acc,240,46)+'</div>':'';
+    el.innerHTML='<div class="ask-card"'+(hasChart?' style="flex-direction:column;align-items:stretch"':'')+'><div class="ask-card-main">'+
       '<div class="ask-card-q">'+esc(intent.raw)+'</div>'+
       '<div class="ask-card-val">'+bigVal+'</div>'+
       '<div class="ask-card-sub">'+headline+'</div></div>'+
-      spark+(acts?'<div class="ask-card-actions">'+acts+'</div>':'')+'</div>';
+      (hasChart?vizBlock():spark)+
+      (acts?'<div class="ask-card-actions"'+(hasChart?' style="flex-direction:row;margin-top:var(--sp-2)"':'')+'>'+acts+'</div>':'')+'</div>';
     el.classList.add('show'); if(typeof renderIcons==='function')renderIcons();
+    if(hasChart){
+      const crows=DATA.merged.filter(d=>d.date>=p.from&&d.date<=p.to);
+      const labels=crows.map(d=>d.label);
+      const isRate=['cpq_llm','cpq_tot','qps','cache'].includes(m.kind);
+      const isCount=['questions','sessions'].includes(m.kind);
+      const col=C.acc, data=series.map(v=>(v==null||!isFinite(v))?null:+v);
+      const tick=isRate?(v=>(+v).toFixed(m.kind==='cache'?0:2)+(m.kind==='cache'?'%':(m.kind==='qps'?'':'p'))):(isCount?(v=>num(v)):(v=>'£'+(+v).toFixed(0)));
+      mountViz({type:isRate?'line':'bar',data:{labels:labels,datasets:[{label:subj,data:data,backgroundColor:isRate?(col+'22'):(col+'cc'),borderColor:col,borderWidth:isRate?2:0,borderRadius:isRate?0:3,pointRadius:0,tension:.3,fill:!!isRate,spanGaps:true,maxBarThickness:22}]},options:mergeOpts(baseOpts(),{plugins:{legend:{display:false}},scales:{y:{ticks:{callback:tick}}}})},{cols:['Date',subj],rows:labels.map((l,i)=>[l,data[i]]),fmt:res.fmt});
+    }
     showFollowups(intent);
   }
 
