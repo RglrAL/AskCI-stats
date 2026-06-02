@@ -1206,8 +1206,13 @@ tr.event-row td{background:color-mix(in srgb,var(--amber) 6%,transparent)}
 .br-val{width:64px;text-align:right;font-family:'DM Mono',monospace;font-size:var(--t-xs);font-variant-numeric:tabular-nums}
 
 /* ── Cost-per-question breakdown ── */
+.cpq-card{border-color:color-mix(in srgb,var(--acc) 22%,var(--border))}
+.cpq-click{cursor:pointer;transition:background .15s,filter .15s}
+.cpq-click:hover{filter:brightness(1.12)}
+.cpq-cur{font-family:'DM Sans',sans-serif;font-size:var(--t-2xs);font-weight:500;color:var(--muted);background:var(--s2);border:1px solid var(--b2);border-radius:var(--r-sm);padding:1px 5px;margin-left:var(--sp-2);vertical-align:middle;letter-spacing:.04em;cursor:help}
 .cpq-explain{margin-bottom:var(--sp-5);padding-bottom:var(--sp-4);border-bottom:1px solid var(--b2)}
-.cpq-explain-top{display:flex;align-items:baseline;justify-content:space-between;gap:var(--sp-3);margin-bottom:var(--sp-3)}
+.cpq-explain-top{display:flex;align-items:baseline;justify-content:space-between;gap:var(--sp-3);margin-bottom:var(--sp-2)}
+.cpq-euro{font-size:var(--t-xs);color:var(--muted);margin-bottom:var(--sp-3);line-height:1.45}
 .cpq-explain-lbl{font-size:var(--t-md);color:var(--text);font-weight:600}
 .cpq-explain-num{font-family:'DM Mono',monospace;font-size:var(--t-2xl);font-weight:500;color:var(--text);font-variant-numeric:tabular-nums;line-height:1;white-space:nowrap}
 .cpq-splitbar{display:flex;height:18px;border-radius:var(--r-sm);overflow:hidden;margin-bottom:var(--sp-2);background:var(--s2)}
@@ -1225,8 +1230,9 @@ tr.event-row td{background:color-mix(in srgb,var(--amber) 6%,transparent)}
 .cpq-sub-h{font-size:var(--t-2xs);color:var(--muted);text-transform:uppercase;letter-spacing:.08em;font-weight:500;margin-bottom:var(--sp-3)}
 .cpq-stack{display:flex;height:14px;border-radius:var(--r-sm);overflow:hidden;margin-bottom:var(--sp-4);background:var(--s2)}
 .cpq-stack>div{height:100%;min-width:1px}
-.cpq-row{display:grid;grid-template-columns:10px 1fr auto 60px 40px;align-items:center;gap:var(--sp-3);padding:5px 0;border-bottom:1px solid var(--b2);font-size:var(--t-xs)}
+.cpq-row{display:grid;grid-template-columns:10px 1fr auto 60px 40px;align-items:center;gap:var(--sp-3);padding:5px var(--sp-2);margin:0 calc(-1*var(--sp-2));border-radius:var(--r-sm);border-bottom:1px solid var(--b2);font-size:var(--t-xs)}
 .cpq-row:last-of-type{border-bottom:none}
+.cpq-row.cpq-click:hover{background:color-mix(in srgb,var(--acc) 9%,transparent);filter:none}
 .cpq-dot{width:10px;height:10px;border-radius:2px}
 .cpq-name{color:var(--text);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .cpq-tag{font-size:var(--t-2xs);color:var(--muted);text-transform:uppercase;letter-spacing:.06em}
@@ -1772,6 +1778,10 @@ const FIXED_SVCS=new Set(['Azure Cognitive Search','Virtual Network','Microsoft 
 // Cost-category identity palette — deliberately NOT red/amber/green so it never
 // collides with semantic state colours (those are reserved for target/anomaly).
 const COST_COL={fixed:'#8b949e',llm:'#6e9bff',other:'#c08cff'};
+// Approximate GBP→EUR rate, used ONLY for the euro-equivalent hint on the cost card.
+// Azure bills this subscription in GBP; this is a display convenience, not a conversion
+// of the underlying data. Update if the rate drifts materially.
+const GBP_EUR=1.18;
 const MON={'jan':1,'feb':2,'mar':3,'apr':4,'may':5,'jun':6,'jul':7,'aug':8,'sep':9,'oct':10,'nov':11,'dec':12};
 const MON_S=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
 function svcCol(s){return SVC_COL[s]||C.dim}
@@ -2492,23 +2502,35 @@ function cpqBreakdownHTML(D,S,pd,svcP,totSvc){
   const aiPq=Math.max(0,Math.min(S.avgCpqLLM,recentPq));
   const runPq=Math.max(0,recentPq-aiPq);
   const aiPct=recentPq>0?aiPq/recentPq*100:0,runPct=100-aiPct;
+  // Euro-equivalent hint (approx — see GBP_EUR). pence GBP × rate = euro cent.
+  const eurCent=recentPq*GBP_EUR, aiCent=aiPq*GBP_EUR;
+  const mLast=(D.monthly||[]).filter(m=>m.questions>0).slice(-1)[0];
+  const eurMonthly=mLast?mLast.cost*GBP_EUR:null;
+  const aiCentStr=aiCent<1?'under a cent':`~${aiCent.toFixed(1)}c`;
+  const euroLine=`≈ ${eurCent.toFixed(1)}c per question${eurMonthly?` · ≈ €${Math.round(eurMonthly).toLocaleString()} last month`:''} — the AI itself is ${aiCentStr}, less than a text message.`;
+  // Volume "what-if": cost/question at ~2× current monthly volume (rounded to 5k).
+  const curMo=mLast?mLast.questions:0;
+  const whatIfMo=curMo>0?Math.max(curMo*2,Math.round(curMo*2/5000)*5000):0;
+  const whatIfDaily=whatIfMo/30.5;
+  const whatIfPq=whatIfDaily>0?(fixedD+totalVarPQ*whatIfDaily)/whatIfDaily*100:null;
   const takeaway=fell
-    ?`Mostly fixed running costs — so each question gets <b>cheaper as usage grows</b> (was ~${firstPq.toFixed(0)}p, now ~${lastPq.toFixed(0)}p).`
+    ?`Mostly fixed running costs — so each question gets <b>cheaper as usage grows</b> (was ~${firstPq.toFixed(0)}p, now ~${lastPq.toFixed(0)}p${whatIfPq!=null?`; ~${whatIfPq.toFixed(1)}p at ${Math.round(whatIfMo/1000)}k/mo`:''}).`
     :`Mostly fixed running costs — so each question gets <b>cheaper as usage grows</b>.`;
   const explain=`<div class="cpq-explain">
     <div class="cpq-explain-top">
       <span class="cpq-explain-lbl">What one question costs, now</span>
-      <span class="cpq-explain-num">${recentPq.toFixed(2)}p</span>
+      <span class="cpq-explain-num cpq-click" onclick="openKpiModal('total-cost-per-question')" title="See the trend over time">${recentPq.toFixed(2)}p<span class="cpq-cur" title="Figures in GBP — Azure bills this subscription in pounds. Pence (p), not euro cent.">GBP</span></span>
     </div>
+    <div class="cpq-euro" title="Approximate, at £1 ≈ €${GBP_EUR}. Azure bills in GBP; this is a display convenience only.">${euroLine}</div>
     <div class="cpq-splitbar">
-      <div style="width:${aiPct.toFixed(1)}%;background:${C.acc}" title="The AI: ${aiPq.toFixed(2)}p"></div>
-      <div style="width:${runPct.toFixed(1)}%;background:${C.dim}" title="Running the service: ${runPq.toFixed(2)}p"></div>
+      <div class="cpq-click" style="width:${aiPct.toFixed(1)}%;background:${C.acc}" onclick="activateSub('llm')" title="The AI: ${aiPq.toFixed(2)}p / question — click for the model breakdown"></div>
+      <div class="cpq-click" style="width:${runPct.toFixed(1)}%;background:${C.dim}" onclick="activateSub('breakdown')" title="Running the service: ${runPq.toFixed(2)}p / question — click for the service breakdown"></div>
     </div>
     <div class="cpq-zones">
-      <span class="cpq-zone"><span class="cpq-dot" style="background:${C.acc}"></span>The AI <b>${aiPq.toFixed(2)}p</b> · ${aiPct.toFixed(0)}%</span>
-      <span class="cpq-zone"><span class="cpq-dot" style="background:${C.dim}"></span>Running the service <b>${runPq.toFixed(2)}p</b> · ${runPct.toFixed(0)}% fixed</span>
+      <span class="cpq-zone cpq-click" onclick="activateSub('llm')" title="See the model breakdown"><span class="cpq-dot" style="background:${C.acc}"></span>The AI <b>${aiPq.toFixed(2)}p</b> · ${aiPct.toFixed(0)}%</span>
+      <span class="cpq-zone cpq-click" onclick="activateSub('breakdown')" title="See the service breakdown"><span class="cpq-dot" style="background:${C.dim}"></span>Running the service <b>${runPq.toFixed(2)}p</b> · ${runPct.toFixed(0)}% fixed</span>
     </div>
-    <div class="cpq-takeaway"><span>${takeaway}</span>${spark?`<span class="cpq-spark" title="Monthly all-in cost / question">${spark}</span>`:''}</div>
+    <div class="cpq-takeaway"><span>${takeaway}</span>${spark?`<span class="cpq-spark cpq-click" onclick="activateSub('projections')" title="See projections — cost at higher volumes">${spark}</span>`:''}</div>
   </div>`;
 
   const refGrid=`<div class="cpq-refs">
@@ -2521,9 +2543,9 @@ function cpqBreakdownHTML(D,S,pd,svcP,totSvc){
   const seg=sorted.map(({s,c})=>`<div title="${s}: ${(c/totQ*100).toFixed(2)}p / question" style="width:${(c/totSvc*100).toFixed(3)}%;background:${svcCol(s)}"></div>`).join('');
   const big=sorted.filter(x=>x.c/totSvc>=0.03),small=sorted.filter(x=>x.c/totSvc<0.03);
   const otherC=small.reduce((a,x)=>a+x.c,0);
-  const rows=big.map(x=>({label:x.s==='Foundry Models'?'Foundry Models (the AI)':x.s,c:x.c,col:svcCol(x.s),tag:x.s==='Foundry Models'?'AI model':(FIXED_SVCS.has(x.s)?'Fixed':'Variable')}));
-  if(otherC>0)rows.push({label:`Other (${small.length} service${small.length>1?'s':''})`,c:otherC,col:C.dim,tag:''});
-  const rowHtml=rows.map(r=>`<div class="cpq-row"><span class="cpq-dot" style="background:${r.col}"></span><span class="cpq-name" title="${r.label}">${r.label}</span><span class="cpq-tag">${r.tag}</span><span class="cpq-pq">${(r.c/totQ*100).toFixed(2)}p</span><span class="cpq-pct">${(r.c/totSvc*100).toFixed(0)}%</span></div>`).join('');
+  const rows=big.map(x=>({label:x.s==='Foundry Models'?'Foundry Models (the AI)':x.s,c:x.c,col:svcCol(x.s),tag:x.s==='Foundry Models'?'AI model':(FIXED_SVCS.has(x.s)?'Fixed':'Variable'),sub:x.s==='Foundry Models'?'llm':'breakdown'}));
+  if(otherC>0)rows.push({label:`Other (${small.length} service${small.length>1?'s':''})`,c:otherC,col:C.dim,tag:'',sub:'breakdown'});
+  const rowHtml=rows.map(r=>`<div class="cpq-row cpq-click" onclick="activateSub('${r.sub}')" title="Drill into ${r.label}"><span class="cpq-dot" style="background:${r.col}"></span><span class="cpq-name" title="${r.label}">${r.label}</span><span class="cpq-tag">${r.tag}</span><span class="cpq-pq">${(r.c/totQ*100).toFixed(2)}p</span><span class="cpq-pct">${(r.c/totSvc*100).toFixed(0)}%</span></div>`).join('');
   return explain+refGrid+
     `<div class="cpq-sub-h">Where each question's cost goes · average over ${num(totQ)} questions</div>
     <div class="cpq-stack">${seg}</div>
@@ -3516,8 +3538,8 @@ function renderOverview(D,S){
     return;
   }
   el.innerHTML=`
+    ${D.hasBoth?`<div class="card cpq-card"><div class="card-title">What a question really costs</div><div id="ov-cpq-breakdown"></div></div>`:''}
     ${chartBox('ov-main',240,'Cost & Query Volume','click bar for day detail')}
-    ${D.hasBoth?`<div class="card"><div class="card-title">What a question really costs</div><div id="ov-cpq-breakdown"></div></div>`:''}
     <div class="grid2">
       ${chartBox('ov-donut',170,'Fixed vs Variable Cost')}
       <div class="card"><div class="card-title">Key Insights</div><div id="ov-ins"></div></div>
