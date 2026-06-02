@@ -1205,6 +1205,28 @@ tr.event-row td{background:color-mix(in srgb,var(--amber) 6%,transparent)}
 .br-fill{height:100%;border-radius:2px;transition:width .3s}
 .br-val{width:64px;text-align:right;font-family:'DM Mono',monospace;font-size:var(--t-xs);font-variant-numeric:tabular-nums}
 
+/* ── Cost-per-question breakdown ── */
+.cpq-trend{display:flex;align-items:center;gap:var(--sp-4);margin-bottom:var(--sp-4)}
+.cpq-trend-cap{flex:1;font-size:var(--t-sm);color:var(--muted);line-height:1.5}
+.cpq-trend-cap b{color:var(--text);font-weight:600}
+.cpq-spark{flex-shrink:0;opacity:.9}
+.cpq-refs{display:flex;gap:var(--sp-2);margin-bottom:var(--sp-5)}
+.cpq-refs>div{flex:1;background:var(--bg);border:1px solid var(--b2);border-radius:var(--r-md);padding:var(--sp-3)}
+.cpq-ref-v{font-family:'DM Mono',monospace;font-size:var(--t-lg);font-weight:500;color:var(--text);font-variant-numeric:tabular-nums}
+.cpq-ref-l{font-size:var(--t-2xs);color:var(--muted);margin-top:2px;text-transform:uppercase;letter-spacing:.05em}
+.cpq-sub-h{font-size:var(--t-2xs);color:var(--muted);text-transform:uppercase;letter-spacing:.08em;font-weight:500;margin-bottom:var(--sp-3)}
+.cpq-stack{display:flex;height:14px;border-radius:var(--r-sm);overflow:hidden;margin-bottom:var(--sp-4);background:var(--s2)}
+.cpq-stack>div{height:100%;min-width:1px}
+.cpq-row{display:grid;grid-template-columns:10px 1fr auto 60px 40px;align-items:center;gap:var(--sp-3);padding:5px 0;border-bottom:1px solid var(--b2);font-size:var(--t-xs)}
+.cpq-row:last-of-type{border-bottom:none}
+.cpq-dot{width:10px;height:10px;border-radius:2px}
+.cpq-name{color:var(--text);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.cpq-tag{font-size:var(--t-2xs);color:var(--muted);text-transform:uppercase;letter-spacing:.06em}
+.cpq-pq{font-family:'DM Mono',monospace;text-align:right;color:var(--text);font-variant-numeric:tabular-nums}
+.cpq-pct{font-family:'DM Mono',monospace;text-align:right;color:var(--muted);font-variant-numeric:tabular-nums}
+.cpq-note{margin-top:var(--sp-4);padding:var(--sp-3);background:color-mix(in srgb,var(--acc) 7%,transparent);border:1px solid color-mix(in srgb,var(--acc) 18%,transparent);border-radius:var(--r-md);font-size:var(--t-xs);color:var(--muted);line-height:1.55}
+.cpq-note b{color:var(--text);font-weight:600}
+
 /* ── Calendar ── */
 .cal-tooltip{
   position:fixed;background:var(--s3);border:1px solid var(--border);
@@ -2087,8 +2109,18 @@ function analyse(costData,usageByDate){
   const wdBase=activeWd.length?activeWd:active;
 
   const totalLLM=overlap.reduce((s,d)=>s+d.llm,0);
+  const totalAllIn=overlap.reduce((s,d)=>s+d.total,0);
   const totalQ=overlap.reduce((s,d)=>s+d.queries,0);
   const avgCpqLLM=totalQ>0?totalLLM/totalQ*100:0;
+  // Fully-loaded cost per question: ALL Azure spend ÷ questions (same period basis
+  // as avgCpqLLM, so the two are directly comparable). This is the lifetime average.
+  const avgCpqTot=totalQ>0?totalAllIn/totalQ*100:0;
+  // Recent run-rate all-in cost/question — what a question costs *now*. The lifetime
+  // average runs higher because early low-volume months spread fixed cost over fewer
+  // questions; this falls as volume grows. Last 30 days with both cost and questions.
+  const recentDays=merged.filter(d=>d.queries>0&&d.total>0).slice(-30);
+  const recTot=recentDays.reduce((s,d)=>s+d.total,0),recQ=recentDays.reduce((s,d)=>s+d.queries,0);
+  const recentCpqTot=recQ>0?recTot/recQ*100:avgCpqTot;
   const avgDaily=wdBase.length?wdBase.reduce((s,d)=>s+d.total,0)/wdBase.length:0;
   const avgQ=wdBase.length?wdBase.reduce((s,d)=>s+d.queries,0)/wdBase.length:0;
   const sc=overlap.map(d=>d.total).sort((a,b)=>a-b);
@@ -2118,6 +2150,8 @@ function analyse(costData,usageByDate){
       peakQ:peak?.queries||0,peakLabel:peak?.label||'',
       peakLLMLabel:peakLLM?.label||'',peakLLMCost:peakLLM?.llm||0,
       totalQ,totalLLM:Math.round(totalLLM*100)/100,
+      totalAllIn:Math.round(totalAllIn*100)/100,avgCpqTot:Math.round(avgCpqTot*1000)/1000,
+      recentCpqTot:Math.round(recentCpqTot*1000)/1000,
       overlapDays:overlap.length,dupesRemoved,cacheRate:Math.round(cacheRate*10)/10,
       cacheSaved:Math.round(cachedCost*3*100)/100,
     },
@@ -2424,6 +2458,55 @@ function emptyState(icon,title,desc,hint=''){
 function barRow(label,value,max,color,note=''){
   const w=max>0?Math.min(value/max*100,100):0;
   return`<div class="br"><div class="br-lbl" title="${label}">${label}</div><div class="br-bg"><div class="br-fill" style="width:${w}%;background:${color}"></div></div><div class="br-val" style="color:${color}">${gbp(value)}</div></div>${note?`<div style="font-size:var(--t-2xs);color:var(--muted);margin:-4px 0 var(--sp-2) calc(180px + var(--sp-3))">${note}</div>`:''}`
+}
+
+// Cost-per-question breakdown: tells the trend (it's falling as volume grows because
+// most cost is fixed), reconciles the lifetime / recent / projected figures into one
+// story, then shows where each question's cost actually goes by service.
+function cpqBreakdownHTML(D,S,pd,svcP,totSvc){
+  const totQ=pd.reduce((s,d)=>s+d.queries,0);
+  if(totQ<=0||totSvc<=0)return `<div class="kpi-sub">Needs both questions and cost in the selected period.</div>`;
+  const periodPq=totSvc/totQ*100;       // average over the selected period (lifetime on All)
+  const recentPq=S.recentCpqTot;        // recent run-rate — "now"
+  // Projected cost/question at the current daily volume — same model as the Projections
+  // tab (fixed daily cost spread over volume + variable per question), so they agree.
+  const fixedD=S.fixedEst,llmPQ=S.avgCpqLLM/100;
+  const totalVarPQ=S.avgQ>0?Math.max(llmPQ,(S.avgDaily-S.fixedEst)/S.avgQ):llmPQ;
+  const initQ=Math.round(S.avgQ)||0;
+  const projPq=initQ>0?(fixedD+totalVarPQ*initQ)/initQ*100:null;
+  // Monthly all-in cost/question — the trend that ties the numbers together.
+  const mCpq=(D.monthly||[]).filter(m=>m.questions>0).map(m=>m.cost/m.questions*100);
+  const spark=mCpq.length>1?sparkline(mCpq,C.amber,260,44):'';
+  const firstPq=mCpq.length?mCpq[0]:null,lastPq=mCpq.length?mCpq[mCpq.length-1]:null;
+  const trendCap=(firstPq!=null&&lastPq!=null&&firstPq>0&&Math.abs(firstPq-lastPq)>0.2)
+    ?`A question now costs <b>${lastPq.toFixed(1)}p</b> all-in, down from <b>${firstPq.toFixed(1)}p</b> early on. Most cost is fixed, so the per-question cost keeps falling as volume grows.`
+    :`Most cost is fixed, so the all-in cost per question falls as volume grows.`;
+  const refGrid=`<div class="cpq-refs">
+    <div><div class="cpq-ref-v" style="color:var(--amber)">${recentPq.toFixed(2)}p</div><div class="cpq-ref-l">recent run-rate · now</div></div>
+    <div><div class="cpq-ref-v">${periodPq.toFixed(2)}p</div><div class="cpq-ref-l">average over period</div></div>
+    ${projPq!=null?`<div><div class="cpq-ref-v">~${projPq.toFixed(2)}p</div><div class="cpq-ref-l">at current daily volume</div></div>`:''}
+  </div>`;
+
+  const sorted=D.allSvcs.map(s=>({s,c:svcP[s]||0})).filter(x=>x.c>0).sort((a,b)=>b.c-a.c);
+  const seg=sorted.map(({s,c})=>`<div title="${s}: ${(c/totQ*100).toFixed(2)}p / question" style="width:${(c/totSvc*100).toFixed(3)}%;background:${svcCol(s)}"></div>`).join('');
+  const big=sorted.filter(x=>x.c/totSvc>=0.03),small=sorted.filter(x=>x.c/totSvc<0.03);
+  const otherC=small.reduce((a,x)=>a+x.c,0);
+  const rows=big.map(x=>({label:x.s==='Foundry Models'?'Foundry Models (the AI)':x.s,c:x.c,col:svcCol(x.s),tag:x.s==='Foundry Models'?'AI model':(FIXED_SVCS.has(x.s)?'Fixed':'Variable')}));
+  if(otherC>0)rows.push({label:`Other (${small.length} service${small.length>1?'s':''})`,c:otherC,col:C.dim,tag:''});
+  const rowHtml=rows.map(r=>`<div class="cpq-row"><span class="cpq-dot" style="background:${r.col}"></span><span class="cpq-name" title="${r.label}">${r.label}</span><span class="cpq-tag">${r.tag}</span><span class="cpq-pq">${(r.c/totQ*100).toFixed(2)}p</span><span class="cpq-pct">${(r.c/totSvc*100).toFixed(0)}%</span></div>`).join('');
+  const llmPct=(svcP['Foundry Models']||0)/totSvc*100;
+  const fixedPct=D.allSvcs.filter(s=>FIXED_SVCS.has(s)).reduce((a,s)=>a+(svcP[s]||0),0)/totSvc*100;
+  return `
+    <div class="cpq-trend">
+      <div class="cpq-trend-cap">${trendCap}</div>
+      ${spark?`<div class="cpq-spark" title="Monthly all-in cost per question">${spark}</div>`:''}
+    </div>
+    ${refGrid}
+    <div class="cpq-sub-h">Where each question's cost goes · average over ${num(totQ)} questions</div>
+    <div class="cpq-stack">${seg}</div>
+    ${rowHtml}
+    <div class="cpq-note"><b>Only ${llmPct.toFixed(0)}% of each question's cost is the AI model.</b> The rest is infrastructure — about ${fixedPct.toFixed(0)}% of it fixed (search, networking, monitoring) that you pay regardless of volume. That's why the per-question cost keeps dropping as usage climbs.</div>
+  `;
 }
 
 // (Week-over-week card removed — the hero + KPI deltas now carry this.)
@@ -3407,6 +3490,7 @@ function renderOverview(D,S){
   }
   el.innerHTML=`
     ${chartBox('ov-main',240,'Cost & Query Volume','click bar for day detail')}
+    ${D.hasBoth?`<div class="card"><div class="card-title">What a question really costs</div><div id="ov-cpq-breakdown"></div></div>`:''}
     <div class="grid2">
       ${chartBox('ov-donut',170,'Fixed vs Variable Cost')}
       <div class="card"><div class="card-title">Key Insights</div><div id="ov-ins"></div></div>
@@ -3441,6 +3525,8 @@ function renderOverview(D,S){
     const pctStr=totSvc>0?`${(v/totSvc*100).toFixed(1)}% · ${FIXED_SVCS.has(s)?'Fixed':'Variable'}`:'';
     return barRow(s,v,maxS,svcCol(s),pctStr);
   }).join('');
+
+  if(D.hasBoth){const cb=document.getElementById('ov-cpq-breakdown');if(cb)cb.innerHTML=cpqBreakdownHTML(D,S,pd,svcP,totSvc);}
 
   const insHtml=[];
   if(D.hasBoth)insHtml.push(insight('good',`<span class="hl-g">✓ ${S.avgCpqLLM.toFixed(2)}p per question (LLM)</span> — total £${S.totalLLM?.toFixed(2)} across ${num(S.totalQ)} questions.`));
@@ -5082,8 +5168,12 @@ function rebuildKpiRow(){
 
   withKpiAnimation(()=>{
     document.getElementById('kpi-row').innerHTML=[
-      DATA.hasBoth?kpi(`${S.avgCpqLLM.toFixed(2)}p`,'LLM cost per question','model tokens only (recent)',{color:C.acc,trend:trendLLMcpq,delta:{curr:dCpq.curr,prev:dCpq.prev,invert:true}}):null,
-      DATA.hasBoth&&S.avgQ>0?kpi(`${(S.avgDaily/S.avgQ*100).toFixed(1)}p`,'Total cost per question','recent post-launch rate',{color:C.amber,trend:trendCpqTot,delta:{curr:dCpqTot.curr,prev:dCpqTot.prev,invert:true},secondary:true}):null,
+      // The TRUE cost, all infrastructure included — shown at the recent run-rate
+      // ("now"), since the lifetime average is inflated by the low-volume ramp. The
+      // breakdown card carries the full trend (lifetime → now → projected).
+      DATA.hasBoth&&S.totalQ>0?kpi(`${S.recentCpqTot.toFixed(2)}p`,'Total cost per question','all-in, recent run-rate — falling as volume grows',{color:C.amber,trend:trendCpqTot,delta:{curr:dCpqTot.curr,prev:dCpqTot.prev,invert:true}}):null,
+      // The AI portion only — the marginal cost of one more question.
+      DATA.hasBoth?kpi(`${S.avgCpqLLM.toFixed(2)}p`,'LLM cost per question','AI model tokens only — the marginal cost',{color:C.acc,trend:trendLLMcpq,delta:{curr:dCpq.curr,prev:dCpq.prev,invert:true}}):null,
       DATA.hasCost?kpi(gbp(S.avgDaily),'Avg daily spend','recent weekday avg',{color:C.green,trend:trendDaily,delta:{curr:dDaily.curr,prev:dDaily.prev,invert:true}}):null,
       DATA.hasCost?kpi(gbp(runRate,0),'Monthly run rate',monthSub,{color:C.purple,trend:trendDaily,delta:{curr:dRun.curr,prev:dRun.prev,invert:true},budgetState:monthlyBudgetState,budgetMeta:stateMeta[monthlyBudgetState]}):null,
       DATA.hasBoth&&S.totalQ>0?kpi(num(S.totalQ),'Total questions','full dataset period',{color:C.acc,trend:trendQueries,delta:{curr:dQuer.curr,prev:dQuer.prev}}):null,
