@@ -1206,10 +1206,18 @@ tr.event-row td{background:color-mix(in srgb,var(--amber) 6%,transparent)}
 .br-val{width:64px;text-align:right;font-family:'DM Mono',monospace;font-size:var(--t-xs);font-variant-numeric:tabular-nums}
 
 /* ── Cost-per-question breakdown ── */
-.cpq-trend{display:flex;align-items:center;gap:var(--sp-4);margin-bottom:var(--sp-4)}
-.cpq-trend-cap{flex:1;font-size:var(--t-sm);color:var(--muted);line-height:1.5}
-.cpq-trend-cap b{color:var(--text);font-weight:600}
-.cpq-spark{flex-shrink:0;opacity:.9}
+.cpq-explain{margin-bottom:var(--sp-5);padding-bottom:var(--sp-4);border-bottom:1px solid var(--b2)}
+.cpq-explain-top{display:flex;align-items:baseline;justify-content:space-between;gap:var(--sp-3);margin-bottom:var(--sp-3)}
+.cpq-explain-lbl{font-size:var(--t-md);color:var(--text);font-weight:600}
+.cpq-explain-num{font-family:'DM Mono',monospace;font-size:var(--t-2xl);font-weight:500;color:var(--text);font-variant-numeric:tabular-nums;line-height:1;white-space:nowrap}
+.cpq-splitbar{display:flex;height:18px;border-radius:var(--r-sm);overflow:hidden;margin-bottom:var(--sp-2);background:var(--s2)}
+.cpq-splitbar>div{height:100%;transition:width .3s}
+.cpq-zones{display:flex;flex-wrap:wrap;gap:var(--sp-2) var(--sp-5);margin-bottom:var(--sp-3)}
+.cpq-zone{display:inline-flex;align-items:center;gap:6px;font-size:var(--t-xs);color:var(--muted)}
+.cpq-zone b{color:var(--text);font-family:'DM Mono',monospace;font-weight:500}
+.cpq-takeaway{display:flex;align-items:center;gap:var(--sp-4);font-size:var(--t-sm);color:var(--muted);line-height:1.5}
+.cpq-takeaway b{color:var(--text);font-weight:600}
+.cpq-spark{flex-shrink:0;margin-left:auto;opacity:.9}
 .cpq-refs{display:flex;gap:var(--sp-2);margin-bottom:var(--sp-5)}
 .cpq-refs>div{flex:1;background:var(--bg);border:1px solid var(--b2);border-radius:var(--r-md);padding:var(--sp-3)}
 .cpq-ref-v{font-family:'DM Mono',monospace;font-size:var(--t-lg);font-weight:500;color:var(--text);font-variant-numeric:tabular-nums}
@@ -1224,8 +1232,6 @@ tr.event-row td{background:color-mix(in srgb,var(--amber) 6%,transparent)}
 .cpq-tag{font-size:var(--t-2xs);color:var(--muted);text-transform:uppercase;letter-spacing:.06em}
 .cpq-pq{font-family:'DM Mono',monospace;text-align:right;color:var(--text);font-variant-numeric:tabular-nums}
 .cpq-pct{font-family:'DM Mono',monospace;text-align:right;color:var(--muted);font-variant-numeric:tabular-nums}
-.cpq-note{margin-top:var(--sp-4);padding:var(--sp-3);background:color-mix(in srgb,var(--acc) 7%,transparent);border:1px solid color-mix(in srgb,var(--acc) 18%,transparent);border-radius:var(--r-md);font-size:var(--t-xs);color:var(--muted);line-height:1.55}
-.cpq-note b{color:var(--text);font-weight:600}
 
 /* ── Calendar ── */
 .cal-tooltip{
@@ -2474,13 +2480,37 @@ function cpqBreakdownHTML(D,S,pd,svcP,totSvc){
   const totalVarPQ=S.avgQ>0?Math.max(llmPQ,(S.avgDaily-S.fixedEst)/S.avgQ):llmPQ;
   const initQ=Math.round(S.avgQ)||0;
   const projPq=initQ>0?(fixedD+totalVarPQ*initQ)/initQ*100:null;
-  // Monthly all-in cost/question — the trend that ties the numbers together.
+  // Monthly all-in cost/question — drives the "getting cheaper" takeaway + sparkline.
   const mCpq=(D.monthly||[]).filter(m=>m.questions>0).map(m=>m.cost/m.questions*100);
-  const spark=mCpq.length>1?sparkline(mCpq,C.amber,260,44):'';
+  const spark=mCpq.length>1?sparkline(mCpq,C.amber,84,26):'';
   const firstPq=mCpq.length?mCpq[0]:null,lastPq=mCpq.length?mCpq[mCpq.length-1]:null;
-  const trendCap=(firstPq!=null&&lastPq!=null&&firstPq>0&&Math.abs(firstPq-lastPq)>0.2)
-    ?`A question now costs <b>${lastPq.toFixed(1)}p</b> all-in, down from <b>${firstPq.toFixed(1)}p</b> early on. Most cost is fixed, so the per-question cost keeps falling as volume grows.`
-    :`Most cost is fixed, so the all-in cost per question falls as volume grows.`;
+  const fell=firstPq!=null&&lastPq!=null&&firstPq>0&&Math.abs(firstPq-lastPq)>0.2;
+
+  // ── Plain-English explainer (management view): one number, an AI-vs-running-cost
+  //    split anyone reads instantly, one sentence. Decomposes the two headline KPIs:
+  //    all-in "now" (recent run-rate) into the AI slice (LLM) + everything else.
+  const aiPq=Math.max(0,Math.min(S.avgCpqLLM,recentPq));
+  const runPq=Math.max(0,recentPq-aiPq);
+  const aiPct=recentPq>0?aiPq/recentPq*100:0,runPct=100-aiPct;
+  const takeaway=fell
+    ?`Mostly fixed running costs — so each question gets <b>cheaper as usage grows</b> (was ~${firstPq.toFixed(0)}p, now ~${lastPq.toFixed(0)}p).`
+    :`Mostly fixed running costs — so each question gets <b>cheaper as usage grows</b>.`;
+  const explain=`<div class="cpq-explain">
+    <div class="cpq-explain-top">
+      <span class="cpq-explain-lbl">What one question costs, now</span>
+      <span class="cpq-explain-num">${recentPq.toFixed(2)}p</span>
+    </div>
+    <div class="cpq-splitbar">
+      <div style="width:${aiPct.toFixed(1)}%;background:${C.acc}" title="The AI: ${aiPq.toFixed(2)}p"></div>
+      <div style="width:${runPct.toFixed(1)}%;background:${C.dim}" title="Running the service: ${runPq.toFixed(2)}p"></div>
+    </div>
+    <div class="cpq-zones">
+      <span class="cpq-zone"><span class="cpq-dot" style="background:${C.acc}"></span>The AI <b>${aiPq.toFixed(2)}p</b> · ${aiPct.toFixed(0)}%</span>
+      <span class="cpq-zone"><span class="cpq-dot" style="background:${C.dim}"></span>Running the service <b>${runPq.toFixed(2)}p</b> · ${runPct.toFixed(0)}% fixed</span>
+    </div>
+    <div class="cpq-takeaway"><span>${takeaway}</span>${spark?`<span class="cpq-spark" title="Monthly all-in cost / question">${spark}</span>`:''}</div>
+  </div>`;
+
   const refGrid=`<div class="cpq-refs">
     <div><div class="cpq-ref-v" style="color:var(--amber)">${recentPq.toFixed(2)}p</div><div class="cpq-ref-l">recent run-rate · now</div></div>
     <div><div class="cpq-ref-v">${periodPq.toFixed(2)}p</div><div class="cpq-ref-l">average over period</div></div>
@@ -2494,19 +2524,10 @@ function cpqBreakdownHTML(D,S,pd,svcP,totSvc){
   const rows=big.map(x=>({label:x.s==='Foundry Models'?'Foundry Models (the AI)':x.s,c:x.c,col:svcCol(x.s),tag:x.s==='Foundry Models'?'AI model':(FIXED_SVCS.has(x.s)?'Fixed':'Variable')}));
   if(otherC>0)rows.push({label:`Other (${small.length} service${small.length>1?'s':''})`,c:otherC,col:C.dim,tag:''});
   const rowHtml=rows.map(r=>`<div class="cpq-row"><span class="cpq-dot" style="background:${r.col}"></span><span class="cpq-name" title="${r.label}">${r.label}</span><span class="cpq-tag">${r.tag}</span><span class="cpq-pq">${(r.c/totQ*100).toFixed(2)}p</span><span class="cpq-pct">${(r.c/totSvc*100).toFixed(0)}%</span></div>`).join('');
-  const llmPct=(svcP['Foundry Models']||0)/totSvc*100;
-  const fixedPct=D.allSvcs.filter(s=>FIXED_SVCS.has(s)).reduce((a,s)=>a+(svcP[s]||0),0)/totSvc*100;
-  return `
-    <div class="cpq-trend">
-      <div class="cpq-trend-cap">${trendCap}</div>
-      ${spark?`<div class="cpq-spark" title="Monthly all-in cost per question">${spark}</div>`:''}
-    </div>
-    ${refGrid}
-    <div class="cpq-sub-h">Where each question's cost goes · average over ${num(totQ)} questions</div>
+  return explain+refGrid+
+    `<div class="cpq-sub-h">Where each question's cost goes · average over ${num(totQ)} questions</div>
     <div class="cpq-stack">${seg}</div>
-    ${rowHtml}
-    <div class="cpq-note"><b>Only ${llmPct.toFixed(0)}% of each question's cost is the AI model.</b> The rest is infrastructure — about ${fixedPct.toFixed(0)}% of it fixed (search, networking, monitoring) that you pay regardless of volume. That's why the per-question cost keeps dropping as usage climbs.</div>
-  `;
+    ${rowHtml}`;
 }
 
 // (Week-over-week card removed — the hero + KPI deltas now carry this.)
