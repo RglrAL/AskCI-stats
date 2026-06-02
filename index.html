@@ -6539,9 +6539,16 @@ h1{letter-spacing:-.025em;font-weight:600}
     if(!fc && !an.length && !cache)return;
     const wrap=document.createElement('div');
     wrap.id='ov-extras';
-    wrap.innerHTML=forecastCardHTML(fc)+calloutsHTML(an,cache);
+    wrap.innerHTML=forecastCardHTML(fc)+calloutsHTML(an,null); // cache tip handled below
     pane.insertBefore(wrap,pane.firstChild);
     if(fc)buildBurnChart(fc);
+    // Prompt-cache tip is a low-priority optimisation note — place it at the very bottom.
+    if(cache){
+      const cwrap=document.createElement('div');
+      cwrap.id='ov-cache-extra';
+      cwrap.innerHTML=`<div class="ov-callouts"><div class="insight good"><span class="insight-icon"><i data-lucide="zap" class="i-sm"></i></span><div>${cache}</div></div></div>`;
+      pane.appendChild(cwrap);
+    }
     if(typeof renderIcons==='function')renderIcons();
   }
 
