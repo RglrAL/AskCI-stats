@@ -1376,7 +1376,28 @@ input[type=date]{color-scheme:dark}
   .pane{padding:var(--sp-4)}
   .card{padding:var(--sp-4)}
   .hdr-left h1{font-size:var(--t-lg)}
+  /* Services breakdown: scroll horizontally rather than squish the columns to nothing */
+  #bk-detail{overflow-x:auto;-webkit-overflow-scrolling:touch}
+  #bk-detail>div{min-width:520px}
+  /* Cost card: stack the three reference tiles; drop the dense Type column from rows */
+  .cpq-refs{flex-direction:column}
+  .cpq-row{grid-template-columns:10px 1fr 56px 38px}
+  .cpq-tag{display:none}
+  .cpq-explain-num{font-size:var(--t-xl)}
+  /* Report: collapse the 3-up KPI grid and let the service bars flex */
+  .report-kpi-grid{grid-template-columns:1fr 1fr}
+  .report-svc-bar-wrap{width:72px;flex-shrink:0}
+  /* Sticky toolbar: compact — drop section labels/dividers/spacer, flex the date inputs */
+  #sticky-bar{padding:var(--sp-2) var(--sp-4);gap:var(--sp-2)}
+  #sticky-bar .tc-label,#sticky-bar .tc-sep,#sticky-bar .bar-spacer{display:none}
+  #sticky-bar input[type=date]{flex:1 1 120px;min-width:0}
+  .pill{padding:0 10px}
+  /* Wide-table scroll cue (specific selector so it wins over the base rule below) */
+  .card-title .tbl-scroll-hint{display:inline}
 }
+/* Mobile-only hint that a table scrolls sideways (hidden on desktop) */
+.tbl-scroll-hint{display:none;float:right;font-size:var(--t-2xs);font-weight:400;color:var(--dim);font-family:'DM Mono',monospace;text-transform:none;letter-spacing:0;animation:hintNudge 2.4s ease-in-out 2}
+@keyframes hintNudge{0%,100%{opacity:.5}50%{opacity:1}}
 /* ── Ask bar ── */
 #ask-wrap{margin-bottom:var(--sp-5)}
 #ask-bar{display:flex;align-items:center;gap:var(--sp-3);background:var(--s1);
@@ -1894,12 +1915,14 @@ function mergeOpts(a,b){
   function mg(x,y){const r={...x};for(const k in y){if(y[k]&&typeof y[k]==='object'&&!Array.isArray(y[k]))r[k]=mg(x[k]||{},y[k]);else r[k]=y[k]}return r}
   return mg(a,b);
 }
-// Shared options for doughnut charts — right-positioned legend, polished tooltip
+// Shared options for doughnut charts — right-positioned legend (bottom on mobile, so
+// the donut doesn't get squeezed to a sliver), polished tooltip
+function isNarrow(){return window.matchMedia('(max-width:600px)').matches}
 function donutOpts(cutout='58%'){return{
   responsive:true,maintainAspectRatio:false,cutout,interaction:{mode:'index'},
   plugins:{
     legend:{
-      position:'right',
+      position:isNarrow()?'bottom':'right',
       labels:{color:C.muted,font:{size:11,family:'DM Sans'},boxWidth:8,boxHeight:8,padding:10,usePointStyle:true,pointStyle:'rectRounded'},
     },
     tooltip:{
@@ -2334,7 +2357,15 @@ document.querySelectorAll('.tab-btn').forEach(b=>b.addEventListener('click',()=>
 document.getElementById('subnav')?.addEventListener('click',e=>{
   const btn=e.target.closest('[data-sub]');if(btn)activateSub(btn.dataset.sub);
 });
-window.addEventListener('resize',()=>{Object.values(charts).forEach(c=>{try{c.resize()}catch(e){}});updateTabOverflow();drawRagConnectorsIfVisible();});
+window.addEventListener('resize',()=>{
+  const donutPos=isNarrow()?'bottom':'right';
+  Object.values(charts).forEach(c=>{try{
+    const lg=c.config?.type==='doughnut'&&c.options?.plugins?.legend;
+    if(lg&&lg.position!==donutPos){lg.position=donutPos;c.update('none');}
+    c.resize();
+  }catch(e){}});
+  updateTabOverflow();drawRagConnectorsIfVisible();
+});
 
 // Redraw RAG connectors only if breakdown pane is active (cheap no-op otherwise)
 function drawRagConnectorsIfVisible(){
@@ -3593,7 +3624,7 @@ function renderTimeline(D,S){
   el.innerHTML=`
     ${chartBox('tl-stack',250,'Stacked Cost by Service + Questions','click bar for day detail')}
     ${D.hasBoth?chartBox('tl-cpq',120,'LLM Cost per Question (pence) — Consistency Check'):''}
-    <div class="card"><div class="card-title">Day-by-Day Detail</div>
+    <div class="card"><div class="card-title">Day-by-Day Detail<span class="tbl-scroll-hint">swipe to see all columns →</span></div>
       <div class="tbl-wrap"><table class="data-table">
         <thead><tr>
           <th class="col-date">Date</th>
