@@ -2134,7 +2134,7 @@ function analyse(costData,usageByDate){
   function mkPrePost(days){
     if(!days.length)return null;
     const tq=days.reduce((s,d)=>s+d.queries,0),tc=days.reduce((s,d)=>s+d.total,0),tl=days.reduce((s,d)=>s+d.llm,0),ts=days.reduce((s,d)=>s+d.sessions,0);
-    return{avgQ:tq/days.length,avgCost:tc/days.length,avgLLM:tl/days.length,cpq:tq>0?tl/tq*100:0,qps:ts>0?tq/ts:0,n:days.length};
+    return{avgQ:tq/days.length,avgCost:tc/days.length,avgLLM:tl/days.length,cpq:tq>0?tl/tq*100:0,cpqAll:tq>0?tc/tq*100:0,qps:ts>0?tq/ts:0,n:days.length};
   }
   // Three periods: pre-modal, post-modal (before fab), post-fab
   const prePeriod=pre;
@@ -2767,9 +2767,14 @@ function buildReportHTML(){
   const avgDailyRecent=recentSpend/recentDays,avgDailyPrior=priorSpend/priorDays;
   const spendDelta=priorSpend>0?(recentSpend-priorSpend)/priorSpend*100:null;
   const qDelta=priorQ>0?(recentQ-priorQ)/priorQ*100:null;
-  const cpqRecent=recentQ>0?sum(recent,'llm')*100/recentQ:null;
+  const cpqRecent=recentQ>0?sum(recent,'llm')*100/recentQ:null;       // LLM only (marginal)
   const cpqPrior=priorQ>0?sum(prior,'llm')*100/priorQ:null;
   const cpqDelta=cpqPrior!=null&&cpqPrior>0?(cpqRecent-cpqPrior)/cpqPrior*100:null;
+  // All-in cost per question — every Azure pound ÷ questions. The headline cost figure;
+  // cpqRecent (LLM only) is the small marginal slice of this.
+  const cpqAllRecent=recentQ>0?recentSpend*100/recentQ:null;
+  const cpqAllPrior=priorQ>0?priorSpend*100/priorQ:null;
+  const cpqAllDelta=cpqAllPrior!=null&&cpqAllPrior>0?(cpqAllRecent-cpqAllPrior)/cpqAllPrior*100:null;
 
   const runRate=S.avgDaily*30.5,yearRate=S.avgDaily*365;
   const budget=PREFS.budgetMonthly||0;
@@ -2785,7 +2790,7 @@ function buildReportHTML(){
   const narrative=buildReportNarrative({
     recentStart,recentEnd,recentSpend,priorSpend,spendDelta,
     recentQ,priorQ,qDelta,
-    cpqRecent,cpqDelta,
+    cpqRecent,cpqDelta,cpqAllRecent,cpqAllDelta,
     runRate,yearRate,budget,budgetStatus,
     topSvcs,
     S,
@@ -2827,10 +2832,10 @@ function buildReportHTML(){
             <div class="report-kpi-lbl">Questions answered</div>
             <div class="report-kpi-meta">${qDelta!=null?(qDelta>0?'+':'')+qDelta.toFixed(1)+'% vs prior period':'this period'}</div>
           </div>`:''}
-          ${cpqRecent!=null?`<div class="report-kpi">
-            <div class="report-kpi-val">${cpqRecent.toFixed(2)}p</div>
-            <div class="report-kpi-lbl">LLM cost / question</div>
-            <div class="report-kpi-meta">${cpqDelta!=null?(cpqDelta>0?'+':'')+cpqDelta.toFixed(1)+'%'+(cpqDelta<0?' (improving)':cpqDelta>0?' (drift up)':''):'this period'}</div>
+          ${cpqAllRecent!=null?`<div class="report-kpi">
+            <div class="report-kpi-val">${cpqAllRecent.toFixed(2)}p</div>
+            <div class="report-kpi-lbl">Cost / question (all-in)</div>
+            <div class="report-kpi-meta">${cpqAllDelta!=null?(cpqAllDelta>0?'+':'')+cpqAllDelta.toFixed(1)+'%'+(cpqAllDelta<0?' (improving)':cpqAllDelta>0?' (drift up)':''):'this period'}${cpqRecent!=null?` · ${cpqRecent.toFixed(2)}p AI model`:''}</div>
           </div>`:''}
           <div class="report-kpi">
             <div class="report-kpi-val">${gbp(avgDailyRecent,2)}</div>
@@ -2874,7 +2879,7 @@ function buildReportHTML(){
 
 // Generate a human-readable summary paragraph from the data
 function buildReportNarrative(ctx){
-  const{recentStart,recentEnd,recentSpend,spendDelta,recentQ,qDelta,cpqRecent,cpqDelta,runRate,budget,budgetStatus,topSvcs,S}=ctx;
+  const{recentStart,recentEnd,recentSpend,spendDelta,recentQ,qDelta,cpqRecent,cpqDelta,cpqAllRecent,cpqAllDelta,runRate,budget,budgetStatus,topSvcs,S}=ctx;
   const fmtPct=v=>v==null?'—':(v>0?'+':'')+v.toFixed(1)+'%';
   const fmt=d=>{if(!d)return'—';const dt=new Date(d);return`${dt.getDate()} ${['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'][dt.getMonth()]}`};
 
@@ -2898,14 +2903,15 @@ function buildReportNarrative(ctx){
     parts.push(`Question volume changed by <span class="${cls}">${fmtPct(qDelta)}</span>.`);
   }
 
-  // cpq drift
-  if(cpqDelta!=null&&cpqRecent!=null){
-    if(cpqDelta>10){
-      parts.push(`<span class="hl-r">LLM cost-per-question drifted up ${fmtPct(cpqDelta)}</span> to ${cpqRecent.toFixed(2)}p — worth investigating output lengths or cache hit rates.`);
-    }else if(cpqDelta<-10){
-      parts.push(`<span class="hl-g">Cost-per-question improved ${fmtPct(cpqDelta)}</span> to ${cpqRecent.toFixed(2)}p, suggesting more efficient model usage.`);
+  // cpq drift — lead with the all-in cost (the true figure), note the AI-model slice.
+  if(cpqAllDelta!=null&&cpqAllRecent!=null){
+    const aiNote=cpqRecent!=null?` Of that, just <b>${cpqRecent.toFixed(2)}p</b> is the AI model — the rest is fixed infrastructure, so the all-in figure falls as question volume grows.`:'';
+    if(cpqAllDelta>10){
+      parts.push(`<span class="hl-r">All-in cost-per-question rose ${fmtPct(cpqAllDelta)}</span> to ${cpqAllRecent.toFixed(2)}p.${aiNote}`);
+    }else if(cpqAllDelta<-10){
+      parts.push(`<span class="hl-g">All-in cost-per-question improved ${fmtPct(cpqAllDelta)}</span> to ${cpqAllRecent.toFixed(2)}p.${aiNote}`);
     }else{
-      parts.push(`Cost-per-question held at <b>${cpqRecent.toFixed(2)}p</b>.`);
+      parts.push(`All-in cost-per-question held at <b>${cpqAllRecent.toFixed(2)}p</b>.${aiNote}`);
     }
   }
 
@@ -3529,7 +3535,7 @@ function renderOverview(D,S){
   if(D.hasBoth){const cb=document.getElementById('ov-cpq-breakdown');if(cb)cb.innerHTML=cpqBreakdownHTML(D,S,pd,svcP,totSvc);}
 
   const insHtml=[];
-  if(D.hasBoth)insHtml.push(insight('good',`<span class="hl-g">✓ ${S.avgCpqLLM.toFixed(2)}p per question (LLM)</span> — total £${S.totalLLM?.toFixed(2)} across ${num(S.totalQ)} questions.`));
+  if(D.hasBoth)insHtml.push(insight('good',`<span class="hl-g">✓ ${S.recentCpqTot.toFixed(2)}p per question all-in</span> — of which ${S.avgCpqLLM.toFixed(2)}p is the AI model; the rest is infrastructure. Across ${num(S.totalQ)} questions.`));
   if(S.modalDate)insHtml.push(insight('warn',`<span class="hl-a">${S.modalLabel}</span> — modal launch detected (largest query spike in data).`));
   if(S.fabDate)insHtml.push(insight('warn',`<span class="hl-a">${S.fabLabel}</span> — fab label change detected (second largest spike).`));
   const fp=S.avgDaily>0?(S.fixedEst/S.avgDaily*100):0;
@@ -4190,9 +4196,9 @@ function renderImpact(D,S){
     <div class="grid2">
       <div class="card"><div class="card-title">Key Impact Numbers</div>
         <div class="grid2">
-          ${[[`${(post.avgQ/pre.avgQ).toFixed(1)}×`,'Volume after Modal',C.green],[hasFab?`${(fab.avgQ/pre.avgQ).toFixed(1)}×`:'—','Volume after Fab',C.purple],[`${((1-post.cpq/pre.cpq)*100).toFixed(0)}%`,'Cheaper/question (modal)',C.acc],[hasFab?`${((1-fab.cpq/pre.cpq)*100).toFixed(0)}%`:'—','Cheaper/question (fab)',C.teal]].map(([v,l,c])=>`<div style="text-align:center;padding:12px;background:var(--bg);border-radius:6px"><div style="font-size:1.3rem;font-weight:700;font-family:'DM Mono',monospace;color:${c}">${v}</div><div style="font-size:.58rem;color:var(--muted);text-transform:uppercase;letter-spacing:.08em;margin-top:3px">${l}</div></div>`).join('')}
+          ${[[`${(post.avgQ/pre.avgQ).toFixed(1)}×`,'Volume after Modal',C.green],[hasFab?`${(fab.avgQ/pre.avgQ).toFixed(1)}×`:'—','Volume after Fab',C.purple],[`${((1-post.cpqAll/pre.cpqAll)*100).toFixed(0)}%`,'Cheaper/question (modal)',C.acc],[hasFab?`${((1-fab.cpqAll/pre.cpqAll)*100).toFixed(0)}%`:'—','Cheaper/question (fab)',C.teal]].map(([v,l,c])=>`<div style="text-align:center;padding:12px;background:var(--bg);border-radius:6px"><div style="font-size:1.3rem;font-weight:700;font-family:'DM Mono',monospace;color:${c}">${v}</div><div style="font-size:.58rem;color:var(--muted);text-transform:uppercase;letter-spacing:.08em;margin-top:3px">${l}</div></div>`).join('')}
         </div>
-        ${insight('good',`<span class="hl-g">Modal launch: ${(post.avgQ/pre.avgQ).toFixed(1)}× questions, only ${Math.round((post.avgCost/pre.avgCost-1)*100)}% more spend</span> — fixed costs absorbed the volume. Each question is now ${((1-post.cpq/pre.cpq)*100).toFixed(0)}% cheaper.${hasFab?` Fab label added another <span class="hl-b">${Math.round((fab.avgQ/post.avgQ-1)*100)}%</span> question growth.`:''}`)}
+        ${insight('good',`<span class="hl-g">Modal launch: ${(post.avgQ/pre.avgQ).toFixed(1)}× questions, only ${Math.round((post.avgCost/pre.avgCost-1)*100)}% more spend</span> — fixed costs absorbed the volume. All-in, each question is now ${((1-post.cpqAll/pre.cpqAll)*100).toFixed(0)}% cheaper.${hasFab?` Fab label added another <span class="hl-b">${Math.round((fab.avgQ/post.avgQ-1)*100)}%</span> question growth.`:''}`)}
       </div>
       <div class="card"><div class="card-title">ROI Estimate</div>
         <div style="font-size:.73rem;color:var(--muted);margin-bottom:10px">Minutes saved per question vs calling/visiting:
@@ -4665,9 +4671,12 @@ function renderDayPanel(day){
   const svcEntries=(DATA.allSvcs||[]).map(s=>([s,day[s]||0])).filter(([,v])=>v>0.001).sort((a,b)=>b[1]-a[1]);
   const maxSvc=svcEntries.length?svcEntries[0][1]:1;
 
-  // Anomaly check
+  // Anomaly check — based on LLM cost/question, the model-efficiency signal.
   const cpqDay=day.queries>0?day.llm/day.queries*100:0;
   const isAnomaly=avgCPQ>0&&Math.abs(cpqDay-avgCPQ)/avgCPQ>0.5;
+  // All-in cost/question for display — consistent with the week/month panels.
+  const cpqDayAll=day.queries>0?day.total/day.queries*100:0;
+  const avgCPQall=avgQ>0?avgTotal/avgQ*100:0;
 
   // Day type
   const dayNum=new Date(day.date||'').getDay();
@@ -4692,15 +4701,15 @@ function renderDayPanel(day){
         <div style="font-size:.6rem;color:var(--muted);margin-top:2px;font-family:'DM Mono',monospace">${badge(day.llm,avgLLM,true)} vs ${gbp(avgLLM)} avg</div>
       </div>
       <div class="day-kpi" style="border-top-color:${C.amber}">
-        <div class="day-kpi-val" style="color:${C.amber}">${cpqDay>0?cpqDay.toFixed(2)+'p':'—'}</div>
-        <div class="day-kpi-lbl">Pence / question</div>
-        <div style="font-size:.6rem;color:var(--muted);margin-top:2px;font-family:'DM Mono',monospace">${badge(cpqDay,avgCPQ,true)} vs ${avgCPQ.toFixed(2)}p avg</div>
+        <div class="day-kpi-val" style="color:${C.amber}">${cpqDayAll>0?cpqDayAll.toFixed(2)+'p':'—'}</div>
+        <div class="day-kpi-lbl">Cost / question (all-in)</div>
+        <div style="font-size:.6rem;color:var(--muted);margin-top:2px;font-family:'DM Mono',monospace">${badge(cpqDayAll,avgCPQall,true)} vs ${avgCPQall.toFixed(2)}p avg · ${cpqDay>0?cpqDay.toFixed(2)+'p':'—'} AI</div>
       </div>
     </div>
 
     <!-- Anomaly alert -->
     ${isAnomaly?`<div style="background:rgba(248,81,73,.08);border:1px solid rgba(248,81,73,.25);border-radius:8px;padding:10px 12px;margin-bottom:14px;font-size:.75rem;color:var(--red)">
-      ⚠ <strong>Anomalous day</strong> — cost per question (${cpqDay.toFixed(2)}p) is ${Math.abs((cpqDay-avgCPQ)/avgCPQ*100).toFixed(0)}% ${cpqDay>avgCPQ?'higher':'lower'} than the ${avgCPQ.toFixed(2)}p average. ${cpqDay>avgCPQ?'Could indicate a test session, long conversations, or unusual model usage.':'May reflect cached responses or shorter queries.'}
+      ⚠ <strong>Anomalous day</strong> — LLM cost per question (${cpqDay.toFixed(2)}p) is ${Math.abs((cpqDay-avgCPQ)/avgCPQ*100).toFixed(0)}% ${cpqDay>avgCPQ?'higher':'lower'} than the ${avgCPQ.toFixed(2)}p average. ${cpqDay>avgCPQ?'Could indicate a test session, long conversations, or unusual model usage.':'May reflect cached responses or shorter queries.'}
     </div>`:''}
 
     <!-- Day summary -->
@@ -5094,12 +5103,11 @@ function buildDashboard(costRows,usageRows){
   const lastDate=DATA.merged.filter(d=>d.total>0).at(-1)?.date||'';
   const daysSince=lastDate?Math.round((new Date()-new Date(lastDate))/86400000):null;
   document.getElementById('hdr-sub').textContent=
-    `${DATA.hasCost?'Azure Cost':''}${DATA.hasBoth?' × ':''}${DATA.hasUsage?'Usage Analytics':''} · Updated ${new Date().toLocaleString('en-IE',{day:'2-digit',month:'short',year:'numeric',hour:'2-digit',minute:'2-digit'})}${daysSince!=null&&daysSince>7?` · data ${daysSince}d old`:''}`;
+    `Updated ${new Date().toLocaleString('en-IE',{day:'2-digit',month:'short',year:'numeric',hour:'2-digit',minute:'2-digit'})}${daysSince!=null&&daysSince>7?` · data ${daysSince}d old`:''}`;
   document.getElementById('hdr-meta').innerHTML=
     `<div><span class="status-dot" style="background:${DATA.hasCost?'var(--green)':'var(--red)'}"></span>${DATA.hasCost?'Cost data':'No cost data'}</div>`+
     `<div><span class="status-dot" style="background:${DATA.hasMeters?'var(--green)':'var(--muted)'}"></span>${DATA.hasMeters?'Model detail':'No meters'}</div>`+
     `<div><span class="status-dot" style="background:${DATA.hasUsage?'var(--green)':'var(--red)'}"></span>${DATA.hasUsage?'Usage data':'No usage data'}</div>`+
-    (S.dupesRemoved?`<div style="color:var(--amber);display:inline-flex;align-items:center;gap:6px"><i data-lucide="alert-triangle" class="i-sm"></i>${S.dupesRemoved} dupes removed</div>`:'')+
     `<div>${DATA.merged.length} days</div>`;
 
   rebuildKpiRow();
@@ -5299,7 +5307,8 @@ init();
     if(/run ?rate/.test(q))return{kind:'runrate',yearly:/year/.test(q),label:(/year/.test(q)?'yearly':'monthly')+' run rate'};
     // "which service / biggest cost driver / where does the money go" → compare services
     if(/\bservices?\b|cost driver|biggest driver|where.*(money|spend|cost)|what.*cost.*most|breakdown by service/.test(q))return{kind:'topService',label:'service'};
-    if(/cost per question|per question|\bcpq\b/.test(q))return /total/.test(q)?{kind:'cpq_tot',label:'total cost per question'}:{kind:'cpq_llm',label:'LLM cost per question'};
+    // "cost per question" now defaults to the all-in figure; LLM only on explicit ask.
+    if(/cost per question|per question|\bcpq\b/.test(q))return /\b(llm|ai|model|token)/.test(q)?{kind:'cpq_llm',label:'LLM cost per question'}:{kind:'cpq_tot',label:'all-in cost per question'};
     if(/questions? per session|per session|engagement/.test(q))return{kind:'qps',label:'questions per session'};
     if(/cache/.test(q))return{kind:'cache',label:'prompt cache rate'};
     if(/session/.test(q))return{kind:'sessions',label:'sessions'};
