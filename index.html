@@ -885,7 +885,7 @@ button:focus-visible,.pill:focus-visible{outline-offset:1px}
 @keyframes spin{to{transform:rotate(360deg)}}
 
 /* ── KPI ─ no coloured top borders; value carries the weight ── */
-.kpi-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:var(--sp-3);margin-bottom:var(--sp-5)}
+.kpi-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:var(--sp-3);margin-bottom:var(--sp-5)}
 .kpi{
   background:var(--s1);border:1px solid var(--b2);
   border-radius:var(--r-lg);padding:var(--sp-4) var(--sp-5);
@@ -2576,6 +2576,7 @@ function cpqBreakdownHTML(D,S,pd,svcP,totSvc){
     <div><div class="cpq-ref-v" style="color:var(--amber)">${recentPq.toFixed(2)}p</div><div class="cpq-ref-l">recent run-rate · now</div></div>
     <div><div class="cpq-ref-v">${periodPq.toFixed(2)}p</div><div class="cpq-ref-l">average over period</div></div>
     ${projPq!=null?`<div><div class="cpq-ref-v">~${projPq.toFixed(2)}p</div><div class="cpq-ref-l">at current daily volume</div></div>`:''}
+    <div><div class="cpq-ref-v" style="color:${C.acc}">${aiPq.toFixed(2)}p</div><div class="cpq-ref-l">AI model · marginal</div></div>
   </div>`;
 
   const sorted=D.allSvcs.map(s=>({s,c:svcP[s]||0})).filter(x=>x.c>0).sort((a,b)=>b.c-a.c);
@@ -5263,12 +5264,11 @@ function rebuildKpiRow(){
       // ("now"), since the lifetime average is inflated by the low-volume ramp. The
       // breakdown card carries the full trend (lifetime → now → projected).
       DATA.hasBoth&&S.totalQ>0?kpi(`${S.recentCpqTot.toFixed(2)}p`,'Total cost per question','all-in, recent run-rate — falling as volume grows',{color:C.amber,trend:trendCpqTot,delta:{curr:dCpqTot.curr,prev:dCpqTot.prev,invert:true}}):null,
-      // The AI portion only — the marginal cost of one more question.
-      DATA.hasBoth?kpi(`${S.avgCpqLLM.toFixed(2)}p`,'LLM cost per question','AI model tokens only — the marginal cost',{color:C.acc,trend:trendLLMcpq,delta:{curr:dCpq.curr,prev:dCpq.prev,invert:true}}):null,
+      // (LLM cost per question moved into the "What a question really costs" card.)
       DATA.hasCost?kpi(gbp(S.avgDaily),'Avg daily spend','recent weekday avg',{color:C.green,trend:trendDaily,delta:{curr:dDaily.curr,prev:dDaily.prev,invert:true}}):null,
       DATA.hasCost?kpi(gbp(runRate,0),'Monthly run rate',monthSub,{color:C.purple,trend:trendDaily,delta:{curr:dRun.curr,prev:dRun.prev,invert:true},budgetState:monthlyBudgetState,budgetMeta:stateMeta[monthlyBudgetState]}):null,
       DATA.hasBoth&&S.totalQ>0?kpi(num(S.totalQ),'Total questions','full dataset period',{color:C.acc,trend:trendQueries,delta:{curr:dQuer.curr,prev:dQuer.prev}}):null,
-      DATA.hasCost?kpi(gbp(ytd,0),'Total spend (YTD)',`${S.totalQ>0?'£'+(ytd/S.totalQ*100).toFixed(1)+'p avg over full period':'Jan to latest data'}`,{color:C.pink,trend:trendDaily,secondary:true}):null,
+      DATA.hasCost?kpi(gbp(ytd,0),'Total spend (YTD)',`${S.totalQ>0?'£'+(ytd/S.totalQ*100).toFixed(1)+'p avg over full period':'Jan to latest data'}`,{color:C.pink,trend:trendDaily}):null,
       DATA.hasCost?kpi(gbp(yearRate,0),'Yearly run rate',yearSub,{color:C.teal,trend:trendDaily,delta:{curr:dYear.curr,prev:dYear.prev,invert:true},budgetState:yearlyBudgetState,budgetMeta:stateMeta[yearlyBudgetState]}):null,
     ].filter(Boolean).join('');
     renderIcons();
