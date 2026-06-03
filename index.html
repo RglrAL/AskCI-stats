@@ -1379,8 +1379,8 @@ input[type=date]{color-scheme:dark}
   .tab-btn i,.subnav .pill i{display:none} /* icons hide on narrowest, save room for labels */
   .pane{padding:var(--sp-4)}
   .card{padding:var(--sp-4)}
-  .hdr-left h1{font-size:var(--t-lg)}
-  .hdr-logo{width:56px;height:56px}
+  .hdr-left h1{font-size:var(--t-xl)}
+  .hdr-logo{width:64px;height:64px}
   /* Services breakdown: scroll horizontally rather than squish the columns to nothing */
   #bk-detail{overflow-x:auto;-webkit-overflow-scrolling:touch}
   #bk-detail>div{min-width:520px}
@@ -4479,8 +4479,9 @@ function renderProjections(D,S){
       {label:'LLM tokens',           icon:'brain',    monthly:llmMonthly,   color:COST_COL.llm,   note:`${(llmPQ*100).toFixed(3)}p/question`},
       {label:'Other variable',       icon:'activity', monthly:otherMonthly, color:COST_COL.other, note:`${(otherVarPQ*100).toFixed(3)}p/question · Container Apps, bandwidth, etc.`},
     ];
+    // total is the MONTHLY base; renderCompBlock multiplies it by `scale` (1=monthly, 12=yearly).
     renderCompBlock('monthly',compItems,monthly,1);
-    renderCompBlock('yearly', compItems,monthly*12,12);
+    renderCompBlock('yearly', compItems,monthly,12);
 
     // ── Deeper breakdown (only if <details> is open) ──
     const det=el.querySelector('.proj-details');
@@ -5269,7 +5270,6 @@ function rebuildKpiRow(){
       DATA.hasBoth&&S.totalQ>0?kpi(num(S.totalQ),'Total questions','full dataset period',{color:C.acc,trend:trendQueries,delta:{curr:dQuer.curr,prev:dQuer.prev}}):null,
       DATA.hasCost?kpi(gbp(ytd,0),'Total spend (YTD)',`${S.totalQ>0?'£'+(ytd/S.totalQ*100).toFixed(1)+'p avg over full period':'Jan to latest data'}`,{color:C.pink,trend:trendDaily,secondary:true}):null,
       DATA.hasCost?kpi(gbp(yearRate,0),'Yearly run rate',yearSub,{color:C.teal,trend:trendDaily,delta:{curr:dYear.curr,prev:dYear.prev,invert:true},budgetState:yearlyBudgetState,budgetMeta:stateMeta[yearlyBudgetState]}):null,
-      DATA.hasMeters&&cacheR>0?kpi(`${cacheR.toFixed(0)}%`,'Prompt cache rate','input tokens from cache',{color:C.green,secondary:true}):null,
     ].filter(Boolean).join('');
     renderIcons();
   });
