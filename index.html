@@ -6168,8 +6168,6 @@ h1{letter-spacing:-.025em;font-weight:600}
 #hero-num,.kpi-val{font-variant-numeric:tabular-nums}
 
 /* ════ HERO PANEL (focal run-rate + trend + plain-English headline) ════ */
-/* The hero promotes "Monthly run rate" — hide the duplicate KPI tile. */
-#kpi-row [data-kpi-key="monthly-run-rate"]{display:none}
 
 #hero{
   display:grid;grid-template-columns:1fr auto;align-items:center;gap:var(--sp-7);
@@ -6417,16 +6415,21 @@ h1{letter-spacing:-.025em;font-weight:600}
     });
   }
 
+  // Hero panel retired — Monthly run rate now lives as a normal KPI card in the grid.
+  // Keep the #hero element hidden (it's revealed as a skeleton during loading) and
+  // keep the KPI count-up animation.
+  function hideHero(){const h=document.getElementById('hero');if(h)h.style.display='none';}
   if(typeof rebuildKpiRow==='function'){
     const _orig=rebuildKpiRow;
     rebuildKpiRow=function(){
       _orig.apply(this,arguments);
-      renderHero();
+      hideHero();
       requestAnimationFrame(countUpKpis);
     };
   }
   document.addEventListener('DOMContentLoaded',()=>{
-    if(typeof DATA!=='undefined'&&DATA){renderHero();requestAnimationFrame(countUpKpis);}
+    hideHero();
+    if(typeof DATA!=='undefined'&&DATA){requestAnimationFrame(countUpKpis);}
   });
 })();
 </script>
@@ -6586,7 +6589,11 @@ h1{letter-spacing:-.025em;font-weight:600}
     const wrap=document.createElement('div');
     wrap.id='ov-extras';
     wrap.innerHTML=forecastCardHTML(fc)+calloutsHTML(an,null); // cache tip handled below
-    pane.insertBefore(wrap,pane.firstChild);
+    // Place the forecast + callouts right after the "What a question really costs" card,
+    // falling back to the top of the pane if that card isn't present (e.g. usage-only).
+    const cpqCard=document.getElementById('ov-cpq-breakdown')?.closest('.card');
+    if(cpqCard&&cpqCard.parentNode===pane)cpqCard.insertAdjacentElement('afterend',wrap);
+    else pane.insertBefore(wrap,pane.firstChild);
     if(fc)buildBurnChart(fc);
     // Prompt-cache tip is a low-priority optimisation note — place it at the very bottom.
     if(cache){
