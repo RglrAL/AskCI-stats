@@ -765,7 +765,9 @@ button:focus-visible,.pill:focus-visible{outline-offset:1px}
 }
 @media(max-width:900px){.hdr{padding-right:140px}}
 @media(max-width:600px){.hdr{padding-right:96px}}
-.hdr-left{min-width:0;flex:1}
+.hdr-left{min-width:0;flex:1;display:flex;align-items:center;gap:var(--sp-5)}
+.hdr-logo{width:84px;height:84px;flex-shrink:0;object-fit:contain;border-radius:var(--r-lg)}
+.hdr-titles{min-width:0}
 .hdr-left .eyebrow{
   font-size:var(--t-xs);color:var(--muted);font-family:'DM Mono',monospace;
   letter-spacing:.18em;text-transform:uppercase;margin-bottom:var(--sp-3);font-weight:500;
@@ -774,7 +776,9 @@ button:focus-visible,.pill:focus-visible{outline-offset:1px}
   font-size:var(--t-2xl);font-weight:600;letter-spacing:-.03em;
   color:var(--text);line-height:1;
 }
-.hdr-left h1 span{color:var(--acc);font-weight:400}
+.hdr-left h1 .brand-ask{color:rgb(132,189,0);font-weight:700}
+.hdr-left h1 .brand-ci{color:rgb(0,124,182);font-weight:700}
+.hdr-left h1 .hdr-rest{color:var(--text);font-weight:400}
 .hdr-left .sub{
   font-size:var(--t-sm);color:var(--muted);font-family:'DM Mono',monospace;
   margin-top:var(--sp-3);
@@ -1376,6 +1380,7 @@ input[type=date]{color-scheme:dark}
   .pane{padding:var(--sp-4)}
   .card{padding:var(--sp-4)}
   .hdr-left h1{font-size:var(--t-lg)}
+  .hdr-logo{width:56px;height:56px}
   /* Services breakdown: scroll horizontally rather than squish the columns to nothing */
   #bk-detail{overflow-x:auto;-webkit-overflow-scrolling:touch}
   #bk-detail>div{min-width:520px}
@@ -1484,9 +1489,12 @@ input[type=date]{color-scheme:dark}
 <div id="app">
   <div class="hdr">
     <div class="hdr-left">
-      <div class="eyebrow">Citizens Information</div>
-      <h1>AskCI <span>Cost and Usage Intelligence</span></h1>
-      <div class="sub" id="hdr-sub">Upload data files to begin</div>
+      <img src="logo.png" alt="AskCI logo" class="hdr-logo">
+      <div class="hdr-titles">
+        <div class="eyebrow">Citizens Information</div>
+        <h1><span class="brand-ask">Ask</span><span class="brand-ci">CI</span> <span class="hdr-rest">Cost and Usage Intelligence</span></h1>
+        <div class="sub" id="hdr-sub">Upload data files to begin</div>
+      </div>
     </div>
     <div class="hdr-right" id="hdr-meta"></div>
   </div>
