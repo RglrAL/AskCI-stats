@@ -472,6 +472,25 @@ button:focus-visible,.pill:focus-visible{outline-offset:1px}
   @page{margin:14mm}
 }
 
+/* ── RAG pipeline: cost-by-stage flow ── */
+.ragc-flow{display:flex;align-items:stretch;gap:var(--sp-1);overflow-x:auto;padding-bottom:var(--sp-2)}
+.ragc-stage{flex:1;min-width:104px;background:var(--bg);border:1px solid var(--b2);border-radius:var(--r-md);padding:var(--sp-3) var(--sp-2);text-align:center;display:flex;flex-direction:column;align-items:center;gap:3px}
+.ragc-icon{width:30px;height:30px;border-radius:var(--r-md);display:flex;align-items:center;justify-content:center;margin-bottom:2px}
+.ragc-label{font-size:var(--t-xs);font-weight:600;color:var(--text)}
+.ragc-cost{font-family:'DM Mono',monospace;font-size:var(--t-md);font-weight:500;font-variant-numeric:tabular-nums;line-height:1.1}
+.ragc-pct{font-family:'DM Mono',monospace;font-size:var(--t-2xs);color:var(--muted)}
+.ragc-note{font-size:var(--t-2xs);color:var(--muted);line-height:1.35;margin-top:2px}
+.ragc-arrow{display:flex;align-items:center;color:var(--dim);flex:0 0 auto}
+.ragc-insight{margin-top:var(--sp-3);padding:var(--sp-3);background:color-mix(in srgb,var(--acc) 7%,transparent);border:1px solid color-mix(in srgb,var(--acc) 18%,transparent);border-radius:var(--r-md);font-size:var(--t-xs);color:var(--muted);line-height:1.55}
+.ragc-insight b{color:var(--text);font-weight:600}
+.ragc-foot{display:block;margin-top:4px;color:var(--dim);font-size:var(--t-2xs)}
+/* On phones, both RAG views scroll sideways (keeps the 5-stage flow + SVG connectors
+   readable and correctly aligned rather than squishing to nothing). */
+@media(max-width:680px){
+  #rag-pipeline{overflow-x:auto;-webkit-overflow-scrolling:touch}
+  #rag-pipeline>.rag-flow,#rag-pipeline>.rag-infra-wrap{min-width:600px}
+}
+
 /* ── RAG Pipeline as SVG flow ── */
 .rag-flow{
   position:relative;
@@ -3736,8 +3755,12 @@ function renderBreakdown(D,S){
   const el=document.getElementById('pane-breakdown');
   el.innerHTML=`
     <div class="card" style="margin-bottom:14px">
-      <div class="card-title">AskCI RAG Pipeline Architecture — Live Cost View</div>
+      <div class="card-title">AskCI RAG Pipeline Architecture — Live Cost View<span class="tbl-scroll-hint">swipe →</span></div>
       <div id="rag-pipeline"></div>
+    </div>
+    <div class="card" style="margin-bottom:14px">
+      <div class="card-title">RAG pipeline — where the money goes<span class="tbl-scroll-hint">swipe →</span></div>
+      <div id="rag-cost-stages"></div>
     </div>
     <div class="grid2">
       ${chartBox('bk-svc',240,'By Service — Period Total','click segment')}
@@ -3776,6 +3799,8 @@ function renderBreakdown(D,S){
 
   // RAG Pipeline diagram
   buildRagPipeline(svcP,D.allSvcs,periodQ);
+  // RAG pipeline cost-by-stage (chunk → embed → retrieve → generate)
+  buildRagCostStages(svcP,filtMeters,periodQ);
 
   // Service detail bars with expandable info
   const totSvc=Object.values(svcP).reduce((a,b)=>a+b,0);
@@ -3844,6 +3869,40 @@ function toggleSvcPanel(key){
 }
 
 // RAG Pipeline Diagram
+// Cost-by-stage view of the RAG data path: store → chunk → embed → retrieve → generate.
+// Makes explicit that data-prep (chunk/embed) is ~free and the cost is the always-on
+// search index + generation. Period-aware (uses the selected range's service + meter totals).
+function buildRagCostStages(svcP,filtMeters,periodQ){
+  const wrap=document.getElementById('rag-cost-stages');if(!wrap)return;
+  const embed=Object.entries(filtMeters||{}).reduce((s,[m,v])=>s+(/embed/i.test(m)?v:0),0);
+  const generate=Math.max(0,(svcP['Foundry Models']||0)-embed);
+  const stages=[
+    {label:'Store',   icon:'file-text',color:'#388bfd',cost:svcP['Storage']||0,             free:false,note:'raw docs in Blob'},
+    {label:'Chunk',   icon:'scissors', color:'#8b949e',cost:0,                               free:true, note:'Text Split — bundled in Search'},
+    {label:'Embed',   icon:'binary',   color:'#94a3b8',cost:embed,                           free:false,note:'text-embedding-3-small · one-off per doc'},
+    {label:'Retrieve',icon:'search',   color:'#58a6ff',cost:svcP['Azure Cognitive Search']||0,free:false,note:'always-on AI Search index'},
+    {label:'Generate',icon:'brain',    color:'#3fb950',cost:generate,                        free:false,note:'GPT — per answer'},
+  ];
+  const tot=stages.reduce((s,x)=>s+x.cost,0)||1;
+  const cells=stages.map((st,i)=>{
+    const pct=st.cost/tot*100;
+    const costStr=st.free?'FREE':gbp(st.cost,st.cost>0&&st.cost<1?2:0);
+    const cpq=periodQ>0&&st.cost>0?` · ${(st.cost/periodQ*100).toFixed(st.cost/periodQ*100<1?3:2)}p/q`:'';
+    return `${i>0?'<div class="ragc-arrow"><i data-lucide="chevron-right" class="i-sm"></i></div>':''}
+      <div class="ragc-stage">
+        <div class="ragc-icon" style="background:${st.color}22;color:${st.color}"><i data-lucide="${st.icon}" class="i-sm"></i></div>
+        <div class="ragc-label">${st.label}</div>
+        <div class="ragc-cost" style="color:${st.free?'var(--green)':st.color}">${costStr}</div>
+        <div class="ragc-pct">${st.free?'£0'+cpq:(pct.toFixed(pct<1?2:0)+'%'+cpq)}</div>
+        <div class="ragc-note">${st.note}</div>
+      </div>`;
+  }).join('');
+  const retPct=(svcP['Azure Cognitive Search']||0)/tot*100, genPct=generate/tot*100;
+  wrap.innerHTML=`<div class="ragc-flow">${cells}</div>
+    <div class="ragc-insight"><b>Prepping the knowledge base is effectively free</b> — chunking is bundled into Search and embeddings cost just ${gbp(embed,2)}. About <b>${retPct.toFixed(0)}%</b> of RAG cost is renting the always-on search index, and <b>${genPct.toFixed(0)}%</b> is the AI generating answers.<span class="ragc-foot">App hosting / orchestration (Container Apps) is tracked separately as the runtime, not shown here.</span></div>`;
+  if(typeof renderIcons==='function')renderIcons();
+}
+
 function buildRagPipeline(svcP,allSvcs,periodQ){
   const wrap=document.getElementById('rag-pipeline');if(!wrap)return;
   const stages=[
