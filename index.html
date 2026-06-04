@@ -239,6 +239,8 @@ button:focus-visible,.pill:focus-visible{outline-offset:1px}
   opacity:0;transition:opacity .15s;
 }
 .card:hover .chart-toggle,.chart-toggle:focus-within{opacity:1}
+/* Touch devices have no hover — keep the chart/table toggle visible so it's reachable */
+@media(hover:none){.chart-toggle{opacity:1}}
 .chart-toggle-btn{
   background:transparent;border:none;color:var(--muted);
   padding:3px 7px;border-radius:3px;cursor:pointer;
@@ -1417,6 +1419,8 @@ input[type=date]{color-scheme:dark}
   /* Report: collapse the 3-up KPI grid and let the service bars flex */
   .report-kpi-grid{grid-template-columns:1fr 1fr}
   .report-svc-bar-wrap{width:72px;flex-shrink:0}
+  /* Plain tables (e.g. Monthly Summary) scroll sideways instead of squishing */
+  .tbl-wrap table{min-width:520px}
   /* Sticky toolbar: compact — drop section labels/dividers/spacer, flex the date inputs */
   #sticky-bar{padding:var(--sp-2) var(--sp-4);gap:var(--sp-2)}
   #sticky-bar .tc-label,#sticky-bar .tc-sep,#sticky-bar .bar-spacer{display:none}
@@ -4067,7 +4071,7 @@ function renderUsage(D,S){
     ${chartBox('us-monthly',200,'Questions & Sessions — Selected Range','click month')}
     <div class="grid2">
       ${chartBox('us-wdwe',170,'Weekday vs Weekend Average')}
-      <div class="card"><div class="card-title">Monthly Summary</div>
+      <div class="card"><div class="card-title">Monthly Summary<span class="tbl-scroll-hint">swipe →</span></div>
         <div class="tbl-wrap"><table>
           <thead><tr><th>Month</th><th>Questions</th><th>Sessions</th><th>Q/Session</th><th>Avg/Day</th><th>Weekday Avg</th></tr></thead>
           <tbody>${fm.map(m=>{const wd=m.wdQ.length?Math.round(m.wdQ.reduce((a,b)=>a+b,0)/m.wdQ.length):0;
