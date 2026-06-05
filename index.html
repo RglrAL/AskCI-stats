@@ -1950,15 +1950,28 @@ const dumbbellPlugin={
     }catch(e){}
   }
 };
-// Bubble labels: labels the larger bubbles on the demand map. Reads options.catLabels.
+// Bubble labels with greedy collision-avoidance: label the highest-volume bubbles first
+// and skip any whose label would overlap one already placed (or run off-chart). Keeps the
+// crowded bottom-left readable — small clustered categories stay hover-only.
 const bubbleLabelPlugin={
   id:'bubbleLabels',
   afterDatasetsDraw(chart){
     const rows=chart.config.options.catLabels; if(!rows)return;
     try{
-      const ctx=chart.ctx, meta=chart.getDatasetMeta(1); if(!meta)return;
-      ctx.save();ctx.font="600 9px 'DM Sans'";ctx.fillStyle=C.muted;ctx.textBaseline='middle';ctx.textAlign='left';
-      rows.forEach((r,i)=>{const pt=meta.data[i]; if(!pt||r.citShare<2)return; ctx.fillText(r.label,pt.x+(pt.options.radius||5)+3,pt.y);});
+      const ctx=chart.ctx, meta=chart.getDatasetMeta(1), ca=chart.chartArea; if(!meta)return;
+      ctx.save();ctx.font="600 9px 'DM Sans'";ctx.textBaseline='middle';ctx.fillStyle=C.muted;ctx.textAlign='left';
+      const placed=[], th=12;
+      const hit=b=>placed.some(p=>!(b.x2<p.x1||b.x1>p.x2||b.y2<p.y1||b.y1>p.y2));
+      rows.map((r,i)=>({r,i})).sort((a,b)=>b.r.cit-a.r.cit).forEach(({r,i})=>{
+        if(r.citShare<1.5)return;                  // skip the truly tiny
+        const pt=meta.data[i]; if(!pt)return;
+        const rad=(pt.options&&pt.options.radius)||5, tw=ctx.measureText(r.label).width;
+        let x=pt.x+rad+3;                           // prefer right of the bubble
+        if(x+tw>ca.right)x=pt.x-rad-3-tw;           // else left
+        const box={x1:x,y1:pt.y-th/2,x2:x+tw,y2:pt.y+th/2};
+        if(x<ca.left||hit(box))return;              // off-edge or collides → skip
+        ctx.fillText(r.label,x,pt.y);placed.push(box);
+      });
       ctx.restore();
     }catch(e){}
   }
@@ -4319,7 +4332,7 @@ function renderCategories(D,S){
   mkChart('cat-map',{data:{datasets:[
     {type:'line',label:'parity',data:[{x:0,y:0},{x:maxS,y:maxS}],borderColor:C.dim+'88',borderDash:[5,4],borderWidth:1,pointRadius:0,fill:false,order:2},
     {type:'bubble',data:rows.map(r=>({x:r.viewShare,y:r.citShare,r:5+Math.sqrt(r.cit/maxC2)*15})),
-      backgroundColor:rows.map(r=>(r.citShare>=r.viewShare?C.green:C.amber)+'88'),borderColor:rows.map(r=>r.citShare>=r.viewShare?C.green:C.amber),borderWidth:1.5,order:1}]},
+      backgroundColor:rows.map(r=>(r.citShare>=r.viewShare?C.green:C.amber)+'55'),borderColor:rows.map(r=>r.citShare>=r.viewShare?C.green:C.amber),borderWidth:1.5,order:1}]},
     options:{responsive:true,maintainAspectRatio:false,animation:{duration:350},
       plugins:{legend:{display:false},tooltip:{backgroundColor:C.s1,titleColor:C.text,bodyColor:C.muted,borderColor:C.border,borderWidth:1,padding:10,cornerRadius:6,bodyFont:{family:'DM Mono',size:11},
         callbacks:{label:c=>{if(c.datasetIndex===0)return'';const r=rows[c.dataIndex];return `${r.label}: AskCI ${r.citShare.toFixed(1)}% vs Site ${r.viewShare.toFixed(1)}% · ${r.index.toFixed(2)}× · ${num(r.cit)} cit`;}}}},
