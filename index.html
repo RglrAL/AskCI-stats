@@ -4170,7 +4170,7 @@ function renderReach(D,S){
   // Hero — two volume lines (searches vs questions) + information-seeking % as a soft area (right axis)
   mkChart('rc-help',{type:'line',data:{labels,datasets:[
     {label:'Information-seeking share',data:months.map(helpShare),yAxisID:'yPct',borderColor:C.amber,backgroundColor:C.amber+'22',fill:true,borderWidth:1.5,pointRadius:0,tension:.3,order:3},
-    {label:'Site searches',data:months.map(m=>m.searchEv),yAxisID:'y',borderColor:C.acc,backgroundColor:'transparent',borderWidth:2.5,pointRadius:3,pointHoverRadius:5,tension:.3,order:1},
+    {label:'Search queries',data:months.map(m=>m.searchEv),yAxisID:'y',borderColor:C.acc,backgroundColor:'transparent',borderWidth:2.5,pointRadius:3,pointHoverRadius:5,tension:.3,order:1},
     {label:'AskCI questions',data:months.map(m=>m.chatQ),yAxisID:'y',borderColor:C.green,backgroundColor:'transparent',borderWidth:2.5,pointRadius:3,pointHoverRadius:5,tension:.3,order:1}]},
     options:mergeOpts(baseOpts(),{plugins:{legend:{display:true},tooltip:{callbacks:{label:c=>c.dataset.yAxisID==='yPct'?`Information-seeking share: ${c.parsed.y.toFixed(1)}%`:`${c.dataset.label}: ${num(c.parsed.y)}`}}},
       scales:{y:{ticks:{callback:v=>num(v)}},yPct:{position:'right',min:0,max:100,grid:{display:false},border:{display:false},ticks:{color:C.amber,font:{size:10,family:'DM Mono'},callback:v=>v+'%'}}}})});
@@ -4186,7 +4186,7 @@ function renderReach(D,S){
       scales:{y:{ticks:{callback:v=>num(v)}},yPct:{position:'right',min:0,grid:{display:false},border:{display:false},ticks:{color:C.muted,font:{size:10,family:'DM Mono'},callback:v=>v.toFixed(1)+'%'}}}})});
   // Insight — adoption story + the carefully-hedged substitution signal
   const ins=[];
-  ins.push(insight('good',`<span class="hl-g">${helpShare(last).toFixed(1)}% of information-seeking actions now go through AskCI</span> (${last.label}) — ${num(last.chatQ)} questions vs ${num(last.searchEv)} site searches — up from ${helpShare(months[0]).toFixed(1)}% in ${months[0].label}.`));
+  ins.push(insight('good',`<span class="hl-g">${helpShare(last).toFixed(1)}% of information-seeking actions now go through AskCI</span> (${last.label}) — ${num(last.chatQ)} questions vs ${num(last.searchEv)} search queries — up from ${helpShare(months[0]).toFixed(1)}% in ${months[0].label}.`));
   ins.push(insight('',`Against <em>all</em> site traffic, adoption is <span class="hl-b">${adoption(last).toFixed(2)}%</span> of sessions — small, because the site sees ${num(last.siteSess)} sessions/month, but climbing.`));
   ins.push(insight('warn',`AskCI usage rose sharply in <span class="hl-b">${infl.label}</span>${S.modalLabel?` (around the ${S.modalLabel} release)`:''}, while site searches have declined gradually since ${months[0].label} (${num(months[0].searchEv)} → ${num(last.searchEv)} searches) — a trend that <b>predates the release</b>. Some substitution is plausible, but the data does not establish that AskCI caused it.`));
   document.getElementById('rc-ins').innerHTML=ins.join('');
