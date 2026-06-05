@@ -1270,6 +1270,15 @@ tr.event-row td{background:color-mix(in srgb,var(--amber) 6%,transparent)}
 .cpq-pq{font-family:'DM Mono',monospace;text-align:right;color:var(--text);font-variant-numeric:tabular-nums}
 .cpq-pct{font-family:'DM Mono',monospace;text-align:right;color:var(--muted);font-variant-numeric:tabular-nums}
 
+/* ── Reach & Adoption headline ── */
+.reach-hero{margin-bottom:var(--sp-4)}
+.reach-hero-num{font-family:'DM Mono',monospace;font-size:var(--t-2xl);font-weight:500;color:var(--text);line-height:1;font-variant-numeric:tabular-nums}
+.reach-hero-lbl{font-size:var(--t-md);color:var(--text);font-weight:600;margin-top:var(--sp-2)}
+.reach-hero-def{font-size:var(--t-xs);color:var(--muted);margin-top:var(--sp-2);line-height:1.5;max-width:74ch}
+.reach-delta{font-size:var(--t-sm);font-family:'DM Sans',sans-serif;font-weight:600;margin-left:var(--sp-3);vertical-align:middle}
+.reach-delta.up{color:var(--green)}
+.reach-delta.down{color:var(--red)}
+
 /* ── Calendar ── */
 .cal-tooltip{
   position:fixed;background:var(--s3);border:1px solid var(--border);
@@ -4102,34 +4111,48 @@ function renderReach(D,S){
   let infl=last,maxJump=-Infinity;
   for(let i=1;i<months.length;i++){const j=helpShare(months[i])-helpShare(months[i-1]);if(j>maxJump){maxJump=j;infl=months[i];}}
 
+  const hs=helpShare(last),hsFirst=helpShare(months[0]),ad=adoption(last),adFirst=adoption(months[0]);
+  const dArrow=(c,f,dp)=>`<span class="reach-delta ${c>=f?'up':'down'}">${c>=f?'▲':'▼'} from ${f.toFixed(dp)}% in ${months[0].label}</span>`;
+
   el.innerHTML=`
     <div class="grid4" style="margin-bottom:14px">
-      ${kpi(helpShare(last).toFixed(1)+'%','Share of help-seeking',`questions vs site searches · ${last.label}`,{color:C.amber,delta:prev?{curr:helpShare(last),prev:helpShare(prev)}:null})}
-      ${kpi(adoption(last).toFixed(2)+'%','Adoption rate',`chat ÷ all site sessions · ${last.label}`,{color:C.acc,delta:prev?{curr:adoption(last),prev:adoption(prev)}:null})}
+      ${kpi(hs.toFixed(1)+'%','Share of help-seeking',`questions vs site searches · ${last.label}`,{color:C.amber,delta:prev?{curr:hs,prev:helpShare(prev)}:null})}
+      ${kpi(ad.toFixed(2)+'%','Adoption rate',`chat ÷ all site sessions · ${last.label}`,{color:C.acc,delta:prev?{curr:ad,prev:adoption(prev)}:null})}
       ${kpi(num(last.chatQ),'Questions asked',last.label,{color:C.green})}
       ${kpi(num(last.siteSess),'Site sessions',last.label,{color:C.purple})}
     </div>
-    ${chartBox('rc-help',210,'Share of Help-Seeking — AskCI vs Site Search','% of info-seeking actions that chose AskCI')}
-    <div class="grid2">
-      ${chartBox('rc-vol',210,'Site Sessions vs Chatbot Sessions')}
-      ${chartBox('rc-srch',210,'Searches Carried Out vs Questions Asked')}
+    <div class="card">
+      <div class="reach-hero">
+        <div class="reach-hero-num">${hs.toFixed(1)}%${months.length>1?dArrow(hs,hsFirst,1):''}</div>
+        <div class="reach-hero-lbl">of information-seeking actions go through AskCI · ${last.label}</div>
+        <div class="reach-hero-def">Each month, of every information-seeking action — a site search <em>or</em> a chatbot question — the share answered by AskCI rather than site search. Both are single actions, so it's a like-for-like comparison.</div>
+      </div>
+      <div class="chart-wrap" id="rc-help-wrap" style="height:250px"><canvas id="rc-help"></canvas></div>
+    </div>
+    <div class="card">
+      <div class="reach-hero">
+        <div class="reach-hero-num" style="font-size:var(--t-xl)">${ad.toFixed(2)}%${months.length>1?dArrow(ad,adFirst,2):''}</div>
+        <div class="reach-hero-lbl">of all site visits used AskCI · ${last.label}</div>
+        <div class="reach-hero-def">Chatbot sessions as a share of all ${num(last.siteSess)} site sessions that month. Small — most visitors aren't seeking help — but climbing.</div>
+      </div>
+      <div class="chart-wrap" id="rc-vol-wrap" style="height:220px"><canvas id="rc-vol"></canvas></div>
     </div>
     <div class="card"><div class="card-title">Key Insight</div><div id="rc-ins"></div></div>
   `;
   const labels=months.map(m=>m.label);
-  // Hero — help-seeking share trend
-  mkChart('rc-help',{type:'line',data:{labels,datasets:[{label:'Help-seeking share',data:months.map(helpShare),borderColor:C.amber,backgroundColor:C.amber+'22',fill:true,borderWidth:2.5,pointRadius:3,pointHoverRadius:5,tension:.3}]},
-    options:mergeOpts(baseOpts(),{plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>c.parsed.y.toFixed(1)+'% of info-seeking actions'}}},scales:{y:{ticks:{callback:v=>v+'%'}}}})});
-  // Volume — site (bars, left axis) vs chatbot (line, right axis); scales differ ~100×
+  // Hero — two volume lines (searches vs questions) + help-seeking % as a soft area (right axis)
+  mkChart('rc-help',{type:'line',data:{labels,datasets:[
+    {label:'Help-seeking share',data:months.map(helpShare),yAxisID:'yPct',borderColor:C.amber,backgroundColor:C.amber+'22',fill:true,borderWidth:1.5,pointRadius:0,tension:.3,order:3},
+    {label:'Site searches',data:months.map(m=>m.searchEv),yAxisID:'y',borderColor:C.acc,backgroundColor:'transparent',borderWidth:2.5,pointRadius:3,pointHoverRadius:5,tension:.3,order:1},
+    {label:'Chatbot questions',data:months.map(m=>m.chatQ),yAxisID:'y',borderColor:C.green,backgroundColor:'transparent',borderWidth:2.5,pointRadius:3,pointHoverRadius:5,tension:.3,order:1}]},
+    options:mergeOpts(baseOpts(),{plugins:{legend:{display:true},tooltip:{callbacks:{label:c=>c.dataset.yAxisID==='yPct'?`Help-seeking share: ${c.parsed.y.toFixed(1)}%`:`${c.dataset.label}: ${num(c.parsed.y)}`}}},
+      scales:{y:{ticks:{callback:v=>num(v)}},yPct:{position:'right',min:0,max:100,grid:{display:false},border:{display:false},ticks:{color:C.amber,font:{size:10,family:'DM Mono'},callback:v=>v+'%'}}}})});
+  // Adoption — site sessions (bars, left) + adoption % (area, right, auto-scaled since it's <1%)
   mkChart('rc-vol',{type:'bar',data:{labels,datasets:[
-    {label:'Site sessions',data:months.map(m=>m.siteSess),backgroundColor:C.purple+'66',yAxisID:'y',order:2},
-    {label:'Chatbot sessions',data:months.map(m=>m.chatSess),type:'line',borderColor:C.green,backgroundColor:'transparent',borderWidth:2.5,pointRadius:3,tension:.3,yAxisID:'y2',order:1}]},
-    options:mergeOpts(baseOpts(),{plugins:{legend:{display:true},tooltip:{callbacks:{label:c=>`${c.dataset.label}: ${num(c.parsed.y)}`}}},scales:{y:{ticks:{callback:v=>num(v)}},y2:{position:'right',grid:{display:false},border:{display:false},ticks:{color:C.green,font:{size:10,family:'DM Mono'},callback:v=>num(v)}}}})});
-  // Searches carried out vs questions asked — action vs action (same axis, apples-to-apples)
-  mkChart('rc-srch',{type:'bar',data:{labels,datasets:[
-    {label:'Searches carried out',data:months.map(m=>m.searchEv),backgroundColor:C.acc+'88'},
-    {label:'Questions asked',data:months.map(m=>m.chatQ),backgroundColor:C.green+'aa'}]},
-    options:mergeOpts(baseOpts(),{plugins:{legend:{display:true},tooltip:{callbacks:{label:c=>`${c.dataset.label}: ${num(c.parsed.y)}`}}},scales:{y:{ticks:{callback:v=>num(v)}}}})});
+    {label:'Site sessions',data:months.map(m=>m.siteSess),backgroundColor:C.purple+'55',yAxisID:'y',order:2},
+    {type:'line',label:'Adoption %',data:months.map(adoption),yAxisID:'yPct',borderColor:C.acc,backgroundColor:C.acc+'22',fill:true,borderWidth:2.5,pointRadius:3,pointHoverRadius:5,tension:.3,order:1}]},
+    options:mergeOpts(baseOpts(),{plugins:{legend:{display:true},tooltip:{callbacks:{label:c=>{const mm=months[c.dataIndex];return c.dataset.yAxisID==='yPct'?`Adoption: ${c.parsed.y.toFixed(2)}% (${num(mm.chatSess)} chat of ${num(mm.siteSess)} site sessions)`:`${c.dataset.label}: ${num(c.parsed.y)}`;}}}},
+      scales:{y:{ticks:{callback:v=>num(v)}},yPct:{position:'right',min:0,grid:{display:false},border:{display:false},ticks:{color:C.acc,font:{size:10,family:'DM Mono'},callback:v=>v.toFixed(2)+'%'}}}})});
   // Insight — adoption story + the carefully-hedged substitution signal
   const ins=[];
   ins.push(insight('good',`<span class="hl-g">${helpShare(last).toFixed(1)}% of info-seeking actions now go through AskCI</span> (${last.label}) — ${num(last.chatQ)} questions vs ${num(last.searchEv)} site searches — up from ${helpShare(months[0]).toFixed(1)}% in ${months[0].label}.`));
