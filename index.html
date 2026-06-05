@@ -1676,6 +1676,7 @@ Date,Questions,Sessions
     <div id="pane-breakdown"   class="pane"></div>
     <div id="pane-usage"       class="pane"></div>
     <div id="pane-reach"       class="pane"></div>
+    <div id="pane-categories"  class="pane"></div>
     <div id="pane-llm"         class="pane"></div>
     <div id="pane-impact"      class="pane"></div>
     <div id="pane-projections" class="pane"></div>
@@ -2200,6 +2201,45 @@ async function loadGa4Files(){
   try{ingestGa4(await loadCSV('ga4/searches-and-sessions.csv'),{'Event count':'searchEvents','Sessions':'searchSessions'});}catch(e){}
 }
 
+// ═══ CATEGORY DEMAND (chatbot citations by category vs site views by category) ═══
+// CATCITE / CATVIEW are keyed [YYYY-MM][slug]. Both sides roll up to the site's
+// top-level URL slug; chatbot display names are slugified (& → and) with a small alias
+// map for the two that don't map 1:1. Shares are later computed across MATCHED content
+// categories only (non-content paths + the two excluded categories are dropped here).
+let CATCITE={}, CATVIEW={}, hasCats=false;
+const CAT_ALIAS={'rti':'returning-to-ireland','family-and-relationships':'birth-family-relationships'};
+const CAT_EXCLUDE=new Set(['about','my-situation']);          // meta/navigation, not citizen content
+const CAT_NONCONTENT=new Set(['whats-new','search_wagtail','yipg']); // site-only, non-category paths
+const MONTHNUM={january:'01',february:'02',march:'03',april:'04',may:'05',june:'06',july:'07',august:'08',september:'09',october:'10',november:'11',december:'12'};
+function catSlug(name){
+  let s=String(name||'').replace(/﻿/,'').trim().toLowerCase().replace(/&/g,'and').replace(/[^a-z0-9]+/g,'-').replace(/^-+|-+$/g,'');
+  return CAT_ALIAS[s]||s;
+}
+function catLabel(slug){const small=new Set(['and','to','of','the','in','a']);return slug.split('-').map((w,i)=>i>0&&small.has(w)?w:w.charAt(0).toUpperCase()+w.slice(1)).join(' ');} // returning-to-ireland → Returning to Ireland
+async function loadCategoryData(){
+  // Chatbot citations (small CSV: Category, Citations, Month-name). Year assumed 2026 (the dataset's year).
+  try{
+    (await loadCSV('categories.csv')).forEach(r=>{
+      const name=r['Category']||r['﻿Category']||Object.values(r)[0];
+      const sl=catSlug(name); if(CAT_EXCLUDE.has(sl)||!sl)return;
+      const mo=MONTHNUM[String(r['Month']||'').trim().toLowerCase()]; if(!mo)return;
+      const m='2026-'+mo, c=parseInt(String(r['Citations']||'0').replace(/,/g,''))||0;
+      (CATCITE[m]||(CATCITE[m]={}))[sl]=(CATCITE[m][sl]||0)+c;
+    });
+  }catch(e){}
+  // Site views by top-level category by month (rolled up from the page-path export).
+  try{
+    (await loadCSV('ga4/categories-and-views.csv')).forEach(r=>{
+      const segs=String(r['Page path and screen class']||'').split('/').filter(Boolean);
+      if(segs.length<2||segs[0]!=='en')return;
+      const sl=segs[1]; if(CAT_NONCONTENT.has(sl)||CAT_EXCLUDE.has(sl))return;
+      const m=`${r['Year']}-${String(r['Month']||'').padStart(2,'0')}`, v=parseFloat(r['Views']||'0')||0;
+      (CATVIEW[m]||(CATVIEW[m]={}))[sl]=(CATVIEW[m][sl]||0)+v;
+    });
+  }catch(e){}
+  hasCats=Object.keys(CATCITE).length>0;
+}
+
 // ═══ ANALYSIS ═══════════════════════════════════════════════════════
 function analyse(costData,usageByDate){
   const{daily,meters,svcTotals,allSvcs,dupesRemoved}=costData;
@@ -2414,6 +2454,7 @@ const TAB_GROUPS=[
   {id:'usage',      label:'Usage',       icon:'users',       subs:[
     {id:'usage',    label:'Volume',        icon:'users'},
     {id:'reach',    label:'Reach',         icon:'globe'},
+    {id:'categories',label:'Categories',   icon:'shapes'},
     {id:'impact',   label:'Launch impact', icon:'rocket'}]},
   {id:'projections',label:'Projections', icon:'sparkles',    subs:[{id:'projections',label:'Projections',icon:'sparkles'}]},
 ];
@@ -3652,6 +3693,7 @@ function renderPane(id){
   if(id==='breakdown')  renderBreakdown(D,S);
   if(id==='usage')      renderUsage(D,S);
   if(id==='reach')      renderReach(D,S);
+  if(id==='categories') renderCategories(D,S);
   if(id==='llm')        renderLLM(D,S);
   if(id==='impact')     renderImpact(D,S);
   if(id==='projections')renderProjections(D,S);
@@ -4194,6 +4236,60 @@ function renderReach(D,S){
   ins.push(insight('',`Against <em>all</em> site traffic, adoption is <span class="hl-b">${adoption(last).toFixed(2)}%</span> of sessions — small, because the site sees ${num(last.siteSess)} sessions/month, but climbing.`));
   ins.push(insight('warn',`AskCI usage rose sharply in <span class="hl-b">${infl.label}</span>${S.modalLabel?` (around the ${S.modalLabel} release)`:''}, while site searches have declined gradually since ${months[0].label} (${num(months[0].searchEv)} → ${num(last.searchEv)} searches) — a trend that <b>predates the release</b>. Some substitution is plausible, but the data does not establish that AskCI caused it.`));
   document.getElementById('rc-ins').innerHTML=ins.join('');
+}
+
+// ═══ CATEGORY DEMAND (what topics drive AskCI use vs site browsing) ══════
+function renderCategories(D,S){
+  const el=document.getElementById('pane-categories');
+  if(!hasCats){
+    el.innerHTML=emptyState('shapes','No category data loaded',
+      `Add <code>categories.csv</code> (chatbot citations by category) and <code>ga4/categories-and-views.csv</code> (site views) to compare what topics people ask AskCI about vs what they browse.`);
+    renderIcons();return;
+  }
+  // Aggregate citations + site views over the months in the selected date range.
+  const monthsInRange=[...new Set(filterRange(D.merged).map(d=>d.date.slice(0,7)))];
+  const cite={},view={};
+  monthsInRange.forEach(m=>{
+    Object.entries(CATCITE[m]||{}).forEach(([s,v])=>cite[s]=(cite[s]||0)+v);
+    Object.entries(CATVIEW[m]||{}).forEach(([s,v])=>view[s]=(view[s]||0)+v);
+  });
+  // Universe = matched content categories: in the chatbot data AND with site views.
+  const universe=Object.keys(cite).filter(s=>(view[s]||0)>0);
+  if(!universe.length){el.innerHTML=emptyState('shapes','No overlapping category data','Citation and site-view categories don\'t overlap in this range.');renderIcons();return;}
+  const totC=universe.reduce((a,s)=>a+cite[s],0),totV=universe.reduce((a,s)=>a+view[s],0);
+  let rows=universe.map(s=>{const cs=cite[s]/totC*100,vs=view[s]/totV*100;return{slug:s,label:catLabel(s),cit:cite[s],citShare:cs,viewShare:vs,index:vs>0?cs/vs:0};});
+  rows.sort((a,b)=>b.citShare-a.citShare); // biggest chatbot categories first
+  // Direction-aware, volume-gated callouts (~3% floor on the relevant side).
+  const FLOOR=3.0;
+  const over=rows.filter(r=>r.citShare>=FLOOR&&r.index>1.15).sort((a,b)=>b.index-a.index).slice(0,3);
+  const under=rows.filter(r=>r.viewShare>=FLOOR&&r.index<0.87).sort((a,b)=>a.index-b.index).slice(0,3);
+  const fmtL=arr=>arr.map(r=>`${r.label} (${r.index.toFixed(1)}×)`).join(', ');
+
+  el.innerHTML=`
+    <div class="card"><div class="card-title">What topics drive AskCI use vs site browsing</div><div id="cat-ins"></div></div>
+    ${chartBox('cat-bars',Math.max(300,rows.length*40),'Share of demand by category — AskCI vs Site','sorted by AskCI share')}
+    ${chartBox('cat-index',Math.max(260,rows.length*30),'Over- / Under-index (AskCI share ÷ site share)','1× = used in chat as much as it\'s browsed')}
+    <div class="reach-foot"><i data-lucide="info" class="i-sm"></i><span>Shares are across <b>matched Citizens Information content categories only</b> (homepage, search, news & utility pages excluded). One question can cite several categories, so citations are a <b>proxy for topic demand</b>, not a question count. The index reflects <b>relative preference</b> (chat vs browse), not chatbot quality.</span></div>
+  `;
+  const labels=rows.map(r=>r.label);
+  const hOpts=valTick=>({responsive:true,maintainAspectRatio:false,indexAxis:'y',animation:{duration:350},interaction:{mode:'index',intersect:false},
+    plugins:{legend:{display:false},tooltip:{backgroundColor:C.s1,titleColor:C.text,bodyColor:C.muted,borderColor:C.border,borderWidth:1,padding:10,cornerRadius:6,titleFont:{family:'DM Sans',size:12,weight:'600'},bodyFont:{family:'DM Mono',size:11}}},
+    scales:{x:{grid:{color:C.border+'1a',drawTicks:false},border:{display:false},ticks:{color:C.muted,font:{size:10,family:'DM Mono'},callback:valTick}},
+      y:{grid:{display:false},border:{color:C.border+'4d'},ticks:{color:C.muted,font:{size:11,family:'DM Sans'},autoSkip:false}}}});
+  // Hero — paired horizontal share bars
+  mkChart('cat-bars',{type:'bar',data:{labels,datasets:[
+    {label:'AskCI share',data:rows.map(r=>+r.citShare.toFixed(1)),backgroundColor:C.green+'cc',borderRadius:2,maxBarThickness:13},
+    {label:'Site share',data:rows.map(r=>+r.viewShare.toFixed(1)),backgroundColor:C.purple+'aa',borderRadius:2,maxBarThickness:13}]},
+    options:mergeOpts(hOpts(v=>v+'%'),{plugins:{legend:{display:true,position:'bottom',align:'start',labels:{color:C.muted,font:{size:11,family:'DM Sans'},boxWidth:8,boxHeight:8,padding:12,usePointStyle:true,pointStyle:'rectRounded'}},tooltip:{callbacks:{label:c=>`${c.dataset.label}: ${c.parsed.x.toFixed(1)}%`}}}})});
+  // Secondary — over/under-index, colour-coded, share shown in tooltip
+  mkChart('cat-index',{type:'bar',data:{labels,datasets:[{label:'Index',data:rows.map(r=>+r.index.toFixed(2)),backgroundColor:rows.map(r=>r.index>=1?C.green+'cc':C.amber+'cc'),borderRadius:2,maxBarThickness:16}]},
+    options:mergeOpts(hOpts(v=>v+'×'),{plugins:{tooltip:{callbacks:{label:c=>{const r=rows[c.dataIndex];return `${r.index.toFixed(2)}× · AskCI ${r.citShare.toFixed(1)}% vs Site ${r.viewShare.toFixed(1)}%`;}}}}})});
+  // Callouts — gated + reframed as behavioural preference, not performance
+  const ins=[];
+  if(over.length)ins.push(insight('good',`<span class="hl-g">AskCI over-indexes on ${fmtL(over)}</span> — users lean on the bot for these more than they browse them (typically complex, conditional or exploratory topics).`));
+  if(under.length)ins.push(insight('',`<span class="hl-b">Users currently favour browsing over AskCI</span> for ${fmtL(under)} — a behavioural difference (often quick "known-item" lookups), and a potential adoption opportunity rather than a content gap.`));
+  ins.push(insight('',`Biggest share of AskCI demand is <b>${rows[0].label}</b> at ${rows[0].citShare.toFixed(0)}% — read the index alongside share, since a small category can show a large multiple.`));
+  document.getElementById('cat-ins').innerHTML=ins.join('');
 }
 
 function renderUsage(D,S){
@@ -5549,6 +5645,7 @@ async function init(){
   try{cr=await loadCSV('costs.csv')}catch(e){}
   try{ur=await loadCSV('usage.csv')}catch(e){}
   await loadGa4Files(); // site-analytics for the Reach tab (graceful if absent)
+  await loadCategoryData(); // category demand for the Categories tab (graceful if absent)
   if(cr||ur)buildDashboard(cr,ur);
 }
 init();
