@@ -1661,6 +1661,7 @@ Date,Questions,Sessions
     <div id="pane-timeline"    class="pane"></div>
     <div id="pane-breakdown"   class="pane"></div>
     <div id="pane-usage"       class="pane"></div>
+    <div id="pane-reach"       class="pane"></div>
     <div id="pane-llm"         class="pane"></div>
     <div id="pane-impact"      class="pane"></div>
     <div id="pane-projections" class="pane"></div>
@@ -2143,6 +2144,37 @@ function parseUsage(rows){
   return bd;
 }
 
+// ═══ GA4 SITE ANALYTICS ══════════════════════════════════════════════
+// Schema-light store: GA4[YYYY-MM-DD] = { metricField: value, ... }. ingestGa4
+// takes any *wide* GA4 daily CSV plus a {csvColumn: ourField} map, so adding a
+// metric later is a one-line mapping change — not new parsing code.
+let GA4={}, hasGa4=false;
+function ga4Date(s){ // GA4 'Date' dimension exports as YYYYMMDD
+  s=String(s||'').trim();
+  if(/^\d{8}$/.test(s))return `${s.slice(0,4)}-${s.slice(4,6)}-${s.slice(6,8)}`;
+  return parseDate(s); // fall back to the standard parser for other formats
+}
+function ingestGa4(rows,map){
+  if(!rows||!rows.length)return;
+  const keys=Object.keys(rows[0]);
+  const dateKey=keys.find(k=>/^date$/i.test(k.trim()))||keys[0];
+  rows.forEach(r=>{
+    const d=ga4Date(r[dateKey]); if(!d)return;
+    if(!GA4[d])GA4[d]={};
+    for(const col in map){
+      const kk=keys.find(k=>k.trim().toLowerCase()===col.toLowerCase());
+      if(kk!=null)GA4[d][map[col]]=(GA4[d][map[col]]||0)+(parseInt(String(r[kk]||'0').replace(/,/g,''))||0);
+    }
+  });
+  hasGa4=true;
+}
+async function loadGa4Files(){
+  // The two files both have a "Sessions" column meaning different things, so each
+  // is ingested with its own mapping (total sessions vs search sessions).
+  try{ingestGa4(await loadCSV('ga4/session-and-users.csv'),{'Sessions':'siteSessions','Total users':'siteUsers'});}catch(e){}
+  try{ingestGa4(await loadCSV('ga4/searches-and-sessions.csv'),{'Event count':'searchEvents','Sessions':'searchSessions'});}catch(e){}
+}
+
 // ═══ ANALYSIS ═══════════════════════════════════════════════════════
 function analyse(costData,usageByDate){
   const{daily,meters,svcTotals,allSvcs,dupesRemoved}=costData;
@@ -2352,6 +2384,7 @@ const TAB_GROUPS=[
     {id:'llm',      label:'Models',   icon:'bot'}]},
   {id:'usage',      label:'Usage',       icon:'users',       subs:[
     {id:'usage',    label:'Volume',        icon:'users'},
+    {id:'reach',    label:'Reach',         icon:'globe'},
     {id:'impact',   label:'Launch impact', icon:'rocket'}]},
   {id:'projections',label:'Projections', icon:'sparkles',    subs:[{id:'projections',label:'Projections',icon:'sparkles'}]},
 ];
@@ -3588,6 +3621,7 @@ function renderPane(id){
   if(id==='timeline')   renderTimeline(D,S);
   if(id==='breakdown')  renderBreakdown(D,S);
   if(id==='usage')      renderUsage(D,S);
+  if(id==='reach')      renderReach(D,S);
   if(id==='llm')        renderLLM(D,S);
   if(id==='impact')     renderImpact(D,S);
   if(id==='projections')renderProjections(D,S);
@@ -4035,6 +4069,69 @@ function drawRagConnectors(stageCosts){
 
 
 // ═══ USAGE ══════════════════════════════════════════════════════════
+// ═══ REACH & ADOPTION (chatbot usage vs GA4 site analytics) ══════════
+function renderReach(D,S){
+  const el=document.getElementById('pane-reach');
+  // Join chatbot days (DATA.merged) with GA4 by date, over the overlap only.
+  const days=D.merged.filter(d=>GA4[d.date]&&(d.queries>0||d.sessions>0));
+  if(!hasGa4||!days.length){
+    el.innerHTML=emptyState('globe','No site analytics loaded',
+      `Add GA4 daily exports to the <code>ga4/</code> folder (<code>session-and-users.csv</code> and <code>searches-and-sessions.csv</code>) to compare chatbot usage against overall site traffic and search.`);
+    renderIcons();return;
+  }
+  // Monthly rollup of the joined data
+  const M={};
+  days.forEach(d=>{
+    const m=d.date.slice(0,7),g=GA4[d.date];
+    if(!M[m])M[m]={month:m,label:fmtMonth(m),chatSess:0,chatQ:0,siteSess:0,siteUsers:0,searchEv:0,searchSess:0};
+    M[m].chatSess+=d.sessions; M[m].chatQ+=d.queries;
+    M[m].siteSess+=g.siteSessions||0; M[m].siteUsers+=g.siteUsers||0;
+    M[m].searchEv+=g.searchEvents||0; M[m].searchSess+=g.searchSessions||0;
+  });
+  const months=Object.values(M).sort((a,b)=>a.month.localeCompare(b.month));
+  const last=months[months.length-1],prev=months.length>1?months[months.length-2]:null;
+  const helpShare=m=>(m.chatSess+m.searchSess)>0?m.chatSess/(m.chatSess+m.searchSess)*100:0;   // sessions-based hero
+  const adoption=m=>m.siteSess>0?m.chatSess/m.siteSess*100:0;
+  // Month of the steepest help-seeking jump (the adoption inflection)
+  let infl=last,maxJump=-Infinity;
+  for(let i=1;i<months.length;i++){const j=helpShare(months[i])-helpShare(months[i-1]);if(j>maxJump){maxJump=j;infl=months[i];}}
+
+  el.innerHTML=`
+    <div class="grid4" style="margin-bottom:14px">
+      ${kpi(helpShare(last).toFixed(1)+'%','Share of help-seeking',`AskCI vs site search · ${last.label}`,{color:C.amber,delta:prev?{curr:helpShare(last),prev:helpShare(prev)}:null})}
+      ${kpi(adoption(last).toFixed(2)+'%','Adoption rate',`chat ÷ all site sessions · ${last.label}`,{color:C.acc,delta:prev?{curr:adoption(last),prev:adoption(prev)}:null})}
+      ${kpi(num(last.chatSess),'Chatbot sessions',last.label,{color:C.green})}
+      ${kpi(num(last.siteSess),'Site sessions',last.label,{color:C.purple})}
+    </div>
+    ${chartBox('rc-help',210,'Share of Help-Seeking — AskCI vs Site Search','% of help-seeking sessions that chose AskCI')}
+    <div class="grid2">
+      ${chartBox('rc-vol',210,'Site Sessions vs Chatbot Sessions')}
+      ${chartBox('rc-srch',210,'Search Sessions vs Chatbot Sessions')}
+    </div>
+    <div class="card"><div class="card-title">Key Insight</div><div id="rc-ins"></div></div>
+  `;
+  const labels=months.map(m=>m.label);
+  // Hero — help-seeking share trend
+  mkChart('rc-help',{type:'line',data:{labels,datasets:[{label:'Help-seeking share',data:months.map(helpShare),borderColor:C.amber,backgroundColor:C.amber+'22',fill:true,borderWidth:2.5,pointRadius:3,pointHoverRadius:5,tension:.3}]},
+    options:mergeOpts(baseOpts(),{plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>c.parsed.y.toFixed(1)+'% of help-seeking sessions'}}},scales:{y:{ticks:{callback:v=>v+'%'}}}})});
+  // Volume — site (bars, left axis) vs chatbot (line, right axis); scales differ ~100×
+  mkChart('rc-vol',{type:'bar',data:{labels,datasets:[
+    {label:'Site sessions',data:months.map(m=>m.siteSess),backgroundColor:C.purple+'66',yAxisID:'y',order:2},
+    {label:'Chatbot sessions',data:months.map(m=>m.chatSess),type:'line',borderColor:C.green,backgroundColor:'transparent',borderWidth:2.5,pointRadius:3,tension:.3,yAxisID:'y2',order:1}]},
+    options:mergeOpts(baseOpts(),{plugins:{legend:{display:true},tooltip:{callbacks:{label:c=>`${c.dataset.label}: ${num(c.parsed.y)}`}}},scales:{y:{ticks:{callback:v=>num(v)}},y2:{position:'right',grid:{display:false},border:{display:false},ticks:{color:C.green,font:{size:10,family:'DM Mono'},callback:v=>num(v)}}}})});
+  // Search vs chatbot — sessions vs sessions (same axis, apples-to-apples)
+  mkChart('rc-srch',{type:'bar',data:{labels,datasets:[
+    {label:'Search sessions',data:months.map(m=>m.searchSess),backgroundColor:C.acc+'88'},
+    {label:'Chatbot sessions',data:months.map(m=>m.chatSess),backgroundColor:C.green+'aa'}]},
+    options:mergeOpts(baseOpts(),{plugins:{legend:{display:true},tooltip:{callbacks:{label:c=>`${c.dataset.label}: ${num(c.parsed.y)}`}}},scales:{y:{ticks:{callback:v=>num(v)}}}})});
+  // Insight — adoption story + the carefully-hedged substitution signal
+  const ins=[];
+  ins.push(insight('good',`<span class="hl-g">${helpShare(last).toFixed(1)}% of help-seeking sessions now use AskCI</span> (${last.label}), up from ${helpShare(months[0]).toFixed(1)}% in ${months[0].label}.`));
+  ins.push(insight('',`Against <em>all</em> site traffic, adoption is <span class="hl-b">${adoption(last).toFixed(2)}%</span> of sessions — small, because the site sees ${num(last.siteSess)} sessions/month, but climbing.`));
+  ins.push(insight('warn',`Chatbot usage rose sharply in <span class="hl-b">${infl.label}</span>${S.modalLabel?` (around the ${S.modalLabel} release)`:''}, while site search has declined gradually since ${months[0].label} (${num(months[0].searchSess)} → ${num(last.searchSess)} search sessions) — a trend that <b>predates the release</b>. Some substitution is plausible, but the data does not establish that AskCI caused it.`));
+  document.getElementById('rc-ins').innerHTML=ins.join('');
+}
+
 function renderUsage(D,S){
   const el=document.getElementById('pane-usage');
 
@@ -5387,6 +5484,7 @@ async function init(){
   let cr=null,ur=null;
   try{cr=await loadCSV('costs.csv')}catch(e){}
   try{ur=await loadCSV('usage.csv')}catch(e){}
+  await loadGa4Files(); // site-analytics for the Reach tab (graceful if absent)
   if(cr||ur)buildDashboard(cr,ur);
 }
 init();
