@@ -1274,6 +1274,8 @@ tr.event-row td{background:color-mix(in srgb,var(--amber) 6%,transparent)}
 .reach-hero{margin-bottom:var(--sp-4)}
 .reach-hero-num{font-family:'DM Mono',monospace;font-size:var(--t-2xl);font-weight:500;color:var(--text);line-height:1;font-variant-numeric:tabular-nums}
 .reach-hero-lbl{font-size:var(--t-md);color:var(--text);font-weight:600;margin-top:var(--sp-2)}
+.reach-hero-alt{font-size:var(--t-sm);color:var(--muted);margin-top:var(--sp-2);line-height:1.5;max-width:74ch;padding-left:var(--sp-3);border-left:2px solid color-mix(in srgb,var(--acc) 35%,transparent)}
+.reach-hero-alt b{color:var(--text);font-weight:600}
 .reach-hero-def{font-size:var(--t-xs);color:var(--muted);margin-top:var(--sp-2);line-height:1.5;max-width:74ch}
 .reach-delta{font-size:var(--t-sm);font-family:'DM Sans',sans-serif;font-weight:600;margin-left:var(--sp-3);vertical-align:middle}
 .reach-delta.up{color:var(--green)}
@@ -1850,6 +1852,14 @@ const COST_COL={fixed:'#8b949e',llm:'#6e9bff',other:'#c08cff'};
 // Azure bills this subscription in GBP; this is a display convenience, not a conversion
 // of the underlying data. Update if the rate drifts materially.
 const GBP_EUR=1.18;
+// Confirmed AskCI rollout milestones — drive the chart event markers AND the launch-impact
+// pre/post split. They override the heuristic "biggest day-over-day jump" detection, which
+// gets fooled by weekend→Monday spikes (it mislabelled 25 May; the modal actually went live
+// 11 May, with the answer-label change on 20 May). Falls back to the heuristic for other data.
+const KNOWN_EVENTS=[
+  {date:'2026-05-11',label:'Modal launch'},
+  {date:'2026-05-20',label:'Label change'},
+];
 const MON={'jan':1,'feb':2,'mar':3,'apr':4,'may':5,'jun':6,'jul':7,'aug':8,'sep':9,'oct':10,'nov':11,'dec':12};
 const MON_S=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
 function svcCol(s){return SVC_COL[s]||C.dim}
@@ -2219,7 +2229,11 @@ function analyse(costData,usageByDate){
   const jumps=[];
   for(let i=1;i<withQ.length;i++){const j=withQ[i].queries-withQ[i-1].queries;if(j>0)jumps.push({date:withQ[i].date,jump:j,label:fmtDate(withQ[i].date)});}
   jumps.sort((a,b)=>b.jump-a.jump);
-  const modalDate=jumps[0]?.date||null,fabDate=jumps[1]?.date||null;
+  // Prefer confirmed rollout dates (KNOWN_EVENTS) when they fall within the data; the
+  // heuristic jumps are only a fallback (they can be fooled by weekend→Monday spikes).
+  const inData=dt=>dt&&merged.some(d=>d.date===dt);
+  const modalDate=(KNOWN_EVENTS[0]&&inData(KNOWN_EVENTS[0].date))?KNOWN_EVENTS[0].date:(jumps[0]?.date||null);
+  const fabDate=(KNOWN_EVENTS[1]&&inData(KNOWN_EVENTS[1].date))?KNOWN_EVENTS[1].date:(jumps[1]?.date||null);
 
   const overlap=merged.filter(d=>d.queries>0&&d.total>0);
   const post=modalDate?overlap.filter(d=>d.date>=modalDate):overlap;
@@ -2672,8 +2686,9 @@ function cpqBreakdownHTML(D,S,pd,svcP,totSvc){
 // reliably across systems (not coloured emoji). Modal=bolt, Fab=arrow-up.
 function evLines(S,labels){
   const el=[];
-  if(S.modalDate&&labels.includes(fmtDate(S.modalDate)))el.push({label:fmtDate(S.modalDate),color:C.amber,text:'⌁ Modal'});
-  if(S.fabDate&&labels.includes(fmtDate(S.fabDate)))el.push({label:fmtDate(S.fabDate),color:C.purple,text:'↑ Fab'});
+  const evText=(d,fb)=>{const k=KNOWN_EVENTS.find(e=>e.date===d);return k?k.label:fb;};
+  if(S.modalDate&&labels.includes(fmtDate(S.modalDate)))el.push({label:fmtDate(S.modalDate),color:C.amber,text:'⌁ '+evText(S.modalDate,'Modal')});
+  if(S.fabDate&&labels.includes(fmtDate(S.fabDate)))el.push({label:fmtDate(S.fabDate),color:C.purple,text:'↑ '+evText(S.fabDate,'Label change')});
   // User-added annotations
   (PREFS.annotations||[]).forEach(a=>{
     const lbl=fmtDate(a.date);
@@ -4125,6 +4140,7 @@ function renderReach(D,S){
       <div class="reach-hero">
         <div class="reach-hero-num">${hs.toFixed(1)}%${months.length>1?dArrow(hs,hsFirst,1):''}</div>
         <div class="reach-hero-lbl">of information-seeking actions go through AskCI · ${last.label}</div>
+        <div class="reach-hero-alt">Put another way: AskCI handled <b>${last.searchEv>0?(last.chatQ/last.searchEv*100).toFixed(0):'—'}%</b> as many queries as site search this month (${num(last.chatQ)} questions vs ${num(last.searchEv)} searches) — the "% of search volume" framing used in management updates.</div>
         <div class="reach-hero-def">Each month, of every information-seeking action — a site search <em>or</em> a chatbot question — the share answered by AskCI rather than site search. Both are single actions, so it's a like-for-like comparison.</div>
       </div>
       <div class="chart-wrap" id="rc-help-wrap" style="height:250px"><canvas id="rc-help"></canvas></div>
