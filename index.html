@@ -1274,6 +1274,9 @@ tr.event-row td{background:color-mix(in srgb,var(--amber) 6%,transparent)}
 .reach-note{display:flex;align-items:center;gap:var(--sp-2);font-size:var(--t-xs);color:var(--muted);background:var(--s2);border:1px solid var(--b2);border-radius:var(--r-md);padding:7px var(--sp-3);margin-bottom:var(--sp-4);line-height:1.45}
 .reach-note [data-lucide]{color:var(--dim);width:14px;height:14px;flex-shrink:0}
 .reach-note b{color:var(--text);font-weight:600}
+.reach-foot{display:flex;align-items:flex-start;gap:var(--sp-2);font-size:var(--t-2xs);color:var(--dim);line-height:1.5;margin-top:var(--sp-2);padding:0 var(--sp-1)}
+.reach-foot [data-lucide]{color:var(--dim);width:13px;height:13px;flex-shrink:0;margin-top:1px}
+.reach-foot b{color:var(--muted);font-weight:600}
 .reach-hero{margin-bottom:var(--sp-4)}
 .reach-hero-num{font-family:'DM Mono',monospace;font-size:var(--t-2xl);font-weight:500;color:var(--text);line-height:1;font-variant-numeric:tabular-nums}
 .reach-hero-lbl{font-size:var(--t-md);color:var(--text);font-weight:600;margin-top:var(--sp-2)}
@@ -4165,6 +4168,7 @@ function renderReach(D,S){
       <div class="chart-wrap" id="rc-vol-wrap" style="height:220px"><canvas id="rc-vol"></canvas></div>
     </div>
     <div class="card"><div class="card-title">Key Insight</div><div id="rc-ins"></div></div>
+    <div class="reach-foot"><i data-lucide="info" class="i-sm"></i><span>"Site visits" here means <b>sessions</b> (one per visit, summed daily) — the right basis for adoption, which compares visits to AskCI use. The count of <b>unique people</b> over a period is lower, because GA4 deduplicates anyone who returns on multiple days (e.g. ~2.6M unique users Jan–May ≈ 17k/day, vs ~35k sessions/day).</span></div>
   `;
   const labels=months.map(m=>m.label);
   // Hero — two volume lines (searches vs questions) + information-seeking % as a soft area (right axis)
