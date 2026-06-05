@@ -2012,11 +2012,14 @@ function buildChartTable(id){
   if(!ch||!host)return;
   const labels=ch.data.labels||[];
   const datasets=ch.data.datasets||[];
-  // Format helpers per dataset (currency by default, raw for non-y axes)
+  // Format helpers per dataset — prefer the chart's *own* axis tick formatter so the
+  // table matches the chart exactly (£, %, counts, p/q, …). Falls back to the old
+  // currency-by-default heuristic only if the axis has no formatter.
   const fmtFor=ds=>{
     const yax=ds.yAxisID||'y';
+    const cb=ch.options&&ch.options.scales&&ch.options.scales[yax]&&ch.options.scales[yax].ticks&&ch.options.scales[yax].ticks.callback;
+    if(typeof cb==='function')return v=>{if(v==null)return'—';try{const r=cb(v);return(r==null||r==='')?String(v):r;}catch(e){return String(v);}};
     if(yax!=='y'&&yax!=='y2'&&yax!=='y1')return v=>v==null?'—':String(v);
-    // Question count axes typically use y2 in this dashboard
     if(yax==='y2')return v=>v==null?'—':num(v);
     return v=>v==null?'—':gbp(v,2);
   };
@@ -4072,8 +4075,8 @@ function drawRagConnectors(stageCosts){
 // ═══ REACH & ADOPTION (chatbot usage vs GA4 site analytics) ══════════
 function renderReach(D,S){
   const el=document.getElementById('pane-reach');
-  // Join chatbot days (DATA.merged) with GA4 by date, over the overlap only.
-  const days=D.merged.filter(d=>GA4[d.date]&&(d.queries>0||d.sessions>0));
+  // Join chatbot days with GA4 by date, over the overlap — respects the date-range filter.
+  const days=filterRange(D.merged).filter(d=>GA4[d.date]&&(d.queries>0||d.sessions>0));
   if(!hasGa4||!days.length){
     el.innerHTML=emptyState('globe','No site analytics loaded',
       `Add GA4 daily exports to the <code>ga4/</code> folder (<code>session-and-users.csv</code> and <code>searches-and-sessions.csv</code>) to compare chatbot usage against overall site traffic and search.`);
@@ -4090,45 +4093,48 @@ function renderReach(D,S){
   });
   const months=Object.values(M).sort((a,b)=>a.month.localeCompare(b.month));
   const last=months[months.length-1],prev=months.length>1?months[months.length-2]:null;
-  const helpShare=m=>(m.chatSess+m.searchSess)>0?m.chatSess/(m.chatSess+m.searchSess)*100:0;   // sessions-based hero
-  const adoption=m=>m.siteSess>0?m.chatSess/m.siteSess*100:0;
+  // Help-seeking share — action-level: of all info-seeking actions (searches carried
+  // out + questions asked), what share were chatbot questions. Apples-to-apples (both
+  // individual actions); tracks the session-based version closely but reads intuitively.
+  const helpShare=m=>(m.chatQ+m.searchEv)>0?m.chatQ/(m.chatQ+m.searchEv)*100:0;
+  const adoption=m=>m.siteSess>0?m.chatSess/m.siteSess*100:0;   // session-level (vs total site traffic)
   // Month of the steepest help-seeking jump (the adoption inflection)
   let infl=last,maxJump=-Infinity;
   for(let i=1;i<months.length;i++){const j=helpShare(months[i])-helpShare(months[i-1]);if(j>maxJump){maxJump=j;infl=months[i];}}
 
   el.innerHTML=`
     <div class="grid4" style="margin-bottom:14px">
-      ${kpi(helpShare(last).toFixed(1)+'%','Share of help-seeking',`AskCI vs site search · ${last.label}`,{color:C.amber,delta:prev?{curr:helpShare(last),prev:helpShare(prev)}:null})}
+      ${kpi(helpShare(last).toFixed(1)+'%','Share of help-seeking',`questions vs site searches · ${last.label}`,{color:C.amber,delta:prev?{curr:helpShare(last),prev:helpShare(prev)}:null})}
       ${kpi(adoption(last).toFixed(2)+'%','Adoption rate',`chat ÷ all site sessions · ${last.label}`,{color:C.acc,delta:prev?{curr:adoption(last),prev:adoption(prev)}:null})}
-      ${kpi(num(last.chatSess),'Chatbot sessions',last.label,{color:C.green})}
+      ${kpi(num(last.chatQ),'Questions asked',last.label,{color:C.green})}
       ${kpi(num(last.siteSess),'Site sessions',last.label,{color:C.purple})}
     </div>
-    ${chartBox('rc-help',210,'Share of Help-Seeking — AskCI vs Site Search','% of help-seeking sessions that chose AskCI')}
+    ${chartBox('rc-help',210,'Share of Help-Seeking — AskCI vs Site Search','% of info-seeking actions that chose AskCI')}
     <div class="grid2">
       ${chartBox('rc-vol',210,'Site Sessions vs Chatbot Sessions')}
-      ${chartBox('rc-srch',210,'Search Sessions vs Chatbot Sessions')}
+      ${chartBox('rc-srch',210,'Searches Carried Out vs Questions Asked')}
     </div>
     <div class="card"><div class="card-title">Key Insight</div><div id="rc-ins"></div></div>
   `;
   const labels=months.map(m=>m.label);
   // Hero — help-seeking share trend
   mkChart('rc-help',{type:'line',data:{labels,datasets:[{label:'Help-seeking share',data:months.map(helpShare),borderColor:C.amber,backgroundColor:C.amber+'22',fill:true,borderWidth:2.5,pointRadius:3,pointHoverRadius:5,tension:.3}]},
-    options:mergeOpts(baseOpts(),{plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>c.parsed.y.toFixed(1)+'% of help-seeking sessions'}}},scales:{y:{ticks:{callback:v=>v+'%'}}}})});
+    options:mergeOpts(baseOpts(),{plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>c.parsed.y.toFixed(1)+'% of info-seeking actions'}}},scales:{y:{ticks:{callback:v=>v+'%'}}}})});
   // Volume — site (bars, left axis) vs chatbot (line, right axis); scales differ ~100×
   mkChart('rc-vol',{type:'bar',data:{labels,datasets:[
     {label:'Site sessions',data:months.map(m=>m.siteSess),backgroundColor:C.purple+'66',yAxisID:'y',order:2},
     {label:'Chatbot sessions',data:months.map(m=>m.chatSess),type:'line',borderColor:C.green,backgroundColor:'transparent',borderWidth:2.5,pointRadius:3,tension:.3,yAxisID:'y2',order:1}]},
     options:mergeOpts(baseOpts(),{plugins:{legend:{display:true},tooltip:{callbacks:{label:c=>`${c.dataset.label}: ${num(c.parsed.y)}`}}},scales:{y:{ticks:{callback:v=>num(v)}},y2:{position:'right',grid:{display:false},border:{display:false},ticks:{color:C.green,font:{size:10,family:'DM Mono'},callback:v=>num(v)}}}})});
-  // Search vs chatbot — sessions vs sessions (same axis, apples-to-apples)
+  // Searches carried out vs questions asked — action vs action (same axis, apples-to-apples)
   mkChart('rc-srch',{type:'bar',data:{labels,datasets:[
-    {label:'Search sessions',data:months.map(m=>m.searchSess),backgroundColor:C.acc+'88'},
-    {label:'Chatbot sessions',data:months.map(m=>m.chatSess),backgroundColor:C.green+'aa'}]},
+    {label:'Searches carried out',data:months.map(m=>m.searchEv),backgroundColor:C.acc+'88'},
+    {label:'Questions asked',data:months.map(m=>m.chatQ),backgroundColor:C.green+'aa'}]},
     options:mergeOpts(baseOpts(),{plugins:{legend:{display:true},tooltip:{callbacks:{label:c=>`${c.dataset.label}: ${num(c.parsed.y)}`}}},scales:{y:{ticks:{callback:v=>num(v)}}}})});
   // Insight — adoption story + the carefully-hedged substitution signal
   const ins=[];
-  ins.push(insight('good',`<span class="hl-g">${helpShare(last).toFixed(1)}% of help-seeking sessions now use AskCI</span> (${last.label}), up from ${helpShare(months[0]).toFixed(1)}% in ${months[0].label}.`));
+  ins.push(insight('good',`<span class="hl-g">${helpShare(last).toFixed(1)}% of info-seeking actions now go through AskCI</span> (${last.label}) — ${num(last.chatQ)} questions vs ${num(last.searchEv)} site searches — up from ${helpShare(months[0]).toFixed(1)}% in ${months[0].label}.`));
   ins.push(insight('',`Against <em>all</em> site traffic, adoption is <span class="hl-b">${adoption(last).toFixed(2)}%</span> of sessions — small, because the site sees ${num(last.siteSess)} sessions/month, but climbing.`));
-  ins.push(insight('warn',`Chatbot usage rose sharply in <span class="hl-b">${infl.label}</span>${S.modalLabel?` (around the ${S.modalLabel} release)`:''}, while site search has declined gradually since ${months[0].label} (${num(months[0].searchSess)} → ${num(last.searchSess)} search sessions) — a trend that <b>predates the release</b>. Some substitution is plausible, but the data does not establish that AskCI caused it.`));
+  ins.push(insight('warn',`Chatbot usage rose sharply in <span class="hl-b">${infl.label}</span>${S.modalLabel?` (around the ${S.modalLabel} release)`:''}, while site searches have declined gradually since ${months[0].label} (${num(months[0].searchEv)} → ${num(last.searchEv)} searches) — a trend that <b>predates the release</b>. Some substitution is plausible, but the data does not establish that AskCI caused it.`));
   document.getElementById('rc-ins').innerHTML=ins.join('');
 }
 
