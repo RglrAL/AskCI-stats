@@ -1932,7 +1932,38 @@ const crosshairPlugin={
     chart._cxX=e.x;chart.draw();
   }
 };
-Chart.register(eventLinesPlugin,crosshairPlugin);
+// Dumbbell dots: draws a site dot + an AskCI dot (sized by volume) on each floating
+// connector bar. Reads chart.config.options.dumbbell = {rows, site, askci, bg}.
+const dumbbellPlugin={
+  id:'dumbbell',
+  afterDatasetsDraw(chart){
+    const cfg=chart.config.options.dumbbell; if(!cfg)return;
+    try{
+      const ctx=chart.ctx, xs=chart.scales.x, meta=chart.getDatasetMeta(0);
+      const maxC=Math.max(...cfg.rows.map(r=>r.cit))||1;
+      cfg.rows.forEach((r,i)=>{
+        const bar=meta.data[i]; if(!bar)return;
+        const yp=bar.y, rad=4+Math.sqrt(r.cit/maxC)*5;
+        const dot=(val,col)=>{ctx.beginPath();ctx.arc(xs.getPixelForValue(val),yp,rad,0,Math.PI*2);ctx.fillStyle=col;ctx.fill();ctx.lineWidth=1.5;ctx.strokeStyle=cfg.bg;ctx.stroke();};
+        dot(r.viewShare,cfg.site); dot(r.citShare,cfg.askci);
+      });
+    }catch(e){}
+  }
+};
+// Bubble labels: labels the larger bubbles on the demand map. Reads options.catLabels.
+const bubbleLabelPlugin={
+  id:'bubbleLabels',
+  afterDatasetsDraw(chart){
+    const rows=chart.config.options.catLabels; if(!rows)return;
+    try{
+      const ctx=chart.ctx, meta=chart.getDatasetMeta(1); if(!meta)return;
+      ctx.save();ctx.font="600 9px 'DM Sans'";ctx.fillStyle=C.muted;ctx.textBaseline='middle';ctx.textAlign='left';
+      rows.forEach((r,i)=>{const pt=meta.data[i]; if(!pt||r.citShare<2)return; ctx.fillText(r.label,pt.x+(pt.options.radius||5)+3,pt.y);});
+      ctx.restore();
+    }catch(e){}
+  }
+};
+Chart.register(eventLinesPlugin,crosshairPlugin,dumbbellPlugin,bubbleLabelPlugin);
 
 // ═══ CHART HELPERS ══════════════════════════════════════════════════
 const charts={};
@@ -4258,37 +4289,48 @@ function renderCategories(D,S){
   if(!universe.length){el.innerHTML=emptyState('shapes','No overlapping category data','Citation and site-view categories don\'t overlap in this range.');renderIcons();return;}
   const totC=universe.reduce((a,s)=>a+cite[s],0),totV=universe.reduce((a,s)=>a+view[s],0);
   let rows=universe.map(s=>{const cs=cite[s]/totC*100,vs=view[s]/totV*100;return{slug:s,label:catLabel(s),cit:cite[s],citShare:cs,viewShare:vs,index:vs>0?cs/vs:0};});
-  rows.sort((a,b)=>b.citShare-a.citShare); // biggest chatbot categories first
-  // Direction-aware, volume-gated callouts (~3% floor on the relevant side).
-  const FLOOR=3.0;
-  const over=rows.filter(r=>r.citShare>=FLOOR&&r.index>1.15).sort((a,b)=>b.index-a.index).slice(0,3);
-  const under=rows.filter(r=>r.viewShare>=FLOOR&&r.index<0.87).sort((a,b)=>a.index-b.index).slice(0,3);
-  const fmtL=arr=>arr.map(r=>`${r.label} (${r.index.toFixed(1)}×)`).join(', ');
+  rows.forEach(r=>r.gap=r.citShare-r.viewShare); // percentage-point gap (chat − browse)
+  const biggest=[...rows].sort((a,b)=>b.citShare-a.citShare)[0];
+  const dumb=[...rows].sort((a,b)=>Math.abs(b.gap)-Math.abs(a.gap)); // biggest preference gaps first
+  // Callouts driven by pp-gap (operationally weighted), not the ratio.
+  const chatPref=[...rows].filter(r=>r.gap>0.5).sort((a,b)=>b.gap-a.gap).slice(0,3);
+  const browsePref=[...rows].filter(r=>r.gap<-0.5).sort((a,b)=>a.gap-b.gap).slice(0,3);
+  const fmtPP=arr=>arr.map(r=>`${r.label} (${r.gap>=0?'+':''}${r.gap.toFixed(1)}pp)`).join(', ');
+  const cardBg=(getComputedStyle(document.documentElement).getPropertyValue('--s2').trim())||C.s2||'#141b27';
 
   el.innerHTML=`
     <div class="card"><div class="card-title">What topics drive AskCI use vs site browsing</div><div id="cat-ins"></div></div>
-    ${chartBox('cat-bars',Math.max(300,rows.length*40),'Share of demand by category — AskCI vs Site','sorted by AskCI share')}
-    ${chartBox('cat-index',Math.max(260,rows.length*30),'Over- / Under-index (AskCI share ÷ site share)','1× = used in chat as much as it\'s browsed')}
-    <div class="reach-foot"><i data-lucide="info" class="i-sm"></i><span>Shares are across <b>matched Citizens Information content categories only</b> (homepage, search, news & utility pages excluded). One question can cite several categories, so citations are a <b>proxy for topic demand</b>, not a question count. The index reflects <b>relative preference</b> (chat vs browse), not chatbot quality.</span></div>
+    ${chartBox('cat-dumbbell',Math.max(300,dumb.length*32),'Where users prefer AskCI vs the site — by category','AskCI citation share (green) vs site browsing share (purple) · sorted by gap')}
+    ${chartBox('cat-map',440,'Demand map — AskCI vs site share','bubble size = volume · above the line = chat-preferred, below = browse-preferred')}
+    <div class="reach-foot"><i data-lucide="info" class="i-sm"></i><span>Shares are across <b>matched Citizens Information content categories only</b> (homepage, search, news & utility pages excluded). One question can cite several categories, so citations are a <b>proxy for topic demand</b>, not a question count. Gaps reflect <b>relative preference</b> (chat vs browse), not chatbot quality.</span></div>
   `;
-  const labels=rows.map(r=>r.label);
-  const hOpts=valTick=>({responsive:true,maintainAspectRatio:false,indexAxis:'y',animation:{duration:350},interaction:{mode:'index',intersect:false},
-    plugins:{legend:{display:false},tooltip:{backgroundColor:C.s1,titleColor:C.text,bodyColor:C.muted,borderColor:C.border,borderWidth:1,padding:10,cornerRadius:6,titleFont:{family:'DM Sans',size:12,weight:'600'},bodyFont:{family:'DM Mono',size:11}}},
-    scales:{x:{grid:{color:C.border+'1a',drawTicks:false},border:{display:false},ticks:{color:C.muted,font:{size:10,family:'DM Mono'},callback:valTick}},
-      y:{grid:{display:false},border:{color:C.border+'4d'},ticks:{color:C.muted,font:{size:11,family:'DM Sans'},autoSkip:false}}}});
-  // Hero — paired horizontal share bars
-  mkChart('cat-bars',{type:'bar',data:{labels,datasets:[
-    {label:'AskCI share',data:rows.map(r=>+r.citShare.toFixed(1)),backgroundColor:C.green+'cc',borderRadius:2,maxBarThickness:13},
-    {label:'Site share',data:rows.map(r=>+r.viewShare.toFixed(1)),backgroundColor:C.purple+'aa',borderRadius:2,maxBarThickness:13}]},
-    options:mergeOpts(hOpts(v=>v+'%'),{plugins:{legend:{display:true,position:'bottom',align:'start',labels:{color:C.muted,font:{size:11,family:'DM Sans'},boxWidth:8,boxHeight:8,padding:12,usePointStyle:true,pointStyle:'rectRounded'}},tooltip:{callbacks:{label:c=>`${c.dataset.label}: ${c.parsed.x.toFixed(1)}%`}}}})});
-  // Secondary — over/under-index, colour-coded, share shown in tooltip
-  mkChart('cat-index',{type:'bar',data:{labels,datasets:[{label:'Index',data:rows.map(r=>+r.index.toFixed(2)),backgroundColor:rows.map(r=>r.index>=1?C.green+'cc':C.amber+'cc'),borderRadius:2,maxBarThickness:16}]},
-    options:mergeOpts(hOpts(v=>v+'×'),{plugins:{tooltip:{callbacks:{label:c=>{const r=rows[c.dataIndex];return `${r.index.toFixed(2)}× · AskCI ${r.citShare.toFixed(1)}% vs Site ${r.viewShare.toFixed(1)}%`;}}}}})});
-  // Callouts — gated + reframed as behavioural preference, not performance
+  // ── Hero: dumbbell (thin connector bar + two dots drawn by the dumbbell plugin) ──
+  mkChart('cat-dumbbell',{type:'bar',data:{labels:dumb.map(r=>r.label),datasets:[{
+    data:dumb.map(r=>[Math.min(r.viewShare,r.citShare),Math.max(r.viewShare,r.citShare)]),
+    backgroundColor:C.dim+'55',maxBarThickness:3,borderSkipped:false}]},
+    options:{responsive:true,maintainAspectRatio:false,indexAxis:'y',animation:{duration:350},interaction:{mode:'index',intersect:false},layout:{padding:{right:12}},
+      plugins:{legend:{display:false},tooltip:{backgroundColor:C.s1,titleColor:C.text,bodyColor:C.muted,borderColor:C.border,borderWidth:1,padding:10,cornerRadius:6,titleFont:{family:'DM Sans',size:12,weight:'600'},bodyFont:{family:'DM Mono',size:11},
+        callbacks:{title:items=>dumb[items[0].dataIndex].label,label:c=>{const r=dumb[c.dataIndex];return [`AskCI ${r.citShare.toFixed(1)}%   Site ${r.viewShare.toFixed(1)}%`,`Gap ${r.gap>=0?'+':''}${r.gap.toFixed(1)}pp · ${r.gap>=0?'chat':'browse'}-leaning`,`${num(r.cit)} citations`];}}}},
+      scales:{x:{min:0,grid:{color:C.border+'1a',drawTicks:false},border:{display:false},ticks:{color:C.muted,font:{size:10,family:'DM Mono'},callback:v=>v+'%'}},
+        y:{grid:{display:false},border:{color:C.border+'4d'},ticks:{color:C.muted,font:{size:11,family:'DM Sans'},autoSkip:false}}},
+      dumbbell:{rows:dumb,site:C.purple,askci:C.green,bg:cardBg}}});
+  // ── Secondary: demand map (bubble + parity line; labels drawn by bubbleLabel plugin) ──
+  const maxC2=Math.max(...rows.map(r=>r.cit))||1, maxS=Math.max(...rows.map(r=>Math.max(r.citShare,r.viewShare)))*1.1;
+  mkChart('cat-map',{data:{datasets:[
+    {type:'line',label:'parity',data:[{x:0,y:0},{x:maxS,y:maxS}],borderColor:C.dim+'88',borderDash:[5,4],borderWidth:1,pointRadius:0,fill:false,order:2},
+    {type:'bubble',data:rows.map(r=>({x:r.viewShare,y:r.citShare,r:5+Math.sqrt(r.cit/maxC2)*15})),
+      backgroundColor:rows.map(r=>(r.citShare>=r.viewShare?C.green:C.amber)+'88'),borderColor:rows.map(r=>r.citShare>=r.viewShare?C.green:C.amber),borderWidth:1.5,order:1}]},
+    options:{responsive:true,maintainAspectRatio:false,animation:{duration:350},
+      plugins:{legend:{display:false},tooltip:{backgroundColor:C.s1,titleColor:C.text,bodyColor:C.muted,borderColor:C.border,borderWidth:1,padding:10,cornerRadius:6,bodyFont:{family:'DM Mono',size:11},
+        callbacks:{label:c=>{if(c.datasetIndex===0)return'';const r=rows[c.dataIndex];return `${r.label}: AskCI ${r.citShare.toFixed(1)}% vs Site ${r.viewShare.toFixed(1)}% · ${r.index.toFixed(2)}× · ${num(r.cit)} cit`;}}}},
+      scales:{x:{min:0,max:maxS,title:{display:true,text:'Site browsing share',color:C.muted,font:{size:11,family:'DM Sans'}},grid:{color:C.border+'1a'},ticks:{color:C.muted,font:{size:10,family:'DM Mono'},callback:v=>v+'%'}},
+        y:{min:0,max:maxS,title:{display:true,text:'AskCI citation share',color:C.muted,font:{size:11,family:'DM Sans'}},grid:{color:C.border+'1a'},ticks:{color:C.muted,font:{size:10,family:'DM Mono'},callback:v=>v+'%'}}},
+      catLabels:rows}});
+  // ── Callouts: pp-gap based, scale-aware, behavioural framing ──
   const ins=[];
-  if(over.length)ins.push(insight('good',`<span class="hl-g">AskCI over-indexes on ${fmtL(over)}</span> — users lean on the bot for these more than they browse them (typically complex, conditional or exploratory topics).`));
-  if(under.length)ins.push(insight('',`<span class="hl-b">Users currently favour browsing over AskCI</span> for ${fmtL(under)} — a behavioural difference (often quick "known-item" lookups), and a potential adoption opportunity rather than a content gap.`));
-  ins.push(insight('',`Biggest share of AskCI demand is <b>${rows[0].label}</b> at ${rows[0].citShare.toFixed(0)}% — read the index alongside share, since a small category can show a large multiple.`));
+  if(chatPref.length)ins.push(insight('good',`<span class="hl-g">Strongest AskCI preference:</span> ${fmtPP(chatPref)} — users choose the bot over browsing for these (gap in share of demand).`));
+  if(browsePref.length)ins.push(insight('',`<span class="hl-b">Strongest browsing preference:</span> ${fmtPP(browsePref)} — users still favour the site here (often quick "known-item" lookups) — an adoption opportunity, not a content gap.`));
+  ins.push(insight('',`Biggest slice of AskCI demand is <b>${biggest.label}</b> (${biggest.citShare.toFixed(0)}% of citations). Gaps are shown in <b>percentage points</b> — a fairer read than the ratio, which can spike on small categories.`));
   document.getElementById('cat-ins').innerHTML=ins.join('');
 }
 
