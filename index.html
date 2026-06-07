@@ -4323,8 +4323,8 @@ function renderCategories(D,S){
       ${chartBox('cat-view',rowH,'Site views by category','what people browse most · same order as left')}
     </div>
     ${chartBox('cat-month',300,'AskCI citations by month, by topic','how topic demand is growing — top topics + Other')}
-    ${chartBox('cat-dumbbell',Math.max(300,dumb.length*32),'Where users prefer AskCI vs the site','each category\'s share of AskCI questions (green) vs site browsing (purple) — far apart = a strong lean')}
-    ${chartBox('cat-gap',Math.max(300,rows.length*32),'Preference gap by category (percentage points)','right = chat-preferred · left = browse-preferred · 0 = parity')}
+    ${chartBox('cat-dumbbell',Math.max(300,dumb.length*32),'Topic mix — AskCI citations vs site browsing','share of AskCI citations (green) vs site views (purple) — far apart = the mix differs')}
+    ${chartBox('cat-gap',Math.max(300,rows.length*32),'Topic-mix gap by category (percentage points)','right = more AskCI-weighted · left = more site-weighted · 0 = parity')}
     <div class="card"><div class="card-title">What this tells us</div><div id="cat-ins"></div></div>
     <div class="reach-foot"><i data-lucide="info" class="i-sm"></i><span>Shares are across <b>matched Citizens Information content categories only</b> (homepage, search, news & utility pages excluded). One question can cite several categories, so citations are a <b>proxy for topic demand</b>, not a question count. Gaps reflect <b>relative preference</b> (chat vs browse), not chatbot quality.</span></div>
   `;
@@ -4350,7 +4350,7 @@ function renderCategories(D,S){
     backgroundColor:C.dim+'55',maxBarThickness:3,borderSkipped:false}]},
     options:{responsive:true,maintainAspectRatio:false,indexAxis:'y',animation:{duration:350},interaction:{mode:'index',intersect:false},layout:{padding:{right:12}},
       plugins:{legend:{display:false},tooltip:{backgroundColor:C.s1,titleColor:C.text,bodyColor:C.muted,borderColor:C.border,borderWidth:1,padding:10,cornerRadius:6,titleFont:{family:'DM Sans',size:12,weight:'600'},bodyFont:{family:'DM Mono',size:11},
-        callbacks:{title:items=>dumb[items[0].dataIndex].label,label:c=>{const r=dumb[c.dataIndex];return [`AskCI ${r.citShare.toFixed(1)}%   Site ${r.viewShare.toFixed(1)}%`,`Gap ${r.gap>=0?'+':''}${r.gap.toFixed(1)}pp · ${r.gap>=0?'chat':'browse'}-leaning`,`${num(r.cit)} citations`];}}}},
+        callbacks:{title:items=>dumb[items[0].dataIndex].label,label:c=>{const r=dumb[c.dataIndex];return [`AskCI ${r.citShare.toFixed(1)}%   Site ${r.viewShare.toFixed(1)}%`,`Gap ${r.gap>=0?'+':''}${r.gap.toFixed(1)}pp · more ${r.gap>=0?'AskCI':'site'}-weighted`,`${num(r.cit)} citations`];}}}},
       scales:{x:{min:0,grid:{color:C.border+'1a',drawTicks:false},border:{display:false},ticks:{color:C.muted,font:{size:10,family:'DM Mono'},callback:v=>v+'%'}},
         y:{grid:{display:false},border:{color:C.border+'4d'},ticks:{color:C.muted,font:{size:11,family:'DM Sans'},autoSkip:false}}},
       dumbbell:{rows:dumb,site:C.purple,askci:C.green,bg:cardBg}}});
@@ -4361,13 +4361,13 @@ function renderCategories(D,S){
     backgroundColor:gaps.map(r=>(r.gap>=0?C.green:C.amber)+'cc'),borderRadius:2,maxBarThickness:16}]},
     options:{responsive:true,maintainAspectRatio:false,indexAxis:'y',animation:{duration:350},interaction:{mode:'index',intersect:false},
       plugins:{legend:{display:false},tooltip:{backgroundColor:C.s1,titleColor:C.text,bodyColor:C.muted,borderColor:C.border,borderWidth:1,padding:10,cornerRadius:6,titleFont:{family:'DM Sans',size:12,weight:'600'},bodyFont:{family:'DM Mono',size:11},
-        callbacks:{title:items=>gaps[items[0].dataIndex].label,label:c=>{const r=gaps[c.dataIndex];return [`${r.gap>=0?'+':''}${r.gap.toFixed(1)}pp · ${r.gap>=0?'chat':'browse'}-leaning`,`AskCI ${r.citShare.toFixed(1)}%   Site ${r.viewShare.toFixed(1)}%   ${r.index.toFixed(2)}×`,`${num(r.cit)} citations`];}}}},
+        callbacks:{title:items=>gaps[items[0].dataIndex].label,label:c=>{const r=gaps[c.dataIndex];return [`${r.gap>=0?'+':''}${r.gap.toFixed(1)}pp · more ${r.gap>=0?'AskCI':'site'}-weighted`,`AskCI ${r.citShare.toFixed(1)}%   Site ${r.viewShare.toFixed(1)}%   ${r.index.toFixed(2)}×`,`${num(r.cit)} citations`];}}}},
       scales:{x:{grid:{color:C.border+'1a',drawTicks:false},border:{display:false},ticks:{color:C.muted,font:{size:10,family:'DM Mono'},callback:v=>(v>0?'+':'')+v+'pp'}},
         y:{grid:{display:false},border:{color:C.border+'4d'},ticks:{color:C.muted,font:{size:11,family:'DM Sans'},autoSkip:false}}}}});
   // ── Callouts: pp-gap based, scale-aware, behavioural framing ──
   const ins=[];
-  if(chatPref.length)ins.push(insight('good',`<span class="hl-g">Strongest AskCI preference:</span> ${fmtPP(chatPref)} — users choose the bot over browsing for these (gap in share of demand).`));
-  if(browsePref.length)ins.push(insight('',`<span class="hl-b">Strongest browsing preference:</span> ${fmtPP(browsePref)} — users still favour the site here (often quick "known-item" lookups) — an adoption opportunity, not a content gap.`));
+  if(chatPref.length)ins.push(insight('good',`<span class="hl-g">Over-represented in AskCI (vs site):</span> ${fmtPP(chatPref)} — these topics are a bigger share of AskCI's cited content than of site browsing.`));
+  if(browsePref.length)ins.push(insight('',`<span class="hl-b">Over-represented on the site (vs AskCI):</span> ${fmtPP(browsePref)} — a bigger share of site browsing than of AskCI citations (often quick "known-item" lookups) — a potential adoption opportunity.`));
   ins.push(insight('',`Biggest slice of AskCI demand is <b>${biggest.label}</b> (${biggest.citShare.toFixed(0)}% of citations). Gaps are shown in <b>percentage points</b> — a fairer read than the ratio, which can spike on small categories.`));
   document.getElementById('cat-ins').innerHTML=ins.join('');
 }
