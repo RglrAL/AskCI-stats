@@ -1510,8 +1510,8 @@ input[type=date]{color-scheme:dark}
 .ask-topn-bar{flex:1;height:8px;background:var(--s1);border-radius:4px;overflow:hidden}
 .ask-topn-bar>span{display:block;height:100%;background:var(--acc);border-radius:4px}
 .ask-topn-val{flex-shrink:0;font-family:'DM Mono',monospace;font-variant-numeric:tabular-nums;font-size:var(--t-sm);min-width:62px;text-align:right}
-.ask-mic{background:none;border:none;color:var(--muted);cursor:pointer;padding:6px;border-radius:var(--r-sm);display:flex;align-items:center;transition:color .15s,background .15s;flex-shrink:0}
-.ask-mic:hover{color:var(--text);background:var(--s2)}
+.ask-mic{background:color-mix(in srgb,var(--acc) 12%,transparent);border:1px solid color-mix(in srgb,var(--acc) 28%,transparent);color:var(--acc);cursor:pointer;padding:9px;border-radius:50%;display:flex;align-items:center;transition:color .15s,background .15s,transform .12s;flex-shrink:0}
+.ask-mic:hover{color:var(--acc-2);background:color-mix(in srgb,var(--acc) 22%,transparent);transform:scale(1.08)}
 .ask-mic.listening{color:var(--red);animation:askMicPulse 1.2s ease-in-out infinite}
 @keyframes askMicPulse{0%,100%{opacity:1}50%{opacity:.35}}
 @media(max-width:760px){
@@ -1584,7 +1584,7 @@ Date,Questions,Sessions
         <i data-lucide="sparkles" class="i-sm" aria-hidden="true"></i>
         <input id="ask-input" type="text" aria-label="Ask a question about your data"
                placeholder="Ask… e.g. “how much did we spend in January 2026”">
-        <button type="button" class="ask-mic" id="ask-mic" aria-label="Ask by voice" title="Ask by voice" style="display:none"><i data-lucide="mic" class="i-sm"></i></button>
+        <button type="button" class="ask-mic" id="ask-mic" aria-label="Ask by voice" title="Ask by voice" style="display:none"><i data-lucide="mic" class="i-lg"></i></button>
         <button type="submit" class="ask-go" id="ask-go">Ask</button>
       </form>
       <div id="ask-chips"></div>
