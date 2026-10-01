@@ -1,0 +1,5 @@
+# macOS
+.DS_Store
+
+# QA feed exports hold citizens' questions — never commit them
+qa-feed*.csv
