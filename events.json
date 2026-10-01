@@ -1,0 +1,51 @@
+{
+  "_comment": "Shared AskCI events. Only status=confirmed events draw on charts. Personal markers added in the dashboard popover stay in the browser and are never written here. Fields: start (YYYY-MM-DD or YYYY-MM), end (optional), kind (model | launch | chips | observed change | other), status (confirmed | candidate | rejected), evidence, applies_to, title, detail.",
+  "events": [
+    {
+      "start": "2026-03-09",
+      "end": "2026-03-10",
+      "kind": "model",
+      "status": "confirmed",
+      "evidence": "Azure billing export",
+      "applies_to": "Foundry Models",
+      "title": "Model change: gpt-4o retired, GPT 5 Mini and GPT 5 added",
+      "detail": "gpt-4o 1120 and gpt-4o-mini 0718 last billed 9 Mar; GPT 5 Mini first billed 9 Mar; GPT 5 first billed 10 Mar."
+    },
+    {
+      "start": "2026-05",
+      "kind": "observed change",
+      "status": "confirmed",
+      "evidence": "Azure billing export",
+      "applies_to": "Azure Cognitive Search",
+      "title": "Search S1 daily cost steps from about £6 to about £11",
+      "detail": "Capacity increase suspected, unconfirmed."
+    },
+    {
+      "start": "2026-05-11",
+      "kind": "launch",
+      "status": "candidate",
+      "evidence": "old dashboard KNOWN_EVENTS",
+      "applies_to": "AskCI",
+      "title": "Modal launch",
+      "detail": "The admin-app spec assumes 1 May; confirm with OGCIO."
+    },
+    {
+      "start": "2026-05-20",
+      "kind": "chips",
+      "status": "candidate",
+      "evidence": "old dashboard KNOWN_EVENTS",
+      "applies_to": "AskCI",
+      "title": "Label change",
+      "detail": "Meaning to confirm."
+    },
+    {
+      "start": "2026-07-01",
+      "kind": "model",
+      "status": "confirmed",
+      "evidence": "Azure billing export",
+      "applies_to": "Foundry Models",
+      "title": "Model change: GPT 5 Chat retired, chat-latest 05052026 added",
+      "detail": "GPT 5 Chat last billed 30 Jun; chat-latest 05052026 first billed 1 Jul."
+    }
+  ]
+}
