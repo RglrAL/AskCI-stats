@@ -184,17 +184,18 @@ Dates are in the feed's own timezone, which is unconfirmed; note that in the fil
 3. The admin app's front-end stack, which decides how much of this file's component work can be reused rather than re-implemented.
 4. Whether a monthly spend target exists on CIB's side, which decides whether the target feature is a self-set tripwire or a real budget line.
 
-## 11. Implementation status (1 Oct 2026, first pass)
+## 11. Implementation status (1 Oct 2026)
 
-Done in `index.html` (config version `2026.10.01-1`) and `events.json`:
+Done in `index.html` (config version `2026.10.01-1`), `events.json` and `tools/make_usage.py`:
 
 - Section 2, all eleven defects: full-row de-duplication with the count reported; one meter-based classification in `CONFIG`; cache savings and the ×3 ratio removed; one forecast function (`forecastSpan` / `forecastMonth` / `runRate30`) used by the hero, KPI row, Ask bar and report; ROI grid, "cheaper per question" and launch narrative removed; Scenario planner demoted with assumptions stated and no break-even volume; launch heuristic removed; anomaly detection replaced by What changed; browser-side API key and model call removed; date validation with refusal above 1% bad dates; lucide pinned to 1.49.0.
 - Section 4: `CONFIG`, ingest, join window, per-turn metrics (sum then divide, validity thresholds), What changed, forecast.
 - Section 5: `events.json` seeded as specified; detected model events shown in the Events popover and drawn nowhere; personal markers dashed.
-- Section 6, partly: data-quality strip; Before / after table replaces Launch impact; resource inventory with scope and region added to Services. The tab regrouping (Cost: Summary | Services | Models) is deferred; the current Overview + Costs (Trend, Services, Models) + Usage + Scenario planner grouping carries the same content.
+- Section 6: tabs regrouped into Cost (Summary | Services | Models), Usage (Volume | Before / after, plus Reach and Categories only when their files are present; the whole group only when `usage.csv` is loaded) and Scenario planner last. Summary carries the hero, KPI row, the cost timeline with a by-service / fixed-variable-unclassified toggle, What changed and the day table. Services carries the scope toggle (service / admin / shared), the resource inventory with region and the RAG stages. Data-quality strip on every pane.
+- Section 7: `tools/make_usage.py` reproduces the usage file from QA feed exports (`--compare` checks against an existing file without writing).
 - Section 8: all acceptance checks pass on the frozen file, with two corrections to the table: the proposed dedup key `date|resourceId|meter|rawCost` removes 87 Azure Monitor email rows that differ only by region (value £0.0016), so the implementation de-duplicates on the full row; March generation cost per turn is 0.76p, not 0.73p; "other" is £67.36 by rounding.
 
-Not done:
+Open:
 
-- Section 7: `usage.csv` is not regenerated from the QA feed (the local feed stops at 7 June; the file in the repo runs to 13 September). The parser now accepts the file's "Sept" dates, which the old parser silently dropped.
-- Section 6 tab regrouping and the service / admin / shared scope toggle on charts (scope is computed and shown in the inventory only).
+- `usage.csv` has not been regenerated. The only feed export in the repo covers 6–7 June 2026 (exported 08:13 on 7 June), and for 6 June it yields 398 turns and 167 conversations against 465 and 193 in the current file. Either the current file comes from the old analytics or the feed export is filtered; this needs a full feed export and a decision before the file is replaced. The parser now accepts the file's "Sept" dates, which the old parser silently dropped.
+- The open questions in section 10 are unchanged.

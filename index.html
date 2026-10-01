@@ -1671,8 +1671,7 @@ Date,Questions,Sessions
 
     <div class="tabs-wrap" id="tabs-wrap">
     <div class="tabs" role="tablist">
-      <button class="tab-btn active" data-tab="overview"    role="tab" aria-selected="true"><i data-lucide="layout-grid" class="i-sm"></i>Overview</button>
-      <button class="tab-btn"        data-tab="costs"       role="tab" aria-selected="false"><i data-lucide="wallet"      class="i-sm"></i>Costs</button>
+      <button class="tab-btn active" data-tab="costs"       role="tab" aria-selected="true"><i data-lucide="wallet"      class="i-sm"></i>Cost</button>
       <button class="tab-btn"        data-tab="usage"       role="tab" aria-selected="false"><i data-lucide="users"       class="i-sm"></i>Usage</button>
       <button class="tab-btn"        data-tab="projections" role="tab" aria-selected="false"><i data-lucide="sparkles"    class="i-sm"></i>Scenario planner</button>
     </div>
@@ -2855,26 +2854,32 @@ document.querySelectorAll('#gran-group .pill').forEach(b=>b.addEventListener('cl
 // just organise how they're reached. Sub-ids match the original tab ids, so
 // persisted PREFS.tab values keep working with no migration.
 const TAB_GROUPS=[
-  {id:'overview',   label:'Overview',    icon:'layout-grid', subs:[{id:'overview',label:'Overview',icon:'layout-grid'}]},
-  {id:'costs',      label:'Costs',       icon:'wallet',      subs:[
-    {id:'timeline', label:'Trend',    icon:'calendar'},
+  {id:'costs',      label:'Cost',        icon:'wallet',      subs:[
+    {id:'overview', label:'Summary',  icon:'layout-grid'},
     {id:'breakdown',label:'Services', icon:'microscope'},
     {id:'llm',      label:'Models',   icon:'bot'}]},
-  {id:'usage',      label:'Usage',       icon:'users',       subs:[
+  // Usage is optional: shown only when usage.csv is loaded; Reach / Categories only when their files are present.
+  {id:'usage',      label:'Usage',       icon:'users',       when:()=>!!(DATA&&DATA.hasUsage), subs:[
     {id:'usage',    label:'Volume',        icon:'users'},
-    {id:'reach',    label:'Reach',         icon:'globe'},
-    {id:'categories',label:'Categories',   icon:'shapes'},
-    {id:'impact',   label:'Before / after', icon:'git-compare'}]},
+    {id:'impact',   label:'Before / after',icon:'git-compare'},
+    {id:'reach',    label:'Reach',         icon:'globe',  when:()=>hasGa4},
+    {id:'categories',label:'Categories',   icon:'shapes', when:()=>hasCats}]},
   {id:'projections',label:'Scenario planner', icon:'sparkles',    subs:[{id:'projections',label:'Scenario planner',icon:'sparkles'}]},
 ];
+const subAvailable=sb=>!sb.when||sb.when();
+const groupAvailable=g=>(!g.when||g.when())&&g.subs.some(subAvailable);
+function syncTabVisibility(){
+  document.querySelectorAll('.tab-btn[data-tab]').forEach(b=>{const g=TAB_GROUPS.find(x=>x.id===b.dataset.tab);b.style.display=(g&&groupAvailable(g))?'':'none';});
+}
 function groupOf(subId){return TAB_GROUPS.find(g=>g.subs.some(s=>s.id===subId));}
 const groupLastSub={}; // remembers the last sub-view visited within each group
 
 function renderSubnav(group,activeSubId){
   const el=document.getElementById('subnav');if(!el)return;
-  if(!group||group.subs.length<2){el.style.display='none';el.innerHTML='';return;}
+  const subs=group?group.subs.filter(subAvailable):[];
+  if(!group||subs.length<2){el.style.display='none';el.innerHTML='';return;}
   el.style.display='';
-  el.innerHTML='<div class="pill-group">'+group.subs.map(s=>{
+  el.innerHTML='<div class="pill-group">'+subs.map(s=>{
     const on=s.id===activeSubId;
     return `<button class="pill${on?' active':''}" data-sub="${s.id}" role="tab" aria-selected="${on}"><i data-lucide="${s.icon}" class="i-sm"></i>${s.label}</button>`;
   }).join('')+'</div>';
@@ -2883,7 +2888,9 @@ function renderSubnav(group,activeSubId){
 // Activate a sub-view (e.g. 'timeline'): sets the owning group's tab active,
 // rebuilds the sub-nav, shows the pane, and lazy-renders it once.
 function activateSub(subId){
-  const group=groupOf(subId);if(!group)return;
+  let group=groupOf(subId);if(!group)return;
+  if(!groupAvailable(group)){group=TAB_GROUPS.find(groupAvailable);if(!group)return;subId=group.subs.find(subAvailable).id;}
+  else if(!subAvailable(group.subs.find(x=>x.id===subId))){subId=group.subs.find(subAvailable).id;}
   groupLastSub[group.id]=subId;
   PREFS.tab=subId;savePrefs();
   document.querySelectorAll('.tab-btn').forEach(t=>{const on=t.dataset.tab===group.id;t.classList.toggle('active',on);t.setAttribute('aria-selected',on?'true':'false');});
@@ -2900,7 +2907,8 @@ function activateSub(subId){
 // Top group tab → open its remembered (or first) sub-view
 document.querySelectorAll('.tab-btn').forEach(b=>b.addEventListener('click',()=>{
   const group=TAB_GROUPS.find(g=>g.id===b.dataset.tab);if(!group)return;
-  activateSub(groupLastSub[group.id]||group.subs[0].id);
+  const remembered=group.subs.find(x=>x.id===groupLastSub[group.id]&&subAvailable(x));
+  activateSub(remembered?remembered.id:group.subs.find(subAvailable).id);
 }));
 // Sub-nav pill → switch sub-view within the active group (event-delegated)
 document.getElementById('subnav')?.addEventListener('click',e=>{
@@ -3731,15 +3739,8 @@ function getPaletteActions(){
   const actions=[];
 
   // — Navigation: tabs & sub-views —
-  const TABS=[
-    {id:'overview',   label:'Overview',              icon:'layout-grid'},
-    {id:'timeline',   label:'Costs · Trend',         icon:'calendar'},
-    {id:'breakdown',  label:'Costs · Services',      icon:'microscope'},
-    {id:'llm',        label:'Costs · Models',        icon:'bot'},
-    {id:'usage',      label:'Usage · Volume',        icon:'users'},
-    {id:'impact',     label:'Usage · Before / after', icon:'git-compare'},
-    {id:'projections',label:'Scenario planner',      icon:'sparkles'},
-  ];
+  const TABS=[];
+  TAB_GROUPS.filter(groupAvailable).forEach(g=>g.subs.filter(subAvailable).forEach(sb=>TABS.push({id:sb.id,label:g.subs.length>1?g.label+' · '+sb.label:sb.label,icon:sb.icon})));
   TABS.forEach(t=>actions.push({
     section:'Go to',
     title:t.label,
@@ -3994,7 +3995,6 @@ function exportCSV(){
 function renderPane(id){
   const D=DATA,S=D.stats;
   if(id==='overview')   renderOverview(D,S);
-  if(id==='timeline')   renderTimeline(D,S);
   if(id==='breakdown')  renderBreakdown(D,S);
   if(id==='usage')      renderUsage(D,S);
   if(id==='reach')      renderReach(D,S);
@@ -4006,6 +4006,8 @@ function renderPane(id){
 }
 
 // ═══ OVERVIEW ═══════════════════════════════════════════════════════
+let stackMode='service'; // Summary timeline: 'service' | 'class'
+function setStackMode(m){stackMode=m;rendered['overview']=false;renderPane('overview');}
 function renderOverview(D,S){
   const el=document.getElementById('pane-overview');
   if(!D.hasCost&&!D.hasUsage){
@@ -4019,32 +4021,17 @@ function renderOverview(D,S){
   }
   el.innerHTML=`
     ${D.hasBoth?`<div class="card cpq-card"><div class="card-title">What a turn costs</div><div id="ov-cpq-breakdown"></div></div>`:''}
-    ${chartBox('ov-main',240,'Billed cost by class & turns','click bar for day detail · provisional days paler')}
+    <div id="ov-timeline"></div>
     <div class="grid2">
       ${chartBox('ov-donut',170,'Fixed / variable / generation — selected period')}
       <div class="card"><div class="card-title">What changed<span class="card-title-note">vs the preceding window of equal length · settled join days</span></div><div id="ov-ins"></div></div>
     </div>
     <div class="card"><div class="card-title">Cost by Service — Selected Period</div><div id="ov-svc-bars"></div></div>
+    <div id="ov-detail"></div>
   `;
-  const vd=getViewData(),labels=vd.map(d=>d.label);
-  const ds=[];
-  if(D.hasCost){
-    ds.push({label:'Fixed',data:vd.map(d=>+d.fixed.toFixed(3)),backgroundColor:provColors(vd,COST_COL.fixed,'66'),stack:'s',yAxisID:'y',order:4,borderRadius:0,maxBarThickness:32});
-    ds.push({label:'Variable (other)',data:vd.map(d=>+Math.max(0,d.variable-d.gen).toFixed(3)),backgroundColor:provColors(vd,COST_COL.other,'aa'),stack:'s',yAxisID:'y',order:3,borderRadius:0,maxBarThickness:32});
-    ds.push({label:'Generation',data:vd.map(d=>+d.gen.toFixed(3)),backgroundColor:provColors(vd,COST_COL.llm,'cc'),stack:'s',yAxisID:'y',order:2,borderRadius:{topLeft:2,topRight:2},maxBarThickness:32});
-    if(vd.some(d=>d.unclassified>0))ds.push({label:'Unclassified',data:vd.map(d=>+d.unclassified.toFixed(3)),backgroundColor:provColors(vd,COST_COL.unclassified,'cc'),stack:'s',yAxisID:'y',order:1,maxBarThickness:32});
-  }
-  if(D.hasUsage)ds.push({label:'Turns',data:vd.map(d=>d.queries),borderColor:C.teal,backgroundColor:'transparent',type:'line',yAxisID:'y2',borderWidth:2.5,pointRadius:0,pointHoverRadius:4,tension:.35,order:0});
-  mkChart('ov-main',{type:'bar',data:{labels,datasets:ds},options:mergeOpts(baseOpts(),{
-    scales:{y:{stacked:true},y2:{position:'right',grid:{display:false},border:{display:false},ticks:{color:C.teal,font:{size:10,family:'DM Mono'},maxTicksLimit:5,padding:8,callback:v=>num(v)}}},
-    plugins:{legend:{display:true},tooltip:{callbacks:{
-      label:c=>`${c.dataset.label}: ${c.dataset.yAxisID==='y2'?num(c.parsed.y):gbp(c.parsed.y,2)}`,
-      afterBody:items=>{const d=vd[items[0]?.dataIndex];if(!d)return'';if(d.provisional||(d.count&&d.hasCost&&d.settledDays<d.count))return'provisional — inside the settlement window';return'';}}}},
-    eventLines:evLines(S,labels),
-    onClick:(e,els)=>{if(els.length)drillBucket(vd[els[0].index]);},
-  })});
-
   const pd=filterRange(D.merged);
+  renderTimeline(D,S,document.getElementById('ov-timeline'),document.getElementById('ov-detail'));
+
   const tF=pd.reduce((s,d)=>s+d.fixed,0),tV=pd.reduce((s,d)=>s+d.variable,0),tG=pd.reduce((s,d)=>s+d.gen,0),tU=pd.reduce((s,d)=>s+d.unclassified,0);
   const dOpts=donutOpts('65%');
   const dl=['Fixed','Variable (other)','Generation'],dv=[+tF.toFixed(2),+Math.max(0,tV-tG).toFixed(2),+tG.toFixed(2)],dc=[COST_COL.fixed,COST_COL.other,COST_COL.llm];
@@ -4075,11 +4062,20 @@ function renderOverview(D,S){
 }
 
 // ═══ TIMELINE ═══════════════════════════════════════════════════════
-function renderTimeline(D,S){
-  const el=document.getElementById('pane-timeline');
+function renderTimeline(D,S,chartTarget,detailTarget){
+  const el=chartTarget||document.getElementById('pane-timeline');
+  const det=detailTarget||el;
+  const byClass=stackMode==='class';
+  const toggle=`<div style="display:flex;justify-content:flex-end;margin:-6px 0 8px"><div class="pill-group" role="tablist" aria-label="Stack by">
+      <button class="pill${byClass?'':' active'}" onclick="setStackMode('service')">By service</button>
+      <button class="pill${byClass?' active':''}" onclick="setStackMode('class')">Fixed / variable / unclassified</button>
+    </div></div>`;
   el.innerHTML=`
-    ${chartBox('tl-stack',250,'Billed cost by service + turns','click bar for day detail · provisional days paler')}
+    ${chartBox('tl-stack',250,byClass?'Billed cost by meter class + turns':'Billed cost by service + turns','click bar for day detail · provisional days paler')}
     ${D.hasBoth?chartBox('tl-cpq',120,'Generation cost per turn (pence) · settled join days only'):''}
+  `;
+  el.querySelector('.card').insertAdjacentHTML('afterbegin',toggle);
+  det.innerHTML=`
     <div class="card"><div class="card-title">Day-by-Day Detail<span class="tbl-scroll-hint">swipe to see all columns →</span></div>
       <div class="tbl-wrap"><table class="data-table">
         <thead><tr>
@@ -4099,7 +4095,17 @@ function renderTimeline(D,S){
     </div>
   `;
   const vd=getViewData(),labels=vd.map(d=>d.label);
-  const sds=D.allSvcs.slice(0,8).map(s=>({label:s,data:vd.map(d=>+(d[s]||0).toFixed(3)),backgroundColor:provColors(vd,svcCol(s),'cc'),stack:'s',yAxisID:'y',order:2}));
+  let sds;
+  if(byClass){
+    sds=[
+      {label:'Fixed',data:vd.map(d=>+d.fixed.toFixed(3)),backgroundColor:provColors(vd,COST_COL.fixed,'99'),stack:'s',yAxisID:'y',order:4},
+      {label:'Variable (other)',data:vd.map(d=>+Math.max(0,d.variable-d.gen).toFixed(3)),backgroundColor:provColors(vd,COST_COL.other,'aa'),stack:'s',yAxisID:'y',order:3},
+      {label:'Generation',data:vd.map(d=>+d.gen.toFixed(3)),backgroundColor:provColors(vd,COST_COL.llm,'cc'),stack:'s',yAxisID:'y',order:2},
+    ];
+    if(vd.some(d=>d.unclassified>0))sds.push({label:'Unclassified',data:vd.map(d=>+d.unclassified.toFixed(3)),backgroundColor:provColors(vd,COST_COL.unclassified,'cc'),stack:'s',yAxisID:'y',order:1});
+  }else{
+    sds=D.allSvcs.slice(0,8).map(s=>({label:s,data:vd.map(d=>+(d[s]||0).toFixed(3)),backgroundColor:provColors(vd,svcCol(s),'cc'),stack:'s',yAxisID:'y',order:2}));
+  }
   if(D.hasUsage)sds.push({label:'Turns',data:vd.map(d=>d.queries),borderColor:C.teal,backgroundColor:'transparent',type:'line',yAxisID:'y2',borderWidth:2,pointRadius:0,tension:.4,order:0});
 
   // Self-set target reference line — only when set. Scaled to the current granularity by calendar days.
@@ -4118,7 +4124,7 @@ function renderTimeline(D,S){
 
   mkChart('tl-stack',{type:'bar',data:{labels,datasets:sds},options:mergeOpts(baseOpts(),{
     scales:{y:{stacked:true},y2:{position:'right',grid:{display:false},ticks:{color:C.teal,font:{size:9,family:'DM Mono'}}}},
-    plugins:{legend:{display:budget>0}},
+    plugins:{legend:{display:budget>0||byClass},tooltip:{callbacks:{afterBody:items=>{const d=vd[items[0]?.dataIndex];if(!d)return'';return(d.provisional||(d.count&&d.hasCost&&d.settledDays<d.count))?'provisional — inside the settlement window':'';}}}},
     eventLines:evLines(S,labels),
     onClick:(e,els)=>{if(els.length)drillBucket(vd[els[0].index]);},
   })});
@@ -4175,9 +4181,26 @@ const SVC_META={
 function svcIcon(svc,size='i-sm'){const m=SVC_META[svc];return`<i data-lucide="${m?.icon||'box'}" class="${size}"></i>`;}
 
 // ═══ COST BREAKDOWN ══════════════════════════════════════════════════
+let bkScope='all'; // Services pane scope: all | service | admin | shared
+function setBkScope(sc){bkScope=sc;rendered['breakdown']=false;renderPane('breakdown');}
+// Per-service and per-Foundry-meter totals for the selected period, restricted to a resource scope.
+function scopedTotals(pd,scope){
+  const svcP={},meters={};
+  pd.forEach(d=>{
+    if(scope==='all'){DATA.allSvcs.forEach(s=>{svcP[s]=(svcP[s]||0)+(d[s]||0)});Object.entries(d.metersByDate||{}).forEach(([k,v])=>{meters[k]=(meters[k]||0)+v;});return;}
+    Object.values(d.resources||{}).forEach(r=>{if(r.scope!==scope)return;svcP[r.svc]=(svcP[r.svc]||0)+r.total;if(r.svc===FOUNDRY)Object.entries(r.meters).forEach(([k,v])=>{meters[k]=(meters[k]||0)+v;});});
+  });
+  DATA.allSvcs.forEach(s=>{if(svcP[s]==null)svcP[s]=0;});
+  return{svcP,meters};
+}
 function renderBreakdown(D,S){
   const el=document.getElementById('pane-breakdown');
+  const scopePills=['all','service','admin','shared'].map(sc=>`<button class="pill${bkScope===sc?' active':''}" onclick="setBkScope('${sc}')">${sc==='all'?'All scopes':sc[0].toUpperCase()+sc.slice(1)}</button>`).join('');
   el.innerHTML=`
+    <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:12px">
+      <span class="tc-label">Scope</span><div class="pill-group" role="tablist" aria-label="Resource scope">${scopePills}</div>
+      <span style="font-size:var(--t-2xs);color:var(--dim);font-family:'DM Mono',monospace">resource scope from CONFIG.scope · applies to the pipeline, service donut, meter donut, service detail and inventory; monthly charts stay unscoped</span>
+    </div>
     <div class="card" style="margin-bottom:14px">
       <div class="card-title">AskCI RAG pipeline — billed cost by stage<span class="tbl-scroll-hint">swipe →</span></div>
       <div id="rag-pipeline"></div>
@@ -4192,14 +4215,13 @@ function renderBreakdown(D,S){
     </div>
     ${chartBox('bk-monthly',185,'Monthly Cost Trend','click month')}
     ${chartBox('bk-fvv',155,'Fixed / Variable / Unclassified — monthly, by meter class','click month')}
-    <div class="card"><div class="card-title">Service Detail — click any service to learn more</div><div id="bk-detail"></div></div>
-    <div class="card"><div class="card-title">Resource inventory — selected period<span class="card-title-note">scope from CONFIG.scope · service / admin / shared · unassigned is amber</span></div><div id="bk-resources"></div></div>
+    <div class="card"><div class="card-title">Service Detail — click any service to learn more${bkScope!=='all'?` <span class="card-title-note">${bkScope} scope</span>`:''}</div><div id="bk-detail"></div></div>
+    <div class="card"><div class="card-title">Resource inventory — selected period<span class="card-title-note">${bkScope==='all'?'all scopes':bkScope+' scope'} · service / admin / shared · unassigned is amber</span></div><div id="bk-resources"></div></div>
   `;
 
   const pd=filterRange(D.merged);
-  buildResourceInventory(pd);
-  const svcP={};pd.forEach(d=>D.allSvcs.forEach(s=>{svcP[s]=(svcP[s]||0)+(d[s]||0)}));
-  const filtMeters=computeMeters(pd);
+  buildResourceInventory(pd,bkScope);
+  const {svcP,meters:filtMeters}=scopedTotals(pd,bkScope);
 
   const dOpts=donutOpts('58%');
   const sKeys=D.allSvcs.slice(0,9);
@@ -4211,7 +4233,7 @@ function renderBreakdown(D,S){
     mkChart('bk-mtr',{type:'doughnut',data:{labels:mKeys.map(shortMeter),datasets:[{data:mKeys.map(k=>+filtMeters[k].toFixed(3)),backgroundColor:mKeys.map(mtrCol),borderColor:C.s1,borderWidth:1,hoverOffset:8}]},
       options:{...dOpts,onClick:(e,els)=>{if(els.length)openMeterPanel(mKeys[els[0].index]);},hoverOffset:6}});
   } else {
-    const el2=document.getElementById('bk-mtr');if(el2)el2.parentElement.querySelector('.chart-wrap').innerHTML='<div style="display:flex;align-items:center;justify-content:center;height:100%;color:var(--muted)">No meter data</div>';
+    const el2=document.getElementById('bk-mtr');const wrap=el2&&(el2.closest('.chart-wrap')||el2.parentElement);if(wrap)wrap.innerHTML='<div style="display:flex;align-items:center;justify-content:center;height:100%;color:var(--muted)">No Foundry meters in this scope / range</div>';
   }
 
   const fm=D.monthly.filter(m=>m.billingDays>0&&pd.some(d=>d.month===m.month));
@@ -4247,7 +4269,7 @@ function renderBreakdown(D,S){
         <div style="font-size:.57rem;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);text-align:right">Type</div>
         <div></div>
       </div>
-    `+D.allSvcs.map(s=>{
+    `+D.allSvcs.filter(s=>bkScope==='all'||(svcP[s]||0)>0).map(s=>{
       const v=svcP[s]||0,m=SVC_META[s];
       const w=maxS>0?Math.min(v/maxS*100,100):0;
       const pctStr=totSvc>0?`${(v/totSvc*100).toFixed(1)}%`:'';
@@ -4288,10 +4310,10 @@ function renderBreakdown(D,S){
 }
 
 // Resource → scope inventory for the selected period (service / admin / shared / unassigned), with region.
-function buildResourceInventory(pd){
+function buildResourceInventory(pd,scope='all'){
   const el=document.getElementById('bk-resources');if(!el||!DATA)return;
   const tot={};
-  pd.forEach(d=>Object.entries(d.resources||{}).forEach(([n,r])=>{const e=tot[n]||(tot[n]={total:0,svc:r.svc,scope:r.scope});e.total+=r.total;}));
+  pd.forEach(d=>Object.entries(d.resources||{}).forEach(([n,r])=>{if(scope!=='all'&&r.scope!==scope)return;const e=tot[n]||(tot[n]={total:0,svc:r.svc,scope:r.scope});e.total+=r.total;}));
   const rows=Object.entries(tot).map(([n,e])=>({name:n,svc:e.svc,scope:e.scope,location:(DATA.resources[n]||{}).location||'',total:e.total})).sort((a,b)=>b.total-a.total);
   const byScope={service:0,admin:0,shared:0,unassigned:0};rows.forEach(r=>{byScope[r.scope]=(byScope[r.scope]||0)+r.total;});
   const grand=Object.values(byScope).reduce((a,b)=>a+b,0)||1;
@@ -5819,6 +5841,7 @@ function buildDashboard(costRows,usageRows){
     `<div>${S.billingDays} billing days · ${S.provisionalDays} provisional</div>`;
 
   renderDqStrip();
+  syncTabVisibility();
   rebuildKpiRow();
   renderIcons();
   rendered['overview']=true;
