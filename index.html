@@ -1868,7 +1868,7 @@ function mtrCol(m){return METER_COL[m]||C.dim}
 // may rest on an assumption that is not in the data or in this object. The
 // version string is shown in the data-quality strip.
 const CONFIG={
-  version:'2026.10.08-2',
+  version:'2026.10.08-3',
   // Resource-group prefixes kept; everything else in the export is excluded and counted.
   resource_groups:['rg-askci-prod','me_cae-askci-prod'],
   // Meter classification — exact meter names from costs.csv (1 Jan–8 Oct 2026).
@@ -1981,9 +1981,11 @@ const CONFIG={
   settlement_days:3,          // billing rows this close to the latest billing day are provisional
   min_settled_join_days:7,    // per-turn figures need at least this many settled join days…
   min_rate_denominator:50,    // …and at least this many turns
+  min_event_numerator:5,      // a rate with fewer events than this shows a dash with the counts…
+  min_zero_denominator:500,   // …unless the numerator is exactly 0 on at least this many (an informative zero)
   model_event_min_cost:10,    // £ — a family below this never emits a detected event
   model_event_gap_days:7,     // gaps up to this long inside a family's billing are not events
-  materiality:{ratio_pct:10,ratio_pence:0.2,total_pct:10},
+  materiality:{ratio_pct:10,ratio_pence:0.2,total_pct:10,rate_pts:1,count_pct:10,latency_pct:10,latency_ms:2000}, // What changed thresholds: pence per turn 10% or 0.2p; rates 1 point; counts 10%; latency 10% or 2 s
   categories_year:2026,       // the citations file carries month names only
   launch_date:'2026-05-11',   // candidate public Modal launch; labels only, see events.json
   // Phone-service hours, used only for the "outside phone-service hours" share on the Usage pane.
@@ -2406,8 +2408,10 @@ function parseUsage(rows){
   const UX={answered:col(/^answered$/i),unanswered:col(/^unanswered$/i),flagged:col(/^flagged$/i),
     newTopic:col(/^newtopic$/i),userFollowup:col(/^userfollowup$/i),suggestedFollowup:col(/^suggestedfollowup$/i),
     modalTurns:col(/^modalturns$/i),webTurns:col(/^webturns$/i),otherTurns:col(/^otherturns$/i),modalSessions:col(/^modalsessions$/i),webSessions:col(/^websessions$/i),
-    citations:col(/^citations$/i),latP50:col(/^latencyp50/i),latP90:col(/^latencyp90/i),voiceTurns:col(/^voiceturns$/i),voiceSessions:col(/^voicesessions$/i)};
-  const columns={outcomes:!!UX.answered,types:!!UX.newTopic,sources:!!UX.modalSessions,latency:!!UX.latP50,voice:!!UX.voiceSessions};
+    citations:col(/^citations$/i),latP50:col(/^latencyp50/i),latP90:col(/^latencyp90/i),voiceTurns:col(/^voiceturns$/i),voiceSessions:col(/^voicesessions$/i),
+    cited:col(/^cited$/i),notFound:col(/^notfound$/i),clarification:col(/^clarification$/i),error:col(/^error$/i),outOfScope:col(/^outofscope$/i),greeting:col(/^greeting$/i),uncited:col(/^uncited$/i),partial:col(/^partial$/i),scored:col(/^scored$/i)};
+  const columns={outcomes:!!UX.answered,types:!!UX.newTopic,sources:!!UX.modalSessions,latency:!!UX.latP50,voice:!!UX.voiceSessions,taxonomy:!!UX.cited};
+  const rulesCol=col(/^outcomerules$/i);let outcomeRules='';
   rows.forEach(row=>{
     const raw=String(row[dk]||'').trim();
     if(!raw&&!String(row[qk]||'').trim())return; // blank trailing line
@@ -2416,9 +2420,10 @@ function parseUsage(rows){
     Q.rowsKept++;
     const ext={};let any=false;
     Object.entries(UX).forEach(([k,c])=>{if(!c)return;const v=String(row[c]||'').replace(/,/g,'').trim();if(v==='')return;ext[k]=+v||0;any=true;});
+    if(rulesCol&&!outcomeRules)outcomeRules=String(row[rulesCol]||'').trim();
     bd[date]={questions:parseInt(String(row[qk]||'0').replace(/,/g,''))||0,sessions:parseInt(String(row[sk]||'0').replace(/,/g,''))||0,ext:any?ext:null};
   });
-  return{byDate:bd,quality:{...Q,badDateShare:rows.length?Q.badDates/rows.length:0,columns}};
+  return{byDate:bd,quality:{...Q,badDateShare:rows.length?Q.badDates/rows.length:0,columns,outcomeRules}};
 }
 
 
@@ -2642,6 +2647,18 @@ function analyse(costData,usageByDate){
   };
 }
 
+// Small-sample rule (admin-app spec): a rate shows only when the denominator is at least
+// min_rate_denominator and the numerator at least min_event_numerator, except that an exact 0
+// on at least min_zero_denominator is shown (a true zero on a large base is precise).
+function rateOK(n,d){
+  if(!(d>=CONFIG.min_rate_denominator))return{ok:false,why:`${num(d||0)} in the denominator, minimum ${CONFIG.min_rate_denominator}`};
+  if(n>=CONFIG.min_event_numerator)return{ok:true,why:''};
+  if(n===0&&d>=CONFIG.min_zero_denominator)return{ok:true,why:'',zero:true};
+  return{ok:false,why:`${n} event${n===1?'':'s'} of ${num(d)}, minimum ${CONFIG.min_event_numerator}`};
+}
+function rate(n,d){return rateOK(n,d).ok&&d>0?n/d*100:null;}
+function rateText(n,d,dp=1){const r=rateOK(n,d);return r.ok?(n/d*100).toFixed(dp)+'%':'—';}
+
 // Sum-then-divide per-turn metrics over the settled join days in `rows`. Never averages
 // daily ratios. Invalid (too few days or turns) → per-turn fields are null and `why` says so.
 function perTurnStats(rows){
@@ -2653,7 +2670,16 @@ function perTurnStats(rows){
   const pt=(c,n)=>valid&&n>0?c/n*100:null;
   const hasAns=j.some(d=>d.ux&&d.ux.answered!=null),ans=j.reduce((s,d)=>s+(d.ux?.answered||0),0),flg=j.reduce((s,d)=>s+(d.ux?.flagged||0),0);
   const latW=j.reduce((s,d)=>s+((d.ux?.latP50||0)*d.queries),0),latQ=j.reduce((s,d)=>s+(d.ux?.latP50?d.queries:0),0);
+  const ux=k=>j.reduce((s,d)=>s+(d.ux?.[k]||0),0),hasTax=j.some(d=>d.ux&&d.ux.cited!=null);
+  const cited=ux('cited'),nf=ux('notFound'),cl=ux('clarification'),er=ux('error'),sc=ux('scored'),pa=ux('partial'),unc=ux('uncited'),oos=ux('outOfScope');
+  const ms=ux('modalSessions'),ws=ux('webSessions'),sf=ux('suggestedFollowup'),hasTypes=j.some(d=>d.ux&&d.ux.suggestedFollowup!=null),hasSrc=j.some(d=>d.ux&&d.ux.modalSessions!=null);
+  const vrate=(n,d)=>valid?rate(n,d):null;
   return{days,from,to,turns,convs,gen,tot,variable:vr,fixed:fx,unclassified:un,valid,
+    scored:sc,cited,notFound:nf,errors:er,
+    citedRate:hasTax?vrate(cited,sc):null,notFoundRate:hasTax?vrate(nf,sc):null,clarRate:hasTax?vrate(cl,sc):null,uncitedRate:hasTax?vrate(unc,sc):null,
+    errorRate:hasTax?vrate(er,turns):null,outOfScopeShare:hasTax?vrate(oos,turns):null,partialRate:hasTax?vrate(pa,cited):null,
+    chipsShare:hasTypes?vrate(sf,turns):null,modalShare:hasSrc?vrate(ms,ms+ws):null,
+    convsPerDay:days?convs/days:null,turnsPerConv:convs>0?turns/convs:null,varPerDay:days?vr/days:null,
     answered:ans,answeredShare:hasAns&&valid&&turns>0?ans/turns*100:null,flaggedShare:hasAns&&valid&&turns>0?flg/turns*100:null,genPA:hasAns?pt(gen,ans):null,latP50:valid&&latQ>0?latW/latQ:null,
     genPT:pt(gen,turns),totPT:pt(tot,turns),varPT:pt(vr,turns),
     genPC:pt(gen,convs),totPC:pt(tot,convs),varPC:pt(vr,convs),
@@ -2742,46 +2768,67 @@ function fcLabel(f){return f?`${f.label} · settled to ${fmtDate(f.lastSettled)}
 // Compares the selected range with the immediately preceding range of equal length, both
 // restricted to settled join days. Up to three statements where the delta passes materiality
 // and both windows pass validity, ranked by delta ÷ threshold. No causal language.
+// Comparison window (admin-app spec): a full calendar month compares with the previous month;
+// month to date with the same elapsed days of the previous month; anything else with the
+// preceding window of equal length.
+function comparisonWindow(from,to){
+  const ym=from.slice(0,7),dim=daysInMonth(ym),sameMonth=to.slice(0,7)===ym,first=+from.slice(8)===1;
+  const[Y,M]=ym.split('-').map(Number),prevYm=new Date(Date.UTC(Y,M-2,1)).toISOString().slice(0,7),pdim=daysInMonth(prevYm);
+  const latest=DATA.merged.length?DATA.merged[DATA.merged.length-1].date:to;
+  if(sameMonth&&first&&+to.slice(8)===dim)return{from:prevYm+'-01',to:`${prevYm}-${String(pdim).padStart(2,'0')}`,rule:'the previous calendar month'};
+  if(sameMonth&&first&&to>=isoAdd(latest,-CONFIG.settlement_days)&&+to.slice(8)<dim)return{from:prevYm+'-01',to:`${prevYm}-${String(Math.min(+to.slice(8),pdim)).padStart(2,'0')}`,rule:'the same elapsed days of the previous month'};
+  const n=daysBetween(from,to)+1,bTo=isoAdd(from,-1);
+  return{from:isoAdd(bTo,-(n-1)),to:bTo,rule:'the preceding window of equal length'};
+}
+// Candidates by priority class (1 failures, 2 latency, 3 quality and cost per turn, 4 demand and
+// cost, 5 product behaviour). At most two statements per class and six in all, ranked within a
+// class by delta ÷ that metric's own materiality threshold. No causal language.
+const WC_CANDIDATES=[
+  {cls:1,name:'Not-found rate',k:'notFoundRate',kind:'pts'},
+  {cls:1,name:'Error rate',k:'errorRate',kind:'pts'},
+  {cls:2,name:'Response time p50',k:'latP50',kind:'ms'},
+  {cls:3,name:'Cited answer rate',k:'citedRate',kind:'pts'},
+  {cls:3,name:'Cited but partial',k:'partialRate',kind:'pts'},
+  {cls:3,name:'Clarification rate',k:'clarRate',kind:'pts'},
+  {cls:3,name:'Generation cost per turn',k:'genPT',kind:'pence'},
+  {cls:4,name:'Turns per day',k:'turnsPerDay',kind:'count'},
+  {cls:4,name:'Conversations per day',k:'convsPerDay',kind:'count'},
+  {cls:4,name:'Billed cost per day',k:'costPerDay',kind:'gbp'},
+  {cls:4,name:'Variable cost per day',k:'varPerDay',kind:'gbp'},
+  {cls:4,name:'Fixed share',k:'fixedShare',kind:'pts'},
+  {cls:4,name:'Modal share of conversations',k:'modalShare',kind:'pts'},
+  {cls:5,name:'Suggested follow-up share',k:'chipsShare',kind:'pts'},
+  {cls:5,name:'Turns per conversation',k:'turnsPerConv',kind:'count'},
+];
 function whatChanged(rangeRows){
-  const empty={statements:[],events:[],A:null,B:null,valid:false,why:'no data in range'};
+  const empty={statements:[],events:[],A:null,B:null,valid:false,why:'no data in range',fallback:'',rule:''};
   if(!rangeRows||!rangeRows.length)return empty;
   const from=rangeRows[0].date,to=rangeRows[rangeRows.length-1].date;
-  const n=daysBetween(from,to)+1;
-  const bTo=isoAdd(from,-1),bFrom=isoAdd(bTo,-(n-1));
-  let A=perTurnStats(rangeRows),B=perTurnStats(DATA.merged.filter(d=>d.date>=bFrom&&d.date<=bTo)),fallback='';
+  const W=comparisonWindow(from,to);
+  let A=perTurnStats(rangeRows),B=perTurnStats(DATA.merged.filter(d=>d.date>=W.from&&d.date<=W.to)),fallback='';
   if(!B.days&&rangeRows.length>56){
     // Nothing precedes the range (e.g. All): compare the last 28 settled join days with the 28 before.
     const j=rangeRows.filter(d=>d.join);
     if(j.length>=56){A=perTurnStats(j.slice(-28));B=perTurnStats(j.slice(-56,-28));fallback='the range has no preceding window, so the last 28 settled join days are compared with the 28 before';}
-  }
+  }else if(W.rule!=='the preceding window of equal length')fallback='compared with '+W.rule;
   const M=CONFIG.materiality,out=[];
-  const pence=v=>v.toFixed(2)+'p',pct=v=>v.toFixed(0)+'%';
-  function cand(name,a,b,kind){
-    if(a==null||b==null||b===0)return;
-    const d=a-b,rel=d/Math.abs(b)*100;
-    let score;
-    if(kind==='pence')score=Math.max(Math.abs(rel)/M.ratio_pct,Math.abs(d)/M.ratio_pence);
-    else if(kind==='pct'||kind==='ms')score=Math.abs(rel)/M.ratio_pct;
-    else score=Math.abs(rel)/M.total_pct;
-    if(score<1)return;
-    const f=kind==='pence'?pence:kind==='pct'?(v=>v.toFixed(0)+' pts'):kind==='ms'?(v=>(v/1000).toFixed(1)+'s'):(v=>gbp(v,Math.abs(v)>=100?0:2));
-    const fa=kind==='pct'?pct(a):f(a),fb=kind==='pct'?pct(b):f(b);
-    const sign=d>0?'+':'−';
-    const dTxt=kind==='pct'?`${sign}${Math.abs(d).toFixed(0)} pts`:`${sign}${f(Math.abs(d))}`;
-    out.push({name,a,b,d,rel,kind,score,
-      text:`${name}: ${fa} (${A.span}) vs ${fb} (${B.span}), ${dTxt} (${sign}${Math.abs(rel).toFixed(0)}%)`});
-  }
+  const fmt={pts:v=>v.toFixed(1)+'%',ms:v=>(v/1000).toFixed(1)+'s',pence:v=>v.toFixed(2)+'p',count:v=>num(Math.round(v)),gbp:v=>gbp(v,Math.abs(v)>=100?0:2)};
   const valid=A.valid&&B.valid;
-  if(valid){
-    cand('Generation cost per turn',A.genPT,B.genPT,'pence');
-    cand('Billed cost on settled join days',A.tot,B.tot,'gbp');
-    cand('Variable cost',A.variable,B.variable,'gbp');
-    cand('Fixed share',A.fixedShare,B.fixedShare,'pct');
-    cand('Answered share',A.answeredShare,B.answeredShare,'pct');
-    cand('Response time p50',A.latP50,B.latP50,'ms');
-  }
-  out.sort((x,y)=>y.score-x.score);
-  return{statements:out.slice(0,3),events:eventsInRange(from,to),A,B,valid,fallback,
+  if(valid)WC_CANDIDATES.forEach(c=>{
+    const a=A[c.k],b=B[c.k];if(a==null||b==null)return;
+    const d=a-b,rel=b!==0?d/Math.abs(b)*100:null;
+    let score,dTxt;const sign=d>0?'+':'−';
+    if(c.kind==='pts'){score=Math.abs(d)/M.rate_pts;dTxt=`${sign}${Math.abs(d).toFixed(1)} pts`;}
+    else if(c.kind==='ms'){score=Math.max(rel==null?0:Math.abs(rel)/M.latency_pct,Math.abs(d)/M.latency_ms);dTxt=`${sign}${(Math.abs(d)/1000).toFixed(1)}s`+(rel!=null?` (${sign}${Math.abs(rel).toFixed(0)}%)`:'');}
+    else if(c.kind==='pence'){score=Math.max(rel==null?0:Math.abs(rel)/M.ratio_pct,Math.abs(d)/M.ratio_pence);dTxt=`${sign}${Math.abs(d).toFixed(2)}p`+(rel!=null?` (${sign}${Math.abs(rel).toFixed(0)}%)`:'');}
+    else{if(rel==null)return;score=Math.abs(rel)/M.count_pct;dTxt=`${sign}${Math.abs(rel).toFixed(0)}%`;}
+    if(score<1)return;
+    out.push({name:c.name,cls:c.cls,a,b,d,rel,kind:c.kind,score,text:`${c.name}: ${fmt[c.kind](a)} (${A.span}) vs ${fmt[c.kind](b)} (${B.span}), ${dTxt}`});
+  });
+  out.sort((x,y)=>x.cls-y.cls||y.score-x.score);
+  const perClass={},statements=[];
+  out.forEach(st=>{if(statements.length>=6)return;perClass[st.cls]=(perClass[st.cls]||0);if(perClass[st.cls]>=2)return;perClass[st.cls]++;statements.push(st);});
+  return{statements,events:eventsInRange(from,to),A,B,valid,fallback,rule:W.rule,
     why:valid?'':(A.valid?`previous window (${B.span}): ${B.why||'no settled join days'}`:`selected window (${A.span}): ${A.why||'no settled join days'}`)};
 }
 // Descriptive before/after around a confirmed event: equal windows of up to `maxDays`,
@@ -3538,7 +3585,8 @@ function buildReportNarrative(ctx){
   parts.push(`Between <b>${fmt(from)}</b> and <b>${fmt(to)}</b>, AskCI was billed <b>${gbp(settledSpend+provSpend,0)}</b> on Azure${provSpend>0?` (${gbp(provSpend,0)} of it provisional)`:''}${turns>0?` and received <b>${num(turns)} turns</b>`:''}.`);
   if(P.valid)parts.push(`Over the settled join window (${P.span}) generation cost <b>${P.genPT.toFixed(2)}p</b> per turn; the allocated total was <b>${P.totPT.toFixed(2)}p</b> per turn, of which ${P.varPT.toFixed(2)}p was variable.`);
   else parts.push(`No per-turn figure is shown for this window: ${P.why}.`);
-  if(P.valid&&P.answeredShare!=null)parts.push(`Of the turns on those days, <b>${P.answeredShare.toFixed(1)}%</b> were answered with a citation${P.flaggedShare!=null?` and ${P.flaggedShare.toFixed(1)}% were flagged`:''}${P.latP50!=null?`; the median response time was <b>${(P.latP50/1000).toFixed(1)}s</b> (turn-weighted daily p50)`:''}.`);
+  if(P.valid&&P.citedRate!=null)parts.push(`Of the scored turns on those days (greetings, errors and refusals excluded), <b>${P.citedRate.toFixed(1)}%</b> were cited answers${P.notFoundRate!=null?`, ${P.notFoundRate.toFixed(1)}% not found`:''}${P.clarRate!=null?` and ${P.clarRate.toFixed(1)}% clarifications`:''}${P.errorRate!=null?`; errors were ${P.errorRate.toFixed(1)}% of all turns`:''}${P.latP50!=null?`; the median response time was <b>${(P.latP50/1000).toFixed(1)}s</b> (turn-weighted daily p50)`:''}.`);
+  else if(P.valid&&P.answeredShare!=null)parts.push(`Of the turns on those days, <b>${P.answeredShare.toFixed(1)}%</b> were answered with a citation${P.flaggedShare!=null?` and ${P.flaggedShare.toFixed(1)}% were flagged`:''}${P.latP50!=null?`; the median response time was <b>${(P.latP50/1000).toFixed(1)}s</b> (turn-weighted daily p50)`:''}.`);
   if(wc.valid&&wc.statements.length)parts.push(`What changed${wc.fallback?' ('+wc.fallback+')':' against the preceding window'}: ${wc.statements.map(s=>s.text).join('; ')}.`);
   else if(wc.valid)parts.push(`No candidate metric moved beyond the materiality thresholds against the preceding window (${wc.B.span}).`);
   if(wc.events.length)parts.push(`Event in range: ${wc.events.map(e=>`<b>${e.title}</b>`).join('; ')}.`);
@@ -3695,6 +3743,14 @@ document.addEventListener('keydown',e=>{
   add('suggested-follow-up-share','Suggested follow-up share','sparkles','amber','Turns that came from a suggested follow-up chip, as a share of the day\'s turns.',dayShare('suggestedFollowup',turns),pct,false);
   add('modal-share','Modal share of conversations','layout','acc','Conversations started in the Modal, as a share of Modal plus Web conversations.',dayShare('modalSessions',convs),pct,false);
   add('web-share','Web share of conversations','globe','teal','Conversations started on the Web, as a share of Modal plus Web conversations.',dayShare('webSessions',convs),pct,false);
+  const dayRate=(n,d)=>dd=>{if(!dd.ux||dd.ux[n]==null)return null;const den=typeof d==='function'?d(dd):dd.ux[d];return rate(dd.ux[n],den);};
+  add('cited-answer-rate','Cited answer rate','check-circle','green','Cited answers as a share of the day\'s scored turns (turns excluding greeting, error and out of scope). Small-sample rule applies per day.',dayRate('cited','scored'),pct,false);
+  add('not-found-rate','Not-found rate','search-x','red','Not-found replies as a share of the day\'s scored turns.',dayRate('notFound','scored'),pct,true);
+  add('clarification-rate','Clarification rate','help-circle','amber','Clarifying questions as a share of the day\'s scored turns. Reported separately, not as a failure.',dayRate('clarification','scored'),pct,true);
+  add('uncited-answer-rate','Uncited answer rate','file-question','teal','Substantive replies with no citation and no rule match, as a share of scored turns.',dayRate('uncited','scored'),pct,true);
+  add('error-rate','Error rate','alert-triangle','pink','Empty responses with 0 ms response time, as a share of all turns received.',dayRate('error',d=>d.queries),pct,true);
+  add('out-of-scope-share','Out-of-scope share','ban','purple','Refusals by pattern or the feed\'s legacy flag, as a share of all turns.',dayRate('outOfScope',d=>d.queries),pct,true);
+  add('partial-answer-rate','Cited but partial','circle-dashed','muted','Cited answers whose text also says something could not be found, as a share of cited answers.',dayRate('partial','cited'),pct,true);
   add('response-time-p50','Response time p50','timer','acc','The day\'s median response time from the feed, positive values only.',d=>d.ux?.latP50||null,secs,true);
   add('response-time-p90','Response time p90','timer','amber','The day\'s 90th-percentile response time from the feed, positive values only.',d=>d.ux?.latP90||null,secs,true);
 })();
@@ -4832,7 +4888,27 @@ function usageDetailHTML(fr){
   const pc=(a,b)=>b>0?(a/b*100).toFixed(1)+'%':'—';
   const span=spanLabel(fr[0].date,fr[fr.length-1].date);
   let h='';
-  if(cols.outcomes){
+  if(cols.taxonomy){
+    const P=perTurnStats(fr),cited=sum('cited'),nf=sum('notFound'),cl=sum('clarification'),er=sum('error'),oos=sum('outOfScope'),gr=sum('greeting'),unc=sum('uncited'),pa=sum('partial'),sc=sum('scored');
+    const rt=(n,d,col)=>{const r=rateOK(n,d);return[r.ok?(n/d*100).toFixed(1)+'%':'—',r.ok?'':r.why];};
+    const T=(n,d,lbl,sub,col,key)=>{const[v,why]=rt(n,d);return uxTile(v,lbl,why||sub,col,key);};
+    h+=`<div class="card"><div class="card-title">Answer outcomes<span class="card-title-note">one outcome per turn, rules ${DATA.usageQuality.outcomeRules||''} applied at redaction · rates over scored turns (excluding greeting, error and out of scope) · error over all turns · ${span}</span></div>
+      <div class="grid4">
+        ${T(cited,sc,'Cited answer rate',num(cited)+' of '+num(sc)+' scored turns'+(sum('citations')>0&&cited>0?` · ${(sum('citations')/cited).toFixed(2)} citations each`:''),C.green,'cited-answer-rate')}
+        ${T(nf,sc,'Not-found rate',num(nf)+' turns',C.red,'not-found-rate')}
+        ${T(cl,sc,'Clarification rate',num(cl)+' turns',C.amber,'clarification-rate')}
+        ${T(er,turns,'Error rate',num(er)+' of '+num(turns)+' turns · empty response, 0 ms',C.pink,'error-rate')}
+      </div>
+      <div class="grid4">
+        ${T(pa,cited,'Cited but partial',num(pa)+' cited answers that also say they could not find something',C.muted,'partial-answer-rate')}
+        ${T(oos,turns,'Out of scope',num(oos)+' turns · refusal by pattern or the feed\'s legacy flag',C.purple,'out-of-scope-share')}
+        ${T(gr,turns,'Greeting',num(gr)+' turns',C.dim)}
+        ${T(unc,sc,'Uncited answer',num(unc)+' turns · substantive reply, no citation, no rule matched',C.teal,'uncited-answer-rate')}
+      </div>
+      ${uxTile(P.genPA!=null?P.genPA.toFixed(2)+'p':'—','Generation cost per cited answer',P.valid?'settled join days · '+P.span:P.why,C.acc,'generation-cost-per-answered-turn').replace('text-align:center','text-align:center;max-width:320px;margin-bottom:12px')}
+      ${chartBox('ux-outcomes',200,'Outcome mix — selected range','shares of turns, stacked to 100% · click a bar')}
+    </div>`;
+  }else if(cols.outcomes){
     const P=perTurnStats(fr),ans=sum('answered'),un=sum('unanswered'),fl=sum('flagged');
     h+=`<div class="card"><div class="card-title">Answer outcomes<span class="card-title-note">answered = at least one citation · flagged = the feed's Flagged column (no citation) · unanswered = neither · ${span}</span></div>
       <div class="grid4">
@@ -4909,7 +4985,14 @@ function usageDetailHTML(fr){
 function buildUsageDetailCharts(fr){
   const vd=getViewData(),labels=vd.map(d=>d.label),g=(r,k)=>r.ux?.[k]||0;
   const stacked=mergeOpts(baseOpts(),{scales:{y:{stacked:true,ticks:{callback:v=>num(v)}},x:{stacked:true}},plugins:{legend:{display:true}},onClick:(e,els)=>{if(els.length)drillBucket(vd[els[0].index]);}});
-  if(document.getElementById('ux-outcomes'))mkChart('ux-outcomes',{type:'bar',data:{labels,datasets:[
+  const tax=vd.some(r=>r.ux&&r.ux.cited!=null);
+  if(document.getElementById('ux-outcomes')&&tax){
+    const sh=(r,k)=>r.queries>0?+((g(r,k))/r.queries*100).toFixed(2):null;
+    const series=[['cited','Cited answer',C.green],['notFound','Not found',C.red],['clarification','Clarification',C.amber],['error','Error',C.pink],['outOfScope','Out of scope',C.purple],['greeting','Greeting',C.dim],['uncited','Uncited answer',C.teal]];
+    mkChart('ux-outcomes',{type:'bar',data:{labels,datasets:series.map(([k,l,c])=>({label:l,data:vd.map(r=>sh(r,k)),backgroundColor:c+'cc',stack:'o',maxBarThickness:28}))},
+      options:mergeOpts(stacked,{scales:{y:{max:100,ticks:{callback:v=>v+'%'}}},plugins:{tooltip:{callbacks:{label:cx=>`${cx.dataset.label}: ${(+cx.parsed.y).toFixed(1)}% (${num(g(vd[cx.dataIndex],series[cx.datasetIndex][0]))})`}}}})});
+  }
+  else if(document.getElementById('ux-outcomes'))mkChart('ux-outcomes',{type:'bar',data:{labels,datasets:[
     {label:'Answered',data:vd.map(r=>g(r,'answered')),backgroundColor:C.green+'cc',stack:'o',maxBarThickness:28},
     {label:'Unanswered',data:vd.map(r=>g(r,'unanswered')),backgroundColor:C.amber+'cc',stack:'o',maxBarThickness:28},
     {label:'Flagged',data:vd.map(r=>g(r,'flagged')),backgroundColor:C.red+'cc',stack:'o',maxBarThickness:28}]},options:stacked});
@@ -6151,6 +6234,7 @@ function renderDqStrip(){
     item('unparsed Foundry meters',(Q.unparsedMeters||[]).length,{amber:(Q.unparsedMeters||[]).length>0,title:list(Q.unparsedMeters)||'all Foundry meters mapped to a family and type'}),
     item('unassigned resources',(Q.unassignedResources||[]).length,{amber:(Q.unassignedResources||[]).length>0,title:list(Q.unassignedResources)||'all resources mapped to service / admin / shared'}),
     item('join window',S.joinDays?`${spanLabel(S.joinFrom,S.joinTo)} · ${S.joinDays}d`:'—',{title:'settled billing days with turns > 0; every per-turn figure is computed on these days'}),
+    U.outcomeRules?item('outcome rules',U.outcomeRules,{title:'rule-set version written by tools/redact_feed.py; a change replays from the raw feed'}):'',
     (U.columns&&Object.values(U.columns).some(Boolean))||hasHours?item('usage detail',['outcomes','types','sources','latency','voice'].filter(k=>U.columns&&U.columns[k]).concat(hasHours?['hours']:[]).join(' · ')||'—',{title:'optional columns found in usage.csv, plus usage-hours.csv'}):'',
     item('events awaiting confirmation',cands,{amber:cands>0,title:'candidate events in events.json plus model events detected from billing'}),
     Q.badDates?item('cost dates rejected',Q.badDates,{amber:true,title:list(Q.badDateSamples)}):'',
@@ -6342,6 +6426,11 @@ init();
     if(/cache/.test(q))return{kind:'cache',label:'cached-input cost share'};
     if(/fixed share|share.*fixed|fixed.*(share|%|percent)/.test(q))return{kind:'fixedshare',label:'fixed share'};
     // Feed-generated usage columns (present only when usage.csv carries them)
+    if(/not[- ]?found/.test(q))return{kind:'notfound',label:'not-found rate'};
+    if(/\berrors?\b/.test(q))return{kind:'error',label:'error rate'};
+    if(/clarif/.test(q))return{kind:'clarification',label:'clarification rate'};
+    if(/cited (answer|rate)|citation rate/.test(q))return{kind:'cited',label:'cited answer rate'};
+    if(/partial/.test(q))return{kind:'partial',label:'cited but partial'};
     if(/unanswered|no answer|not answered/.test(q))return{kind:'unanswered',label:'unanswered share'};
     if(/flagged/.test(q))return{kind:'flagged',label:'flagged share'};
     if(/answered|answer rate|answer share/.test(q))return{kind:'answered',label:'answered share'};
@@ -6374,7 +6463,11 @@ init();
       case 'fixed':return d.fixed||0; case 'variable':return d.variable||0;
       case 'model':{let v=0;const ms=d.metersByDate||{};for(const k in ms){if(m.match(k))v+=ms[k];}return v;}
       case 'cpq_llm':return d.join?d.cpq_llm:null; case 'cpq_tot':return d.join?d.cpq_tot:null;
-      case 'answered':case 'unanswered':case 'flagged':return d.ux&&d.queries>0&&d.ux[m.kind]!=null?d.ux[m.kind]/d.queries*100:null;
+      case 'answered':case 'unanswered':case 'flagged':case 'error':return d.ux&&d.queries>0&&d.ux[m.kind]!=null?rate(d.ux[m.kind],d.queries):null;
+      case 'notfound':return d.ux&&d.ux.notFound!=null?rate(d.ux.notFound,d.ux.scored):null;
+      case 'clarification':return d.ux&&d.ux.clarification!=null?rate(d.ux.clarification,d.ux.scored):null;
+      case 'cited':return d.ux&&d.ux.cited!=null?rate(d.ux.cited,d.ux.scored):null;
+      case 'partial':return d.ux&&d.ux.partial!=null?rate(d.ux.partial,d.ux.cited):null;
       case 'chips':return d.ux&&d.queries>0&&d.ux.suggestedFollowup!=null?d.ux.suggestedFollowup/d.queries*100:null;
       case 'modal':{const a=d.ux?.modalSessions,b=d.ux?.webSessions;return a!=null&&(a+b)>0?a/(a+b)*100:null;}
       case 'latency':return d.ux?.latP50||null;
@@ -6620,18 +6713,22 @@ init();
     }
 
     // Shares from the feed-generated columns: sum then divide over the period, never a mean of daily ratios.
-    if(['answered','unanswered','flagged','chips','modal'].includes(metric.kind)){
-      const has=rows.some(d=>d.ux);
-      if(!has)return{value:null,fmt:v=>'—',series:null,note:'usage.csv has no '+metric.label+' column; regenerate it from the QA feed',intent};
-      const numK=metric.kind==='chips'?'suggestedFollowup':metric.kind==='modal'?'modalSessions':metric.kind;
+    if(['answered','unanswered','flagged','chips','modal','notfound','error','clarification','cited','partial'].includes(metric.kind)){
+      const numK={chips:'suggestedFollowup',modal:'modalSessions',notfound:'notFound',cited:'cited'}[metric.kind]||metric.kind;
+      const has=rows.some(d=>d.ux&&d.ux[numK]!=null);
+      if(!has)return{value:null,fmt:v=>'—',series:null,note:'usage.csv has no '+metric.label+' column; regenerate it from the QA feed (redact first for outcomes)',intent};
       const n=rows.reduce((s,d)=>s+(d.ux?.[numK]||0),0);
-      const den=metric.kind==='modal'?rows.reduce((s,d)=>s+(d.ux?.modalSessions||0)+(d.ux?.webSessions||0),0):rows.reduce((s,d)=>s+(d.ux?d.queries:0),0);
+      const scored=['notfound','clarification','cited'].includes(metric.kind);
+      const den=metric.kind==='modal'?rows.reduce((s,d)=>s+(d.ux?.modalSessions||0)+(d.ux?.webSessions||0),0)
+        :scored?rows.reduce((s,d)=>s+(d.ux?.scored||0),0):metric.kind==='partial'?rows.reduce((s,d)=>s+(d.ux?.cited||0),0):rows.reduce((s,d)=>s+(d.ux?d.queries:0),0);
+      const ok=rateOK(n,den);
+      if(!ok.ok)return{value:null,fmt:v=>'—',series:rows.map(d=>rowVal(d,metric)),note:`not shown: ${ok.why} (small-sample rule)`,intent};
       series=rows.map(d=>rowVal(d,metric));
       if(agg==='max'||agg==='min'){
         const cand=rows.filter(d=>rowVal(d,metric)!=null);
         if(cand.length){const best=cand.reduce((a,b)=>{const y=rowVal(b,metric),x=rowVal(a,metric);return (agg==='max'?y>x:y<x)?b:a;});intent._day=best.date;return{value:rowVal(best,metric),fmt:v=>v==null?'—':v.toFixed(1)+'%',series,note:(agg==='max'?'highest on ':'lowest on ')+best.label,intent};}
       }
-      return{value:den>0?n/den*100:null,fmt:v=>v==null?'—':v.toFixed(1)+'%',series,note:`${num(n)} of ${num(den)} ${metric.kind==='modal'?'conversations':'turns'} · sum then divide`,intent};
+      return{value:den>0?n/den*100:null,fmt:v=>v==null?'—':v.toFixed(1)+'%',series,note:`${num(n)} of ${num(den)} ${metric.kind==='modal'?'conversations':scored?'scored turns':metric.kind==='partial'?'cited answers':'turns'} · sum then divide`,intent};
     }
     if(metric.kind==='latency'){
       const has=rows.some(d=>d.ux&&d.ux.latP50);
@@ -6691,7 +6788,7 @@ init();
   }
   function context(intent,value){
     if(value==null||intent.agg!=='sum')return '';
-    if(['cpq_llm','cpq_tot','qps','cache','fixedshare','runrate','topService','topModel','answered','unanswered','flagged','chips','modal','latency'].includes(intent.metric.kind))return ''; // ratios: never summed
+    if(['cpq_llm','cpq_tot','qps','cache','fixedshare','runrate','topService','topModel','answered','unanswered','flagged','chips','modal','latency','notfound','error','clarification','cited','partial'].includes(intent.metric.kind))return ''; // ratios: never summed
     const p=intent.period; if(p.kind==='all'||p.kind==='year')return '';
     const days=Math.round((new Date(p.to)-new Date(p.from))/86400000)+1;
     const prevTo=addDays(p.from,-1),prevFrom=addDays(prevTo,-(days-1));
@@ -6913,10 +7010,10 @@ init();
     if(hasChart){
       const crows=DATA.merged.filter(d=>d.date>=p.from&&d.date<=p.to);
       const labels=crows.map(d=>d.label);
-      const isRate=['cpq_llm','cpq_tot','qps','cache','fixedshare','answered','unanswered','flagged','chips','modal','latency'].includes(m.kind);
+      const isRate=['cpq_llm','cpq_tot','qps','cache','fixedshare','answered','unanswered','flagged','chips','modal','latency','notfound','error','clarification','cited','partial'].includes(m.kind);
       const isCount=['questions','sessions','citations'].includes(m.kind);
       const col=C.acc, data=series.map(v=>(v==null||!isFinite(v))?null:+v);
-      const pctKind=['cache','fixedshare','answered','unanswered','flagged','chips','modal'].includes(m.kind);
+      const pctKind=['cache','fixedshare','answered','unanswered','flagged','chips','modal','notfound','error','clarification','cited','partial'].includes(m.kind);
       const tick=m.kind==='latency'?(v=>(+v/1000).toFixed(1)+'s'):isRate?(v=>(+v).toFixed(pctKind?0:2)+(pctKind?'%':(m.kind==='qps'?'':'p'))):(isCount?(v=>num(v)):(v=>'£'+(+v).toFixed(0)));
       mountViz({type:isRate?'line':'bar',data:{labels:labels,datasets:[{label:subj,data:data,backgroundColor:isRate?(col+'22'):(col+'cc'),borderColor:col,borderWidth:isRate?2:0,borderRadius:isRate?0:3,pointRadius:0,tension:.3,fill:!!isRate,spanGaps:true,maxBarThickness:22}]},options:mergeOpts(baseOpts(),{plugins:{legend:{display:false}},scales:{y:{ticks:{callback:tick}}}})},{cols:['Date',subj],rows:labels.map((l,i)=>[l,data[i]]),fmt:res.fmt});
     }
@@ -6992,7 +7089,7 @@ init();
     const el=$('ask-chips'); if(!el||!have())return;
     const m=DATA.merged.filter(d=>d.total>0);
     const lm=m.length?fmtMonth(m[m.length-1].date.slice(0,7)):'this month';
-    const ex=['Spend in '+lm,'Most expensive service','Generation cost per turn last 3 months','Answered share last month','Response time this month','Projected spend this month'];
+    const ex=['Spend in '+lm,'Most expensive service','Generation cost per turn last 3 months','Not-found rate last month','Error rate this month','Projected spend this month'];
     el.innerHTML=ex.map(t=>'<button class="ask-chip" data-ex="'+escA(t)+'">'+esc(t)+'</button>').join('');
   }
   function applyRange(f,t){

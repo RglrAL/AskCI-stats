@@ -4,7 +4,10 @@
 Outputs (all daily counts; nothing per-turn and no text crosses into the dashboard):
 
   usage.csv            Date, Questions, Sessions, then optional columns the dashboard may use:
-                         Answered, Unanswered, Flagged            turn outcomes (see below)
+                         Answered, Unanswered, Flagged            legacy outcome split (see below)
+                         Cited, NotFound, Clarification, Error, OutOfScope, Greeting, Uncited, Partial, Scored, OutcomeRules
+                                                                   outcome taxonomy, only when the redacted feed carries an
+                                                                   Outcome column (tools/redact_feed.py writes it)
                          NewTopic, UserFollowup, SuggestedFollowup  question types
                          ModalTurns, WebTurns, OtherTurns, ModalSessions, WebSessions  by source
                          Citations                                 cited URLs
@@ -20,6 +23,9 @@ Definitions:
   Answered    turns with at least one citation URL
   Flagged     turns with Flagged == Yes (these carry no citations)
   Unanswered  turns with no citation and not flagged
+  Outcomes    from the redacted feed's Outcome column (seven classes, rules versioned in redact_feed.py);
+              Partial = cited answers that also match the not-found pattern; Scored = turns excluding
+              Greeting, Error and Out of scope, the denominator for quality rates
   Categories  one hit per distinct category per turn, from the Categories column (or, if blank,
               from the /en/<category>/ segment of the cited URLs). From April 2026 the feed's
               Categories column is already distinct per turn, so this equals the hand-maintained
@@ -89,13 +95,15 @@ def aggregate(files):
     hours = defaultdict(lambda: defaultdict(int))    # (date, hour) -> turns
     hour_sess = defaultdict(set)                     # (date, hour) -> conversation ids (turn 1)
     cats = defaultdict(lambda: defaultdict(int))     # date -> slug -> hits
-    bad = 0; has_voice = False; cat_dropped = 0
+    bad = 0; has_voice = False; cat_dropped = 0; has_outcome = False; rules = set()
     seen = set(); dupes = 0   # exports taken on different days overlap on their boundary day
     for f in files:
         with open(f, encoding="utf-8-sig", newline="") as fh:
             r = csv.DictReader(fh)
             voice_col = find_col(r.fieldnames, r"input.?mode|modality")
             has_voice = has_voice or bool(voice_col)
+            outcome_col = "Outcome" if "Outcome" in r.fieldnames else None
+            has_outcome = has_outcome or bool(outcome_col)
             for row in r:
                 key = (row.get("Conversation ID") or "", (row.get("Turn #") or "").strip())
                 if key in seen:
@@ -121,6 +129,12 @@ def aggregate(files):
                 elif flagged: c["flagged"] += 1
                 else: c["unanswered"] += 1
                 c["citations"] += len(urls)
+                if outcome_col:
+                    o = (row.get("Outcome") or "").strip()
+                    c["o:" + o] += 1
+                    if (row.get("Partial") or "").strip().lower() == "yes": c["o:partial"] += 1
+                    if o not in ("Greeting", "Error", "Out of scope"): c["o:scored"] += 1
+                    rules.add((row.get("Outcome Rules") or "").strip())
                 # question type
                 qt = (row.get("Question Type") or "").strip()
                 if qt == "new_topic": c["new_topic"] += 1
@@ -151,13 +165,18 @@ def aggregate(files):
                         cat_dropped += sum(1 for x in slugs if x is None)
                         toks = [x for x in slugs if x]
                     for s in set(toks): cats[d][s] += 1
-    return D, sess, lat, hours, hour_sess, cats, bad, has_voice, dupes, cat_dropped
+    return D, sess, lat, hours, hour_sess, cats, bad, has_voice, dupes, cat_dropped, has_outcome, rules
 
 
-def usage_rows(D, sess, lat, has_voice):
+OUTCOME_COLS = [("Cited", "o:Cited answer"), ("NotFound", "o:Not found"), ("Clarification", "o:Clarification"), ("Error", "o:Error"),
+                ("OutOfScope", "o:Out of scope"), ("Greeting", "o:Greeting"), ("Uncited", "o:Uncited answer"), ("Partial", "o:partial"), ("Scored", "o:scored")]
+
+
+def usage_rows(D, sess, lat, has_voice, has_outcome=False, rules=""):
     cols = ["Date", "Questions", "Sessions", "Answered", "Unanswered", "Flagged", "NewTopic", "UserFollowup", "SuggestedFollowup",
             "ModalTurns", "WebTurns", "OtherTurns", "ModalSessions", "WebSessions", "Citations", "LatencyP50ms", "LatencyP90ms"]
     if has_voice: cols += ["VoiceTurns", "VoiceSessions"]
+    if has_outcome: cols += [c for c, _ in OUTCOME_COLS] + ["OutcomeRules"]
     out = []
     for d in sorted(D):
         c = D[d]; s = sess[d]; L = sorted(lat[d])
@@ -165,6 +184,7 @@ def usage_rows(D, sess, lat, has_voice):
                c["suggested_followup"], c["modal_turns"], c["web_turns"], c["other_turns"], len(s["modal"]), len(s["web"]), c["citations"],
                pct(L, 50), pct(L, 90)]
         if has_voice: row += [c["voice_turns"], len(s["voice"])]
+        if has_outcome: row += [c[k] for _, k in OUTCOME_COLS] + [rules]
         out.append(row)
     return cols, out
 
@@ -251,7 +271,8 @@ def main():
     ap.add_argument("--category-rule", choices=["distinct", "tokens"], default="distinct", help="distinct per turn with URL fallback (default), or every Categories entry incl. repeats and no fallback (old file's rule)")
     a = ap.parse_args()
     global CATEGORY_RULE; CATEGORY_RULE = a.category_rule
-    D, sess, lat, hours, hour_sess, cats, bad, has_voice, dupes, cat_dropped = aggregate(a.files)
+    D, sess, lat, hours, hour_sess, cats, bad, has_voice, dupes, cat_dropped, has_outcome, rules = aggregate(a.files)
+    rules = ", ".join(sorted(r for r in rules if r))
     if bad: print(f"warning: {bad} rows with unreadable Timestamp skipped", file=sys.stderr)
     if dupes: print(f"note: {dupes} rows repeated across the input files (same conversation and turn) counted once")
     if cat_dropped: print(f"note: {cat_dropped} cited URLs on rows with a blank Categories column were not citizensinformation.ie category pages; not counted")
@@ -263,12 +284,13 @@ def main():
         print(f"note: {last} is the export day and partial; dropped (--keep-partial to keep it)")
         for store in (D, sess, lat, cats): store.pop(last, None)
         for k in [k for k in hours if k[0] == last]: hours.pop(k); hour_sess.pop(k, None)
-    ucols, urows = usage_rows(D, sess, lat, has_voice)
+    ucols, urows = usage_rows(D, sess, lat, has_voice, has_outcome, rules)
     hcols, hrows = hours_rows(hours, hour_sess)
     (ccols, crows), (dcols, drows) = categories_rows(cats)
     days = sorted(D)
     print(f"{len(days)} days, {days[0]} to {days[-1]}, {sum(r[1] for r in urows)} turns, {sum(r[2] for r in urows)} conversations"
-          + (", input-mode column found (voice columns included)" if has_voice else ", no input-mode column (voice columns omitted)"))
+          + (", input-mode column found (voice columns included)" if has_voice else ", no input-mode column (voice columns omitted)")
+          + (f", outcome columns included (rules {rules})" if has_outcome else ", no Outcome column (redact first for the outcome taxonomy)"))
     if a.compare:
         compare(a.compare, ucols, urows, ccols, crows); return
     if a.out_dir:

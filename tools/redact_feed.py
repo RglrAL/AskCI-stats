@@ -1,8 +1,22 @@
 #!/usr/bin/env python3
 """Redact an AskCI QA feed export so it can be kept and shared without citizens' text.
 
-Drops the free-text columns (User Query, Assistant Response, Report Subject, Report
-Description) and writes every other column unchanged. The output still contains per-turn
+Classifies each turn's outcome from the response text (rules below, versioned), then drops
+the free-text columns (User Query, Assistant Response, Report Subject, Report Description)
+and writes every other column unchanged plus three derived ones: Outcome, Partial and
+Outcome Rules. Nothing of the text itself survives.
+
+Outcome rules, applied in order, first match wins (after mapping curly apostrophes to
+straight ones; the admin-app spec's published patterns use straight apostrophes while the
+feed mostly uses U+2019, which is why its printed not-found pattern under-counts):
+  Error          empty response and 0 ms
+  Cited answer   at least one citation URL
+  Not found      "couldn't find", "no specific information", "does not (currently) provide" ...
+  Clarification  "could you clarify", "what you mean", "more detail", "which scheme/payment"
+  Out of scope   refusal phrases, else the feed's Flagged = Yes (after Greeting)
+  Greeting       "hello"/"hi" opening, "how can I help", "glad to help" ...
+  Uncited answer anything else
+Partial = a Cited answer whose text also matches the not-found pattern. The output still contains per-turn
 rows, so it stays out of git (.gitignore covers qa-feed*.csv); only the daily aggregates
 produced by make_usage.py go into the dashboard.
 
@@ -12,8 +26,42 @@ Usage:
 """
 import argparse, csv, os, sys
 
+import re
+
 DROP = ["User Query", "Assistant Response", "Report Subject", "Report Description"]
 csv.field_size_limit(min(sys.maxsize, 2**31 - 1))
+
+OUTCOME_RULES_VERSION = "2026.10.08-1"
+RX = {
+    "not_found": re.compile(r"couldn't find|could not find|wasn't able to find|unable to find|no specific information|not find specific|don't have (specific )?information|does not (currently )?(provide|have)", re.I),
+    "clarification": re.compile(r"could you (please )?(clarify|tell me|let me know)|what you mean|more detail|which (scheme|payment)", re.I),
+    "out_of_scope": re.compile(r"specialise in providing information|specialize in providing information|can't help with that (particular )?topic|not able to help with that topic|outside (the )?scope", re.I),
+    "greeting": re.compile(r"^(hello|hi)\b|how can i help|you're welcome|glad to help|glad to hear|glad you|glad i could", re.I),
+}
+URL_RE = re.compile(r'https?://[^\s,;|"]+')
+APOS = str.maketrans({"\u2019": "'", "\u2018": "'", "\u02bc": "'"})
+
+
+def classify(row):
+    """Return (outcome, partial) for one feed row. Text is read here and nowhere else."""
+    resp = (row.get("Assistant Response") or "").translate(APOS).strip()
+    rt = (row.get("Response Time (ms)") or "").strip()
+    if resp == "" and rt in ("0", ""):
+        return "Error", ""
+    cites = len(URL_RE.findall(row.get("Citations") or ""))
+    if cites >= 1:
+        return "Cited answer", ("Yes" if RX["not_found"].search(resp) else "")
+    if RX["not_found"].search(resp):
+        return "Not found", ""
+    if RX["clarification"].search(resp):
+        return "Clarification", ""
+    if RX["out_of_scope"].search(resp):
+        return "Out of scope", ""
+    if RX["greeting"].search(resp):
+        return "Greeting", ""
+    if (row.get("Flagged") or "").strip().lower() == "yes":
+        return "Out of scope", ""
+    return "Uncited answer", ""
 
 
 def out_name(path, out_dir):
@@ -25,15 +73,19 @@ def out_name(path, out_dir):
 def redact(src, dst):
     with open(src, encoding="utf-8-sig", newline="") as fi, open(dst, "w", encoding="utf-8", newline="") as fo:
         r = csv.DictReader(fi)
-        keep = [c for c in r.fieldnames if c not in DROP]
+        keep = [c for c in r.fieldnames if c not in DROP] + ["Outcome", "Partial", "Outcome Rules"]
         dropped = [c for c in r.fieldnames if c in DROP]
         w = csv.DictWriter(fo, fieldnames=keep, extrasaction="ignore")
         w.writeheader()
-        n = 0
+        n = 0; counts = {}
         for row in r:
+            o, partial = classify(row)
+            counts[o] = counts.get(o, 0) + 1
+            if partial: counts["(partial)"] = counts.get("(partial)", 0) + 1
+            row["Outcome"], row["Partial"], row["Outcome Rules"] = o, partial, OUTCOME_RULES_VERSION
             w.writerow(row)
             n += 1
-    return n, keep, dropped
+    return n, keep, dropped, counts
 
 
 def main():
@@ -48,9 +100,10 @@ def main():
             sys.exit(f"refusing to overwrite the input: {f}")
         if os.path.exists(dst) and not a.force:
             sys.exit(f"{dst} exists; pass --force to overwrite")
-        n, keep, dropped = redact(f, dst)
+        n, keep, dropped, counts = redact(f, dst)
         missing = [c for c in DROP if c not in dropped]
         print(f"{f}: {n} rows -> {dst}")
+        print(f"  outcomes (rules {OUTCOME_RULES_VERSION}): " + ", ".join(f"{k} {v}" for k, v in sorted(counts.items(), key=lambda kv: -kv[1])))
         print(f"  dropped: {', '.join(dropped) or 'nothing'}" + (f"  (not present: {', '.join(missing)})" if missing else ""))
         print(f"  kept:    {', '.join(keep)}")
 
