@@ -2460,7 +2460,7 @@ async function loadGa4Files(){
 // categories only (non-content paths + the two excluded categories are dropped here).
 let CATCITE={}, CATVIEW={}, hasCats=false;
 const CAT_ALIAS={'rti':'returning-to-ireland','family-and-relationships':'birth-family-relationships'};
-const CAT_EXCLUDE=new Set(['about','my-situation']);          // meta/navigation, not citizen content
+const CAT_EXCLUDE=new Set(['about','my-situation','all-categories']); // meta/navigation, not citizen content
 const CAT_NONCONTENT=new Set(['whats-new','search_wagtail','yipg']); // site-only, non-category paths
 const MONTHNUM={january:'01',february:'02',march:'03',april:'04',may:'05',june:'06',july:'07',august:'08',september:'09',october:'10',november:'11',december:'12'};
 function catSlug(name){
