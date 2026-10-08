@@ -2651,10 +2651,10 @@ function perTurnStats(rows){
   const days=j.length,from=days?j[0].date:null,to=days?j[days-1].date:null;
   const valid=days>=CONFIG.min_settled_join_days&&turns>=CONFIG.min_rate_denominator;
   const pt=(c,n)=>valid&&n>0?c/n*100:null;
-  const hasAns=j.some(d=>d.ux&&d.ux.answered!=null),ans=j.reduce((s,d)=>s+(d.ux?.answered||0),0);
+  const hasAns=j.some(d=>d.ux&&d.ux.answered!=null),ans=j.reduce((s,d)=>s+(d.ux?.answered||0),0),flg=j.reduce((s,d)=>s+(d.ux?.flagged||0),0);
   const latW=j.reduce((s,d)=>s+((d.ux?.latP50||0)*d.queries),0),latQ=j.reduce((s,d)=>s+(d.ux?.latP50?d.queries:0),0);
   return{days,from,to,turns,convs,gen,tot,variable:vr,fixed:fx,unclassified:un,valid,
-    answered:ans,answeredShare:hasAns&&valid&&turns>0?ans/turns*100:null,genPA:hasAns?pt(gen,ans):null,latP50:valid&&latQ>0?latW/latQ:null,
+    answered:ans,answeredShare:hasAns&&valid&&turns>0?ans/turns*100:null,flaggedShare:hasAns&&valid&&turns>0?flg/turns*100:null,genPA:hasAns?pt(gen,ans):null,latP50:valid&&latQ>0?latW/latQ:null,
     genPT:pt(gen,turns),totPT:pt(tot,turns),varPT:pt(vr,turns),
     genPC:pt(gen,convs),totPC:pt(tot,convs),varPC:pt(vr,convs),
     fixedShare:(fx+vr)>0?fx/(fx+vr)*100:null,
@@ -3538,6 +3538,7 @@ function buildReportNarrative(ctx){
   parts.push(`Between <b>${fmt(from)}</b> and <b>${fmt(to)}</b>, AskCI was billed <b>${gbp(settledSpend+provSpend,0)}</b> on Azure${provSpend>0?` (${gbp(provSpend,0)} of it provisional)`:''}${turns>0?` and received <b>${num(turns)} turns</b>`:''}.`);
   if(P.valid)parts.push(`Over the settled join window (${P.span}) generation cost <b>${P.genPT.toFixed(2)}p</b> per turn; the allocated total was <b>${P.totPT.toFixed(2)}p</b> per turn, of which ${P.varPT.toFixed(2)}p was variable.`);
   else parts.push(`No per-turn figure is shown for this window: ${P.why}.`);
+  if(P.valid&&P.answeredShare!=null)parts.push(`Of the turns on those days, <b>${P.answeredShare.toFixed(1)}%</b> were answered with a citation${P.flaggedShare!=null?` and ${P.flaggedShare.toFixed(1)}% were flagged`:''}${P.latP50!=null?`; the median response time was <b>${(P.latP50/1000).toFixed(1)}s</b> (turn-weighted daily p50)`:''}.`);
   if(wc.valid&&wc.statements.length)parts.push(`What changed${wc.fallback?' ('+wc.fallback+')':' against the preceding window'}: ${wc.statements.map(s=>s.text).join('; ')}.`);
   else if(wc.valid)parts.push(`No candidate metric moved beyond the materiality thresholds against the preceding window (${wc.B.span}).`);
   if(wc.events.length)parts.push(`Event in range: ${wc.events.map(e=>`<b>${e.title}</b>`).join('; ')}.`);
@@ -4799,6 +4800,8 @@ function uxTile(val,lbl,sub,col){
     <div style="font-size:.6rem;color:var(--muted);text-transform:uppercase;letter-spacing:.08em;margin-top:3px">${lbl}</div>
     <div style="font-size:.63rem;color:var(--muted);margin-top:2px">${sub}</div></div>`;
 }
+let hoursMode='turns';
+function setHoursMode(m){hoursMode=m;rendered['usage']=false;renderPane('usage');}
 function usageDetailHTML(fr){
   const cols=(DATA.usageQuality&&DATA.usageQuality.columns)||{};
   if(!fr.length)return'';
@@ -4811,7 +4814,7 @@ function usageDetailHTML(fr){
     const P=perTurnStats(fr),ans=sum('answered'),un=sum('unanswered'),fl=sum('flagged');
     h+=`<div class="card"><div class="card-title">Answer outcomes<span class="card-title-note">answered = at least one citation · flagged = the feed's Flagged column (no citation) · unanswered = neither · ${span}</span></div>
       <div class="grid4">
-        ${uxTile(pc(ans,turns),'Answered',num(ans)+' of '+num(turns)+' turns',C.green)}
+        ${uxTile(pc(ans,turns),'Answered',num(ans)+' of '+num(turns)+' turns'+(sum('citations')>0&&ans>0?` · ${(sum('citations')/ans).toFixed(2)} citations per answered turn`:''),C.green)}
         ${uxTile(pc(un,turns),'Unanswered',num(un)+' turns',C.amber)}
         ${uxTile(pc(fl,turns),'Flagged',num(fl)+' turns',C.red)}
         ${uxTile(P.genPA!=null?P.genPA.toFixed(2)+'p':'—','Generation cost per answered turn',P.valid?'settled join days · '+P.span:P.why,C.acc)}
@@ -4855,20 +4858,21 @@ function usageDetailHTML(fr){
     </div>`;
   }
   if(hasHours){
-    const ps=CONFIG.phone_service,grid=Array.from({length:7},()=>Array(24).fill(0));
+    const ps=CONFIG.phone_service,grid=Array.from({length:7},()=>Array(24).fill(0)),hk=hoursMode==='sessions'?'s':'t',unit=hoursMode==='sessions'?'conversations':'turns';
     let tot=0,out=0,days=0;
     fr.forEach(d=>{const a=HOURS[d.date];if(!a)return;days++;const k=isoDow(d.date);
-      for(let hh=0;hh<24;hh++){const t=a[hh]?a[hh].t:0;grid[k][hh]+=t;tot+=t;if(!(ps.days.includes(k)&&hh>=ps.from&&hh<ps.to))out+=t;}});
+      for(let hh=0;hh<24;hh++){const t=a[hh]?a[hh][hk]:0;grid[k][hh]+=t;tot+=t;if(!(ps.days.includes(k)&&hh>=ps.from&&hh<ps.to))out+=t;}});
     if(tot>0){
       const order=[1,2,3,4,5,6,0],names=['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
       const max=Math.max(...grid.flat());
       let bh=0,bt=-1;for(let hh=0;hh<24;hh++){const t=grid.reduce((s,r)=>s+r[hh],0);if(t>bt){bt=t;bh=hh;}}
       const cell=(k,hh)=>{const t=grid[k][hh],a=max>0?Math.round(0x12+(0xee-0x12)*(t/max)):0x12;
-        return`<div title="${names[k]} ${String(hh).padStart(2,'0')}:00 · ${num(t)} turns" style="height:16px;border-radius:2px;background:${C.acc}${a.toString(16).padStart(2,'0')}"></div>`;};
-      h+=`<div class="card"><div class="card-title">Hour of day<span class="card-title-note">turns by weekday and hour, Irish time · ${days} day${days===1?'':'s'} with hourly data in range</span></div>
+        return`<div title="${names[k]} ${String(hh).padStart(2,'0')}:00 · ${num(t)} ${unit}" style="height:16px;border-radius:2px;background:${C.acc}${a.toString(16).padStart(2,'0')}"></div>`;};
+      h+=`<div class="card"><div class="card-title">Hour of day<span class="card-title-note">${unit} by weekday and hour, Irish time · ${days} day${days===1?'':'s'} with hourly data in range</span>
+          <span class="pill-group" style="margin-left:auto"><button class="pill${hoursMode==='turns'?' active':''}" onclick="setHoursMode('turns')">Turns</button><button class="pill${hoursMode==='sessions'?' active':''}" onclick="setHoursMode('sessions')">Conversations</button></span></div>
         <div class="grid4">
           ${uxTile(pc(out,tot),'Outside phone-service hours',ps.label+' · configured, '+ps.source,C.amber)}
-          ${uxTile(String(bh).padStart(2,'0')+':00','Busiest hour',num(bt)+' turns in range',C.acc)}
+          ${uxTile(String(bh).padStart(2,'0')+':00','Busiest hour',num(bt)+' '+unit+' in range',C.acc)}
         </div>
         <div style="display:grid;grid-template-columns:34px repeat(24,1fr);gap:2px;align-items:center">
           <div></div>${Array.from({length:24},(_,hh)=>`<div style="font-size:.55rem;color:var(--dim);text-align:center;font-family:'DM Mono',monospace">${hh%3===0?hh:''}</div>`).join('')}
@@ -5016,6 +5020,7 @@ function renderLLM(D,S){
         </div>`).join('')}
       </div>
     </div>
+    ${followupCacheCardHTML()}
     ${voiceCardHTML(pd)}
     ${chartBox('llm-daily',200,'Generation billed cost by family — model timeline','confirmed events marked · provisional days paler')}
     ${chartBox('llm-monthly',190,'Generation billed cost by family — monthly')}
@@ -5056,8 +5061,29 @@ function renderLLM(D,S){
     options:mergeOpts(baseOpts(),{scales:{y:{stacked:true}},plugins:{legend:{display:true}},eventLines:evLines(S,labels),onClick:(e,els)=>{if(els.length)drillBucket(vd[els[0].index]);}})});
 
   buildVoiceChart(vd);
+  buildFollowupCacheChart();
   mkChart('llm-monthly',{type:'bar',data:{labels:filtMonthly.map(m=>m.label),datasets:famList.map(m=>({label:m.name,data:filtMonthly.map(mo=>+Object.values(mo.fam?.[m.name]||{}).reduce((s,x)=>s+x,0).toFixed(3)),backgroundColor:m.color+'99',stack:'s'}))},
     options:mergeOpts(baseOpts(),{scales:{y:{stacked:true}},onClick:(e,els)=>{if(els.length)openMonthPanel(filtMonthly[els[0].index].month);}})});
+}
+
+// Follow-up share against cached-input billed-cost share, by week. Follow-ups reuse context, so
+// weeks with more follow-ups should show a higher cached share. Descriptive; both are shares.
+function followupCacheCardHTML(){
+  const cols=(DATA.usageQuality&&DATA.usageQuality.columns)||{};
+  if(!cols.types||!DATA.hasBoth)return'';
+  return`<div class="card"><div class="card-title">Follow-up share and cached-input cost share<span class="card-title-note">weekly · follow-ups (typed + suggested) ÷ turns · cached-input cost ÷ (input + cached-input cost) · descriptive only</span></div>
+    ${chartBox('llm-followup-cache',190,'Follow-up share vs cached-input billed-cost share — weekly','settled days carry the cost side')}
+  </div>`;
+}
+function buildFollowupCacheChart(){
+  if(!document.getElementById('llm-followup-cache'))return;
+  const wk=rollUp(filterRange(DATA.merged),'week');
+  const fu=wk.map(r=>r.ux&&r.queries>0?+(((r.ux.userFollowup||0)+(r.ux.suggestedFollowup||0))/r.queries*100).toFixed(1):null);
+  const cs=wk.map(r=>{const c=cachedShare([r]);return c.overall==null?null:+c.overall.toFixed(1);});
+  mkChart('llm-followup-cache',{type:'line',data:{labels:wk.map(r=>r.label),datasets:[
+    {label:'Follow-up share of turns',data:fu,borderColor:C.purple,backgroundColor:C.purple+'11',fill:true,borderWidth:1.5,pointRadius:0,tension:.3,spanGaps:true},
+    {label:'Cached-input cost share',data:cs,borderColor:C.green,borderWidth:1.5,pointRadius:0,tension:.3,spanGaps:true,fill:false}]},
+    options:mergeOpts(baseOpts(),{scales:{y:{min:0,max:100,ticks:{callback:v=>v+'%'}}},plugins:{legend:{display:true},tooltip:{callbacks:{label:cx=>`${cx.dataset.label}: ${(+cx.parsed.y).toFixed(1)}%`}}}})});
 }
 
 // Voice: billed cost only. The export has no minutes, characters or voice turn counts, so
@@ -5621,6 +5647,16 @@ function renderDayPanel(day){
         <div class="day-kpi-lbl">Billed cost${day.provisional?' · provisional':''}</div>
         <div style="font-size:.6rem;color:var(--muted);margin-top:2px;font-family:'DM Mono',monospace">${badge(day.total,avgTotal,true)} vs ${gbp(avgTotal)} join-day avg</div>
       </div>
+      ${day.ux&&day.ux.answered!=null&&day.queries>0?`<div class="day-kpi" style="border-top-color:${C.teal}">
+        <div class="day-kpi-val" style="color:${C.teal}">${(day.ux.answered/day.queries*100).toFixed(1)}%</div>
+        <div class="day-kpi-lbl">Answered</div>
+        <div style="font-size:.6rem;color:var(--muted);margin-top:2px;font-family:'DM Mono',monospace">${num(day.ux.unanswered||0)} unanswered · ${num(day.ux.flagged||0)} flagged</div>
+      </div>`:''}
+      ${day.ux&&day.ux.latP50?`<div class="day-kpi" style="border-top-color:${C.purple}">
+        <div class="day-kpi-val" style="color:${C.purple}">${(day.ux.latP50/1000).toFixed(1)}s</div>
+        <div class="day-kpi-lbl">Response p50</div>
+        <div style="font-size:.6rem;color:var(--muted);margin-top:2px;font-family:'DM Mono',monospace">p90 ${day.ux.latP90?(day.ux.latP90/1000).toFixed(1)+'s':'—'}${day.ux.suggestedFollowup!=null?` · ${(day.ux.suggestedFollowup/day.queries*100).toFixed(0)}% chips`:''}</div>
+      </div>`:''}
       <div class="day-kpi" style="border-top-color:${C.purple}">
         <div class="day-kpi-val" style="color:${C.purple}">${gbp(day.gen,3)}</div>
         <div class="day-kpi-lbl">Generation spend</div>
@@ -6282,6 +6318,14 @@ init();
     if(/questions? per session|per session|engagement/.test(q))return{kind:'qps',label:'questions per session'};
     if(/cache/.test(q))return{kind:'cache',label:'cached-input cost share'};
     if(/fixed share|share.*fixed|fixed.*(share|%|percent)/.test(q))return{kind:'fixedshare',label:'fixed share'};
+    // Feed-generated usage columns (present only when usage.csv carries them)
+    if(/unanswered|no answer|not answered/.test(q))return{kind:'unanswered',label:'unanswered share'};
+    if(/flagged/.test(q))return{kind:'flagged',label:'flagged share'};
+    if(/answered|answer rate|answer share/.test(q))return{kind:'answered',label:'answered share'};
+    if(/latency|response time|how (fast|slow)|\bslow(est)?\b|\bfast(est)?\b|\bspeed\b|\bp50\b|median response/.test(q))return{kind:'latency',label:'response time p50',superl:/slowest|\bslow(est)? day/.test(q)?'max':/fastest|quickest/.test(q)?'min':null};
+    if(/\bchips?\b|suggested follow|follow[- ]?ups?/.test(q))return{kind:'chips',label:'suggested follow-up share'};
+    if(/\bmodal\b|\bweb\b|by source|source split/.test(q))return{kind:'modal',label:'Modal share of conversations'};
+    if(/citation/.test(q))return{kind:'citations',label:'citations'};
     if(/session|conversation/.test(q))return{kind:'sessions',label:'conversations'};
     if(/question|quer|asked|\bturns?\b/.test(q))return{kind:'questions',label:'turns'};
     if(/\bllm\b|foundry|token|inference|model cost|generation/.test(q))return{kind:'llm',label:'generation cost'};
@@ -6307,6 +6351,11 @@ init();
       case 'fixed':return d.fixed||0; case 'variable':return d.variable||0;
       case 'model':{let v=0;const ms=d.metersByDate||{};for(const k in ms){if(m.match(k))v+=ms[k];}return v;}
       case 'cpq_llm':return d.join?d.cpq_llm:null; case 'cpq_tot':return d.join?d.cpq_tot:null;
+      case 'answered':case 'unanswered':case 'flagged':return d.ux&&d.queries>0&&d.ux[m.kind]!=null?d.ux[m.kind]/d.queries*100:null;
+      case 'chips':return d.ux&&d.queries>0&&d.ux.suggestedFollowup!=null?d.ux.suggestedFollowup/d.queries*100:null;
+      case 'modal':{const a=d.ux?.modalSessions,b=d.ux?.webSessions;return a!=null&&(a+b)>0?a/(a+b)*100:null;}
+      case 'latency':return d.ux?.latP50||null;
+      case 'citations':return d.ux?.citations||0;
     }
     return 0;
   }
@@ -6547,6 +6596,35 @@ init();
       return{value:ss>0?sq/ss:null,fmt:v=>v==null?'—':v.toFixed(1),series,note:'',intent};
     }
 
+    // Shares from the feed-generated columns: sum then divide over the period, never a mean of daily ratios.
+    if(['answered','unanswered','flagged','chips','modal'].includes(metric.kind)){
+      const has=rows.some(d=>d.ux);
+      if(!has)return{value:null,fmt:v=>'—',series:null,note:'usage.csv has no '+metric.label+' column; regenerate it from the QA feed',intent};
+      const numK=metric.kind==='chips'?'suggestedFollowup':metric.kind==='modal'?'modalSessions':metric.kind;
+      const n=rows.reduce((s,d)=>s+(d.ux?.[numK]||0),0);
+      const den=metric.kind==='modal'?rows.reduce((s,d)=>s+(d.ux?.modalSessions||0)+(d.ux?.webSessions||0),0):rows.reduce((s,d)=>s+(d.ux?d.queries:0),0);
+      series=rows.map(d=>rowVal(d,metric));
+      if(agg==='max'||agg==='min'){
+        const cand=rows.filter(d=>rowVal(d,metric)!=null);
+        if(cand.length){const best=cand.reduce((a,b)=>{const y=rowVal(b,metric),x=rowVal(a,metric);return (agg==='max'?y>x:y<x)?b:a;});intent._day=best.date;return{value:rowVal(best,metric),fmt:v=>v==null?'—':v.toFixed(1)+'%',series,note:(agg==='max'?'highest on ':'lowest on ')+best.label,intent};}
+      }
+      return{value:den>0?n/den*100:null,fmt:v=>v==null?'—':v.toFixed(1)+'%',series,note:`${num(n)} of ${num(den)} ${metric.kind==='modal'?'conversations':'turns'} · sum then divide`,intent};
+    }
+    if(metric.kind==='latency'){
+      const has=rows.some(d=>d.ux&&d.ux.latP50);
+      if(!has)return{value:null,fmt:v=>'—',series:null,note:'usage.csv has no latency column; regenerate it from the QA feed',intent};
+      series=rows.map(d=>rowVal(d,metric));
+      const ag=metric.superl||agg; // "slowest" is the highest p50, whatever parseAgg made of the word
+      if(metric.superl)intent.agg=metric.superl; // so the answer card says highest / lowest correctly
+      if(ag==='max'||ag==='min'){
+        const agg=ag;
+        const cand=rows.filter(d=>d.ux?.latP50);
+        const best=cand.reduce((a,b)=>{return (agg==='max'?b.ux.latP50>a.ux.latP50:b.ux.latP50<a.ux.latP50)?b:a;});intent._day=best.date;
+        return{value:best.ux.latP50,fmt:v=>v==null?'—':(v/1000).toFixed(1)+'s',series,note:(agg==='max'?'slowest day, ':'fastest day, ')+best.label+' · daily p50',intent};
+      }
+      const w=rows.reduce((s,d)=>s+((d.ux?.latP50||0)*d.queries),0),q=rows.reduce((s,d)=>s+(d.ux?.latP50?d.queries:0),0);
+      return{value:q>0?w/q:null,fmt:v=>v==null?'—':(v/1000).toFixed(1)+'s',series,note:'turn-weighted mean of the daily p50',intent};
+    }
     if(metric.kind==='cache'){
       const c=cachedShare(rows);
       return{value:c.overall,fmt:v=>v==null?'—':v.toFixed(0)+'%',series:null,note:'share of input-meter cost on cached-input meters · not a cache-hit rate',intent};
@@ -6590,7 +6668,7 @@ init();
   }
   function context(intent,value){
     if(value==null||intent.agg!=='sum')return '';
-    if(['cpq_llm','cpq_tot','qps','cache','fixedshare','runrate','topService','topModel'].includes(intent.metric.kind))return ''; // ratios: never summed
+    if(['cpq_llm','cpq_tot','qps','cache','fixedshare','runrate','topService','topModel','answered','unanswered','flagged','chips','modal','latency'].includes(intent.metric.kind))return ''; // ratios: never summed
     const p=intent.period; if(p.kind==='all'||p.kind==='year')return '';
     const days=Math.round((new Date(p.to)-new Date(p.from))/86400000)+1;
     const prevTo=addDays(p.from,-1),prevFrom=addDays(prevTo,-(days-1));
@@ -6812,11 +6890,11 @@ init();
     if(hasChart){
       const crows=DATA.merged.filter(d=>d.date>=p.from&&d.date<=p.to);
       const labels=crows.map(d=>d.label);
-      const isRate=['cpq_llm','cpq_tot','qps','cache','fixedshare'].includes(m.kind);
-      const isCount=['questions','sessions'].includes(m.kind);
+      const isRate=['cpq_llm','cpq_tot','qps','cache','fixedshare','answered','unanswered','flagged','chips','modal','latency'].includes(m.kind);
+      const isCount=['questions','sessions','citations'].includes(m.kind);
       const col=C.acc, data=series.map(v=>(v==null||!isFinite(v))?null:+v);
-      const pctKind=m.kind==='cache'||m.kind==='fixedshare';
-      const tick=isRate?(v=>(+v).toFixed(pctKind?0:2)+(pctKind?'%':(m.kind==='qps'?'':'p'))):(isCount?(v=>num(v)):(v=>'£'+(+v).toFixed(0)));
+      const pctKind=['cache','fixedshare','answered','unanswered','flagged','chips','modal'].includes(m.kind);
+      const tick=m.kind==='latency'?(v=>(+v/1000).toFixed(1)+'s'):isRate?(v=>(+v).toFixed(pctKind?0:2)+(pctKind?'%':(m.kind==='qps'?'':'p'))):(isCount?(v=>num(v)):(v=>'£'+(+v).toFixed(0)));
       mountViz({type:isRate?'line':'bar',data:{labels:labels,datasets:[{label:subj,data:data,backgroundColor:isRate?(col+'22'):(col+'cc'),borderColor:col,borderWidth:isRate?2:0,borderRadius:isRate?0:3,pointRadius:0,tension:.3,fill:!!isRate,spanGaps:true,maxBarThickness:22}]},options:mergeOpts(baseOpts(),{plugins:{legend:{display:false}},scales:{y:{ticks:{callback:tick}}}})},{cols:['Date',subj],rows:labels.map((l,i)=>[l,data[i]]),fmt:res.fmt});
     }
     showFollowups(intent);
@@ -6891,7 +6969,7 @@ init();
     const el=$('ask-chips'); if(!el||!have())return;
     const m=DATA.merged.filter(d=>d.total>0);
     const lm=m.length?fmtMonth(m[m.length-1].date.slice(0,7)):'this month';
-    const ex=['Spend in '+lm,'Most expensive service','Generation cost per turn last 3 months','Fixed share this year','Projected spend this month'];
+    const ex=['Spend in '+lm,'Most expensive service','Generation cost per turn last 3 months','Answered share last month','Response time this month','Projected spend this month'];
     el.innerHTML=ex.map(t=>'<button class="ask-chip" data-ex="'+escA(t)+'">'+esc(t)+'</button>').join('');
   }
   function applyRange(f,t){

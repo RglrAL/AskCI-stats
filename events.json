@@ -23,11 +23,11 @@
     {
       "start": "2026-05-11",
       "kind": "launch",
-      "status": "candidate",
-      "evidence": "old dashboard KNOWN_EVENTS",
+      "status": "confirmed",
+      "evidence": "QA feed Source column",
       "applies_to": "AskCI",
       "title": "Modal launch",
-      "detail": "The admin-app spec assumes 1 May; confirm with OGCIO."
+      "detail": "The feed shows 3 Modal turns on 7 May (test) and then 408 of 568 turns from Modal on 11 May, 72% of the day; Modal has carried about three quarters of turns since. The admin-app spec's 1 May assumption is not supported by the feed."
     },
     {
       "start": "2026-05-20",
@@ -36,7 +36,16 @@
       "evidence": "old dashboard KNOWN_EVENTS",
       "applies_to": "AskCI",
       "title": "Label change",
-      "detail": "Meaning to confirm."
+      "detail": "Meaning still to confirm. The feed shows suggested follow-ups (chips) present since 1 Jan, so this is not their introduction; see the confirmed observed change on the same day."
+    },
+    {
+      "start": "2026-05-20",
+      "kind": "observed change",
+      "status": "confirmed",
+      "evidence": "QA feed Source column",
+      "applies_to": "AskCI",
+      "title": "Modal turns step from about 440 to about 820 a day",
+      "detail": "Modal turns: 434 on 18 May, 442 on 19 May, 818 on 20 May, 959 on 21 May; Web turns unchanged at 130–180. Coincides with the candidate 'Label change' whose meaning is unconfirmed."
     },
     {
       "start": "2026-07-01",

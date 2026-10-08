@@ -250,3 +250,15 @@ Elsewhere: `perTurnStats` returns answered share, generation cost per answered t
 Checked in the browser on the full range: answered 85.3%, unanswered 7.7%, flagged 6.9%, generation cost per answered turn 1.92p, suggested follow-ups 20.3% of turns, Modal 71.8% of conversations, p50 12.1s and p90 18.2s, 34.7% of turns outside the configured phone hours, busiest hour 11:00. Before / after around 9 March shows p50 rising from 8.3s to 15.8s and answered share falling from 92.9% to 86.8% with the GPT 5 family; descriptive only.
 
 Not done: the Ask bar does not know the new metrics; report mode does not include them; a voice volume column still depends on an input-mode column in the export.
+
+## 15. Gaps closed (8 Oct 2026)
+
+- Open question 1 resolved from the feed's Source column: 3 Modal turns on 7 May (a test), then 408 of 568 turns on 11 May. `events.json`: Modal launch is now confirmed on 2026-05-11, evidence "QA feed Source column"; the 1 May assumption in the admin-app spec is not supported.
+- Open question 2 partly resolved: suggested follow-ups (chips) have been present since 1 Jan, so the 20 May "Label change" is not their introduction. The feed shows Modal turns stepping from about 440 to about 820 a day on 20 May with Web unchanged; recorded as a confirmed observed change on 2026-05-20. The "Label change" candidate stays a candidate with that note.
+- Ask bar: answered, unanswered and flagged share, response time p50 (turn-weighted; "slowest day" picks the highest daily p50), suggested follow-up share, Modal share of conversations, and citations. Shares are sum-then-divide; a question about a column the file lacks says so.
+- Day panel: Answered and Response p50 cards when the day carries them. Report narrative: a sentence with answered share, flagged share and median response time on the join window.
+- Usage › Volume: citations per answered turn in the Answered tile; the hour-of-day heat map toggles between turns and conversations.
+- Cost › Models: weekly follow-up share against cached-input billed-cost share, descriptive.
+- The site-search-versus-chatbot comparison already exists on Usage › Reach (information-seeking share and adoption rate); nothing new was needed there.
+
+Still unused: `categories-daily.csv` (no daily counterpart on the GA4 side). Still unavailable: voice volume.
