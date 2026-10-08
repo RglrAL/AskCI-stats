@@ -3678,6 +3678,26 @@ document.addEventListener('keydown',e=>{
   if(KPI_CATALOG[key])openKpiModal(key);
 });
 
+// History-modal entries for the feed-generated usage columns. Daily values; shares are the day's
+// own sum-then-divide. Entries are harmless when the columns are absent (series of nulls).
+(function(){
+  const dayShare=(num,den)=>d=>{const n=typeof num==='function'?num(d):d.ux?.[num],q=den(d);return d.ux&&n!=null&&q>0?n/q*100:null;};
+  const turns=d=>d.queries,convs=d=>(d.ux?.modalSessions||0)+(d.ux?.webSessions||0);
+  const ser=f=>()=>DATA.merged.map(d=>({date:d.date,label:d.label,v:f(d)}));
+  const pct=v=>v==null?'—':v.toFixed(1)+'%',secs=v=>v==null?'—':(v/1000).toFixed(1)+'s';
+  const add=(key,title,icon,color,desc,f,fmt,invert)=>{KPI_CATALOG[key]={title,icon,color:()=>C[color],desc,series:ser(f),fmt,invert};};
+  add('answered-share','Answered share','check-circle','green','Turns answered with at least one citation, as a share of the day\'s turns. From the feed-generated usage file.',dayShare('answered',turns),pct,false);
+  add('unanswered-share','Unanswered share','help-circle','amber','Turns with no citation that were not flagged, as a share of the day\'s turns.',dayShare('unanswered',turns),pct,true);
+  add('flagged-share','Flagged share','flag','red','Turns the feed marks Flagged (no citation), as a share of the day\'s turns.',dayShare('flagged',turns),pct,true);
+  add('generation-cost-per-answered-turn','Generation cost per answered turn','brain','acc','Foundry generation cost divided by answered turns, settled join days only.',d=>d.join&&d.ux?.answered>0?d.gen/d.ux.answered*100:null,v=>v==null?'—':v.toFixed(2)+'p',true);
+  add('new-topic-share','New topic share','message-square-plus','acc','Turns the feed types as new_topic, as a share of the day\'s turns.',dayShare('newTopic',turns),pct,false);
+  add('typed-follow-up-share','Typed follow-up share','corner-down-right','purple','Turns typed as user_followup, as a share of the day\'s turns.',dayShare('userFollowup',turns),pct,false);
+  add('suggested-follow-up-share','Suggested follow-up share','sparkles','amber','Turns that came from a suggested follow-up chip, as a share of the day\'s turns.',dayShare('suggestedFollowup',turns),pct,false);
+  add('modal-share','Modal share of conversations','layout','acc','Conversations started in the Modal, as a share of Modal plus Web conversations.',dayShare('modalSessions',convs),pct,false);
+  add('web-share','Web share of conversations','globe','teal','Conversations started on the Web, as a share of Modal plus Web conversations.',dayShare('webSessions',convs),pct,false);
+  add('response-time-p50','Response time p50','timer','acc','The day\'s median response time from the feed, positive values only.',d=>d.ux?.latP50||null,secs,true);
+  add('response-time-p90','Response time p90','timer','amber','The day\'s 90th-percentile response time from the feed, positive values only.',d=>d.ux?.latP90||null,secs,true);
+})();
 function openKpiModal(key){
   const meta=KPI_CATALOG[key];
   if(!meta||!DATA)return;
@@ -4093,7 +4113,8 @@ function renderOverview(D,S){
   const dOpts=donutOpts('65%');
   const dl=['Fixed','Variable (other)','Generation'],dv=[+tF.toFixed(2),+Math.max(0,tV-tG).toFixed(2),+tG.toFixed(2)],dc=[COST_COL.fixed,COST_COL.other,COST_COL.llm];
   if(tU>0){dl.push('Unclassified');dv.push(+tU.toFixed(2));dc.push(COST_COL.unclassified);}
-  mkChart('ov-donut',{type:'doughnut',data:{labels:dl,datasets:[{data:dv,backgroundColor:dc,borderColor:C.s1,borderWidth:1,hoverOffset:8}]},options:dOpts});
+  mkChart('ov-donut',{type:'doughnut',data:{labels:dl,datasets:[{data:dv,backgroundColor:dc,borderColor:C.s1,borderWidth:1,hoverOffset:8}]},
+    options:{...dOpts,onClick:(e,els)=>{if(!els.length)return;const l=dl[els[0].index];if(l==='Fixed')openKpiModal('fixed-share');else if(l==='Generation')activateSub('llm');else activateSub('breakdown');}}});
 
   const svcP={};pd.forEach(d=>D.allSvcs.forEach(s=>{svcP[s]=(svcP[s]||0)+(d[s]||0)}));
   const maxS=Math.max(1,...Object.values(svcP));
@@ -4762,11 +4783,11 @@ function renderUsage(D,S){
       ${kpi(num(totQ),'Total turns','selected period',C.acc)}
       ${kpi(num(totS),'Conversations','selected period',C.green)}
       ${kpi(totS>0?(totQ/totS).toFixed(1):'—','Turns per conversation','selected period',C.amber)}
-      ${kpi(num(peakD.queries||0),'Peak day',peakD.label||'—',C.purple)}
+      <div${peakD.date?` onclick="openDayPanel('${peakD.date}')" style="cursor:pointer" title="Open ${peakD.label}"`:''}>${kpi(num(peakD.queries||0),'Peak day',peakD.label||'—',C.purple)}</div>
     </div>
     ${chartBox('us-monthly',200,'Turns & conversations — selected range','click month')}
     <div class="grid2">
-      ${chartBox('us-wdwe',170,'Weekday vs Weekend Average')}
+      ${chartBox('us-wdwe',170,'Weekday vs Weekend Average','click month')}
       <div class="card"><div class="card-title">Monthly Summary<span class="tbl-scroll-hint">swipe →</span></div>
         <div class="tbl-wrap"><table>
           <thead><tr><th>Month</th><th>Turns</th><th>Conversations</th><th>Turns/conv</th><th>Avg/Day</th><th>Weekday Avg</th></tr></thead>
@@ -4786,7 +4807,7 @@ function renderUsage(D,S){
   const usOpts=mergeOpts(baseOpts(),{scales:{y:{ticks:{callback:v=>num(v)}}}});
   mkChart('us-monthly',{type:'bar',data:{labels:fm.map(m=>m.label),datasets:[{label:'Turns',data:fm.map(m=>m.questions),backgroundColor:C.acc+'88'},{label:'Conversations',data:fm.map(m=>m.sessions),backgroundColor:C.purple+'88'}]},
     options:mergeOpts(usOpts,{onClick:(e,els)=>{if(els.length)openMonthPanel(fm[els[0].index].month);}})});
-  mkChart('us-wdwe',{type:'bar',data:{labels:fm.map(m=>m.label),datasets:[{label:'Weekday avg',data:fm.map(m=>m.wdQ.length?Math.round(m.wdQ.reduce((a,b)=>a+b,0)/m.wdQ.length):0),backgroundColor:C.acc+'88'},{label:'Weekend avg',data:fm.map(m=>m.weQ.length?Math.round(m.weQ.reduce((a,b)=>a+b,0)/m.weQ.length):0),backgroundColor:C.purple+'88'}]},options:usOpts});
+  mkChart('us-wdwe',{type:'bar',data:{labels:fm.map(m=>m.label),datasets:[{label:'Weekday avg',data:fm.map(m=>m.wdQ.length?Math.round(m.wdQ.reduce((a,b)=>a+b,0)/m.wdQ.length):0),backgroundColor:C.acc+'88'},{label:'Weekend avg',data:fm.map(m=>m.weQ.length?Math.round(m.weQ.reduce((a,b)=>a+b,0)/m.weQ.length):0),backgroundColor:C.purple+'88'}]},options:mergeOpts(usOpts,{onClick:(e,els)=>{if(els.length)openMonthPanel(fm[els[0].index].month);}})});
   buildCalendar(D);
   buildUsageDetailCharts(fr);
 }
@@ -4794,8 +4815,9 @@ function renderUsage(D,S){
 // ── Usage detail: cards that switch on when usage.csv carries the feed-generated columns ──
 // Every share is sum-then-divide over the selected range. Latency is the turn-weighted mean of
 // the daily p50 / p90, labelled as such (a true range percentile needs per-turn data).
-function uxTile(val,lbl,sub,col){
-  return`<div style="text-align:center;padding:12px;background:var(--bg);border-radius:6px">
+function uxTile(val,lbl,sub,col,key){
+  const click=key&&KPI_CATALOG[key];
+  return`<div${click?` class="kpi-clickable" role="button" tabindex="0" onclick="openKpiModal('${key}')" title="See the daily series"`:''} style="text-align:center;padding:12px;background:var(--bg);border-radius:6px${click?';cursor:pointer':''}">
     <div style="font-size:1.1rem;font-weight:700;font-family:'DM Mono',monospace;color:${col}">${val}</div>
     <div style="font-size:.6rem;color:var(--muted);text-transform:uppercase;letter-spacing:.08em;margin-top:3px">${lbl}</div>
     <div style="font-size:.63rem;color:var(--muted);margin-top:2px">${sub}</div></div>`;
@@ -4814,36 +4836,36 @@ function usageDetailHTML(fr){
     const P=perTurnStats(fr),ans=sum('answered'),un=sum('unanswered'),fl=sum('flagged');
     h+=`<div class="card"><div class="card-title">Answer outcomes<span class="card-title-note">answered = at least one citation · flagged = the feed's Flagged column (no citation) · unanswered = neither · ${span}</span></div>
       <div class="grid4">
-        ${uxTile(pc(ans,turns),'Answered',num(ans)+' of '+num(turns)+' turns'+(sum('citations')>0&&ans>0?` · ${(sum('citations')/ans).toFixed(2)} citations per answered turn`:''),C.green)}
-        ${uxTile(pc(un,turns),'Unanswered',num(un)+' turns',C.amber)}
-        ${uxTile(pc(fl,turns),'Flagged',num(fl)+' turns',C.red)}
-        ${uxTile(P.genPA!=null?P.genPA.toFixed(2)+'p':'—','Generation cost per answered turn',P.valid?'settled join days · '+P.span:P.why,C.acc)}
+        ${uxTile(pc(ans,turns),'Answered',num(ans)+' of '+num(turns)+' turns'+(sum('citations')>0&&ans>0?` · ${(sum('citations')/ans).toFixed(2)} citations per answered turn`:''),C.green,'answered-share')}
+        ${uxTile(pc(un,turns),'Unanswered',num(un)+' turns',C.amber,'unanswered-share')}
+        ${uxTile(pc(fl,turns),'Flagged',num(fl)+' turns',C.red,'flagged-share')}
+        ${uxTile(P.genPA!=null?P.genPA.toFixed(2)+'p':'—','Generation cost per answered turn',P.valid?'settled join days · '+P.span:P.why,C.acc,'generation-cost-per-answered-turn')}
       </div>
-      ${chartBox('ux-outcomes',180,'Answer outcomes — selected range','turns, stacked')}
+      ${chartBox('ux-outcomes',180,'Answer outcomes — selected range','turns, stacked · click a bar')}
     </div>`;
   }
   if(cols.types){
     const nt=sum('newTopic'),uf=sum('userFollowup'),sf=sum('suggestedFollowup');
     h+=`<div class="card"><div class="card-title">Question types<span class="card-title-note">from the feed's Question Type column · suggested follow-ups are the chips · ${span}</span></div>
       <div class="grid4">
-        ${uxTile(pc(nt,turns),'New topic',num(nt)+' turns',C.acc)}
-        ${uxTile(pc(uf,turns),'Typed follow-up',num(uf)+' turns',C.purple)}
-        ${uxTile(pc(sf,turns),'Suggested follow-up',num(sf)+' turns',C.amber)}
-        ${uxTile(convs>0?(turns/convs).toFixed(2):'—','Turns per conversation',num(convs)+' conversations',C.muted)}
+        ${uxTile(pc(nt,turns),'New topic',num(nt)+' turns',C.acc,'new-topic-share')}
+        ${uxTile(pc(uf,turns),'Typed follow-up',num(uf)+' turns',C.purple,'typed-follow-up-share')}
+        ${uxTile(pc(sf,turns),'Suggested follow-up',num(sf)+' turns',C.amber,'suggested-follow-up-share')}
+        ${uxTile(convs>0?(turns/convs).toFixed(2):'—','Turns per conversation',num(convs)+' conversations',C.muted,'turns-per-conversation')}
       </div>
-      ${chartBox('ux-types',180,'Question types — selected range','turns, stacked')}
+      ${chartBox('ux-types',180,'Question types — selected range','turns, stacked · click a bar')}
     </div>`;
   }
   if(cols.sources){
     const ms=sum('modalSessions'),ws=sum('webSessions'),mt=sum('modalTurns'),wt=sum('webTurns'),ot=sum('otherTurns');
     h+=`<div class="card"><div class="card-title">Source<span class="card-title-note">conversations by where they started · ${span}</span></div>
       <div class="grid4">
-        ${uxTile(pc(ms,ms+ws),'Modal',num(ms)+' conversations',C.acc)}
-        ${uxTile(pc(ws,ms+ws),'Web',num(ws)+' conversations',C.teal)}
+        ${uxTile(pc(ms,ms+ws),'Modal',num(ms)+' conversations',C.acc,'modal-share')}
+        ${uxTile(pc(ws,ms+ws),'Web',num(ws)+' conversations',C.teal,'web-share')}
         ${uxTile(ms>0?(mt/ms).toFixed(2):'—','Turns per Modal conversation',num(mt)+' turns',C.muted)}
         ${uxTile(ws>0?(wt/ws).toFixed(2):'—','Turns per Web conversation',num(wt)+' turns'+(ot?` · ${num(ot)} other`:''),C.muted)}
       </div>
-      ${chartBox('ux-sources',180,'Conversations by source — selected range','stacked')}
+      ${chartBox('ux-sources',180,'Conversations by source — selected range','stacked · click a bar')}
     </div>`;
   }
   if(cols.latency){
@@ -4851,23 +4873,24 @@ function usageDetailHTML(fr){
     const p50=w('latP50'),p90=w('latP90');
     h+=`<div class="card"><div class="card-title">Response time<span class="card-title-note">turn-weighted mean of the daily p50 and p90 · positive values only · ${span}</span></div>
       <div class="grid4">
-        ${uxTile(p50!=null?(p50/1000).toFixed(1)+'s':'—','p50','daily median, weighted by turns',C.acc)}
-        ${uxTile(p90!=null?(p90/1000).toFixed(1)+'s':'—','p90','daily 90th percentile, weighted by turns',C.amber)}
+        ${uxTile(p50!=null?(p50/1000).toFixed(1)+'s':'—','p50','daily median, weighted by turns',C.acc,'response-time-p50')}
+        ${uxTile(p90!=null?(p90/1000).toFixed(1)+'s':'—','p90','daily 90th percentile, weighted by turns',C.amber,'response-time-p90')}
       </div>
-      ${chartBox('ux-latency',180,'Response time — daily p50 and p90','seconds · confirmed events marked')}
+      ${chartBox('ux-latency',180,'Response time — daily p50 and p90','seconds · confirmed events marked · click a day')}
     </div>`;
   }
   if(hasHours){
     const ps=CONFIG.phone_service,grid=Array.from({length:7},()=>Array(24).fill(0)),hk=hoursMode==='sessions'?'s':'t',unit=hoursMode==='sessions'?'conversations':'turns';
+    const best=Array.from({length:7},()=>Array(24).fill(null)); // busiest day per weekday-hour slot, for the click
     let tot=0,out=0,days=0;
     fr.forEach(d=>{const a=HOURS[d.date];if(!a)return;days++;const k=isoDow(d.date);
-      for(let hh=0;hh<24;hh++){const t=a[hh]?a[hh][hk]:0;grid[k][hh]+=t;tot+=t;if(!(ps.days.includes(k)&&hh>=ps.from&&hh<ps.to))out+=t;}});
+      for(let hh=0;hh<24;hh++){const t=a[hh]?a[hh][hk]:0;grid[k][hh]+=t;tot+=t;if(t>0&&(!best[k][hh]||t>best[k][hh].t))best[k][hh]={date:d.date,t};if(!(ps.days.includes(k)&&hh>=ps.from&&hh<ps.to))out+=t;}});
     if(tot>0){
       const order=[1,2,3,4,5,6,0],names=['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
       const max=Math.max(...grid.flat());
       let bh=0,bt=-1;for(let hh=0;hh<24;hh++){const t=grid.reduce((s,r)=>s+r[hh],0);if(t>bt){bt=t;bh=hh;}}
-      const cell=(k,hh)=>{const t=grid[k][hh],a=max>0?Math.round(0x12+(0xee-0x12)*(t/max)):0x12;
-        return`<div title="${names[k]} ${String(hh).padStart(2,'0')}:00 · ${num(t)} ${unit}" style="height:16px;border-radius:2px;background:${C.acc}${a.toString(16).padStart(2,'0')}"></div>`;};
+      const cell=(k,hh)=>{const t=grid[k][hh],a=max>0?Math.round(0x12+(0xee-0x12)*(t/max)):0x12,b=best[k][hh];
+        return`<div title="${names[k]} ${String(hh).padStart(2,'0')}:00 · ${num(t)} ${unit}${b?` · busiest ${fmtDate(b.date)} (${num(b.t)}) — click to open`:''}"${b?` onclick="openDayPanel('${b.date}')"`:''} style="height:16px;border-radius:2px;background:${C.acc}${a.toString(16).padStart(2,'0')}${b?';cursor:pointer':''}"></div>`;};
       h+=`<div class="card"><div class="card-title">Hour of day<span class="card-title-note">${unit} by weekday and hour, Irish time · ${days} day${days===1?'':'s'} with hourly data in range</span>
           <span class="pill-group" style="margin-left:auto"><button class="pill${hoursMode==='turns'?' active':''}" onclick="setHoursMode('turns')">Turns</button><button class="pill${hoursMode==='sessions'?' active':''}" onclick="setHoursMode('sessions')">Conversations</button></span></div>
         <div class="grid4">
@@ -4885,7 +4908,7 @@ function usageDetailHTML(fr){
 }
 function buildUsageDetailCharts(fr){
   const vd=getViewData(),labels=vd.map(d=>d.label),g=(r,k)=>r.ux?.[k]||0;
-  const stacked=mergeOpts(baseOpts(),{scales:{y:{stacked:true,ticks:{callback:v=>num(v)}},x:{stacked:true}},plugins:{legend:{display:true}}});
+  const stacked=mergeOpts(baseOpts(),{scales:{y:{stacked:true,ticks:{callback:v=>num(v)}},x:{stacked:true}},plugins:{legend:{display:true}},onClick:(e,els)=>{if(els.length)drillBucket(vd[els[0].index]);}});
   if(document.getElementById('ux-outcomes'))mkChart('ux-outcomes',{type:'bar',data:{labels,datasets:[
     {label:'Answered',data:vd.map(r=>g(r,'answered')),backgroundColor:C.green+'cc',stack:'o',maxBarThickness:28},
     {label:'Unanswered',data:vd.map(r=>g(r,'unanswered')),backgroundColor:C.amber+'cc',stack:'o',maxBarThickness:28},
@@ -4902,7 +4925,7 @@ function buildUsageDetailCharts(fr){
     mkChart('ux-latency',{type:'line',data:{labels:dl,datasets:[
       {label:'p50',data:fr.map(d=>d.ux?.latP50?+(d.ux.latP50/1000).toFixed(2):null),borderColor:C.acc,backgroundColor:C.acc+'11',fill:true,borderWidth:1.5,pointRadius:0,tension:.3,spanGaps:true},
       {label:'p90',data:fr.map(d=>d.ux?.latP90?+(d.ux.latP90/1000).toFixed(2):null),borderColor:C.amber,borderWidth:1.5,pointRadius:0,tension:.3,spanGaps:true,fill:false}]},
-      options:mergeOpts(baseOpts(),{scales:{y:{ticks:{callback:v=>(+v).toFixed(0)+'s'}}},plugins:{legend:{display:true},tooltip:{callbacks:{label:cx=>`${cx.dataset.label}: ${(+cx.parsed.y).toFixed(1)}s`}}},eventLines:evLines(DATA.stats,dl)})});
+      options:mergeOpts(baseOpts(),{scales:{y:{ticks:{callback:v=>(+v).toFixed(0)+'s'}}},plugins:{legend:{display:true},tooltip:{callbacks:{label:cx=>`${cx.dataset.label}: ${(+cx.parsed.y).toFixed(1)}s`}}},eventLines:evLines(DATA.stats,dl),onClick:(e,els)=>{if(els.length)openDayPanel(fr[els[0].index].date);}})});
   }
 }
 
@@ -5072,7 +5095,7 @@ function followupCacheCardHTML(){
   const cols=(DATA.usageQuality&&DATA.usageQuality.columns)||{};
   if(!cols.types||!DATA.hasBoth)return'';
   return`<div class="card"><div class="card-title">Follow-up share and cached-input cost share<span class="card-title-note">weekly · follow-ups (typed + suggested) ÷ turns · cached-input cost ÷ (input + cached-input cost) · descriptive only</span></div>
-    ${chartBox('llm-followup-cache',190,'Follow-up share vs cached-input billed-cost share — weekly','settled days carry the cost side')}
+    ${chartBox('llm-followup-cache',190,'Follow-up share vs cached-input billed-cost share — weekly','settled days carry the cost side · click a week')}
   </div>`;
 }
 function buildFollowupCacheChart(){
@@ -5083,7 +5106,7 @@ function buildFollowupCacheChart(){
   mkChart('llm-followup-cache',{type:'line',data:{labels:wk.map(r=>r.label),datasets:[
     {label:'Follow-up share of turns',data:fu,borderColor:C.purple,backgroundColor:C.purple+'11',fill:true,borderWidth:1.5,pointRadius:0,tension:.3,spanGaps:true},
     {label:'Cached-input cost share',data:cs,borderColor:C.green,borderWidth:1.5,pointRadius:0,tension:.3,spanGaps:true,fill:false}]},
-    options:mergeOpts(baseOpts(),{scales:{y:{min:0,max:100,ticks:{callback:v=>v+'%'}}},plugins:{legend:{display:true},tooltip:{callbacks:{label:cx=>`${cx.dataset.label}: ${(+cx.parsed.y).toFixed(1)}%`}}}})});
+    options:mergeOpts(baseOpts(),{scales:{y:{min:0,max:100,ticks:{callback:v=>v+'%'}}},plugins:{legend:{display:true},tooltip:{callbacks:{label:cx=>`${cx.dataset.label}: ${(+cx.parsed.y).toFixed(1)}%`}}},onClick:(e,els)=>{if(els.length)drillBucket(wk[els[0].index],'week');}})});
 }
 
 // Voice: billed cost only. The export has no minutes, characters or voice turn counts, so
@@ -5166,7 +5189,7 @@ function renderImpact(D,S){
         <thead><tr style="border-bottom:2px solid var(--b2)">${th('Event','left')}${th('Window','left')}${th('Turns / day')}${th('Billed £ / day')}${th('Generation p / turn')}${th('Allocated total p / turn')}${ux.outcomes?th('Answered share'):''}${ux.latency?th('Response p50'):''}</tr></thead>
         <tbody>
           ${rows.map(r=>`
-            <tr><td colspan="${ncol}" style="padding:12px 12px 4px;font-size:.78rem;color:var(--text);font-weight:600"><span style="display:inline-block;width:8px;height:8px;border-radius:2px;background:${eventColor(r.ev)};margin-right:8px"></span>${r.ev.title} <span style="color:var(--muted);font-weight:400;font-family:'DM Mono',monospace;font-size:.65rem">· ${r.ev.kind} · ${fmtDate(r.ev.start)}${r.ev.end&&r.ev.end!==r.ev.start?'–'+fmtDate(r.ev.end):''}${r.ev.evidence?' · evidence: '+r.ev.evidence:''}</span></td></tr>
+            <tr onclick="openDayPanel('${r.ev.start}')" style="cursor:pointer" title="Open ${fmtDate(r.ev.start)}"><td colspan="${ncol}" style="padding:12px 12px 4px;font-size:.78rem;color:var(--text);font-weight:600"><span style="display:inline-block;width:8px;height:8px;border-radius:2px;background:${eventColor(r.ev)};margin-right:8px"></span>${r.ev.title} <span style="color:var(--muted);font-weight:400;font-family:'DM Mono',monospace;font-size:.65rem">· ${r.ev.kind} · ${fmtDate(r.ev.start)}${r.ev.end&&r.ev.end!==r.ev.start?'–'+fmtDate(r.ev.end):''}${r.ev.evidence?' · evidence: '+r.ev.evidence:''}</span></td></tr>
             ${side(r.before,'Before','var(--muted)')}
             ${side(r.after,'After',C.acc)}
           `).join('')}
@@ -5174,10 +5197,10 @@ function renderImpact(D,S){
       </table>
       <div style="font-size:.63rem;color:var(--dim);margin-top:10px;font-family:'DM Mono',monospace">Descriptive only. Differences between the two windows are shown, not attributed to the event. A dash means the window has fewer than ${CONFIG.min_settled_join_days} settled join days or fewer than ${CONFIG.min_rate_denominator} turns.</div>
     </div>
-    ${chartBox('imp-chart',210,'Daily turns — full period with confirmed events')}
+    ${chartBox('imp-chart',210,'Daily turns — full period with confirmed events','click a day · click an event row above to open its day')}
   `;
   const allLabels=D.merged.map(d=>d.label),allQ=D.merged.map(d=>d.queries);
-  mkChart('imp-chart',{type:'line',data:{labels:allLabels,datasets:[{label:'Turns / day',data:allQ,borderColor:C.acc,backgroundColor:C.acc+'11',fill:true,borderWidth:1.5,pointRadius:0,tension:.3}]},options:mergeOpts(baseOpts(),{scales:{y:{ticks:{callback:v=>num(v)}}},eventLines:evLines(S,allLabels)})});
+  mkChart('imp-chart',{type:'line',data:{labels:allLabels,datasets:[{label:'Turns / day',data:allQ,borderColor:C.acc,backgroundColor:C.acc+'11',fill:true,borderWidth:1.5,pointRadius:0,tension:.3}]},options:mergeOpts(baseOpts(),{scales:{y:{ticks:{callback:v=>num(v)}}},eventLines:evLines(S,allLabels),onClick:(e,els)=>{if(els.length)openDayPanel(D.merged[els[0].index].date);}})});
 }
 
 // ═══ PROJECTIONS ════════════════════════════════════════════════════
@@ -5575,10 +5598,10 @@ function navDay(dir){
 //   month → that month's panel
 // `row` is the view-data entry for the clicked bar (its .date is a day iso,
 // week-start iso, or YYYY-MM depending on granularity).
-function drillBucket(row){
+function drillBucket(row,gran=granularity){
   if(!row||!DATA)return;
-  if(granularity==='month'){openMonthPanel(row.date);return;}
-  if(granularity==='week'){
+  if(gran==='month'){openMonthPanel(row.date);return;}
+  if(gran==='week'){
     const days=DATA.merged.filter(d=>d.week===row.date&&(d.total>0||d.queries>0));
     if(days.length)openDayPanel(days.reduce((a,b)=>b.total>a.total?b:a).date);
     return;

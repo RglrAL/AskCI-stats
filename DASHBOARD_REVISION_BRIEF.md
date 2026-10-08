@@ -262,3 +262,15 @@ Not done: the Ask bar does not know the new metrics; report mode does not includ
 - The site-search-versus-chatbot comparison already exists on Usage › Reach (information-seeking share and adoption rate); nothing new was needed there.
 
 Still unused: `categories-daily.csv` (no daily counterpart on the GA4 side). Still unavailable: voice volume.
+
+## 16. Drill-down audit (8 Oct 2026)
+
+Targets are the existing day, month, service and meter panels and the KPI history modal. After the audit every chart except the Scenario planner's two, the Ask bar's and the burn-down opens something:
+
+- Summary share donut: Fixed opens the fixed-share history, Generation opens Models, the rest opens Services.
+- Usage: answer outcomes, question types and source bars drill by the selected granularity (day, busiest day of the week, month); the latency line opens the day; weekday/weekend bars open the month; hour-of-day cells open the busiest day in that weekday-hour slot; Peak day opens its day.
+- Models: the weekly follow-up/cached-share chart opens the busiest day of the week.
+- Before / after: the daily turns line opens the day; each event row opens the event's day.
+- History modal entries for answered, unanswered and flagged share, generation cost per answered turn, new-topic, typed and suggested follow-up share, Modal and Web share, response p50 and p90; the tiles in the new Usage cards open them.
+
+Left without a click: Reach and Categories (monthly, compared with GA4, no panel of their own), the Scenario planner (a model), the Ask bar chart and the burn-down.
