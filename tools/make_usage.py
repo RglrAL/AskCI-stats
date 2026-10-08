@@ -35,6 +35,9 @@ Outputs (all daily counts; nothing per-turn and no text crosses into the dashboa
   citations-monthly.csv     Month, URL (normalised), Citations, Category (known slug or blank)
   journeys-monthly.csv      Month, From, To, Conversations (consecutive category steps, mature conversations)
   starter-prompts-monthly.csv  Month, Prompt, Count, Cited, FollowedByTyped, FollowedBySuggested
+  latency-buckets-daily.csv  Date, Kind (words | citations), Bucket, Turns, LatencySumMs — response time by
+                            response length and by citation count (needs Response Words from the redaction)
+  category-outcomes-daily.csv also carries Organic<Outcome> columns: organic first turns by their outcome.
   usage-hours.csv also carries NotFound, Errors, Timed and LatencySumMs per hour slot.
 
 Conversation rules (admin-app spec): a conversation starts on the day of its first turn; it is
@@ -141,6 +144,8 @@ def aggregate(files, skip_days=frozenset()):
     bad = 0; has_voice = False; cat_dropped = 0; has_outcome = False; rules = set(); has_starter = False; has_script = False
     recs = []                                        # per-turn minimal records for the conversation pass (no text)
     cites_m = defaultdict(int)                       # (month, url) -> citations
+    latb = defaultdict(lambda: defaultdict(int))     # (date, kind, bucket) -> turns, latsum
+    has_words = False
     seen = set(); dupes = 0   # exports taken on different days overlap on their boundary day
     for f in files:
         with open(f, encoding="utf-8-sig", newline="") as fh:
@@ -151,6 +156,7 @@ def aggregate(files, skip_days=frozenset()):
             has_outcome = has_outcome or bool(outcome_col)
             has_starter = has_starter or ("Starter Prompt" in r.fieldnames)
             has_script = has_script or ("Query Script" in r.fieldnames)
+            has_words = has_words or ("Response Words" in r.fieldnames)
             for row in r:
                 key = (row.get("Conversation ID") or "", (row.get("Turn #") or "").strip())
                 if key in seen:
@@ -233,6 +239,16 @@ def aggregate(files, skip_days=frozenset()):
                 for u in urls:
                     nu = norm_url(u)
                     if nu: cites_m[(d.strftime("%Y-%m"), nu)] += 1
+                # latency by response length and by citation count (positive response times only)
+                if has_words:
+                    try: ms3 = int(float(row.get("Response Time (ms)") or ""))
+                    except ValueError: ms3 = 0
+                    if ms3 > 0:
+                        w = int(row.get("Response Words") or 0)
+                        wb = "0-50" if w <= 50 else "51-100" if w <= 100 else "101-150" if w <= 150 else "151-200" if w <= 200 else "201-300" if w <= 300 else "301+"
+                        nc = len(urls); cb = str(nc) if nc < 6 else "6+"
+                        for kind, b in (("words", wb), ("citations", cb)):
+                            e = latb[(d, kind, b)]; e["turns"] += 1; e["latsum"] += ms3
                 # hour-slot detail for the heat-map toggle
                 hv = hours[(d, t.hour)]
                 if o_rec == "Not found": hv["notfound"] += 1
@@ -252,7 +268,7 @@ def aggregate(files, skip_days=frozenset()):
                         cat_dropped += sum(1 for x in slugs if x is None)
                         toks = [x for x in slugs if x]
                     for s in set(toks): cats[d][s] += 1
-    return D, sess, lat, hours, hour_sess, cats, bad, has_voice, dupes, cat_dropped, has_outcome, rules, has_starter, has_script, recs, cites_m
+    return D, sess, lat, hours, hour_sess, cats, bad, has_voice, dupes, cat_dropped, has_outcome, rules, has_starter, has_script, recs, cites_m, latb
 
 
 def conversation_pass(recs):
@@ -286,7 +302,9 @@ def conversation_pass(recs):
             k["turns"] += 1
             if r[4]: k["o:" + r[4]] += 1
             if r[4] and r[4] not in ("Greeting", "Error", "Out of scope"): k["scored"] += 1
-            if r[1] == 1 and not r[8]: k["organic"] += 1
+            if r[1] == 1 and not r[8]:
+                k["organic"] += 1
+                if r[4]: k["org:" + r[4]] += 1
             if r[7]: k["dislikes_cited"] += 1
         # follow-up gaps (fixture diagnostic)
         for a, b in zip(turns, turns[1:]):
@@ -342,12 +360,16 @@ def conversation_rows(cd):
 
 
 def category_outcome_rows(co):
-    cols = ["Date", "Category", "Turns"] + [OUT_KEY[o] for o in OUTCOMES] + ["Scored", "OrganicFirstTurns", "DislikesOnCited"]
+    cols = ["Date", "Category", "Turns"] + [OUT_KEY[o] for o in OUTCOMES] + ["Scored", "OrganicFirstTurns", "DislikesOnCited"] + ["Organic" + OUT_KEY[o] for o in OUTCOMES]
     out = []
     for (d, cat) in sorted(co, key=lambda k: (k[0], k[1])):
         k = co[(d, cat)]
-        out.append([d.isoformat(), cat, k["turns"]] + [k["o:" + o] for o in OUTCOMES] + [k["scored"], k["organic"], k["dislikes_cited"]])
+        out.append([d.isoformat(), cat, k["turns"]] + [k["o:" + o] for o in OUTCOMES] + [k["scored"], k["organic"], k["dislikes_cited"]] + [k["org:" + o] for o in OUTCOMES])
     return cols, out
+
+
+def latency_bucket_rows(latb):
+    return ["Date", "Kind", "Bucket", "Turns", "LatencySumMs"], [[d.isoformat(), kind, b, e["turns"], e["latsum"]] for (d, kind, b), e in sorted(latb.items())]
 
 
 def citation_rows(cites_m):
@@ -485,7 +507,7 @@ def main():
     # An export taken on day X contains only part of day X; skip those rows unless asked to keep them.
     export_days = {datetime.strptime(m.group(1), "%Y%m%d").date() for m in (re.search(r"(\d{8})_\d{6}", os.path.basename(f)) for f in a.files) if m}
     skip = frozenset() if (a.keep_partial or not export_days) else frozenset({max(export_days)})  # only the newest export's own day is partial
-    D, sess, lat, hours, hour_sess, cats, bad, has_voice, dupes, cat_dropped, has_outcome, rules, has_starter, has_script, recs, cites_m = aggregate(a.files, skip)
+    D, sess, lat, hours, hour_sess, cats, bad, has_voice, dupes, cat_dropped, has_outcome, rules, has_starter, has_script, recs, cites_m, latb = aggregate(a.files, skip)
     rules = ", ".join(sorted(r for r in rules if r))
     if skip and any(True for _ in skip): print(f"note: export day(s) {', '.join(str(x) for x in sorted(skip))} skipped as partial (--keep-partial to keep)")
     cd, co, jm, sp, cstats = conversation_pass(recs)
@@ -515,6 +537,7 @@ def main():
         write(os.path.join(a.out_dir, "citations-monthly.csv"), *citation_rows(cites_m))
         write(os.path.join(a.out_dir, "journeys-monthly.csv"), *journey_rows(jm))
         write(os.path.join(a.out_dir, "starter-prompts-monthly.csv"), *starter_rows(sp))
+        if latb: write(os.path.join(a.out_dir, "latency-buckets-daily.csv"), *latency_bucket_rows(latb))
     elif a.out:
         write(a.out, ucols, urows)
     else:
