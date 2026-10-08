@@ -52,7 +52,18 @@ CAT_NAME = {  # feed slug -> display name used by the existing categories.csv (l
     "government-in-ireland": "Government in Ireland", "environment": "Environment",
 }
 URL_RE = re.compile(r'https?://[^\s,;|"]+')
-CAT_SEG_RE = re.compile(r'^https?://[^/]+/en/([^/?#]+)')
+# Category from a cited URL: citizensinformation.ie only, /en/<slug>/ or the old-site /<slug>/ with
+# underscores; the slug must be a known category or the hit is dropped (and counted).
+CAT_SEG_RE = re.compile(r'^https?://(?:www\.)?citizensinformation\.ie/(?:en/)?([^/?#]+)')
+KNOWN_SLUGS = set(CAT_NAME) | {"my-situation"}
+
+
+def url_slug(u):
+    m = CAT_SEG_RE.match(u)
+    if not m:
+        return None
+    slug = m.group(1).lower().replace("_", "-")
+    return slug if slug in KNOWN_SLUGS else None
 csv.field_size_limit(min(sys.maxsize, 2**31 - 1))
 
 
@@ -78,7 +89,7 @@ def aggregate(files):
     hours = defaultdict(lambda: defaultdict(int))    # (date, hour) -> turns
     hour_sess = defaultdict(set)                     # (date, hour) -> conversation ids (turn 1)
     cats = defaultdict(lambda: defaultdict(int))     # date -> slug -> hits
-    bad = 0; has_voice = False
+    bad = 0; has_voice = False; cat_dropped = 0
     seen = set(); dupes = 0   # exports taken on different days overlap on their boundary day
     for f in files:
         with open(f, encoding="utf-8-sig", newline="") as fh:
@@ -136,9 +147,11 @@ def aggregate(files):
                     for s in toks: cats[d][s] += 1
                 else:
                     if not toks and urls:
-                        toks = [m.group(1) for m in map(CAT_SEG_RE.match, urls) if m]
+                        slugs = [url_slug(u) for u in urls]
+                        cat_dropped += sum(1 for x in slugs if x is None)
+                        toks = [x for x in slugs if x]
                     for s in set(toks): cats[d][s] += 1
-    return D, sess, lat, hours, hour_sess, cats, bad, has_voice, dupes
+    return D, sess, lat, hours, hour_sess, cats, bad, has_voice, dupes, cat_dropped
 
 
 def usage_rows(D, sess, lat, has_voice):
@@ -238,9 +251,10 @@ def main():
     ap.add_argument("--category-rule", choices=["distinct", "tokens"], default="distinct", help="distinct per turn with URL fallback (default), or every Categories entry incl. repeats and no fallback (old file's rule)")
     a = ap.parse_args()
     global CATEGORY_RULE; CATEGORY_RULE = a.category_rule
-    D, sess, lat, hours, hour_sess, cats, bad, has_voice, dupes = aggregate(a.files)
+    D, sess, lat, hours, hour_sess, cats, bad, has_voice, dupes, cat_dropped = aggregate(a.files)
     if bad: print(f"warning: {bad} rows with unreadable Timestamp skipped", file=sys.stderr)
     if dupes: print(f"note: {dupes} rows repeated across the input files (same conversation and turn) counted once")
+    if cat_dropped: print(f"note: {cat_dropped} cited URLs on rows with a blank Categories column were not citizensinformation.ie category pages; not counted")
     if not D: sys.exit("no rows parsed")
     # An export taken on day X contains only part of day X. Drop it unless asked to keep it.
     export_days = {datetime.strptime(m.group(1), "%Y%m%d").date() for m in (re.search(r"(\d{8})_\d{6}", os.path.basename(f)) for f in a.files) if m}

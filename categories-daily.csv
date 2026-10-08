@@ -7,7 +7,6 @@ Date,Category,Citations
 2026-01-01,environment,1
 2026-01-01,moving-country,1
 2026-01-01,returning-to-ireland,1
-2026-01-01,topics,1
 2026-01-01,justice,1
 2026-01-01,death,1
 2026-01-01,about,1
@@ -26,8 +25,6 @@ Date,Category,Citations
 2026-01-02,education,2
 2026-01-02,justice,2
 2026-01-02,returning-to-ireland,1
-2026-01-02,personal-tax-credits-reliefs-and-exemptions,1
-2026-01-02,service,1
 2026-01-03,health,4
 2026-01-03,justice,4
 2026-01-03,money-and-tax,2
@@ -59,7 +56,6 @@ Date,Category,Citations
 2026-01-05,birth-family-relationships,4
 2026-01-05,environment,2
 2026-01-05,death,1
-2026-01-05,social_welfare,1
 2026-01-06,social-welfare,67
 2026-01-06,employment,37
 2026-01-06,moving-country,23
@@ -73,9 +69,6 @@ Date,Category,Citations
 2026-01-06,death,3
 2026-01-06,about,3
 2026-01-06,my-situation,1
-2026-01-06,online-services,1
-2026-01-06,personal-tax-credits-reliefs-and-exemptions,1
-2026-01-06,self-assessment-and-self-employment,1
 2026-01-06,government-in-ireland,1
 2026-01-06,consumer,1
 2026-01-07,social-welfare,107
@@ -93,8 +86,6 @@ Date,Category,Citations
 2026-01-07,government-in-ireland,3
 2026-01-07,education,3
 2026-01-07,about,2
-2026-01-07,collection,1
-2026-01-07,intreo-centres,1
 2026-01-08,social-welfare,97
 2026-01-08,money-and-tax,34
 2026-01-08,employment,21
@@ -111,7 +102,6 @@ Date,Category,Citations
 2026-01-08,environment,3
 2026-01-08,justice,3
 2026-01-08,about,2
-2026-01-08,department-of-social-protection,1
 2026-01-09,social-welfare,78
 2026-01-09,employment,36
 2026-01-09,money-and-tax,26
@@ -126,7 +116,6 @@ Date,Category,Citations
 2026-01-09,consumer,2
 2026-01-09,returning-to-ireland,1
 2026-01-09,government-in-ireland,1
-2026-01-09,directory,1
 2026-01-09,about,1
 2026-01-10,social-welfare,13
 2026-01-10,employment,8
@@ -155,8 +144,8 @@ Date,Category,Citations
 2026-01-12,health,12
 2026-01-12,housing,9
 2026-01-12,justice,4
-2026-01-12,returning-to-ireland,4
 2026-01-12,education,4
+2026-01-12,returning-to-ireland,4
 2026-01-12,birth-family-relationships,3
 2026-01-12,about,2
 2026-01-12,environment,2
@@ -190,7 +179,6 @@ Date,Category,Citations
 2026-01-14,birth-family-relationships,7
 2026-01-14,justice,6
 2026-01-14,education,6
-2026-01-14,publication,4
 2026-01-14,about,1
 2026-01-14,death,1
 2026-01-15,social-welfare,112
@@ -205,8 +193,6 @@ Date,Category,Citations
 2026-01-15,returning-to-ireland,4
 2026-01-15,death,4
 2026-01-15,justice,4
-2026-01-15,topics,1
-2026-01-15,topic,1
 2026-01-15,government-in-ireland,1
 2026-01-15,about,1
 2026-01-15,consumer,1
@@ -221,14 +207,11 @@ Date,Category,Citations
 2026-01-16,education,18
 2026-01-16,health,15
 2026-01-16,justice,10
-2026-01-16,topics,9
 2026-01-16,government-in-ireland,6
 2026-01-16,death,5
 2026-01-16,consumer,3
 2026-01-16,about,2
 2026-01-16,environment,1
-2026-01-16,intreo-centres,1
-2026-01-16,department-of-social-protection,1
 2026-01-17,social-welfare,7
 2026-01-17,money-and-tax,6
 2026-01-17,housing,4
@@ -246,7 +229,6 @@ Date,Category,Citations
 2026-01-18,consumer,1
 2026-01-18,travel-and-recreation,1
 2026-01-18,birth-family-relationships,1
-2026-01-18,what-we-do,1
 2026-01-19,social-welfare,114
 2026-01-19,money-and-tax,58
 2026-01-19,employment,45
@@ -260,11 +242,6 @@ Date,Category,Citations
 2026-01-19,travel-and-recreation,6
 2026-01-19,consumer,4
 2026-01-19,birth-family-relationships,3
-2026-01-19,social-w,1
-2026-01-19,topics,1
-2026-01-19,What-We-Do,1
-2026-01-19,contact-us,1
-2026-01-19,what-we-do,1
 2026-01-19,about,1
 2026-01-20,social-welfare,149
 2026-01-20,money-and-tax,45
@@ -297,7 +274,6 @@ Date,Category,Citations
 2026-01-21,returning-to-ireland,3
 2026-01-21,about,2
 2026-01-21,environment,2
-2026-01-21,topics,1
 2026-01-22,social-welfare,142
 2026-01-22,money-and-tax,48
 2026-01-22,housing,48
@@ -315,7 +291,7 @@ Date,Category,Citations
 2026-01-22,environment,2
 2026-01-22,consumer,1
 2026-01-23,social-welfare,68
-2026-01-23,money-and-tax,26
+2026-01-23,money-and-tax,27
 2026-01-23,moving-country,16
 2026-01-23,employment,15
 2026-01-23,travel-and-recreation,11
@@ -327,8 +303,6 @@ Date,Category,Citations
 2026-01-23,consumer,3
 2026-01-23,justice,2
 2026-01-23,death,2
-2026-01-23,topics,1
-2026-01-23,money_and_tax,1
 2026-01-24,money-and-tax,16
 2026-01-24,social-welfare,12
 2026-01-24,moving-country,9
@@ -339,8 +313,6 @@ Date,Category,Citations
 2026-01-24,education,3
 2026-01-24,birth-family-relationships,3
 2026-01-24,travel-and-recreation,1
-2026-01-24,employing-people,1
-2026-01-24,social_welfare,1
 2026-01-25,money-and-tax,7
 2026-01-25,social-welfare,6
 2026-01-25,travel-and-recreation,4
@@ -364,11 +336,8 @@ Date,Category,Citations
 2026-01-26,consumer,3
 2026-01-26,environment,3
 2026-01-26,government-in-ireland,2
-2026-01-26,topics,2
 2026-01-26,justice,2
 2026-01-26,death,1
-2026-01-26,publication,1
-2026-01-26,contact,1
 2026-01-27,social-welfare,8
 2026-01-27,travel-and-recreation,6
 2026-01-27,housing,5
@@ -385,8 +354,8 @@ Date,Category,Citations
 2026-01-28,money-and-tax,24
 2026-01-28,employment,21
 2026-01-28,housing,21
+2026-01-28,moving-country,21
 2026-01-28,health,20
-2026-01-28,moving-country,20
 2026-01-28,birth-family-relationships,11
 2026-01-28,returning-to-ireland,8
 2026-01-28,travel-and-recreation,6
@@ -396,9 +365,7 @@ Date,Category,Citations
 2026-01-28,consumer,2
 2026-01-28,death,2
 2026-01-28,about,2
-2026-01-28,topics,2
 2026-01-28,justice,2
-2026-01-28,moving_country,1
 2026-01-29,social-welfare,79
 2026-01-29,moving-country,33
 2026-01-29,money-and-tax,30
@@ -414,8 +381,6 @@ Date,Category,Citations
 2026-01-29,education,2
 2026-01-29,consumer,2
 2026-01-29,government-in-ireland,2
-2026-01-29,self-assessment-and-self-employment,1
-2026-01-29,Complaints_Disputes,1
 2026-01-29,about,1
 2026-01-30,social-welfare,61
 2026-01-30,housing,19
@@ -447,7 +412,6 @@ Date,Category,Citations
 2026-02-01,moving-country,2
 2026-02-01,death,1
 2026-02-01,justice,1
-2026-02-01,Complaints_Disputes,1
 2026-02-01,consumer,1
 2026-02-02,social-welfare,12
 2026-02-02,moving-country,11
@@ -459,7 +423,6 @@ Date,Category,Citations
 2026-02-02,about,2
 2026-02-02,birth-family-relationships,2
 2026-02-02,travel-and-recreation,1
-2026-02-02,services,1
 2026-02-02,education,1
 2026-02-03,social-welfare,79
 2026-02-03,money-and-tax,27
@@ -474,7 +437,6 @@ Date,Category,Citations
 2026-02-03,justice,4
 2026-02-03,government-in-ireland,2
 2026-02-03,education,1
-2026-02-03,topics,1
 2026-02-03,consumer,1
 2026-02-04,social-welfare,101
 2026-02-04,housing,29
@@ -492,7 +454,6 @@ Date,Category,Citations
 2026-02-04,consumer,1
 2026-02-04,education,1
 2026-02-04,government-in-ireland,1
-2026-02-04,money_and_tax,1
 2026-02-05,social-welfare,117
 2026-02-05,money-and-tax,33
 2026-02-05,employment,29
@@ -506,9 +467,7 @@ Date,Category,Citations
 2026-02-05,returning-to-ireland,5
 2026-02-05,environment,3
 2026-02-05,about,2
-2026-02-05,social_welfare,1
 2026-02-05,justice,1
-2026-02-05,contact,1
 2026-02-05,death,1
 2026-02-06,social-welfare,111
 2026-02-06,money-and-tax,36
@@ -519,7 +478,6 @@ Date,Category,Citations
 2026-02-06,travel-and-recreation,13
 2026-02-06,health,12
 2026-02-06,justice,5
-2026-02-06,topics,3
 2026-02-06,consumer,3
 2026-02-06,government-in-ireland,3
 2026-02-06,death,2
@@ -534,9 +492,6 @@ Date,Category,Citations
 2026-02-07,returning-to-ireland,3
 2026-02-07,justice,2
 2026-02-07,health,2
-2026-02-07,topics,1
-2026-02-07,social,1
-2026-02-07,what_you_should_know,1
 2026-02-08,social-welfare,8
 2026-02-08,health,7
 2026-02-08,birth-family-relationships,2
@@ -556,9 +511,6 @@ Date,Category,Citations
 2026-02-09,government-in-ireland,2
 2026-02-09,environment,2
 2026-02-09,justice,2
-2026-02-09,topics,1
-2026-02-09,department-of-social-protection,1
-2026-02-09,publication,1
 2026-02-09,consumer,1
 2026-02-10,social-welfare,102
 2026-02-10,employment,23
@@ -575,12 +527,7 @@ Date,Category,Citations
 2026-02-10,justice,2
 2026-02-10,about,2
 2026-02-10,government-in-ireland,2
-2026-02-10,what_you_should_know,1
-2026-02-10,dfa,1
-2026-02-10,publication,1
 2026-02-10,environment,1
-2026-02-10,money_and_tax,1
-2026-02-10,service,1
 2026-02-11,social-welfare,77
 2026-02-11,money-and-tax,25
 2026-02-11,housing,19
@@ -595,10 +542,7 @@ Date,Category,Citations
 2026-02-11,birth-family-relationships,3
 2026-02-11,death,3
 2026-02-11,government-in-ireland,2
-2026-02-11,jobs-and-pensions,1
-2026-02-11,topics,1
 2026-02-11,about,1
-2026-02-11,department-of-social-protection,1
 2026-02-12,social-welfare,121
 2026-02-12,money-and-tax,31
 2026-02-12,housing,24
@@ -614,7 +558,6 @@ Date,Category,Citations
 2026-02-12,justice,2
 2026-02-12,consumer,2
 2026-02-12,government-in-ireland,1
-2026-02-12,topics,1
 2026-02-13,social-welfare,79
 2026-02-13,employment,22
 2026-02-13,housing,15
@@ -626,7 +569,6 @@ Date,Category,Citations
 2026-02-13,birth-family-relationships,9
 2026-02-13,justice,5
 2026-02-13,death,4
-2026-02-13,topics,2
 2026-02-13,consumer,1
 2026-02-13,returning-to-ireland,1
 2026-02-14,housing,4
@@ -638,8 +580,6 @@ Date,Category,Citations
 2026-02-15,employment,3
 2026-02-15,birth-family-relationships,2
 2026-02-15,money-and-tax,2
-2026-02-15,contact-us,1
-2026-02-15,crime-and-justice,1
 2026-02-15,consumer,1
 2026-02-15,moving-country,1
 2026-02-16,social-welfare,111
@@ -669,11 +609,8 @@ Date,Category,Citations
 2026-02-17,education,4
 2026-02-17,justice,3
 2026-02-17,government-in-ireland,2
-2026-02-17,starting-a-business,1
-2026-02-17,self-assessment-and-self-employment,1
 2026-02-17,death,1
 2026-02-17,environment,1
-2026-02-17,topics,1
 2026-02-18,social-welfare,83
 2026-02-18,money-and-tax,43
 2026-02-18,housing,33
@@ -687,9 +624,6 @@ Date,Category,Citations
 2026-02-18,about,5
 2026-02-18,justice,4
 2026-02-18,consumer,2
-2026-02-18,services,1
-2026-02-18,service,1
-2026-02-18,publication,1
 2026-02-18,death,1
 2026-02-19,social-welfare,74
 2026-02-19,housing,32
@@ -718,10 +652,8 @@ Date,Category,Citations
 2026-02-20,birth-family-relationships,5
 2026-02-20,death,4
 2026-02-20,justice,2
-2026-02-20,topics,1
 2026-02-20,government-in-ireland,1
 2026-02-20,about,1
-2026-02-20,online-services,1
 2026-02-21,social-welfare,12
 2026-02-21,housing,3
 2026-02-21,health,2
@@ -760,11 +692,7 @@ Date,Category,Citations
 2026-02-24,government-in-ireland,3
 2026-02-24,consumer,3
 2026-02-24,travel-and-recreation,3
-2026-02-24,topics,2
 2026-02-24,death,2
-2026-02-24,department-of-social-protection,1
-2026-02-24,additional-incomes,1
-2026-02-24,tax-professionals,1
 2026-02-24,education,1
 2026-02-25,social-welfare,55
 2026-02-25,employment,17
@@ -779,7 +707,6 @@ Date,Category,Citations
 2026-02-25,justice,2
 2026-02-25,about,2
 2026-02-25,returning-to-ireland,1
-2026-02-25,service,1
 2026-02-26,social-welfare,95
 2026-02-26,employment,29
 2026-02-26,money-and-tax,25
@@ -809,8 +736,6 @@ Date,Category,Citations
 2026-02-27,death,1
 2026-02-27,about,1
 2026-02-27,consumer,1
-2026-02-27,dfa,1
-2026-02-27,topics,1
 2026-02-28,social-welfare,14
 2026-02-28,employment,6
 2026-02-28,death,6
@@ -830,9 +755,7 @@ Date,Category,Citations
 2026-03-01,travel-and-recreation,2
 2026-03-01,returning-to-ireland,2
 2026-03-01,health,2
-2026-03-01,department-of-social-protection,1
 2026-03-01,employment,1
-2026-03-01,topics,1
 2026-03-01,government-in-ireland,1
 2026-03-02,social-welfare,108
 2026-03-02,housing,24
@@ -844,10 +767,7 @@ Date,Category,Citations
 2026-03-02,travel-and-recreation,11
 2026-03-02,education,4
 2026-03-02,government-in-ireland,3
-2026-03-02,campaigns,2
-2026-03-02,topics,2
 2026-03-02,about,2
-2026-03-02,organisation-information,1
 2026-03-02,death,1
 2026-03-02,consumer,1
 2026-03-03,social-welfare,74
@@ -871,8 +791,8 @@ Date,Category,Citations
 2026-03-04,health,23
 2026-03-04,housing,15
 2026-03-04,money-and-tax,12
-2026-03-04,moving-country,10
 2026-03-04,education,10
+2026-03-04,moving-country,10
 2026-03-04,birth-family-relationships,6
 2026-03-04,justice,5
 2026-03-04,travel-and-recreation,4
@@ -897,7 +817,6 @@ Date,Category,Citations
 2026-03-05,environment,2
 2026-03-05,about,2
 2026-03-05,government-in-ireland,1
-2026-03-05,consumer-affairs,1
 2026-03-06,social-welfare,51
 2026-03-06,employment,29
 2026-03-06,health,20
@@ -924,8 +843,8 @@ Date,Category,Citations
 2026-03-08,social-welfare,8
 2026-03-08,travel-and-recreation,3
 2026-03-08,birth-family-relationships,2
-2026-03-08,justice,1
 2026-03-08,environment,1
+2026-03-08,justice,1
 2026-03-09,social-welfare,79
 2026-03-09,housing,36
 2026-03-09,moving-country,19
@@ -942,7 +861,6 @@ Date,Category,Citations
 2026-03-09,government-in-ireland,1
 2026-03-09,justice,1
 2026-03-09,consumer,1
-2026-03-09,returning_to_ireland,1
 2026-03-10,social-welfare,83
 2026-03-10,employment,33
 2026-03-10,money-and-tax,27
@@ -1950,8 +1868,8 @@ Date,Category,Citations
 2026-05-24,returning-to-ireland,11
 2026-05-24,government-in-ireland,10
 2026-05-24,education,7
-2026-05-24,consumer,2
 2026-05-24,environment,2
+2026-05-24,consumer,2
 2026-05-24,death,2
 2026-05-25,social-welfare,390
 2026-05-25,money-and-tax,92
