@@ -939,6 +939,15 @@ button:focus-visible,.pill:focus-visible{outline-offset:1px}
 }
 .kpi-sub{font-size:var(--t-2xs);color:var(--dim);font-family:'DM Mono',monospace;margin-top:var(--sp-1)}
 /* Secondary KPI tiles — hidden until "more metrics" is expanded */
+.home-active #hero,.home-active #kpi-row,.home-active #kpi-more-btn{display:none!important}
+.home-headline{font-size:1rem;line-height:1.55;color:var(--text)}
+.home-headline b{font-weight:600}
+.home-sub{font-size:var(--t-xs);color:var(--muted);margin-top:8px;font-family:'DM Mono',monospace}
+details.card>summary{cursor:pointer;list-style:none;display:flex;align-items:center;justify-content:space-between}
+details.card>summary::-webkit-details-marker{display:none}
+details.card>summary::after{content:'▸';color:var(--muted);font-size:.9rem;margin-left:8px}
+details.card[open]>summary::after{content:'▾'}
+details.card:not([open])>summary.card-title{margin-bottom:0}
 .kpi-secondary{display:none}
 #kpi-row.show-more .kpi-secondary{display:block}
 .kpi-more-btn{
@@ -1671,14 +1680,16 @@ Date,Questions,Sessions
 
     <div class="tabs-wrap" id="tabs-wrap">
     <div class="tabs" role="tablist">
-      <button class="tab-btn active" data-tab="costs"       role="tab" aria-selected="true"><i data-lucide="wallet"      class="i-sm"></i>Cost</button>
+      <button class="tab-btn active" data-tab="home"        role="tab" aria-selected="true"><i data-lucide="layout-dashboard" class="i-sm"></i>Overview</button>
+      <button class="tab-btn"        data-tab="costs"       role="tab" aria-selected="false"><i data-lucide="wallet"      class="i-sm"></i>Cost</button>
       <button class="tab-btn"        data-tab="usage"       role="tab" aria-selected="false"><i data-lucide="users"       class="i-sm"></i>Usage</button>
       <button class="tab-btn"        data-tab="projections" role="tab" aria-selected="false"><i data-lucide="sparkles"    class="i-sm"></i>Scenario planner</button>
     </div>
     </div>
     <!-- In-pane sub-navigation for grouped tabs (Costs, Usage); hidden for single-view tabs -->
     <div id="subnav" class="subnav" role="tablist" style="display:none"></div>
-    <div id="pane-overview"    class="pane active"></div>
+    <div id="pane-home"        class="pane active"></div>
+    <div id="pane-overview"    class="pane"></div>
     <div id="pane-timeline"    class="pane"></div>
     <div id="pane-breakdown"   class="pane"></div>
     <div id="pane-usage"       class="pane"></div>
@@ -1774,7 +1785,7 @@ function readPalette(){
 const PREFS_KEY='askci-prefs-v1';
 const PREFS_DEFAULTS={
   theme:'dark',       // dark | light
-  tab:'overview',
+  tab:'home',
   range:'ALL',        // 7D | 1M | 3M | ALL
   gran:'day',         // day | week | month
   customFrom:'',
@@ -1990,7 +2001,6 @@ const CONFIG={
   launch_date:'2026-05-11',   // candidate public Modal launch; labels only, see events.json
   // Phone-service hours, used only for the "outside phone-service hours" share on the Usage pane.
   phone_service:{days:[1,2,3,4,5],from:9,to:20,label:'Mon–Fri 09:00–20:00',source:'Citizens Information Phone Service published hours — to confirm'},
-  gbp_eur:1.18,               // display convenience only — Azure bills this subscription in GBP
 };
 const FOUNDRY='Foundry Models';
 const FAMILY_COL={'GPT 5 Chat':'#58a6ff','GPT 5 Mini':'#bc8cff','GPT 5':'#ff7b72','gpt-4o 1120':'#d29922','gpt-4o-mini 0718':'#e879f9','chat-latest 05052026':'#3fb950','5.4':'#39d353','5.4 mini':'#f0883e','gpt-4o-transcribe':'#79c0ff','text-embedding-3-small':'#8b949e','unparsed':'#6e7681'};
@@ -2409,8 +2419,10 @@ function parseUsage(rows){
     newTopic:col(/^newtopic$/i),userFollowup:col(/^userfollowup$/i),suggestedFollowup:col(/^suggestedfollowup$/i),
     modalTurns:col(/^modalturns$/i),webTurns:col(/^webturns$/i),otherTurns:col(/^otherturns$/i),modalSessions:col(/^modalsessions$/i),webSessions:col(/^websessions$/i),
     citations:col(/^citations$/i),latP50:col(/^latencyp50/i),latP90:col(/^latencyp90/i),voiceTurns:col(/^voiceturns$/i),voiceSessions:col(/^voicesessions$/i),
+    likes:col(/^likes$/i),dislikes:col(/^dislikes$/i),dislikesCited:col(/^dislikesoncited$/i),starter:col(/^starterpromptfirstturns$/i),organic:col(/^organicfirstturns$/i),
+    scLatin:col(/^scriptlatin$/i),scCyrillic:col(/^scriptcyrillic$/i),scArabic:col(/^scriptarabic$/i),scCJK:col(/^scriptcjk$/i),scDevanagari:col(/^scriptdevanagari$/i),scOther:col(/^scriptother$/i),scNone:col(/^scriptnone$/i),
     cited:col(/^cited$/i),notFound:col(/^notfound$/i),clarification:col(/^clarification$/i),error:col(/^error$/i),outOfScope:col(/^outofscope$/i),greeting:col(/^greeting$/i),uncited:col(/^uncited$/i),partial:col(/^partial$/i),scored:col(/^scored$/i)};
-  const columns={outcomes:!!UX.answered,types:!!UX.newTopic,sources:!!UX.modalSessions,latency:!!UX.latP50,voice:!!UX.voiceSessions,taxonomy:!!UX.cited};
+  const columns={outcomes:!!UX.answered,types:!!UX.newTopic,sources:!!UX.modalSessions,latency:!!UX.latP50,voice:!!UX.voiceSessions,taxonomy:!!UX.cited,feedback:!!UX.likes,starter:!!UX.starter,script:!!UX.scLatin};
   const rulesCol=col(/^outcomerules$/i);let outcomeRules='';
   rows.forEach(row=>{
     const raw=String(row[dk]||'').trim();
@@ -2674,11 +2686,14 @@ function perTurnStats(rows){
   const cited=ux('cited'),nf=ux('notFound'),cl=ux('clarification'),er=ux('error'),sc=ux('scored'),pa=ux('partial'),unc=ux('uncited'),oos=ux('outOfScope');
   const ms=ux('modalSessions'),ws=ux('webSessions'),sf=ux('suggestedFollowup'),hasTypes=j.some(d=>d.ux&&d.ux.suggestedFollowup!=null),hasSrc=j.some(d=>d.ux&&d.ux.modalSessions!=null);
   const vrate=(n,d)=>valid?rate(n,d):null;
+  const likes=ux('likes'),dislikes=ux('dislikes'),dk=ux('dislikesCited'),hasFb=j.some(d=>d.ux&&d.ux.likes!=null);
+  const dpk=hasFb&&valid&&rateOK(dk,cited).ok&&cited>0?dk/cited*1000:null;
   return{days,from,to,turns,convs,gen,tot,variable:vr,fixed:fx,unclassified:un,valid,
     scored:sc,cited,notFound:nf,errors:er,
     citedRate:hasTax?vrate(cited,sc):null,notFoundRate:hasTax?vrate(nf,sc):null,clarRate:hasTax?vrate(cl,sc):null,uncitedRate:hasTax?vrate(unc,sc):null,
     errorRate:hasTax?vrate(er,turns):null,outOfScopeShare:hasTax?vrate(oos,turns):null,partialRate:hasTax?vrate(pa,cited):null,
     chipsShare:hasTypes?vrate(sf,turns):null,modalShare:hasSrc?vrate(ms,ms+ws):null,
+    likes,dislikes,dislikesPerK:dpk,feedbackRate:hasFb?vrate(likes+dislikes,turns):null,
     convsPerDay:days?convs/days:null,turnsPerConv:convs>0?turns/convs:null,varPerDay:days?vr/days:null,
     answered:ans,answeredShare:hasAns&&valid&&turns>0?ans/turns*100:null,flaggedShare:hasAns&&valid&&turns>0?flg/turns*100:null,genPA:hasAns?pt(gen,ans):null,latP50:valid&&latQ>0?latW/latQ:null,
     genPT:pt(gen,turns),totPT:pt(tot,turns),varPT:pt(vr,turns),
@@ -2790,18 +2805,21 @@ const WC_CANDIDATES=[
   {cls:3,name:'Cited answer rate',k:'citedRate',kind:'pts'},
   {cls:3,name:'Cited but partial',k:'partialRate',kind:'pts'},
   {cls:3,name:'Clarification rate',k:'clarRate',kind:'pts'},
-  {cls:3,name:'Generation cost per turn',k:'genPT',kind:'pence'},
+  {cls:3,name:'Dislikes per 1,000 cited answers',k:'dislikesPerK',kind:'perk'},
+  {cls:3,name:'Generation cost per turn',k:'genPT',kind:'pence',cost:true},
   {cls:4,name:'Turns per day',k:'turnsPerDay',kind:'count'},
   {cls:4,name:'Conversations per day',k:'convsPerDay',kind:'count'},
-  {cls:4,name:'Billed cost per day',k:'costPerDay',kind:'gbp'},
-  {cls:4,name:'Variable cost per day',k:'varPerDay',kind:'gbp'},
-  {cls:4,name:'Fixed share',k:'fixedShare',kind:'pts'},
+  {cls:4,name:'Billed cost per day',k:'costPerDay',kind:'gbp',cost:true},
+  {cls:4,name:'Variable cost per day',k:'varPerDay',kind:'gbp',cost:true},
+  {cls:4,name:'Fixed share',k:'fixedShare',kind:'pts',cost:true},
   {cls:4,name:'Modal share of conversations',k:'modalShare',kind:'pts'},
   {cls:5,name:'Suggested follow-up share',k:'chipsShare',kind:'pts'},
   {cls:5,name:'Turns per conversation',k:'turnsPerConv',kind:'count'},
 ];
-function whatChanged(rangeRows){
-  const empty={statements:[],events:[],A:null,B:null,valid:false,why:'no data in range',fallback:'',rule:''};
+// set: 'service' (Overview: quality, latency, demand, product) or 'cost' (Cost tab: unit cost,
+// billed and variable cost, fixed share; at most three statements). The two are never merged.
+function whatChanged(rangeRows,set='service'){
+  const empty={statements:[],events:[],A:null,B:null,valid:false,why:'no data in range',fallback:'',rule:'',set};
   if(!rangeRows||!rangeRows.length)return empty;
   const from=rangeRows[0].date,to=rangeRows[rangeRows.length-1].date;
   const W=comparisonWindow(from,to);
@@ -2812,13 +2830,15 @@ function whatChanged(rangeRows){
     if(j.length>=56){A=perTurnStats(j.slice(-28));B=perTurnStats(j.slice(-56,-28));fallback='the range has no preceding window, so the last 28 settled join days are compared with the 28 before';}
   }else if(W.rule!=='the preceding window of equal length')fallback='compared with '+W.rule;
   const M=CONFIG.materiality,out=[];
-  const fmt={pts:v=>v.toFixed(1)+'%',ms:v=>(v/1000).toFixed(1)+'s',pence:v=>v.toFixed(2)+'p',count:v=>num(Math.round(v)),gbp:v=>gbp(v,Math.abs(v)>=100?0:2)};
+  const fmt={pts:v=>v.toFixed(1)+'%',ms:v=>(v/1000).toFixed(1)+'s',pence:v=>v.toFixed(2)+'p',count:v=>num(Math.round(v)),gbp:v=>gbp(v,Math.abs(v)>=100?0:2),perk:v=>v.toFixed(1)};
   const valid=A.valid&&B.valid;
-  if(valid)WC_CANDIDATES.forEach(c=>{
+  const cands=WC_CANDIDATES.filter(c=>set==='all'||(set==='cost'?c.cost:!c.cost)),limit=set==='cost'?3:6;
+  if(valid)cands.forEach(c=>{
     const a=A[c.k],b=B[c.k];if(a==null||b==null)return;
     const d=a-b,rel=b!==0?d/Math.abs(b)*100:null;
     let score,dTxt;const sign=d>0?'+':'−';
     if(c.kind==='pts'){score=Math.abs(d)/M.rate_pts;dTxt=`${sign}${Math.abs(d).toFixed(1)} pts`;}
+    else if(c.kind==='perk'){score=Math.abs(d)/M.rate_pts;dTxt=`${sign}${Math.abs(d).toFixed(1)} per 1,000`;} // one per thousand treated like one point
     else if(c.kind==='ms'){score=Math.max(rel==null?0:Math.abs(rel)/M.latency_pct,Math.abs(d)/M.latency_ms);dTxt=`${sign}${(Math.abs(d)/1000).toFixed(1)}s`+(rel!=null?` (${sign}${Math.abs(rel).toFixed(0)}%)`:'');}
     else if(c.kind==='pence'){score=Math.max(rel==null?0:Math.abs(rel)/M.ratio_pct,Math.abs(d)/M.ratio_pence);dTxt=`${sign}${Math.abs(d).toFixed(2)}p`+(rel!=null?` (${sign}${Math.abs(rel).toFixed(0)}%)`:'');}
     else{if(rel==null)return;score=Math.abs(rel)/M.count_pct;dTxt=`${sign}${Math.abs(rel).toFixed(0)}%`;}
@@ -2827,8 +2847,8 @@ function whatChanged(rangeRows){
   });
   out.sort((x,y)=>x.cls-y.cls||y.score-x.score);
   const perClass={},statements=[];
-  out.forEach(st=>{if(statements.length>=6)return;perClass[st.cls]=(perClass[st.cls]||0);if(perClass[st.cls]>=2)return;perClass[st.cls]++;statements.push(st);});
-  return{statements,events:eventsInRange(from,to),A,B,valid,fallback,rule:W.rule,
+  out.forEach(st=>{if(statements.length>=limit)return;perClass[st.cls]=(perClass[st.cls]||0);if(perClass[st.cls]>=2)return;perClass[st.cls]++;statements.push(st);});
+  return{statements,events:eventsInRange(from,to),A,B,valid,fallback,rule:W.rule,set,
     why:valid?'':(A.valid?`previous window (${B.span}): ${B.why||'no settled join days'}`:`selected window (${A.span}): ${A.why||'no settled join days'}`)};
 }
 // Descriptive before/after around a confirmed event: equal windows of up to `maxDays`,
@@ -2957,6 +2977,8 @@ document.querySelectorAll('#gran-group .pill').forEach(b=>b.addEventListener('cl
 // just organise how they're reached. Sub-ids match the original tab ids, so
 // persisted PREFS.tab values keep working with no migration.
 const TAB_GROUPS=[
+  // Overview first: outcomes before activity. One screen — headline, six tiles, What changed (service), two charts.
+  {id:'home',       label:'Overview',    icon:'layout-dashboard', subs:[{id:'home',label:'Overview',icon:'layout-dashboard'}]},
   {id:'costs',      label:'Cost',        icon:'wallet',      subs:[
     {id:'overview', label:'Summary',  icon:'layout-grid'},
     {id:'breakdown',label:'Services', icon:'microscope'},
@@ -3000,6 +3022,7 @@ function activateSub(subId){
   renderSubnav(group,subId);
   document.querySelectorAll('.pane').forEach(p=>p.classList.remove('active'));
   const pane=document.getElementById('pane-'+subId);if(pane)pane.classList.add('active');
+  document.body.classList.toggle('home-active',subId==='home'); // the Overview carries its own tiles; the cost hero and KPI row stay off it
   requestAnimationFrame(()=>requestAnimationFrame(()=>{
     if(!rendered[subId]){rendered[subId]=true;renderPane(subId);}
     Object.values(charts).forEach(c=>{try{c.resize()}catch(e){}});
@@ -3178,13 +3201,12 @@ function cpqBreakdownHTML(D,S,pd,svcP,totSvc){
   const pence=v=>v==null?'—':v.toFixed(2)+'p';
   const genPT=P.genPT,totPT=P.totPT,varPT=P.varPT;
   const aiPct=P.valid&&totPT>0?genPT/totPT*100:0,runPct=100-aiPct;
-  const eurCent=P.valid?totPT*CONFIG.gbp_eur:null;
   const explain=`<div class="cpq-explain">
     <div class="cpq-explain-top">
       <span class="cpq-explain-lbl">Allocated total cost per turn</span>
       <span class="cpq-explain-num cpq-click" onclick="openKpiModal('allocated-total-cost-per-turn')" title="See the daily series">${pence(totPT)}<span class="cpq-cur" title="Figures in GBP — Azure bills this subscription in pounds. Pence (p), not euro cent.">GBP</span></span>
     </div>
-    <div class="cpq-euro">Ratios cover <b>${P.span}</b> — settled billing days with turns, summed then divided.${eurCent!=null?` ≈ ${eurCent.toFixed(1)}c at £1 ≈ €${CONFIG.gbp_eur} (display only).`:''}</div>
+    <div class="cpq-euro">Ratios cover <b>${P.span}</b> — settled billing days with turns, summed then divided.</div>
     ${P.valid?'':`<div class="cpq-euro" style="color:var(--amber)">Not enough settled data for a per-turn figure: ${P.why}.</div>`}
     ${P.valid?`<div class="cpq-splitbar">
       <div class="cpq-click" style="width:${aiPct.toFixed(1)}%;background:${C.acc}" onclick="activateSub('llm')" title="Generation: ${pence(genPT)} per turn — click for the model breakdown"></div>
@@ -3485,7 +3507,7 @@ function buildReportHTML(){
   const turns=pd.reduce((s,d)=>s+d.queries,0),convs=pd.reduce((s,d)=>s+d.sessions,0);
   const P=perTurnStats(pd);
   const fc=forecastMonth();
-  const wc=whatChanged(pd);
+  const wc=whatChanged(pd,'cost'),wcS=whatChanged(pd,'service');
   const budget=PREFS.budgetMonthly||0;
   const budgetStatus=budget>0&&fc?(fc.forecast>budget?'over':fc.forecast>budget*0.85?'near':'under'):null;
   const svcTotals={};
@@ -3493,7 +3515,7 @@ function buildReportHTML(){
   const topSvcs=Object.entries(svcTotals).sort((a,b)=>b[1]-a[1]).slice(0,6);
   const svcGrandTotal=topSvcs.reduce((s,[,v])=>s+v,0)||1;
   const pence=v=>v==null?'—':v.toFixed(2)+'p';
-  const narrative=buildReportNarrative({from,to,settledSpend,provSpend,turns,P,fc,wc,budget,budgetStatus,topSvcs});
+  const narrative=buildReportNarrative({from,to,settledSpend,provSpend,turns,P,fc,wc,wcS,budget,budgetStatus,topSvcs});
 
   return`
     <div id="report-mode-toolbar" class="report-toolbar">
@@ -3579,7 +3601,7 @@ function buildReportHTML(){
 // Narrative built from the same functions as the Summary pane: perTurnStats, whatChanged,
 // forecastMonth. Descriptive only — no causal language.
 function buildReportNarrative(ctx){
-  const{from,to,settledSpend,provSpend,turns,P,fc,wc,budget,budgetStatus,topSvcs}=ctx;
+  const{from,to,settledSpend,provSpend,turns,P,fc,wc,wcS,budget,budgetStatus,topSvcs}=ctx;
   const fmt=d=>d?`${+d.slice(8)} ${MON_S[+d.slice(5,7)-1]}`:'—';
   const parts=[];
   parts.push(`Between <b>${fmt(from)}</b> and <b>${fmt(to)}</b>, AskCI was billed <b>${gbp(settledSpend+provSpend,0)}</b> on Azure${provSpend>0?` (${gbp(provSpend,0)} of it provisional)`:''}${turns>0?` and received <b>${num(turns)} turns</b>`:''}.`);
@@ -3587,8 +3609,9 @@ function buildReportNarrative(ctx){
   else parts.push(`No per-turn figure is shown for this window: ${P.why}.`);
   if(P.valid&&P.citedRate!=null)parts.push(`Of the scored turns on those days (greetings, errors and refusals excluded), <b>${P.citedRate.toFixed(1)}%</b> were cited answers${P.notFoundRate!=null?`, ${P.notFoundRate.toFixed(1)}% not found`:''}${P.clarRate!=null?` and ${P.clarRate.toFixed(1)}% clarifications`:''}${P.errorRate!=null?`; errors were ${P.errorRate.toFixed(1)}% of all turns`:''}${P.latP50!=null?`; the median response time was <b>${(P.latP50/1000).toFixed(1)}s</b> (turn-weighted daily p50)`:''}.`);
   else if(P.valid&&P.answeredShare!=null)parts.push(`Of the turns on those days, <b>${P.answeredShare.toFixed(1)}%</b> were answered with a citation${P.flaggedShare!=null?` and ${P.flaggedShare.toFixed(1)}% were flagged`:''}${P.latP50!=null?`; the median response time was <b>${(P.latP50/1000).toFixed(1)}s</b> (turn-weighted daily p50)`:''}.`);
-  if(wc.valid&&wc.statements.length)parts.push(`What changed${wc.fallback?' ('+wc.fallback+')':' against the preceding window'}: ${wc.statements.map(s=>s.text).join('; ')}.`);
-  else if(wc.valid)parts.push(`No candidate metric moved beyond the materiality thresholds against the preceding window (${wc.B.span}).`);
+  if(wcS&&wcS.valid&&wcS.statements.length)parts.push(`What changed in service${wcS.fallback?' ('+wcS.fallback+')':' against '+wcS.rule}: ${wcS.statements.map(s=>s.text).join('; ')}.`);
+  if(wc.valid&&wc.statements.length)parts.push(`What changed in cost${wc.fallback?' ('+wc.fallback+')':' against '+wc.rule}: ${wc.statements.map(s=>s.text).join('; ')}.`);
+  else if(wc.valid)parts.push(`No cost metric moved beyond the materiality thresholds against ${wc.rule} (${wc.B.span}).`);
   if(wc.events.length)parts.push(`Event in range: ${wc.events.map(e=>`<b>${e.title}</b>`).join('; ')}.`);
   if(fc){
     const tail=` (${fcLabel(fc)}).`;
@@ -3751,6 +3774,9 @@ document.addEventListener('keydown',e=>{
   add('error-rate','Error rate','alert-triangle','pink','Empty responses with 0 ms response time, as a share of all turns received.',dayRate('error',d=>d.queries),pct,true);
   add('out-of-scope-share','Out-of-scope share','ban','purple','Refusals by pattern or the feed\'s legacy flag, as a share of all turns.',dayRate('outOfScope',d=>d.queries),pct,true);
   add('partial-answer-rate','Cited but partial','circle-dashed','muted','Cited answers whose text also says something could not be found, as a share of cited answers.',dayRate('partial','cited'),pct,true);
+  add('dislikes-per-1000-cited','Dislikes per 1,000 cited answers','thumbs-down','amber','Dislikes on cited answers per thousand cited answers that day. Small-sample rule applies, so most single days show a dash; use week or month ranges.',dd=>dd.ux&&dd.ux.dislikesCited!=null&&rateOK(dd.ux.dislikesCited,dd.ux.cited).ok&&dd.ux.cited>0?dd.ux.dislikesCited/dd.ux.cited*1000:null,v=>v==null?'—':v.toFixed(1),true);
+  add('starter-prompt-share','Starter-prompt share of first turns','sparkles','purple','First turns whose query matched a configured chip, as a share of first turns that day.',dd=>dd.ux&&dd.ux.starter!=null?rate(dd.ux.starter,dd.ux.starter+dd.ux.organic):null,pct,false);
+  add('non-latin-share','Non-Latin script share','languages','purple','Turns whose query starts with a non-Latin letter, as a share of turns with letters. A script, not a language.',dd=>{if(!dd.ux||dd.ux.scLatin==null)return null;const t=['scLatin','scCyrillic','scArabic','scCJK','scDevanagari','scOther'].reduce((a,k)=>a+(dd.ux[k]||0),0);return rate(t-dd.ux.scLatin,t);},pct,false);
   add('response-time-p50','Response time p50','timer','acc','The day\'s median response time from the feed, positive values only.',d=>d.ux?.latP50||null,secs,true);
   add('response-time-p90','Response time p90','timer','amber','The day\'s 90th-percentile response time from the feed, positive values only.',d=>d.ux?.latP90||null,secs,true);
 })();
@@ -4127,6 +4153,7 @@ function exportCSV(){
 // ═══ RENDER DISPATCH ════════════════════════════════════════════════
 function renderPane(id){
   const D=DATA,S=D.stats;
+  if(id==='home')       renderHome(D,S);
   if(id==='overview')   renderOverview(D,S);
   if(id==='breakdown')  renderBreakdown(D,S);
   if(id==='usage')      renderUsage(D,S);
@@ -4136,6 +4163,65 @@ function renderPane(id){
   if(id==='impact')     renderImpact(D,S);
   if(id==='projections')renderProjections(D,S);
   renderIcons();
+}
+
+// ═══ HOME (Overview): how well, how much, what changed — one screen ═══════════
+function outcomeMixChart(id,vd,extra={}){
+  if(!document.getElementById(id))return;
+  const g=(r,k)=>r.ux?.[k]||0,sh=(r,k)=>r.queries>0?+((g(r,k))/r.queries*100).toFixed(2):null;
+  const series=[['cited','Cited answer',C.green],['notFound','Not found',C.red],['clarification','Clarification',C.amber],['error','Error',C.pink],['outOfScope','Out of scope',C.purple],['greeting','Greeting',C.dim],['uncited','Uncited answer',C.teal]];
+  mkChart(id,{type:'bar',data:{labels:vd.map(d=>d.label),datasets:series.map(([k,l,c])=>({label:l,data:vd.map(r=>sh(r,k)),backgroundColor:c+'cc',stack:'o',maxBarThickness:28}))},
+    options:mergeOpts(baseOpts(),{scales:{y:{stacked:true,max:100,ticks:{callback:v=>v+'%'}},x:{stacked:true}},plugins:{legend:{display:true},tooltip:{callbacks:{label:cx=>`${cx.dataset.label}: ${(+cx.parsed.y).toFixed(1)}% (${num(g(vd[cx.dataIndex],series[cx.datasetIndex][0]))})`}}},onClick:(e,els)=>{if(els.length)drillBucket(vd[els[0].index]);},...extra})});
+}
+function renderHome(D,S){
+  const el=document.getElementById('pane-home');
+  const pd=filterRange(D.merged);
+  if(!pd.length){el.innerHTML=emptyState('layout-dashboard','Nothing in range','Widen the date range.');renderIcons();return;}
+  const cols=(D.usageQuality&&D.usageQuality.columns)||{};
+  const P=perTurnStats(pd),wc=whatChanged(pd,'service'),A=wc.A||P,B=wc.B;
+  const fc=D.hasCost&&typeof forecastMonth==='function'?forecastMonth():null;
+  const turns=pd.reduce((s,d)=>s+d.queries,0),convs=pd.reduce((s,d)=>s+d.sessions,0),days=pd.filter(d=>d.queries>0).length,spend=pd.reduce((s,d)=>s+d.total,0);
+  const pct=v=>v==null?'—':v.toFixed(1)+'%',secs=v=>v==null?'—':(v/1000).toFixed(1)+'s',pence=v=>v==null?'—':v.toFixed(2)+'p';
+  const delta=(k,invert)=>B&&A&&A[k]!=null&&B[k]!=null?{curr:A[k],prev:B[k],invert}:null;
+  const ratioSub=P.valid?`settled join days · ${P.span}`:P.why;
+  const parts=[];
+  if(turns>0)parts.push(`Between <b>${fmtDate(pd[0].date)}</b> and <b>${fmtDate(pd[pd.length-1].date)}</b> AskCI received <b>${num(turns)} turns</b> in ${num(convs)} conversations, about ${num(Math.round(convs/Math.max(days,1)))} a day.`);
+  if(P.valid&&P.citedRate!=null)parts.push(`Of scored turns, <b>${P.citedRate.toFixed(1)}%</b> were cited answers and <b>${P.notFoundRate==null?'—':P.notFoundRate.toFixed(1)+'%'}</b> not found${P.latP50!=null?`; the median response time was <b>${secs(P.latP50)}</b>`:''}.`);
+  else if(P.valid&&P.answeredShare!=null)parts.push(`<b>${P.answeredShare.toFixed(1)}%</b> of turns were answered with a citation${P.latP50!=null?`; the median response time was <b>${secs(P.latP50)}</b>`:''}.`);
+  else if(!P.valid)parts.push(`No per-turn figure yet for this window: ${P.why}.`);
+  if(D.hasCost)parts.push(`Billed cost <b>${gbp(spend,0)}</b>${P.valid&&P.genPT!=null?`, generation ${pence(P.genPT)} per turn`:''}${fc?`; ${fc.monthName} projected at <b>${gbp(fc.forecast,0)}</b> (${fc.label})`:''}.`);
+  const compare=wc.B?(wc.fallback||`compared with ${wc.rule}`)+` · ${wc.B.span}`:'';
+  const tiles=[
+    cols.taxonomy?kpi(pct(P.citedRate),'Cited answer rate',P.valid?`of scored turns · ${P.span}`:P.why,{color:C.green,delta:delta('citedRate',false)}):(cols.outcomes?kpi(pct(P.answeredShare),'Answered share',ratioSub,{color:C.green,delta:delta('answeredShare',false)}):null),
+    cols.taxonomy?kpi(pct(P.notFoundRate),'Not-found rate',P.valid?'of scored turns':P.why,{color:C.red,delta:delta('notFoundRate',true)}):null,
+    cols.latency?kpi(secs(P.latP50),'Response time p50','turn-weighted daily median',{color:C.acc,delta:delta('latP50',true)}):null,
+    D.hasUsage?kpi(num(convs),'Conversations',`${num(Math.round(convs/Math.max(days,1)))} a day · ${num(turns)} turns`,{color:C.teal,delta:delta('convsPerDay',false)}):null,
+    fc?kpi(gbp(fc.forecast,0),'Month forecast',`${fc.monthName} · ${fcLabel(fc)}`,{color:C.amber}):null,
+    D.hasBoth?kpi(pence(P.genPT),'Generation cost per turn',ratioSub,{color:C.purple,delta:delta('genPT',true)}):null,
+  ].filter(Boolean).join('');
+  const ins=[];
+  if(!wc.valid)ins.push(insight('',`Not enough settled data to compare windows: ${wc.why}.`));
+  else if(!wc.statements.length)ins.push(insight('good',`No service metric moved beyond the materiality thresholds (rates ${CONFIG.materiality.rate_pts} point, counts ${CONFIG.materiality.count_pct}%, latency ${CONFIG.materiality.latency_pct}% or ${CONFIG.materiality.latency_ms/1000} s) against ${wc.rule} (${wc.B.span}).`));
+  if(wc.fallback)ins.push(insight('',`Note: ${wc.fallback}.`));
+  wc.statements.forEach(st=>ins.push(insight('warn',st.text)));
+  wc.events.forEach(e=>ins.push(insight('',`Event in range: <b>${e.title}</b>${e.detail?` — ${e.detail}`:''}`)));
+  el.innerHTML=`
+    <div class="card"><div class="home-headline">${parts.join(' ')}</div>${compare?`<div class="home-sub">${compare}</div>`:''}</div>
+    <div class="kpi-grid" style="margin-bottom:var(--sp-4)">${tiles}</div>
+    <div class="card"><div class="card-title">What changed<span class="card-title-note">service metrics · deterministic · no causes claimed · cost changes are on the Cost tab</span></div>${ins.join('')}</div>
+    <div class="grid2">
+      ${D.hasUsage?chartBox('home-vol',220,cols.sources?'Conversations by source':'Conversations','per period · click a bar'):''}
+      ${cols.taxonomy?chartBox('home-mix',220,'Outcome mix','shares of turns · click a bar'):''}
+    </div>`;
+  const vd=getViewData(),labels=vd.map(d=>d.label);
+  if(document.getElementById('home-vol')){
+    const ds=cols.sources?[
+      {label:'Modal',data:vd.map(r=>r.ux?.modalSessions||0),backgroundColor:C.acc+'cc',stack:'s',maxBarThickness:28},
+      {label:'Web',data:vd.map(r=>r.ux?.webSessions||0),backgroundColor:C.teal+'cc',stack:'s',maxBarThickness:28}]
+      :[{label:'Conversations',data:vd.map(r=>r.sessions),backgroundColor:C.acc+'cc',maxBarThickness:28}];
+    mkChart('home-vol',{type:'bar',data:{labels,datasets:ds},options:mergeOpts(baseOpts(),{scales:{y:{stacked:true,ticks:{callback:v=>num(v)}},x:{stacked:true}},plugins:{legend:{display:cols.sources}},eventLines:evLines(S,labels),onClick:(e,els)=>{if(els.length)drillBucket(vd[els[0].index]);}})});
+  }
+  outcomeMixChart('home-mix',vd);
 }
 
 // ═══ OVERVIEW ═══════════════════════════════════════════════════════
@@ -4183,8 +4269,8 @@ function renderOverview(D,S){
 
   if(D.hasBoth){const cb=document.getElementById('ov-cpq-breakdown');if(cb)cb.innerHTML=cpqBreakdownHTML(D,S,pd,svcP,totSvc);}
 
-  // What changed — deterministic statements, no causal language.
-  const wc=whatChanged(pd);
+  // What changed (cost set) — deterministic statements, no causal language. Service metrics live on the Overview.
+  const wc=whatChanged(pd,'cost');
   const ins=[];
   if(!wc.valid)ins.push(insight('',`Not enough settled data to compare windows: ${wc.why}.`));
   else if(!wc.statements.length)ins.push(insight('good',`No candidate metric moved beyond the materiality thresholds (ratios ${CONFIG.materiality.ratio_pct}% or ${CONFIG.materiality.ratio_pence}p per turn; totals ${CONFIG.materiality.total_pct}%) between ${wc.A.span} and ${wc.B.span}.`));
@@ -4210,7 +4296,7 @@ function renderTimeline(D,S,chartTarget,detailTarget){
   `;
   el.querySelector('.card').insertAdjacentHTML('afterbegin',toggle);
   det.innerHTML=`
-    <div class="card"><div class="card-title">Day-by-Day Detail<span class="tbl-scroll-hint">swipe to see all columns →</span></div>
+    <details class="card"><summary class="card-title">Day-by-Day Detail<span class="card-title-note">table · click to expand</span></summary>
       <div class="tbl-wrap"><table class="data-table">
         <thead><tr>
           <th class="col-date">Date</th>
@@ -4226,7 +4312,7 @@ function renderTimeline(D,S,chartTarget,detailTarget){
         </tr></thead>
         <tbody id="tl-tbody"></tbody>
       </table></div>
-    </div>
+    </details>
   `;
   const vd=getViewData(),labels=vd.map(d=>d.label);
   let sds;
@@ -4351,7 +4437,7 @@ function renderBreakdown(D,S){
     ${chartBox('bk-monthly',185,'Monthly Cost Trend','click month')}
     ${chartBox('bk-fvv',155,'Fixed / Variable / Unclassified — monthly, by meter class','click month')}
     <div class="card"><div class="card-title">Service Detail — click any service to learn more${bkScope!=='all'?` <span class="card-title-note">${bkScope} scope</span>`:''}</div><div id="bk-detail"></div></div>
-    <div class="card"><div class="card-title">Resource inventory — selected period<span class="card-title-note">${bkScope==='all'?'all scopes':bkScope+' scope'} · service / admin / shared · unassigned is amber</span></div><div id="bk-resources"></div></div>
+    <details class="card"><summary class="card-title">Resource inventory — selected period<span class="card-title-note">${bkScope==='all'?'all scopes':bkScope+' scope'} · service / admin / shared · unassigned is amber</span></summary><div id="bk-resources"></div></details>
   `;
 
   const pd=filterRange(D.merged);
@@ -4835,6 +4921,7 @@ function renderUsage(D,S){
   const peakD=fr.reduce((b,d)=>d.queries>b.queries?d:b,fr[0]||{queries:0});
 
   el.innerHTML=`
+    ${usageOutcomesHTML(fr)}
     <div class="grid4" style="margin-bottom:14px">
       ${kpi(num(totQ),'Total turns','selected period',C.acc)}
       ${kpi(num(totS),'Conversations','selected period',C.green)}
@@ -4853,10 +4940,10 @@ function renderUsage(D,S){
         </table></div>
       </div>
     </div>
-    <div class="card"><div class="card-title">Turn volume heatmap — full dataset</div>
+    <details class="card"><summary class="card-title">Turn volume heatmap — full dataset<span class="card-title-note">calendar · click to expand</span></summary>
       <div id="cal-wrap" style="overflow-x:auto;padding-bottom:6px"></div>
       <div class="cal-legend"><span>Less</span><div style="display:flex;gap:2px;margin:0 5px" id="cal-legend-cells"></div><span>More</span></div>
-    </div>
+    </details>
     ${usageDetailHTML(fr)}
   `;
 
@@ -4880,7 +4967,8 @@ function uxTile(val,lbl,sub,col,key){
 }
 let hoursMode='turns';
 function setHoursMode(m){hoursMode=m;rendered['usage']=false;renderPane('usage');}
-function usageDetailHTML(fr){
+// Outcomes first (admin-app spec principle 1), then activity.
+function usageOutcomesHTML(fr){
   const cols=(DATA.usageQuality&&DATA.usageQuality.columns)||{};
   if(!fr.length)return'';
   const sum=k=>fr.reduce((s,d)=>s+(d.ux?.[k]||0),0);
@@ -4920,6 +5008,28 @@ function usageDetailHTML(fr){
       ${chartBox('ux-outcomes',180,'Answer outcomes — selected range','turns, stacked · click a bar')}
     </div>`;
   }
+  return h;
+}
+function usageDetailHTML(fr){
+  const cols=(DATA.usageQuality&&DATA.usageQuality.columns)||{};
+  if(!fr.length)return'';
+  const sum=k=>fr.reduce((s,d)=>s+(d.ux?.[k]||0),0);
+  const turns=fr.reduce((s,d)=>s+d.queries,0),convs=fr.reduce((s,d)=>s+d.sessions,0);
+  const pc=(a,b)=>b>0?(a/b*100).toFixed(1)+'%':'—';
+  const span=spanLabel(fr[0].date,fr[fr.length-1].date);
+  let h='';
+  if(cols.feedback){
+    const li=sum('likes'),di=sum('dislikes'),dk=sum('dislikesCited'),ci=sum('cited');
+    const fbr=rateOK(li+di,turns),dpk=rateOK(dk,ci);
+    h+=`<div class="card"><div class="card-title">Feedback<span class="card-title-note">likes and dislikes are ${rateText(li+di,turns,2)} of turns, so every rate here is shown beside its counts · ${span}</span></div>
+      <div class="grid4">
+        ${uxTile(num(li),'Likes','on any turn',C.green)}
+        ${uxTile(num(di),'Dislikes',num(dk)+' of them on cited answers',C.red)}
+        ${uxTile(fbr.ok?((li+di)/turns*100).toFixed(2)+'%':'—','Feedback rate',fbr.ok?num(li+di)+' of '+num(turns)+' turns':fbr.why,C.muted)}
+        ${uxTile(dpk.ok&&ci>0?(dk/ci*1000).toFixed(1):'—','Dislikes per 1,000 cited answers',dpk.ok?num(dk)+' of '+num(ci):dpk.why,C.amber,'dislikes-per-1000-cited')}
+      </div>
+    </div>`;
+  }
   if(cols.types){
     const nt=sum('newTopic'),uf=sum('userFollowup'),sf=sum('suggestedFollowup');
     h+=`<div class="card"><div class="card-title">Question types<span class="card-title-note">from the feed's Question Type column · suggested follow-ups are the chips · ${span}</span></div>
@@ -4929,6 +5039,9 @@ function usageDetailHTML(fr){
         ${uxTile(pc(sf,turns),'Suggested follow-up',num(sf)+' turns',C.amber,'suggested-follow-up-share')}
         ${uxTile(convs>0?(turns/convs).toFixed(2):'—','Turns per conversation',num(convs)+' conversations',C.muted,'turns-per-conversation')}
       </div>
+      ${cols.starter?`<div class="grid4">
+        ${uxTile(rateText(sum('starter'),sum('starter')+sum('organic')),'Starter-prompt first turns',num(sum('starter'))+' of '+num(sum('starter')+sum('organic'))+' first turns matched a configured chip · the rest are organic',C.purple,'starter-prompt-share')}
+      </div>`:''}
       ${chartBox('ux-types',180,'Question types — selected range','turns, stacked · click a bar')}
     </div>`;
   }
@@ -4942,6 +5055,16 @@ function usageDetailHTML(fr){
         ${uxTile(ws>0?(wt/ws).toFixed(2):'—','Turns per Web conversation',num(wt)+' turns'+(ot?` · ${num(ot)} other`:''),C.muted)}
       </div>
       ${chartBox('ux-sources',180,'Conversations by source — selected range','stacked · click a bar')}
+    </div>`;
+  }
+  if(cols.script){
+    const keys=[['scLatin','Latin',C.acc],['scCyrillic','Cyrillic',C.purple],['scArabic','Arabic',C.amber],['scCJK','CJK',C.teal],['scDevanagari','Devanagari',C.pink],['scOther','Other',C.muted],['scNone','No letters',C.dim]];
+    const tot=keys.reduce((a,[k])=>a+sum(k),0),nonLatin=tot-sum('scLatin')-sum('scNone');
+    h+=`<div class="card"><div class="card-title">Query script<span class="card-title-note">Unicode script of the first letter of each query · a script, not a language · ${span}</span></div>
+      <div class="grid4">
+        ${uxTile(rateText(nonLatin,tot,2),'Non-Latin script',num(nonLatin)+' of '+num(tot)+' turns',C.purple,'non-latin-share')}
+        ${keys.filter(([k])=>k!=='scLatin'&&k!=='scNone').map(([k,l,c])=>uxTile(num(sum(k)),l,rateText(sum(k),tot,2)+' of turns',c)).join('')}
+      </div>
     </div>`;
   }
   if(cols.latency){
@@ -5250,7 +5373,7 @@ function renderImpact(D,S){
     return;
   }
   const rows=evs.map(e=>beforeAfter(e,28));
-  const ux=(DATA.usageQuality&&DATA.usageQuality.columns)||{},ncol=6+(ux.outcomes?1:0)+(ux.latency?1:0);
+  const ux=(DATA.usageQuality&&DATA.usageQuality.columns)||{},ncol=6+(ux.outcomes?1:0)+(ux.latency?1:0)+(ux.feedback?1:0);
   const dash='<span style="color:var(--dim)">—</span>';
   const cell=(v,f,why)=>v==null?`<span title="${(why||'').replace(/"/g,'&quot;')}">${dash}</span>`:f(v);
   const num0=v=>Math.round(v).toLocaleString(),pence=v=>v.toFixed(2)+'p',money=v=>gbp(v,2);
@@ -5264,12 +5387,13 @@ function renderImpact(D,S){
       <td class="num" style="text-align:right;padding:8px 12px;font-family:'DM Mono',monospace;font-size:.85rem;color:${C.amber}">${cell(P.totPT,pence,P.why)}</td>
       ${ux.outcomes?`<td class="num" style="text-align:right;padding:8px 12px;font-family:'DM Mono',monospace;font-size:.85rem;color:${C.green}">${cell(P.answeredShare,v=>v.toFixed(1)+'%',P.why)}</td>`:''}
       ${ux.latency?`<td class="num" style="text-align:right;padding:8px 12px;font-family:'DM Mono',monospace;font-size:.85rem">${cell(P.latP50,v=>(v/1000).toFixed(1)+'s',P.why)}</td>`:''}
+      ${ux.feedback?`<td class="num" style="text-align:right;padding:8px 12px;font-family:'DM Mono',monospace;font-size:.85rem;color:${C.amber}">${cell(P.dislikesPerK,v=>v.toFixed(1),P.dislikesPerK==null?'fewer than '+CONFIG.min_event_numerator+' dislikes on cited answers':'')}</td>`:''}
     </tr>`;
   el.innerHTML=`
     <div class="card" style="margin-bottom:14px;overflow-x:auto">
       <div class="card-title">Before / after confirmed events<span class="card-title-note">equal windows of up to 28 days each side · settled join days · sum then divide</span></div>
       <table style="width:100%;border-collapse:collapse;min-width:640px">
-        <thead><tr style="border-bottom:2px solid var(--b2)">${th('Event','left')}${th('Window','left')}${th('Turns / day')}${th('Billed £ / day')}${th('Generation p / turn')}${th('Allocated total p / turn')}${ux.outcomes?th('Answered share'):''}${ux.latency?th('Response p50'):''}</tr></thead>
+        <thead><tr style="border-bottom:2px solid var(--b2)">${th('Event','left')}${th('Window','left')}${th('Turns / day')}${th('Billed £ / day')}${th('Generation p / turn')}${th('Allocated total p / turn')}${ux.outcomes?th('Answered share'):''}${ux.latency?th('Response p50'):''}${ux.feedback?th('Dislikes / 1,000 cited'):''}</tr></thead>
         <tbody>
           ${rows.map(r=>`
             <tr onclick="openDayPanel('${r.ev.start}')" style="cursor:pointer" title="Open ${fmtDate(r.ev.start)}"><td colspan="${ncol}" style="padding:12px 12px 4px;font-size:.78rem;color:var(--text);font-weight:600"><span style="display:inline-block;width:8px;height:8px;border-radius:2px;background:${eventColor(r.ev)};margin-right:8px"></span>${r.ev.title} <span style="color:var(--muted);font-weight:400;font-family:'DM Mono',monospace;font-size:.65rem">· ${r.ev.kind} · ${fmtDate(r.ev.start)}${r.ev.end&&r.ev.end!==r.ev.start?'–'+fmtDate(r.ev.end):''}${r.ev.evidence?' · evidence: '+r.ev.evidence:''}</span></td></tr>
@@ -6205,12 +6329,8 @@ function buildDashboard(costRows,usageRows){
   syncTabVisibility();
   rebuildKpiRow();
   renderIcons();
-  rendered['overview']=true;
   requestAnimationFrame(()=>requestAnimationFrame(()=>{
-    renderPane('overview');
-    if(PREFS.tab&&PREFS.tab!=='overview'&&groupOf(PREFS.tab)){
-      activateSub(PREFS.tab);
-    }
+    activateSub(PREFS.tab&&groupOf(PREFS.tab)?PREFS.tab:'home');
   }));
 }
 
@@ -6295,8 +6415,8 @@ function rebuildKpiRow(){
       DATA.hasBoth?kpi(pence(P.totPT),'Allocated total cost per turn',P.valid?`${pence(P.varPT)} variable · ${ratioSub}`:ratioSub,{color:C.amber,trend:trendTot,delta:{curr:dTot.curr,prev:dTot.prev,invert:true}}):null,
       DATA.hasCost?kpi(gbp(settledSpend+provSpend,0),'Billed cost',`${gbp(settledSpend,0)} settled · ${gbp(provSpend,0)} provisional · ${rangeSpan}`,{color:C.green,trend:trendDaily,delta:{curr:dDaily.curr,prev:dDaily.prev,invert:true}}):null,
       fc?kpi(gbp(fc.forecast,0),'Month forecast',budget>0?`${fc.monthName} · ${gbp(budget,0)} target · ${stateMeta[fcState].label}`:`${fc.monthName} · ${fcLabel(fc)}`,{color:C.purple,trend:trendDaily,budgetState:fcState,budgetMeta:stateMeta[fcState]}):null,
-      DATA.hasCost?kpi(fixedShare!=null?fixedShare.toFixed(0)+'%':'—','Fixed share',`fixed ${gbp(fx,0)} · variable ${gbp(vr,0)}${un>0?` · unclassified ${gbp(un,2)}`:''} · settled days`,{color:COST_COL.fixed,trend:trendFixed}):null,
-      DATA.hasMeters?kpi(cache.overall!=null?cache.overall.toFixed(0)+'%':'—','Cached-input cost share','share of input-meter cost on cached-input meters · not a cache-hit rate',{color:C.green}):null,
+      DATA.hasCost?kpi(fixedShare!=null?fixedShare.toFixed(0)+'%':'—','Fixed share',`fixed ${gbp(fx,0)} · variable ${gbp(vr,0)}${un>0?` · unclassified ${gbp(un,2)}`:''} · settled days`,{color:COST_COL.fixed,trend:trendFixed,secondary:true}):null,
+      DATA.hasMeters?kpi(cache.overall!=null?cache.overall.toFixed(0)+'%':'—','Cached-input cost share','share of input-meter cost on cached-input meters · not a cache-hit rate',{color:C.green,secondary:true}):null,
       DATA.hasUsage?kpi(num(turns),'Total turns',`${num(convs)} conversations · ${rangeSpan}`,{color:C.teal,trend:trendQ,delta:{curr:dQ.curr,prev:dQ.prev},secondary:true}):null,
       DATA.hasCost?kpi(gbp(S.avgDaily),'Average daily spend','mean of the last 28 settled days',{color:C.pink,trend:trendDaily,secondary:true}):null,
     ].filter(Boolean).join('');
@@ -6426,6 +6546,9 @@ init();
     if(/cache/.test(q))return{kind:'cache',label:'cached-input cost share'};
     if(/fixed share|share.*fixed|fixed.*(share|%|percent)/.test(q))return{kind:'fixedshare',label:'fixed share'};
     // Feed-generated usage columns (present only when usage.csv carries them)
+    if(/dislike/.test(q))return{kind:'dislikes',label:'dislikes per 1,000 cited answers'};
+    if(/\blikes?\b|feedback/.test(q))return{kind:'feedback',label:'feedback rate'};
+    if(/starter|chip prompt/.test(q))return{kind:'starter',label:'starter-prompt share of first turns'};
     if(/not[- ]?found/.test(q))return{kind:'notfound',label:'not-found rate'};
     if(/\berrors?\b/.test(q))return{kind:'error',label:'error rate'};
     if(/clarif/.test(q))return{kind:'clarification',label:'clarification rate'};
@@ -6468,6 +6591,9 @@ init();
       case 'clarification':return d.ux&&d.ux.clarification!=null?rate(d.ux.clarification,d.ux.scored):null;
       case 'cited':return d.ux&&d.ux.cited!=null?rate(d.ux.cited,d.ux.scored):null;
       case 'partial':return d.ux&&d.ux.partial!=null?rate(d.ux.partial,d.ux.cited):null;
+      case 'dislikes':return d.ux&&d.ux.dislikesCited!=null&&rateOK(d.ux.dislikesCited,d.ux.cited).ok&&d.ux.cited>0?d.ux.dislikesCited/d.ux.cited*1000:null;
+      case 'feedback':return d.ux&&d.ux.likes!=null&&d.queries>0?rate(d.ux.likes+d.ux.dislikes,d.queries):null;
+      case 'starter':return d.ux&&d.ux.starter!=null?rate(d.ux.starter,d.ux.starter+d.ux.organic):null;
       case 'chips':return d.ux&&d.queries>0&&d.ux.suggestedFollowup!=null?d.ux.suggestedFollowup/d.queries*100:null;
       case 'modal':{const a=d.ux?.modalSessions,b=d.ux?.webSessions;return a!=null&&(a+b)>0?a/(a+b)*100:null;}
       case 'latency':return d.ux?.latP50||null;
@@ -6713,13 +6839,18 @@ init();
     }
 
     // Shares from the feed-generated columns: sum then divide over the period, never a mean of daily ratios.
-    if(['answered','unanswered','flagged','chips','modal','notfound','error','clarification','cited','partial'].includes(metric.kind)){
-      const numK={chips:'suggestedFollowup',modal:'modalSessions',notfound:'notFound',cited:'cited'}[metric.kind]||metric.kind;
+    if(metric.kind==='dislikes'){
+      const dk=rows.reduce((s,d)=>s+(d.ux?.dislikesCited||0),0),ci=rows.reduce((s,d)=>s+(d.ux?.cited||0),0),ok=rateOK(dk,ci);
+      if(!rows.some(d=>d.ux&&d.ux.dislikesCited!=null))return{value:null,fmt:v=>'—',series:null,note:'usage.csv has no feedback columns; regenerate it from the QA feed',intent};
+      return{value:ok.ok&&ci>0?dk/ci*1000:null,fmt:v=>v==null?'—':v.toFixed(1),series:rows.map(d=>rowVal(d,metric)),note:ok.ok?`${num(dk)} dislikes on ${num(ci)} cited answers`:`not shown: ${ok.why} (small-sample rule)`,intent};
+    }
+    if(['answered','unanswered','flagged','chips','modal','notfound','error','clarification','cited','partial','feedback','starter'].includes(metric.kind)){
+      const numK={chips:'suggestedFollowup',modal:'modalSessions',notfound:'notFound',cited:'cited',feedback:'likes',starter:'starter'}[metric.kind]||metric.kind;
       const has=rows.some(d=>d.ux&&d.ux[numK]!=null);
       if(!has)return{value:null,fmt:v=>'—',series:null,note:'usage.csv has no '+metric.label+' column; regenerate it from the QA feed (redact first for outcomes)',intent};
-      const n=rows.reduce((s,d)=>s+(d.ux?.[numK]||0),0);
+      const n=metric.kind==='feedback'?rows.reduce((s,d)=>s+(d.ux?.likes||0)+(d.ux?.dislikes||0),0):rows.reduce((s,d)=>s+(d.ux?.[numK]||0),0);
       const scored=['notfound','clarification','cited'].includes(metric.kind);
-      const den=metric.kind==='modal'?rows.reduce((s,d)=>s+(d.ux?.modalSessions||0)+(d.ux?.webSessions||0),0)
+      const den=metric.kind==='modal'?rows.reduce((s,d)=>s+(d.ux?.modalSessions||0)+(d.ux?.webSessions||0),0):metric.kind==='starter'?rows.reduce((s,d)=>s+(d.ux?.starter||0)+(d.ux?.organic||0),0)
         :scored?rows.reduce((s,d)=>s+(d.ux?.scored||0),0):metric.kind==='partial'?rows.reduce((s,d)=>s+(d.ux?.cited||0),0):rows.reduce((s,d)=>s+(d.ux?d.queries:0),0);
       const ok=rateOK(n,den);
       if(!ok.ok)return{value:null,fmt:v=>'—',series:rows.map(d=>rowVal(d,metric)),note:`not shown: ${ok.why} (small-sample rule)`,intent};
@@ -6728,7 +6859,7 @@ init();
         const cand=rows.filter(d=>rowVal(d,metric)!=null);
         if(cand.length){const best=cand.reduce((a,b)=>{const y=rowVal(b,metric),x=rowVal(a,metric);return (agg==='max'?y>x:y<x)?b:a;});intent._day=best.date;return{value:rowVal(best,metric),fmt:v=>v==null?'—':v.toFixed(1)+'%',series,note:(agg==='max'?'highest on ':'lowest on ')+best.label,intent};}
       }
-      return{value:den>0?n/den*100:null,fmt:v=>v==null?'—':v.toFixed(1)+'%',series,note:`${num(n)} of ${num(den)} ${metric.kind==='modal'?'conversations':scored?'scored turns':metric.kind==='partial'?'cited answers':'turns'} · sum then divide`,intent};
+      return{value:den>0?n/den*100:null,fmt:v=>v==null?'—':v.toFixed(metric.kind==='feedback'?2:1)+'%',series,note:`${num(n)} of ${num(den)} ${metric.kind==='modal'?'conversations':scored?'scored turns':metric.kind==='partial'?'cited answers':metric.kind==='starter'?'first turns':'turns'} · sum then divide`,intent};
     }
     if(metric.kind==='latency'){
       const has=rows.some(d=>d.ux&&d.ux.latP50);
@@ -6788,7 +6919,7 @@ init();
   }
   function context(intent,value){
     if(value==null||intent.agg!=='sum')return '';
-    if(['cpq_llm','cpq_tot','qps','cache','fixedshare','runrate','topService','topModel','answered','unanswered','flagged','chips','modal','latency','notfound','error','clarification','cited','partial'].includes(intent.metric.kind))return ''; // ratios: never summed
+    if(['cpq_llm','cpq_tot','qps','cache','fixedshare','runrate','topService','topModel','answered','unanswered','flagged','chips','modal','latency','notfound','error','clarification','cited','partial','dislikes','feedback','starter'].includes(intent.metric.kind))return ''; // ratios: never summed
     const p=intent.period; if(p.kind==='all'||p.kind==='year')return '';
     const days=Math.round((new Date(p.to)-new Date(p.from))/86400000)+1;
     const prevTo=addDays(p.from,-1),prevFrom=addDays(prevTo,-(days-1));
@@ -7010,10 +7141,10 @@ init();
     if(hasChart){
       const crows=DATA.merged.filter(d=>d.date>=p.from&&d.date<=p.to);
       const labels=crows.map(d=>d.label);
-      const isRate=['cpq_llm','cpq_tot','qps','cache','fixedshare','answered','unanswered','flagged','chips','modal','latency','notfound','error','clarification','cited','partial'].includes(m.kind);
+      const isRate=['cpq_llm','cpq_tot','qps','cache','fixedshare','answered','unanswered','flagged','chips','modal','latency','notfound','error','clarification','cited','partial','dislikes','feedback','starter'].includes(m.kind);
       const isCount=['questions','sessions','citations'].includes(m.kind);
       const col=C.acc, data=series.map(v=>(v==null||!isFinite(v))?null:+v);
-      const pctKind=['cache','fixedshare','answered','unanswered','flagged','chips','modal','notfound','error','clarification','cited','partial'].includes(m.kind);
+      const pctKind=['cache','fixedshare','answered','unanswered','flagged','chips','modal','notfound','error','clarification','cited','partial','feedback','starter'].includes(m.kind);
       const tick=m.kind==='latency'?(v=>(+v/1000).toFixed(1)+'s'):isRate?(v=>(+v).toFixed(pctKind?0:2)+(pctKind?'%':(m.kind==='qps'?'':'p'))):(isCount?(v=>num(v)):(v=>'£'+(+v).toFixed(0)));
       mountViz({type:isRate?'line':'bar',data:{labels:labels,datasets:[{label:subj,data:data,backgroundColor:isRate?(col+'22'):(col+'cc'),borderColor:col,borderWidth:isRate?2:0,borderRadius:isRate?0:3,pointRadius:0,tension:.3,fill:!!isRate,spanGaps:true,maxBarThickness:22}]},options:mergeOpts(baseOpts(),{plugins:{legend:{display:false}},scales:{y:{ticks:{callback:tick}}}})},{cols:['Date',subj],rows:labels.map((l,i)=>[l,data[i]]),fmt:res.fmt});
     }

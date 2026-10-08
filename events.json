@@ -64,7 +64,7 @@
       "evidence": "Azure billing export",
       "applies_to": "Foundry Models",
       "title": "Model change: GPT 5 Chat retired, chat-latest 05052026 added",
-      "detail": "GPT 5 Chat last billed 30 Jun; chat-latest 05052026 first billed 1 Jul."
+      "detail": "GPT 5 Chat last billed 30 Jun; chat-latest 05052026 first billed 1 Jul. Generation cost per turn 0.49p in June to 2.94p in July. Before/after, complete months, sum then divide (cost brief 5.7): cited answer rate 86.2% → 91.8% of scored turns; cited but partial 3.0% → 14.0%; not found 8.2% → 3.5%; clarification 4.3% → 4.5%; response time p50 11.3s → 12.5s, p90 16.3s → 17.0s; dislikes per 1,000 cited answers 1.73 → 1.19 (32 and 19); likes per 1,000 4.16 → 3.77. Aug 1–17 separately: cited 91.6%, partial 13.9%, p50 11.9s, dislikes per 1,000 1.66. Descriptive only; the deployment change is not isolated from other changes in the window."
     },
     {
       "start": "2026-09-14",

@@ -5,6 +5,10 @@ Outputs (all daily counts; nothing per-turn and no text crosses into the dashboa
 
   usage.csv            Date, Questions, Sessions, then optional columns the dashboard may use:
                          Answered, Unanswered, Flagged            legacy outcome split (see below)
+                         Likes, Dislikes, DislikesOnCited             feedback (always; the feed carries Feedback)
+                         StarterPromptFirstTurns, OrganicFirstTurns  only when the redacted feed carries Starter Prompt
+                         ScriptLatin, ScriptCyrillic, ScriptArabic, ScriptCJK, ScriptDevanagari, ScriptOther, ScriptNone
+                                                                   only when the redacted feed carries Query Script
                          Cited, NotFound, Clarification, Error, OutOfScope, Greeting, Uncited, Partial, Scored, OutcomeRules
                                                                    outcome taxonomy, only when the redacted feed carries an
                                                                    Outcome column (tools/redact_feed.py writes it)
@@ -95,7 +99,7 @@ def aggregate(files):
     hours = defaultdict(lambda: defaultdict(int))    # (date, hour) -> turns
     hour_sess = defaultdict(set)                     # (date, hour) -> conversation ids (turn 1)
     cats = defaultdict(lambda: defaultdict(int))     # date -> slug -> hits
-    bad = 0; has_voice = False; cat_dropped = 0; has_outcome = False; rules = set()
+    bad = 0; has_voice = False; cat_dropped = 0; has_outcome = False; rules = set(); has_starter = False; has_script = False
     seen = set(); dupes = 0   # exports taken on different days overlap on their boundary day
     for f in files:
         with open(f, encoding="utf-8-sig", newline="") as fh:
@@ -104,6 +108,8 @@ def aggregate(files):
             has_voice = has_voice or bool(voice_col)
             outcome_col = "Outcome" if "Outcome" in r.fieldnames else None
             has_outcome = has_outcome or bool(outcome_col)
+            has_starter = has_starter or ("Starter Prompt" in r.fieldnames)
+            has_script = has_script or ("Query Script" in r.fieldnames)
             for row in r:
                 key = (row.get("Conversation ID") or "", (row.get("Turn #") or "").strip())
                 if key in seen:
@@ -129,6 +135,14 @@ def aggregate(files):
                 elif flagged: c["flagged"] += 1
                 else: c["unanswered"] += 1
                 c["citations"] += len(urls)
+                fb = (row.get("Feedback") or "").strip().lower()
+                if fb == "like": c["likes"] += 1
+                elif fb == "dislike":
+                    c["dislikes"] += 1
+                    if (row.get("Outcome") or "").strip() == "Cited answer": c["dislikes_cited"] += 1
+                if first and "Starter Prompt" in row:
+                    c["starter" if (row.get("Starter Prompt") or "").strip().lower() == "yes" else "organic"] += 1
+                if "Query Script" in row: c["script:" + ((row.get("Query Script") or "").strip() or "None")] += 1
                 if outcome_col:
                     o = (row.get("Outcome") or "").strip()
                     c["o:" + o] += 1
@@ -165,17 +179,23 @@ def aggregate(files):
                         cat_dropped += sum(1 for x in slugs if x is None)
                         toks = [x for x in slugs if x]
                     for s in set(toks): cats[d][s] += 1
-    return D, sess, lat, hours, hour_sess, cats, bad, has_voice, dupes, cat_dropped, has_outcome, rules
+    return D, sess, lat, hours, hour_sess, cats, bad, has_voice, dupes, cat_dropped, has_outcome, rules, has_starter, has_script
 
 
 OUTCOME_COLS = [("Cited", "o:Cited answer"), ("NotFound", "o:Not found"), ("Clarification", "o:Clarification"), ("Error", "o:Error"),
                 ("OutOfScope", "o:Out of scope"), ("Greeting", "o:Greeting"), ("Uncited", "o:Uncited answer"), ("Partial", "o:partial"), ("Scored", "o:scored")]
 
 
-def usage_rows(D, sess, lat, has_voice, has_outcome=False, rules=""):
+SCRIPT_COLS = ["Latin", "Cyrillic", "Arabic", "CJK", "Devanagari", "Other", "None"]
+
+
+def usage_rows(D, sess, lat, has_voice, has_outcome=False, rules="", has_starter=False, has_script=False):
     cols = ["Date", "Questions", "Sessions", "Answered", "Unanswered", "Flagged", "NewTopic", "UserFollowup", "SuggestedFollowup",
             "ModalTurns", "WebTurns", "OtherTurns", "ModalSessions", "WebSessions", "Citations", "LatencyP50ms", "LatencyP90ms"]
     if has_voice: cols += ["VoiceTurns", "VoiceSessions"]
+    cols += ["Likes", "Dislikes", "DislikesOnCited"]
+    if has_starter: cols += ["StarterPromptFirstTurns", "OrganicFirstTurns"]
+    if has_script: cols += ["Script" + k for k in SCRIPT_COLS]
     if has_outcome: cols += [c for c, _ in OUTCOME_COLS] + ["OutcomeRules"]
     out = []
     for d in sorted(D):
@@ -184,6 +204,9 @@ def usage_rows(D, sess, lat, has_voice, has_outcome=False, rules=""):
                c["suggested_followup"], c["modal_turns"], c["web_turns"], c["other_turns"], len(s["modal"]), len(s["web"]), c["citations"],
                pct(L, 50), pct(L, 90)]
         if has_voice: row += [c["voice_turns"], len(s["voice"])]
+        row += [c["likes"], c["dislikes"], c["dislikes_cited"]]
+        if has_starter: row += [c["starter"], c["organic"]]
+        if has_script: row += [c["script:" + k] for k in SCRIPT_COLS]
         if has_outcome: row += [c[k] for _, k in OUTCOME_COLS] + [rules]
         out.append(row)
     return cols, out
@@ -271,7 +294,7 @@ def main():
     ap.add_argument("--category-rule", choices=["distinct", "tokens"], default="distinct", help="distinct per turn with URL fallback (default), or every Categories entry incl. repeats and no fallback (old file's rule)")
     a = ap.parse_args()
     global CATEGORY_RULE; CATEGORY_RULE = a.category_rule
-    D, sess, lat, hours, hour_sess, cats, bad, has_voice, dupes, cat_dropped, has_outcome, rules = aggregate(a.files)
+    D, sess, lat, hours, hour_sess, cats, bad, has_voice, dupes, cat_dropped, has_outcome, rules, has_starter, has_script = aggregate(a.files)
     rules = ", ".join(sorted(r for r in rules if r))
     if bad: print(f"warning: {bad} rows with unreadable Timestamp skipped", file=sys.stderr)
     if dupes: print(f"note: {dupes} rows repeated across the input files (same conversation and turn) counted once")
@@ -284,7 +307,7 @@ def main():
         print(f"note: {last} is the export day and partial; dropped (--keep-partial to keep it)")
         for store in (D, sess, lat, cats): store.pop(last, None)
         for k in [k for k in hours if k[0] == last]: hours.pop(k); hour_sess.pop(k, None)
-    ucols, urows = usage_rows(D, sess, lat, has_voice, has_outcome, rules)
+    ucols, urows = usage_rows(D, sess, lat, has_voice, has_outcome, rules, has_starter, has_script)
     hcols, hrows = hours_rows(hours, hour_sess)
     (ccols, crows), (dcols, drows) = categories_rows(cats)
     days = sorted(D)

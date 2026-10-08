@@ -16,7 +16,13 @@ feed mostly uses U+2019, which is why its printed not-found pattern under-counts
   Out of scope   refusal phrases, else the feed's Flagged = Yes (after Greeting)
   Greeting       "hello"/"hi" opening, "how can I help", "glad to help" ...
   Uncited answer anything else
-Partial = a Cited answer whose text also matches the not-found pattern. The output still contains per-turn
+Partial = a Cited answer whose text also matches the not-found pattern.
+
+Two more derived columns, both read from the query text before it is dropped:
+  Starter Prompt  Yes when a first turn's normalised query (lower case, trimmed, trailing
+                  punctuation removed, spaces collapsed) equals one of the configured chips
+  Query Script    Unicode script of the first letter: Latin, Cyrillic, Arabic, CJK, Devanagari,
+                  Other, or None when the query has no letter. A script, not a language. The output still contains per-turn
 rows, so it stays out of git (.gitignore covers qa-feed*.csv); only the daily aggregates
 produced by make_usage.py go into the dashboard.
 
@@ -39,6 +45,35 @@ RX = {
     "greeting": re.compile(r"^(hello|hi)\b|how can i help|you're welcome|glad to help|glad to hear|glad you|glad i could", re.I),
 }
 URL_RE = re.compile(r'https?://[^\s,;|"]+')
+
+# Starter-prompt chips (AGENT_BRIEF.md, 29 Sep 2026). Matched on first turns only, after
+# normalisation. Versioned with the outcome rules; effective dates are not known yet.
+STARTER_PROMPTS = {
+    "what is auto-enrolment", "can i get help with low pay", "how much is maternity benefit",
+    "what are the housing assistance payment (hap) limits", "how do i renew my passport",
+    "how do i apply for the back to school clothing and footwear allowance",
+}
+SCRIPTS = [("Latin", re.compile(r"[A-Za-z\u00C0-\u024F]")), ("Cyrillic", re.compile(r"[\u0400-\u04FF]")),
+           ("Arabic", re.compile(r"[\u0600-\u06FF]")), ("CJK", re.compile(r"[\u4E00-\u9FFF\u3040-\u30FF\uAC00-\uD7AF]")),
+           ("Devanagari", re.compile(r"[\u0900-\u097F]"))]
+LETTER = re.compile(r"[^\W\d_]")
+
+
+def normalise_query(q):
+    q = (q or "").translate(APOS).lower().strip()
+    q = re.sub(r"[\s]+", " ", q)
+    return re.sub(r"[?.!,;:]+$", "", q).strip()
+
+
+def query_script(q):
+    m = LETTER.search(q or "")
+    if not m:
+        return "None"
+    ch = m.group(0)
+    for name, rx in SCRIPTS:
+        if rx.match(ch):
+            return name
+    return "Other"
 APOS = str.maketrans({"\u2019": "'", "\u2018": "'", "\u02bc": "'"})
 
 
@@ -73,7 +108,7 @@ def out_name(path, out_dir):
 def redact(src, dst):
     with open(src, encoding="utf-8-sig", newline="") as fi, open(dst, "w", encoding="utf-8", newline="") as fo:
         r = csv.DictReader(fi)
-        keep = [c for c in r.fieldnames if c not in DROP] + ["Outcome", "Partial", "Outcome Rules"]
+        keep = [c for c in r.fieldnames if c not in DROP] + ["Outcome", "Partial", "Outcome Rules", "Starter Prompt", "Query Script"]
         dropped = [c for c in r.fieldnames if c in DROP]
         w = csv.DictWriter(fo, fieldnames=keep, extrasaction="ignore")
         w.writeheader()
@@ -83,6 +118,10 @@ def redact(src, dst):
             counts[o] = counts.get(o, 0) + 1
             if partial: counts["(partial)"] = counts.get("(partial)", 0) + 1
             row["Outcome"], row["Partial"], row["Outcome Rules"] = o, partial, OUTCOME_RULES_VERSION
+            q = row.get("User Query") or ""
+            row["Starter Prompt"] = "Yes" if (row.get("Turn #") or "").strip() == "1" and normalise_query(q) in STARTER_PROMPTS else ""
+            row["Query Script"] = query_script(q)
+            if row["Starter Prompt"]: counts["(starter prompt)"] = counts.get("(starter prompt)", 0) + 1
             w.writerow(row)
             n += 1
     return n, keep, dropped, counts
