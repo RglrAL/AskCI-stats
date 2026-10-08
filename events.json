@@ -21,13 +21,23 @@
       "detail": "Capacity increase suspected, unconfirmed."
     },
     {
+      "start": "2026-03-24",
+      "end": "2026-04-07",
+      "kind": "observed change",
+      "status": "candidate",
+      "evidence": "QA feed Source column",
+      "applies_to": "AskCI",
+      "title": "Pre-launch Modal rows: limited rollout or internal use",
+      "detail": "980 Modal turns in 464 conversations on 22 days from 5 Jan to 7 May, concentrated 24 Mar to 7 Apr (up to 130 a day). Confirm with OGCIO whether this was a limited rollout or internal testing. Kept in totals; the admin-app spec excludes them from Web-versus-Modal comparisons."
+    },
+    {
       "start": "2026-05-11",
       "kind": "launch",
       "status": "confirmed",
       "evidence": "QA feed Source column",
       "applies_to": "AskCI",
       "title": "Modal launch",
-      "detail": "The feed shows 3 Modal turns on 7 May (test) and then 408 of 568 turns from Modal on 11 May, 72% of the day; Modal has carried about three quarters of turns since. The admin-app spec's 1 May assumption is not supported by the feed."
+      "detail": "Public launch: from 11 May Modal carries 408 of 568 turns (72%) and about three quarters of turns since. Before that the feed holds 980 Modal turns in 464 conversations on 22 days between 5 Jan and 7 May, mostly 24 Mar to 7 Apr, which the admin-app spec treats as a limited rollout or internal use (to confirm). The spec's 1 May assumption for the public launch is not supported by the feed."
     },
     {
       "start": "2026-05-20",
