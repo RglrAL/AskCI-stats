@@ -150,7 +150,7 @@ out = pd.concat([turns, first], axis=1).fillna(0).astype(int).reset_index().rena
 out.to_csv("usage.csv", index=False)
 ```
 
-Dates are in the feed's own timezone, which is unconfirmed; note that in the file's header comment. Do not add any other column from the feed; only daily aggregates cross into this tool.
+Feed timestamps are Irish local time (Europe/Dublin; confirmed 8 Oct 2026), so daily aggregates are Irish days. Note that in the file's header comment. Do not add any other column from the feed; only daily aggregates cross into this tool.
 
 ## 8. Acceptance checks on the frozen `costs.csv`
 
@@ -193,9 +193,60 @@ Done in `index.html` (config version `2026.10.01-1`), `events.json` and `tools/m
 - Section 5: `events.json` seeded as specified; detected model events shown in the Events popover and drawn nowhere; personal markers dashed.
 - Section 6: tabs regrouped into Cost (Summary | Services | Models), Usage (Volume | Before / after, plus Reach and Categories only when their files are present; the whole group only when `usage.csv` is loaded) and Scenario planner last. Summary carries the hero, KPI row, the cost timeline with a by-service / fixed-variable-unclassified toggle, What changed and the day table. Services carries the scope toggle (service / admin / shared), the resource inventory with region and the RAG stages. Data-quality strip on every pane.
 - Section 7: `tools/make_usage.py` reproduces the usage file from QA feed exports (`--compare` checks against an existing file without writing).
+- Section 7, extended 8 Oct 2026: `tools/redact_feed.py` drops the four free-text columns from a feed export (output stays gitignored). `tools/make_usage.py` reads raw or redacted feeds and, with `--out-dir`, writes four daily-aggregate files: `usage.csv` (Date, Questions, Sessions unchanged, plus Answered / Unanswered / Flagged, question types, source turns and sessions, Citations, latency p50 and p90, and Voice columns when the export has an input-mode column), `usage-hours.csv` (Date, Hour, Turns, Sessions; Irish time), `categories.csv` in the current contract with stable display names, and `categories-daily.csv`. `--compare DIR` reports day-by-day and month-by-month differences against the files in DIR and writes nothing. Answered means at least one citation; Flagged means Flagged = Yes; Unanswered is neither. Raw and redacted inputs give identical outputs. The dashboard reads only Date, Questions and Sessions from `usage.csv` today; the other columns wait on a full export that passes the comparison. A Mac droplet, `tools/AskCI Feed Export.app` (built from `tools/feed_droplet.applescript`, logic in `tools/feed_export.sh`), runs redact, compare and generate on dropped feed files, writes everything to an `askci-export-<stamp>` folder beside the dropped file, and copies the four aggregate files into the dashboard folder only on an explicit second confirmation. The app bundle and the review folders are gitignored; rebuild with the one-line command in `.gitignore`.
 - Section 8: all acceptance checks pass on the frozen file, with two corrections to the table: the proposed dedup key `date|resourceId|meter|rawCost` removes 87 Azure Monitor email rows that differ only by region (value £0.0016), so the implementation de-duplicates on the full row; March generation cost per turn is 0.76p, not 0.73p; "other" is £67.36 by rounding.
 
 Open:
 
 - `usage.csv` has not been regenerated. The only feed export in the repo covers 6–7 June 2026 (exported 08:13 on 7 June), and for 6 June it yields 398 turns and 167 conversations against 465 and 193 in the current file. Either the current file comes from the old analytics or the feed export is filtered; this needs a full feed export and a decision before the file is replaced. The parser now accepts the file's "Sept" dates, which the old parser silently dropped.
 - The open questions in section 10 are unchanged.
+
+## 12. Data refresh (8 Oct 2026), config `2026.10.08-1`
+
+`costs.csv` now runs 1 Jan to 8 Oct 2026 (15,693 rows, £6,370.59). The export also restated August by £38.30, all on days that were provisional in the frozen file, so the section 8 total of £4,537.71 no longer reproduces from this file; rows to 17 Aug now sum to £4,576.02. `usage.csv` runs to 7 Oct; the GA4 files to 8 Oct; `categories.csv` to September (the September rows arrived with a blank Month column, filled in by hand; the upload also created a case-colliding `Categories.csv`, removed because the dashboard fetches the lowercase name).
+
+Config additions, all driven by meters first billed 14 Sep 2026:
+
+- Model families `5.4` and `5.4 mini` (six meters, variable) and `gpt-4o-transcribe` (two meters, variable; speech-to-text billed as tokens, so it counts in generation cost per turn under the section 4.3 rule).
+- `Foundry Tools` service (Neural Text To Speech, variable) and the `spch-askci-prod` resource (scope service; its private endpoint is shared). Added to the Generation stage of the RAG pipeline.
+- `Task vCPU Duration` (Container Registry) and the two data-transfer-in meters (Bandwidth), variable.
+- Output meter type now also matches `out` (transcribe text-out meter).
+- Voice (same day, config unchanged in version): `CONFIG.voice` names the speech-to-text and text-to-speech meters; the transcribe meters carry meter type `voice`; voice cost is excluded from generation cost per turn, as embeddings are, so the per-turn series stays comparable across 14 Sep. The Models pane gains a Voice billed-cost card (speech-to-text, text-to-speech, share of Foundry cost, daily chart) and the RAG stages gain a Voice stage. Billed cost only: the export carries no minutes, characters or voice turn counts. The admin app records input mode per conversation (September: 208 voice conversations of 11,431, about 3% of conversations since the 14 Sep launch); a daily voice-conversation column in `usage.csv`, generated from the feed, would unlock voice share and cost per voice conversation. Deferred.
+- `events.json`: confirmed model event 14 Sep (GPT 5, GPT 5 Mini and chat-latest last billed; 5.4 and 5.4 mini first billed; voice meters begin), evidence Azure billing export.
+
+Checks on the refreshed file: unclassified meters, unparsed Foundry meters and unassigned resources all 0; scopes sum to the total; detected model events 0 once the 14 Sep event is recorded; join window 1 Jan to 5 Oct, 278 days.
+
+## 13. Full QA feed export validated (8 Oct 2026)
+
+Two export parts, 1 Jan to 28 Sep 2026, 113,410 turns in 56,365 conversations, no overlap and no duplicate (conversation, turn) keys. No input-mode column, so no voice columns. Run through `tools/feed_export.sh`; outputs in `exports/askci-export-full/` (gitignored).
+
+Usage against the current `usage.csv`: turns +0.1%, conversations +0.0% over 271 shared days. The differences are:
+
+- 63 days where the current file has one to three more conversations: it counted conversations active on the day, so one spanning midnight counted twice; the feed count is conversations started, the brief's definition.
+- 9 March: current file 23 turns / 15 conversations, feed 206 / 113. The old source lost most of the model-change day. The feed is right.
+- 28 Sep: the export's last day, 15 turns short of the current file. Partial.
+- 6 June: 465 in both. The June sample export was filtered; the discrepancy in section 11 is closed.
+
+Categories against the current `categories.csv`: April identical; May to August the feed is 3 to 5% higher in every category uniformly, so the current file was built from an earlier, incomplete pull; September lower because the feed ends on the 28th. January to March the current file is 35 to 40% higher: until March the feed's Categories column repeated a category once per citation and the old file counted the repeats (`--category-rule tokens` reproduces it to within 1%). From April the column is distinct per turn. The generator's default, distinct per turn, is consistent across the whole period and is the rule to use; the Categories pane's early months will drop accordingly. The feed also carries a `my-situation` category (12 hits in August) that the current file omits; the dashboard's `CAT_EXCLUDE` decides whether it shows.
+
+A third part (28 Sep to 8 Oct, exported 8 Oct 16:30) completed the range with no overlap. The generator now drops the export day itself as partial (`--keep-partial` overrides) and counts a (conversation, turn) once across input files. All three parts together: 1 Jan to 7 Oct, 122,647 turns, 61,481 conversations, +0.1% turns and +0.0% conversations against the old file.
+
+Copied into the dashboard folder on 8 Oct 2026: `usage.csv` (with the optional columns), `categories.csv` (distinct-per-turn rule; January to March lower than before for the reason above), and the new `usage-hours.csv` and `categories-daily.csv`. Checked in the browser: 280 usage days, no rejected dates, 9 March now 206 turns, join window 1 Jan to 5 Oct, generation cost per turn 1.645p, Categories pane shows January to October. The dashboard still reads only Date, Questions and Sessions from `usage.csv`; the other columns and the hours file are the material for the next piece of work.
+
+## 14. Usage detail from the feed-generated columns (8 Oct 2026), config `2026.10.08-2`
+
+`parseUsage` reads the optional columns written by `tools/make_usage.py` and records which groups are present (outcomes, types, sources, latency, voice); each group switches its own card on. `usage-hours.csv` is fetched from the relative path like the GA4 files. The data-quality strip lists the groups found.
+
+Usage › Volume gains, below the existing cards and only when the columns exist:
+
+- Answer outcomes: answered / unanswered / flagged shares over the selected range, generation cost per answered turn on the settled join window, stacked chart by the selected granularity.
+- Question types: new topic / typed follow-up / suggested follow-up (the chips) shares, turns per conversation, stacked chart.
+- Source: Modal and Web conversation shares, turns per conversation by source, stacked chart.
+- Response time: turn-weighted mean of the daily p50 and p90 (labelled as such; a true range percentile needs per-turn data), daily line chart with confirmed events.
+- Hour of day: weekday × hour heat map of turns over the selected range, busiest hour, and the share of turns outside phone-service hours. The hours are `CONFIG.phone_service` (Mon–Fri 09:00–20:00, marked "to confirm" until checked against the published schedule).
+
+Elsewhere: `perTurnStats` returns answered share, generation cost per answered turn and turn-weighted p50, all subject to the existing validity thresholds; What changed gains "Answered share" and "Response time p50" as candidates (same 10% materiality); the Before / after table gains Answered share and Response p50 columns. All shares are sum-then-divide; no causal wording.
+
+Checked in the browser on the full range: answered 85.3%, unanswered 7.7%, flagged 6.9%, generation cost per answered turn 1.92p, suggested follow-ups 20.3% of turns, Modal 71.8% of conversations, p50 12.1s and p90 18.2s, 34.7% of turns outside the configured phone hours, busiest hour 11:00. Before / after around 9 March shows p50 rising from 8.3s to 15.8s and answered share falling from 92.9% to 86.8% with the GPT 5 family; descriptive only.
+
+Not done: the Ask bar does not know the new metrics; report mode does not include them; a voice volume column still depends on an input-mode column in the export.

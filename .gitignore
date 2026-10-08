@@ -3,3 +3,9 @@
 
 # QA feed exports hold citizens' questions — never commit them
 qa-feed*.csv
+
+# Built droplet app (rebuild with: osacompile -o "tools/AskCI Feed Export.app" tools/feed_droplet.applescript)
+*.app/
+
+# Review folders written by the feed droplet
+askci-export-*/

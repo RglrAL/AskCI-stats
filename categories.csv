@@ -1,55 +1,101 @@
-﻿Category,Citations,Month
-Social Welfare,"4,091",January
-Money & Tax,"1,690",January
-Employment,770,January
-Moving Country,709,January
-Housing,619,January
-Travel & Recreation,358,January
-Birth Family Relationships,297,January
-Health,263,January
-RTI,200,January
-Education,195,January
-Justice,142,January
-Consumer ,107,January
-Death,95,January
-About,66,January
-Government in Ireland,53,January
-Environment,45,January
+Category,Citations,Month
+Social Welfare,2188,January
+Money & Tax,746,January
+Employment,588,January
+Moving Country,534,January
+Housing,446,January
+Health,276,January
+Travel and Recreation,247,January
+Family and Relationships,188,January
+RTI,179,January
+Education,138,January
+Justice,131,January
+Death,75,January
+Consumer,66,January
+Government in Ireland,54,January
+About,38,January
+Environment,31,January
+Topics,18,January
+Publication,5,January
+Self Assessment And Self Employment,2,January
+Social_Welfare,2,January
+What We Do,2,January
+Intreo Centres,2,January
+Department Of Social Protection,2,January
+Personal Tax Credits Reliefs And Exemptions,2,January
+Complaints_Disputes,1,January
+Moving_Country,1,January
+Contact,1,January
+Employing People,1,January
+Money_And_Tax,1,January
+Social W,1,January
+What We Do,1,January
+Contact Us,1,January
+Topic,1,January
+Directory,1,January
+Collection,1,January
 My Situation,1,January
-Social Welfare,"3,300",February
-Money & Tax,"1,085",February
-Employment,544,February
-Moving Country,502,February
-Housing,455,February
-Health,326,February
-Travel & Recreation,270,February
-Birth Family Relationships,200,February
-RTI,199,February
-Education,177,February
-Justice,71,February
-Consumer ,68,February
-Death,68,February
-About,57,February
-Environment,32,February
-Government in Ireland,10,February
-Social Welfare,"2,262",March
-Money & Tax,618,March
-Employment,558,March
-Moving Country,371,March
-Housing,353,March
-Health,255,March
-Travel and Recreation,206,March
-RTI,202,March
-Family and Relationships,152,March
-Education,119,March
-Consumer ,89,March
-Justice,77,March
-Death,70,March
-About,56,March
-Environment,36,March
-Government in Ireland,33,March
-My Situation,0,March
-Social Welfare,"2,169",April
+Online Services,1,January
+Service,1,January
+Social Welfare,1827,February
+Money & Tax,534,February
+Employment,463,February
+Housing,404,February
+Moving Country,332,February
+Health,267,February
+Travel and Recreation,188,February
+RTI,151,February
+Education,142,February
+Family and Relationships,133,February
+Justice,66,February
+Consumer,57,February
+Death,52,February
+About,29,February
+Environment,26,February
+Government in Ireland,21,February
+Topics,15,February
+Service,3,February
+Department Of Social Protection,3,February
+Publication,3,February
+Dfa,2,February
+Services,2,February
+What_You_Should_Know,2,February
+Money_And_Tax,2,February
+Additional Incomes,1,February
+Tax Professionals,1,February
+Online Services,1,February
+Starting A Business,1,February
+Self Assessment And Self Employment,1,February
+Contact Us,1,February
+Crime And Justice,1,February
+Jobs And Pensions,1,February
+Social,1,February
+Social_Welfare,1,February
+Contact,1,February
+Complaints_Disputes,1,February
+Social Welfare,2086,March
+Money & Tax,584,March
+Employment,541,March
+Housing,412,March
+Moving Country,387,March
+Health,270,March
+RTI,211,March
+Travel and Recreation,210,March
+Family and Relationships,148,March
+Education,136,March
+Consumer,98,March
+Justice,76,March
+Death,62,March
+About,53,March
+Government in Ireland,41,March
+Environment,31,March
+Topics,3,March
+Campaigns,2,March
+Returning_To_Ireland,1,March
+Consumer Affairs,1,March
+Organisation Information,1,March
+Department Of Social Protection,1,March
+Social Welfare,2169,April
 Money & Tax,586,April
 Employment,479,April
 Moving Country,381,April
@@ -65,18 +111,104 @@ About,69,April
 Death,47,April
 Government in Ireland,31,April
 Environment,29,April
-Social Welfare,"5,450",May
-Money & Tax,"1,260",May
-Employment,"1,218",May
-Moving Country,998,May
-Travel and Recreation,796,May
-Housing,759,May
-Health,619,May
-RTI,536,May
-Family and Relationships,482,May
-Education,375,May
-Justice,299,May
-Consumer,198,May
+Social Welfare,5600,May
+Money & Tax,1287,May
+Employment,1267,May
+Moving Country,1044,May
+Travel and Recreation,827,May
+Housing,784,May
+Health,638,May
+RTI,552,May
+Family and Relationships,499,May
+Justice,384,May
+Education,308,May
+Consumer,200,May
 About,128,May
-Government in Ireland,93,May
-Death,88,May
+Death,94,May
+Government in Ireland,94,May
+Environment,72,May
+Social Welfare,8555,June
+Money & Tax,2101,June
+Moving Country,1756,June
+Employment,1650,June
+Travel and Recreation,1434,June
+Housing,1432,June
+Health,891,June
+RTI,880,June
+Family and Relationships,697,June
+Education,520,June
+Justice,476,June
+Consumer,299,June
+About,185,June
+Death,163,June
+Government in Ireland,98,June
+Environment,97,June
+Social Welfare,6780,July
+Employment,2104,July
+Housing,1709,July
+Money & Tax,1561,July
+Moving Country,1450,July
+Travel and Recreation,1260,July
+Health,1136,July
+RTI,831,July
+Family and Relationships,780,July
+Justice,514,July
+Education,435,July
+Consumer,390,July
+Death,290,July
+Government in Ireland,252,July
+Environment,202,July
+About,177,July
+My Situation,5,July
+Social Welfare,6208,August
+Employment,2182,August
+Housing,1905,August
+Moving Country,1640,August
+Money & Tax,1410,August
+Travel and Recreation,1230,August
+Health,1178,August
+RTI,938,August
+Family and Relationships,886,August
+Education,786,August
+Justice,436,August
+Consumer,401,August
+Government in Ireland,333,August
+Death,314,August
+Environment,199,August
+About,130,August
+My Situation,12,August
+Social Welfare,7991,September
+Housing,2162,September
+Employment,2139,September
+Moving Country,1567,September
+Money & Tax,1385,September
+Travel and Recreation,1283,September
+Health,1194,September
+RTI,851,September
+Family and Relationships,837,September
+Education,666,September
+Justice,510,September
+Consumer,476,September
+Government in Ireland,336,September
+Death,270,September
+Environment,174,September
+About,173,September
+My Situation,4,September
+All Categories,1,September
+Social Welfare,2581,October
+Money & Tax,1165,October
+Housing,665,October
+Employment,509,October
+Moving Country,314,October
+Travel and Recreation,309,October
+Health,292,October
+Education,225,October
+Family and Relationships,208,October
+RTI,172,October
+Consumer,127,October
+Justice,103,October
+Death,81,October
+Government in Ireland,75,October
+Environment,49,October
+About,42,October
+My Situation,1,October

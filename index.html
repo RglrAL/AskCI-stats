@@ -1853,8 +1853,8 @@ loadPrefs();
 isDark=PREFS.theme!=='light';
 C=isDark?DARK:LIGHT;
 
-const SVC_COL={'Azure Cognitive Search':'#f85149','Foundry Models':'#58a6ff','Azure Container Apps':'#d29922','Virtual Network':'#bc8cff','Microsoft Defender for Cloud':'#6e7681','Load Balancer':'#3fb950','Bandwidth':'#ff7b72','Container Registry':'#6e40c9','Azure Monitor':'#1f6feb','Storage':'#388bfd','Azure Cosmos DB':'#9e6a03','Azure App Service':'#2ea043','Key Vault':'#8b949e'};
-const METER_COL={'GPT 5 Chat outpt Glbl 1M Tokens':'#f85149','GPT 5 Chat Inpt Glbl 1M Tokens':'#58a6ff','GPT 5 Chat cchd Inpt Glbl 1M Tokens':'#3fb950','GPT 5 Mini outpt Glbl 1M Tokens':'#d29922','GPT 5 Mini Inpt Glbl 1M Tokens':'#bc8cff','GPT 5 Mini cchd Inpt Glbl 1M Tokens':'#6ee7b7','GPT 5 outpt Glbl 1M Tokens':'#ff7b72','GPT 5 Inpt Glbl 1M Tokens':'#818cf8','gpt 4o 1120 Inp glbl Tokens':'#60a5fa','gpt 4o 1120 Outp glbl Tokens':'#fb923c','gpt 4o 1120 cached Inp glbl Tokens':'#4ade80','gpt-4o-mini-0718-Inp-glbl Tokens':'#e879f9','gpt-4o-mini-0718-Outp-glbl Tokens':'#f97316','text-embedding-3-small-glbl Tokens':'#94a3b8'};
+const SVC_COL={'Azure Cognitive Search':'#f85149','Foundry Models':'#58a6ff','Azure Container Apps':'#d29922','Virtual Network':'#bc8cff','Microsoft Defender for Cloud':'#6e7681','Load Balancer':'#3fb950','Bandwidth':'#ff7b72','Container Registry':'#6e40c9','Azure Monitor':'#1f6feb','Storage':'#388bfd','Azure Cosmos DB':'#9e6a03','Azure App Service':'#2ea043','Key Vault':'#8b949e','Foundry Tools':'#79c0ff'};
+const METER_COL={'GPT 5 Chat outpt Glbl 1M Tokens':'#f85149','GPT 5 Chat Inpt Glbl 1M Tokens':'#58a6ff','GPT 5 Chat cchd Inpt Glbl 1M Tokens':'#3fb950','GPT 5 Mini outpt Glbl 1M Tokens':'#d29922','GPT 5 Mini Inpt Glbl 1M Tokens':'#bc8cff','GPT 5 Mini cchd Inpt Glbl 1M Tokens':'#6ee7b7','GPT 5 outpt Glbl 1M Tokens':'#ff7b72','GPT 5 Inpt Glbl 1M Tokens':'#818cf8','gpt 4o 1120 Inp glbl Tokens':'#60a5fa','gpt 4o 1120 Outp glbl Tokens':'#fb923c','gpt 4o 1120 cached Inp glbl Tokens':'#4ade80','gpt-4o-mini-0718-Inp-glbl Tokens':'#e879f9','gpt-4o-mini-0718-Outp-glbl Tokens':'#f97316','text-embedding-3-small-glbl Tokens':'#94a3b8','5.4 opt Gl 1M Tokens':'#39d353','5.4 inp Gl 1M Tokens':'#2dd4bf','5.4 cd inp Gl 1M Tokens':'#a7f3d0','5.4 mini Opt Gl 1M Tokens':'#f0883e','5.4 mini Inp Gl 1M Tokens':'#fbbf24','5.4 mini cd Inp Gl 1M Tokens':'#fde68a'};
 // Cost-category identity palette — deliberately NOT red/amber/green so it never
 // collides with semantic state colours (those are reserved for target/anomaly).
 const COST_COL={fixed:'#8b949e',llm:'#6e9bff',other:'#c08cff',unclassified:'#f0883e'};
@@ -1868,10 +1868,10 @@ function mtrCol(m){return METER_COL[m]||C.dim}
 // may rest on an assumption that is not in the data or in this object. The
 // version string is shown in the data-quality strip.
 const CONFIG={
-  version:'2026.10.01-1',
+  version:'2026.10.08-2',
   // Resource-group prefixes kept; everything else in the export is excluded and counted.
   resource_groups:['rg-askci-prod','me_cae-askci-prod'],
-  // Meter classification — exact meter names from the frozen costs.csv (1 Jan–17 Aug 2026).
+  // Meter classification — exact meter names from costs.csv (1 Jan–8 Oct 2026).
   // A meter in neither list is "unclassified" and is reported, never silently bucketed.
   meters:{
     fixed:[
@@ -1899,6 +1899,13 @@ const CONFIG={
       'gpt 4o 1120 Inp glbl Tokens','gpt 4o 1120 Outp glbl Tokens','gpt 4o 1120 cached Inp glbl Tokens',
       'gpt-4o-mini-0718-Inp-glbl Tokens','gpt-4o-mini-0718-Outp-glbl Tokens','gpt 4o mini 0718 cached Inp glbl Tokens',
       'text-embedding-3-small-glbl Tokens',
+      // Added 2026.10.08-1 — first billed 14 Sep 2026
+      '5.4 inp Gl 1M Tokens','5.4 opt Gl 1M Tokens','5.4 cd inp Gl 1M Tokens',
+      '5.4 mini Inp Gl 1M Tokens','5.4 mini Opt Gl 1M Tokens','5.4 mini cd Inp Gl 1M Tokens',
+      'gpt-4o-transcribe-aud-inp-glbl Tokens','gpt-4o-transcribe-txt-out-glbl Tokens', // voice: speech-to-text
+      'S1 Neural Text To Speech Characters', // voice: Foundry Tools (Speech)
+      'Task vCPU Duration',                  // Container Registry build tasks
+      'Inter Continent Data Transfer In - NAM or EU To Any','Intra Continent Data Transfer In',
     ],
   },
   // Foundry meter text → model family. Order matters (Chat / Mini before the bare GPT 5).
@@ -1910,13 +1917,25 @@ const CONFIG={
     {match:/\bGPT 5 Mini\b/i,         family:'GPT 5 Mini'},
     {match:/^GPT 5 (Inpt|outpt)\b/i,  family:'GPT 5'},
     {match:/chat-latest 05052026/i,   family:'chat-latest 05052026'},
+    {match:/^5\.4 mini\b/i,           family:'5.4 mini'},            // first billed 14 Sep 2026
+    {match:/^5\.4\b/i,                family:'5.4'},                 // first billed 14 Sep 2026
+    {match:/gpt-4o-transcribe/i,      family:'gpt-4o-transcribe'},   // voice: speech-to-text, billed as tokens
     {match:/text-embedding-3-small/i, family:'text-embedding-3-small'},
   ],
-  // Foundry meter text → billed meter type. Order matters (embedding, cached, output, then input).
+  // Voice meters, by exact name. Speech-to-text is billed as tokens under Foundry Models;
+  // text-to-speech as characters under Foundry Tools. The export carries cost only — no
+  // minutes, characters or turn counts — so voice is reported as billed cost and nothing else.
+  // Voice cost is excluded from "generation" per-turn figures, as embeddings are.
+  voice:{
+    stt:['gpt-4o-transcribe-aud-inp-glbl Tokens','gpt-4o-transcribe-txt-out-glbl Tokens'],
+    tts:['S1 Neural Text To Speech Characters'],
+  },
+  // Foundry meter text → billed meter type. Order matters (voice, embedding, cached, output, then input).
   meter_types:[
+    {match:/transcribe/i,            type:'voice'},
     {match:/embed/i,                 type:'embedding'},
     {match:/cchd|cached|\bcd inp\b/i,type:'cached input'},
-    {match:/outp|\bopt\b/i,          type:'output'},
+    {match:/outp|\bopt\b|\bout\b/i, type:'output'},
     {match:/\binp/i,                 type:'input'},
   ],
   // Resource name (last segment of ResourceId) → scope. Unmapped resources are "unassigned".
@@ -1927,6 +1946,7 @@ const CONFIG={
     {match:/^askci-admin-(backend|frontend)-prod$/i, scope:'admin'},
     {match:/-pe$/i,                                  scope:'shared'}, // private endpoints
     {match:/^pe-/i,                                  scope:'shared'},
+    {match:/^spch-askci-prod/i,                      scope:'service'}, // Speech (voice); its -pe endpoint is shared, matched above
     {match:/^kvaskciprod/i,                          scope:'shared'}, // Key Vault
     {match:/^acraskciprod/i,                         scope:'shared'}, // Container Registry
     {match:/^staskciprod/i,                          scope:'shared'}, // storage, bandwidth, Defender on storage
@@ -1935,19 +1955,21 @@ const CONFIG={
     {match:/^ag-askci-prod/i,                        scope:'shared'}, // Monitor action group
   ],
   // RAG stage mapping (Store → Chunk → Embed → Retrieve → Generate). Stage cost is either
-  // a list of services, the embedding meter type, or generation (Foundry minus embedding).
+  // a list of services, the embedding meter type, voice (CONFIG.voice meters), or
+  // generation (Foundry minus embedding minus speech-to-text).
   rag_stages:[
     {label:'Store',   icon:'file-text',color:'#388bfd',services:['Storage'],                 note:'raw docs in Blob'},
     {label:'Chunk',   icon:'scissors', color:'#8b949e',free:true,                             note:'Text Split — bundled in Search'},
     {label:'Embed',   icon:'binary',   color:'#94a3b8',meterType:'embedding',                 note:'text-embedding-3-small'},
     {label:'Retrieve',icon:'search',   color:'#58a6ff',services:['Azure Cognitive Search'],   note:'AI Search index'},
     {label:'Generate',icon:'brain',    color:'#3fb950',generation:true,                       note:'GPT — per answer'},
+    {label:'Voice',   icon:'audio-lines',color:'#79c0ff',voice:true,                          note:'speech in / out'},
   ],
   rag_pipeline:{
     stages:[
       {id:'ingest',  label:'Ingestion',  color:'#388bfd',icon:'file-text',     svcs:['Storage'],                                 desc:'Raw documents'},
       {id:'retrieve',label:'Retrieval',  color:'#58a6ff',icon:'search',        svcs:['Azure Cognitive Search'],                  desc:'Find context'},
-      {id:'generate',label:'Generation', color:'#3fb950',icon:'brain',         svcs:['Foundry Models'],                          desc:'Create answer'},
+      {id:'generate',label:'Generation', color:'#3fb950',icon:'brain',         svcs:['Foundry Models','Foundry Tools'],          desc:'Create answer'},
       {id:'serve',   label:'Application',color:'#d29922',icon:'server',        svcs:['Azure Container Apps','Azure App Service'],desc:'Serve response'},
       {id:'memory',  label:'Memory',     color:'#9e6a03',icon:'message-square',svcs:['Azure Cosmos DB'],                         desc:'Chat history'},
     ],
@@ -1964,11 +1986,13 @@ const CONFIG={
   materiality:{ratio_pct:10,ratio_pence:0.2,total_pct:10},
   categories_year:2026,       // the citations file carries month names only
   launch_date:'2026-05-11',   // candidate public Modal launch; labels only, see events.json
+  // Phone-service hours, used only for the "outside phone-service hours" share on the Usage pane.
+  phone_service:{days:[1,2,3,4,5],from:9,to:20,label:'Mon–Fri 09:00–20:00',source:'Citizens Information Phone Service published hours — to confirm'},
   gbp_eur:1.18,               // display convenience only — Azure bills this subscription in GBP
 };
 const FOUNDRY='Foundry Models';
-const FAMILY_COL={'GPT 5 Chat':'#58a6ff','GPT 5 Mini':'#bc8cff','GPT 5':'#ff7b72','gpt-4o 1120':'#d29922','gpt-4o-mini 0718':'#e879f9','chat-latest 05052026':'#3fb950','text-embedding-3-small':'#8b949e','unparsed':'#6e7681'};
-const METER_TYPE_COL={'input':'#58a6ff','cached input':'#3fb950','output':'#f85149','embedding':'#8b949e','unparsed':'#6e7681'};
+const FAMILY_COL={'GPT 5 Chat':'#58a6ff','GPT 5 Mini':'#bc8cff','GPT 5':'#ff7b72','gpt-4o 1120':'#d29922','gpt-4o-mini 0718':'#e879f9','chat-latest 05052026':'#3fb950','5.4':'#39d353','5.4 mini':'#f0883e','gpt-4o-transcribe':'#79c0ff','text-embedding-3-small':'#8b949e','unparsed':'#6e7681'};
+const METER_TYPE_COL={'input':'#58a6ff','cached input':'#3fb950','output':'#f85149','embedding':'#8b949e','voice':'#79c0ff','unparsed':'#6e7681'};
 const EVENT_KIND_COL={model:'#58a6ff',launch:'#d29922',chips:'#bc8cff','observed change':'#39d353'};
 
 // ═══ CLASSIFIERS ═══════════════════════════════════════════════════
@@ -2019,7 +2043,7 @@ function num(v){return(+v||0).toLocaleString()}
 function dow(iso){try{return new Date(iso).getDay()}catch{return-1}}
 function addDays(iso,n){const d=new Date(iso);d.setDate(d.getDate()+n);return d.toISOString().slice(0,10)}
 function weekStart(iso){const d=new Date(iso),day=d.getDay(),diff=d.getDate()-(day===0?6:day-1);d.setDate(diff);return d.toISOString().slice(0,10)}
-function shortMeter(k){return k.replace(/Glbl 1M Tokens|glbl Tokens|regional Tokens|1M Tokens/gi,'').replace(/cchd/gi,'cached').replace(/Inpt|Inp\b/gi,'In').replace(/outpt|Outp\b/gi,'Out').replace(/-glbl$/i,'').trim()}
+function shortMeter(k){return k.replace(/Glbl 1M Tokens|glbl Tokens|regional Tokens|1M Tokens/gi,'').replace(/cchd/gi,'cached').replace(/Inpt|Inp\b/gi,'In').replace(/outpt|Outp\b/gi,'Out').replace(/-glbl$/i,'').replace(/-$/,'').trim()}
 
 // ═══ CHART PLUGINS ══════════════════════════════════════════════════
 const eventLinesPlugin={
@@ -2341,14 +2365,16 @@ function parseCosts(rows){
       if(!fam||!typ){Q.unparsedMeters.add(mtr);fam=fam||'unparsed';typ=typ||'unparsed';}
     }
     Q.rowsKept++;
-    const dd=daily[date]||(daily[date]={total:0,llm:0,gen:0,fixed:0,variable:0,unclassified:0,services:{},meters:{},scope:{service:0,admin:0,shared:0,unassigned:0},fam:{},resources:{}});
+    const dd=daily[date]||(daily[date]={total:0,llm:0,gen:0,fixed:0,variable:0,unclassified:0,services:{},meters:{},scope:{service:0,admin:0,shared:0,unassigned:0},fam:{},resources:{},voice:{stt:0,tts:0}});
+    const vk=CONFIG.voice.stt.includes(mtr)?'stt':CONFIG.voice.tts.includes(mtr)?'tts':null;
+    if(vk)dd.voice[vk]+=cost;
     dd.total+=cost;
     dd[cls]+=cost;
     dd.scope[scope]+=cost;
     dd.services[svc]=(dd.services[svc]||0)+cost;
     if(svc===FOUNDRY){
       dd.llm+=cost;
-      if(typ!=='embedding')dd.gen+=cost;
+      if(typ!=='embedding'&&typ!=='voice')dd.gen+=cost;
       if(mtr){dd.meters[mtr]=(dd.meters[mtr]||0)+cost;meters[mtr]=(meters[mtr]||0)+cost;}
       (dd.fam[fam]||(dd.fam[fam]={}))[typ]=(dd.fam[fam][typ]||0)+cost;
     }
@@ -2375,15 +2401,24 @@ function parseUsage(rows){
   if(!rows.length)return{byDate:bd,quality:{...Q,badDateShare:0}};
   const k0=Object.keys(rows[0]);
   const dk=k0.find(k=>/date/i.test(k)),qk=k0.find(k=>/question|turn/i.test(k)),sk=k0.find(k=>/session|conversation/i.test(k));
+  // Optional columns written by tools/make_usage.py. Absent columns simply switch their cards off.
+  const col=re=>k0.find(k=>re.test(k.trim()))||null;
+  const UX={answered:col(/^answered$/i),unanswered:col(/^unanswered$/i),flagged:col(/^flagged$/i),
+    newTopic:col(/^newtopic$/i),userFollowup:col(/^userfollowup$/i),suggestedFollowup:col(/^suggestedfollowup$/i),
+    modalTurns:col(/^modalturns$/i),webTurns:col(/^webturns$/i),otherTurns:col(/^otherturns$/i),modalSessions:col(/^modalsessions$/i),webSessions:col(/^websessions$/i),
+    citations:col(/^citations$/i),latP50:col(/^latencyp50/i),latP90:col(/^latencyp90/i),voiceTurns:col(/^voiceturns$/i),voiceSessions:col(/^voicesessions$/i)};
+  const columns={outcomes:!!UX.answered,types:!!UX.newTopic,sources:!!UX.modalSessions,latency:!!UX.latP50,voice:!!UX.voiceSessions};
   rows.forEach(row=>{
     const raw=String(row[dk]||'').trim();
     if(!raw&&!String(row[qk]||'').trim())return; // blank trailing line
     const date=parseDate(raw);
     if(!date){Q.badDates++;if(Q.badDateSamples.length<3)Q.badDateSamples.push(raw);return}
     Q.rowsKept++;
-    bd[date]={questions:parseInt(String(row[qk]||'0').replace(/,/g,''))||0,sessions:parseInt(String(row[sk]||'0').replace(/,/g,''))||0};
+    const ext={};let any=false;
+    Object.entries(UX).forEach(([k,c])=>{if(!c)return;const v=String(row[c]||'').replace(/,/g,'').trim();if(v==='')return;ext[k]=+v||0;any=true;});
+    bd[date]={questions:parseInt(String(row[qk]||'0').replace(/,/g,''))||0,sessions:parseInt(String(row[sk]||'0').replace(/,/g,''))||0,ext:any?ext:null};
   });
-  return{byDate:bd,quality:{...Q,badDateShare:rows.length?Q.badDates/rows.length:0}};
+  return{byDate:bd,quality:{...Q,badDateShare:rows.length?Q.badDates/rows.length:0,columns}};
 }
 
 
@@ -2457,6 +2492,19 @@ async function loadCategoryData(){
   hasCats=Object.keys(CATCITE).length>0;
 }
 
+// ═══ HOUR OF DAY (usage-hours.csv: Date, Hour, Turns, Sessions; Irish time) ═══
+let HOURS={},hasHours=false;
+async function loadHoursFile(){
+  try{
+    (await loadCSV('usage-hours.csv')).forEach(r=>{
+      const d=parseDate(r['Date']),h=parseInt(r['Hour']);if(!d||!(h>=0&&h<24))return;
+      const a=HOURS[d]||(HOURS[d]=[]);
+      a[h]={t:parseInt(String(r['Turns']||'0').replace(/,/g,''))||0,s:parseInt(String(r['Sessions']||'0').replace(/,/g,''))||0};
+    });
+  }catch(e){}
+  hasHours=Object.keys(HOURS).length>0;
+}
+
 // ═══ EVENTS ═════════════════════════════════════════════════════════
 // Shared events come from events.json (status confirmed / candidate / rejected). Only
 // confirmed events draw on charts. Detected model events are derived from meter first/last
@@ -2519,11 +2567,11 @@ function analyse(costData,usageByDate){
     const hasCost=!!c;
     const settled=hasCost&&!!settledCutoff&&date<=settledCutoff;
     const e={date,label:fmtDate(date),month:date.slice(0,7),week:weekStart(date),
-      total:tot,llm,gen,queries:q,sessions:s,
+      total:tot,llm,gen,queries:q,sessions:s,ux:u.ext||null,
       cpq_llm:q>0&&hasCost?gen/q*100:null,cpq_tot:q>0&&hasCost?tot/q*100:null,
       fixed:c?c.fixed:0,variable:c?c.variable:0,unclassified:c?c.unclassified:0,
       scope:c?c.scope:{service:0,admin:0,shared:0,unassigned:0},
-      fam:c?c.fam:{},resources:c?c.resources:{},
+      fam:c?c.fam:{},resources:c?c.resources:{},voice:c?c.voice:{stt:0,tts:0},
       metersByDate:c?c.meters:{},
       hasCost,settled,provisional:hasCost&&!settled,join:settled&&q>0};
     allSvcs.forEach(sv=>{e[sv]=c?.services?.[sv]||0;});
@@ -2603,7 +2651,10 @@ function perTurnStats(rows){
   const days=j.length,from=days?j[0].date:null,to=days?j[days-1].date:null;
   const valid=days>=CONFIG.min_settled_join_days&&turns>=CONFIG.min_rate_denominator;
   const pt=(c,n)=>valid&&n>0?c/n*100:null;
+  const hasAns=j.some(d=>d.ux&&d.ux.answered!=null),ans=j.reduce((s,d)=>s+(d.ux?.answered||0),0);
+  const latW=j.reduce((s,d)=>s+((d.ux?.latP50||0)*d.queries),0),latQ=j.reduce((s,d)=>s+(d.ux?.latP50?d.queries:0),0);
   return{days,from,to,turns,convs,gen,tot,variable:vr,fixed:fx,unclassified:un,valid,
+    answered:ans,answeredShare:hasAns&&valid&&turns>0?ans/turns*100:null,genPA:hasAns?pt(gen,ans):null,latP50:valid&&latQ>0?latW/latQ:null,
     genPT:pt(gen,turns),totPT:pt(tot,turns),varPT:pt(vr,turns),
     genPC:pt(gen,convs),totPC:pt(tot,convs),varPC:pt(vr,convs),
     fixedShare:(fx+vr)>0?fx/(fx+vr)*100:null,
@@ -2710,10 +2761,10 @@ function whatChanged(rangeRows){
     const d=a-b,rel=d/Math.abs(b)*100;
     let score;
     if(kind==='pence')score=Math.max(Math.abs(rel)/M.ratio_pct,Math.abs(d)/M.ratio_pence);
-    else if(kind==='pct')score=Math.abs(rel)/M.ratio_pct;
+    else if(kind==='pct'||kind==='ms')score=Math.abs(rel)/M.ratio_pct;
     else score=Math.abs(rel)/M.total_pct;
     if(score<1)return;
-    const f=kind==='pence'?pence:kind==='pct'?(v=>v.toFixed(0)+' pts'):(v=>gbp(v,Math.abs(v)>=100?0:2));
+    const f=kind==='pence'?pence:kind==='pct'?(v=>v.toFixed(0)+' pts'):kind==='ms'?(v=>(v/1000).toFixed(1)+'s'):(v=>gbp(v,Math.abs(v)>=100?0:2));
     const fa=kind==='pct'?pct(a):f(a),fb=kind==='pct'?pct(b):f(b);
     const sign=d>0?'+':'−';
     const dTxt=kind==='pct'?`${sign}${Math.abs(d).toFixed(0)} pts`:`${sign}${f(Math.abs(d))}`;
@@ -2726,6 +2777,8 @@ function whatChanged(rangeRows){
     cand('Billed cost on settled join days',A.tot,B.tot,'gbp');
     cand('Variable cost',A.variable,B.variable,'gbp');
     cand('Fixed share',A.fixedShare,B.fixedShare,'pct');
+    cand('Answered share',A.answeredShare,B.answeredShare,'pct');
+    cand('Response time p50',A.latP50,B.latP50,'ms');
   }
   out.sort((x,y)=>y.score-x.score);
   return{statements:out.slice(0,3),events:eventsInRange(from,to),A,B,valid,fallback,
@@ -2772,18 +2825,21 @@ function rollUp(data,gran){
   const map={};
   data.forEach(d=>{
     const key=gran==='week'?d.week:d.month;
-    if(!map[key]){map[key]={date:key,label:gran==='week'?fmtWeek(key):monthLabel(key),total:0,llm:0,gen:0,queries:0,sessions:0,fixed:0,variable:0,unclassified:0,count:0,settledDays:0,joinDays:0,hasCost:false,fam:{},scope:{service:0,admin:0,shared:0,unassigned:0}};DATA.allSvcs.forEach(s=>{map[key][s]=0;});map[key].metersByDate={};}
+    if(!map[key]){map[key]={date:key,label:gran==='week'?fmtWeek(key):monthLabel(key),total:0,llm:0,gen:0,queries:0,sessions:0,fixed:0,variable:0,unclassified:0,count:0,settledDays:0,joinDays:0,hasCost:false,fam:{},scope:{service:0,admin:0,shared:0,unassigned:0},voice:{stt:0,tts:0}};DATA.allSvcs.forEach(s=>{map[key][s]=0;});map[key].metersByDate={};}
     const e=map[key];
     e.total+=d.total;e.llm+=d.llm;e.gen+=d.gen;e.queries+=d.queries;e.sessions+=d.sessions;e.fixed+=d.fixed;e.variable+=d.variable;e.unclassified+=d.unclassified;e.count++;
     if(d.hasCost)e.hasCost=true;if(d.settled)e.settledDays++;if(d.join)e.joinDays++;
     DATA.allSvcs.forEach(s=>{e[s]+=(d[s]||0);});
     Object.keys(e.scope).forEach(k=>{e.scope[k]+=(d.scope?.[k]||0);});
+    e.voice.stt+=(d.voice?.stt||0);e.voice.tts+=(d.voice?.tts||0);
+    if(d.ux){const x=e.ux||(e.ux={});Object.entries(d.ux).forEach(([k,v])=>{if(k==='latP50'||k==='latP90'){x[k+'W']=(x[k+'W']||0)+v*d.queries;x[k+'Q']=(x[k+'Q']||0)+d.queries;}else x[k]=(x[k]||0)+v;});}
     Object.entries(d.metersByDate||{}).forEach(([k,v])=>{e.metersByDate[k]=(e.metersByDate[k]||0)+v;});
     Object.entries(d.fam||{}).forEach(([f,types])=>{const t=e.fam[f]||(e.fam[f]={});Object.entries(types).forEach(([ty,v])=>{t[ty]=(t[ty]||0)+v;});});
   });
   const result=Object.values(map).sort((a,b)=>a.date.localeCompare(b.date));
   // Bucket ratios: sum then divide over the bucket's join days only.
-  result.forEach(e=>{e.cpq_llm=e.queries>0&&e.hasCost?e.gen/e.queries*100:null;e.cpq_tot=e.queries>0&&e.hasCost?e.total/e.queries*100:null;});
+  result.forEach(e=>{e.cpq_llm=e.queries>0&&e.hasCost?e.gen/e.queries*100:null;e.cpq_tot=e.queries>0&&e.hasCost?e.total/e.queries*100:null;
+    if(e.ux){['latP50','latP90'].forEach(k=>{if(e.ux[k+'Q'])e.ux[k]=e.ux[k+'W']/e.ux[k+'Q'];});}});
   return result;
 }
 // Month axis label from the monthly rollup, so partial months read "Aug 1–17".
@@ -3523,7 +3579,7 @@ const KPI_CATALOG={
   'generation-cost-per-turn':{
     title:'Generation cost per turn',
     icon:'brain',color:()=>C.acc,
-    desc:'Foundry generation cost (all model families, embeddings excluded) divided by turns received. The tile sums cost and turns over the settled join days in the selected range, then divides; this chart shows the per-day series.',
+    desc:'Foundry generation cost (all model families; embeddings and voice excluded) divided by turns received. The tile sums cost and turns over the settled join days in the selected range, then divides; this chart shows the per-day series.',
     series:()=>DATA.merged.map(d=>({date:d.date,label:d.label,v:d.join?d.cpq_llm:null})),
     fmt:v=>v==null?'—':v.toFixed(2)+'p',
     invert:true,
@@ -4175,6 +4231,7 @@ const SVC_META={
   "Azure Cosmos DB":             {"role":"Conversation Memory","layer":"Memory",            "layerColor":"#9e6a03","icon":"message-square", "tagline":"Stores chat history & sessions",        "desc":"Stores chat history, user sessions and application state. Enables multi-turn conversations where the chatbot remembers what was said earlier in the same session.","type":"Variable"},
   "Azure Monitor":               {"role":"Observability",      "layer":"Observability",     "layerColor":"#1f6feb","icon":"activity",       "tagline":"The nervous system",                    "desc":"Collects logs, metrics and traces from every service. Enables alerting on errors, latency spikes or unusual cost patterns. Essential for understanding system health.","type":"Fixed"},
   "Azure Key Vault":             {"role":"Secrets Management", "layer":"Security",          "layerColor":"#bc8cff","icon":"key-round",      "tagline":"Secure secrets locker",                 "desc":"Stores API keys, database credentials and connection strings. Services retrieve secrets at runtime — no sensitive values ever in code. Cost is near-zero (charged per 10k operations, fractions of a penny) — essentially free security that protects your entire stack.","type":"Fixed"},
+  "Foundry Tools":               {"role":"Speech (voice)",     "layer":"Brain (Generation)","layerColor":"#3fb950","icon":"audio-lines",    "tagline":"Voice in and out",                      "desc":"Azure Speech: text-to-speech characters for spoken answers. Speech-to-text runs on the gpt-4o-transcribe meters under Foundry Models. Both first billed 14 Sep 2026.","type":"Variable"},
   "Azure App Service":           {"role":"App Hosting",        "layer":"Application",       "layerColor":"#2ea043","icon":"globe",          "tagline":"Web hosting layer",                     "desc":"Hosts web applications or APIs. May be used for the frontend or additional API endpoints alongside Container Apps.","type":"Variable"},
 };
 // Tiny helper to render a service icon
@@ -4341,10 +4398,12 @@ function toggleSvcPanel(key){
 function buildRagCostStages(svcP,filtMeters,periodQ){
   const wrap=document.getElementById('rag-cost-stages');if(!wrap)return;
   const embed=Object.entries(filtMeters||{}).reduce((s,[m,v])=>s+((meterType(m)==='embedding')?v:0),0);
-  const generate=Math.max(0,(svcP[FOUNDRY]||0)-embed);
+  const stt=Object.entries(filtMeters||{}).reduce((s,[m,v])=>s+((meterType(m)==='voice')?v:0),0);
+  const voice=stt+(svcP['Foundry Tools']||0); // speech-to-text (Foundry Models) + text-to-speech (Foundry Tools)
+  const generate=Math.max(0,(svcP[FOUNDRY]||0)-embed-stt);
   // Stage → cost mapping is configuration (CONFIG.rag_stages), not code.
   const stages=CONFIG.rag_stages.map(st=>({...st,free:!!st.free,
-    cost:st.free?0:st.generation?generate:st.meterType==='embedding'?embed:(st.services||[]).reduce((s,svc)=>s+(svcP[svc]||0),0)}));
+    cost:st.free?0:st.generation?generate:st.voice?voice:st.meterType==='embedding'?embed:(st.services||[]).reduce((s,svc)=>s+(svcP[svc]||0),0)}));
   const tot=stages.reduce((s,x)=>s+x.cost,0)||1;
   const cells=stages.map((st,i)=>{
     const pct=st.cost/tot*100;
@@ -4360,7 +4419,7 @@ function buildRagCostStages(svcP,filtMeters,periodQ){
       </div>`;
   }).join('');
   wrap.innerHTML=`<div class="ragc-flow">${cells}</div>
-    <div class="ragc-insight">${stages.filter(s=>!s.free).map(s=>`<b>${s.label}</b> ${(s.cost/tot*100).toFixed(s.cost/tot*100<1?1:0)}%`).join(' · ')} of the five stages' billed cost in the selected period${periodQ>0?`, over ${num(periodQ)} turns`:''}.<span class="ragc-foot">App hosting / orchestration (Container Apps) is tracked separately as the runtime, not shown here. Stage mapping: CONFIG.rag_stages.</span></div>`;
+    <div class="ragc-insight">${stages.filter(s=>!s.free).map(s=>`<b>${s.label}</b> ${(s.cost/tot*100).toFixed(s.cost/tot*100<1?1:0)}%`).join(' · ')} of the ${stages.length} stages' billed cost in the selected period${periodQ>0?`, over ${num(periodQ)} turns`:''}.<span class="ragc-foot">App hosting / orchestration (Container Apps) is tracked separately as the runtime, not shown here. Stage mapping: CONFIG.rag_stages.</span></div>`;
   if(typeof renderIcons==='function')renderIcons();
 }
 
@@ -4720,6 +4779,7 @@ function renderUsage(D,S){
       <div id="cal-wrap" style="overflow-x:auto;padding-bottom:6px"></div>
       <div class="cal-legend"><span>Less</span><div style="display:flex;gap:2px;margin:0 5px" id="cal-legend-cells"></div><span>More</span></div>
     </div>
+    ${usageDetailHTML(fr)}
   `;
 
   const usOpts=mergeOpts(baseOpts(),{scales:{y:{ticks:{callback:v=>num(v)}}}});
@@ -4727,6 +4787,119 @@ function renderUsage(D,S){
     options:mergeOpts(usOpts,{onClick:(e,els)=>{if(els.length)openMonthPanel(fm[els[0].index].month);}})});
   mkChart('us-wdwe',{type:'bar',data:{labels:fm.map(m=>m.label),datasets:[{label:'Weekday avg',data:fm.map(m=>m.wdQ.length?Math.round(m.wdQ.reduce((a,b)=>a+b,0)/m.wdQ.length):0),backgroundColor:C.acc+'88'},{label:'Weekend avg',data:fm.map(m=>m.weQ.length?Math.round(m.weQ.reduce((a,b)=>a+b,0)/m.weQ.length):0),backgroundColor:C.purple+'88'}]},options:usOpts});
   buildCalendar(D);
+  buildUsageDetailCharts(fr);
+}
+
+// ── Usage detail: cards that switch on when usage.csv carries the feed-generated columns ──
+// Every share is sum-then-divide over the selected range. Latency is the turn-weighted mean of
+// the daily p50 / p90, labelled as such (a true range percentile needs per-turn data).
+function uxTile(val,lbl,sub,col){
+  return`<div style="text-align:center;padding:12px;background:var(--bg);border-radius:6px">
+    <div style="font-size:1.1rem;font-weight:700;font-family:'DM Mono',monospace;color:${col}">${val}</div>
+    <div style="font-size:.6rem;color:var(--muted);text-transform:uppercase;letter-spacing:.08em;margin-top:3px">${lbl}</div>
+    <div style="font-size:.63rem;color:var(--muted);margin-top:2px">${sub}</div></div>`;
+}
+function usageDetailHTML(fr){
+  const cols=(DATA.usageQuality&&DATA.usageQuality.columns)||{};
+  if(!fr.length)return'';
+  const sum=k=>fr.reduce((s,d)=>s+(d.ux?.[k]||0),0);
+  const turns=fr.reduce((s,d)=>s+d.queries,0),convs=fr.reduce((s,d)=>s+d.sessions,0);
+  const pc=(a,b)=>b>0?(a/b*100).toFixed(1)+'%':'—';
+  const span=spanLabel(fr[0].date,fr[fr.length-1].date);
+  let h='';
+  if(cols.outcomes){
+    const P=perTurnStats(fr),ans=sum('answered'),un=sum('unanswered'),fl=sum('flagged');
+    h+=`<div class="card"><div class="card-title">Answer outcomes<span class="card-title-note">answered = at least one citation · flagged = the feed's Flagged column (no citation) · unanswered = neither · ${span}</span></div>
+      <div class="grid4">
+        ${uxTile(pc(ans,turns),'Answered',num(ans)+' of '+num(turns)+' turns',C.green)}
+        ${uxTile(pc(un,turns),'Unanswered',num(un)+' turns',C.amber)}
+        ${uxTile(pc(fl,turns),'Flagged',num(fl)+' turns',C.red)}
+        ${uxTile(P.genPA!=null?P.genPA.toFixed(2)+'p':'—','Generation cost per answered turn',P.valid?'settled join days · '+P.span:P.why,C.acc)}
+      </div>
+      ${chartBox('ux-outcomes',180,'Answer outcomes — selected range','turns, stacked')}
+    </div>`;
+  }
+  if(cols.types){
+    const nt=sum('newTopic'),uf=sum('userFollowup'),sf=sum('suggestedFollowup');
+    h+=`<div class="card"><div class="card-title">Question types<span class="card-title-note">from the feed's Question Type column · suggested follow-ups are the chips · ${span}</span></div>
+      <div class="grid4">
+        ${uxTile(pc(nt,turns),'New topic',num(nt)+' turns',C.acc)}
+        ${uxTile(pc(uf,turns),'Typed follow-up',num(uf)+' turns',C.purple)}
+        ${uxTile(pc(sf,turns),'Suggested follow-up',num(sf)+' turns',C.amber)}
+        ${uxTile(convs>0?(turns/convs).toFixed(2):'—','Turns per conversation',num(convs)+' conversations',C.muted)}
+      </div>
+      ${chartBox('ux-types',180,'Question types — selected range','turns, stacked')}
+    </div>`;
+  }
+  if(cols.sources){
+    const ms=sum('modalSessions'),ws=sum('webSessions'),mt=sum('modalTurns'),wt=sum('webTurns'),ot=sum('otherTurns');
+    h+=`<div class="card"><div class="card-title">Source<span class="card-title-note">conversations by where they started · ${span}</span></div>
+      <div class="grid4">
+        ${uxTile(pc(ms,ms+ws),'Modal',num(ms)+' conversations',C.acc)}
+        ${uxTile(pc(ws,ms+ws),'Web',num(ws)+' conversations',C.teal)}
+        ${uxTile(ms>0?(mt/ms).toFixed(2):'—','Turns per Modal conversation',num(mt)+' turns',C.muted)}
+        ${uxTile(ws>0?(wt/ws).toFixed(2):'—','Turns per Web conversation',num(wt)+' turns'+(ot?` · ${num(ot)} other`:''),C.muted)}
+      </div>
+      ${chartBox('ux-sources',180,'Conversations by source — selected range','stacked')}
+    </div>`;
+  }
+  if(cols.latency){
+    const w=k=>{const q=fr.reduce((s,d)=>s+(d.ux?.[k]?d.queries:0),0);return q>0?fr.reduce((s,d)=>s+((d.ux?.[k]||0)*d.queries),0)/q:null;};
+    const p50=w('latP50'),p90=w('latP90');
+    h+=`<div class="card"><div class="card-title">Response time<span class="card-title-note">turn-weighted mean of the daily p50 and p90 · positive values only · ${span}</span></div>
+      <div class="grid4">
+        ${uxTile(p50!=null?(p50/1000).toFixed(1)+'s':'—','p50','daily median, weighted by turns',C.acc)}
+        ${uxTile(p90!=null?(p90/1000).toFixed(1)+'s':'—','p90','daily 90th percentile, weighted by turns',C.amber)}
+      </div>
+      ${chartBox('ux-latency',180,'Response time — daily p50 and p90','seconds · confirmed events marked')}
+    </div>`;
+  }
+  if(hasHours){
+    const ps=CONFIG.phone_service,grid=Array.from({length:7},()=>Array(24).fill(0));
+    let tot=0,out=0,days=0;
+    fr.forEach(d=>{const a=HOURS[d.date];if(!a)return;days++;const k=isoDow(d.date);
+      for(let hh=0;hh<24;hh++){const t=a[hh]?a[hh].t:0;grid[k][hh]+=t;tot+=t;if(!(ps.days.includes(k)&&hh>=ps.from&&hh<ps.to))out+=t;}});
+    if(tot>0){
+      const order=[1,2,3,4,5,6,0],names=['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
+      const max=Math.max(...grid.flat());
+      let bh=0,bt=-1;for(let hh=0;hh<24;hh++){const t=grid.reduce((s,r)=>s+r[hh],0);if(t>bt){bt=t;bh=hh;}}
+      const cell=(k,hh)=>{const t=grid[k][hh],a=max>0?Math.round(0x12+(0xee-0x12)*(t/max)):0x12;
+        return`<div title="${names[k]} ${String(hh).padStart(2,'0')}:00 · ${num(t)} turns" style="height:16px;border-radius:2px;background:${C.acc}${a.toString(16).padStart(2,'0')}"></div>`;};
+      h+=`<div class="card"><div class="card-title">Hour of day<span class="card-title-note">turns by weekday and hour, Irish time · ${days} day${days===1?'':'s'} with hourly data in range</span></div>
+        <div class="grid4">
+          ${uxTile(pc(out,tot),'Outside phone-service hours',ps.label+' · configured, '+ps.source,C.amber)}
+          ${uxTile(String(bh).padStart(2,'0')+':00','Busiest hour',num(bt)+' turns in range',C.acc)}
+        </div>
+        <div style="display:grid;grid-template-columns:34px repeat(24,1fr);gap:2px;align-items:center">
+          <div></div>${Array.from({length:24},(_,hh)=>`<div style="font-size:.55rem;color:var(--dim);text-align:center;font-family:'DM Mono',monospace">${hh%3===0?hh:''}</div>`).join('')}
+          ${order.map(k=>`<div style="font-size:.6rem;color:var(--muted);font-family:'DM Mono',monospace">${names[k]}</div>${Array.from({length:24},(_,hh)=>cell(k,hh)).join('')}`).join('')}
+        </div>
+      </div>`;
+    }
+  }
+  return h;
+}
+function buildUsageDetailCharts(fr){
+  const vd=getViewData(),labels=vd.map(d=>d.label),g=(r,k)=>r.ux?.[k]||0;
+  const stacked=mergeOpts(baseOpts(),{scales:{y:{stacked:true,ticks:{callback:v=>num(v)}},x:{stacked:true}},plugins:{legend:{display:true}}});
+  if(document.getElementById('ux-outcomes'))mkChart('ux-outcomes',{type:'bar',data:{labels,datasets:[
+    {label:'Answered',data:vd.map(r=>g(r,'answered')),backgroundColor:C.green+'cc',stack:'o',maxBarThickness:28},
+    {label:'Unanswered',data:vd.map(r=>g(r,'unanswered')),backgroundColor:C.amber+'cc',stack:'o',maxBarThickness:28},
+    {label:'Flagged',data:vd.map(r=>g(r,'flagged')),backgroundColor:C.red+'cc',stack:'o',maxBarThickness:28}]},options:stacked});
+  if(document.getElementById('ux-types'))mkChart('ux-types',{type:'bar',data:{labels,datasets:[
+    {label:'New topic',data:vd.map(r=>g(r,'newTopic')),backgroundColor:C.acc+'cc',stack:'t',maxBarThickness:28},
+    {label:'Typed follow-up',data:vd.map(r=>g(r,'userFollowup')),backgroundColor:C.purple+'cc',stack:'t',maxBarThickness:28},
+    {label:'Suggested follow-up',data:vd.map(r=>g(r,'suggestedFollowup')),backgroundColor:C.amber+'cc',stack:'t',maxBarThickness:28}]},options:stacked});
+  if(document.getElementById('ux-sources'))mkChart('ux-sources',{type:'bar',data:{labels,datasets:[
+    {label:'Modal',data:vd.map(r=>g(r,'modalSessions')),backgroundColor:C.acc+'cc',stack:'s',maxBarThickness:28},
+    {label:'Web',data:vd.map(r=>g(r,'webSessions')),backgroundColor:C.teal+'cc',stack:'s',maxBarThickness:28}]},options:stacked});
+  if(document.getElementById('ux-latency')){
+    const dl=fr.map(d=>d.label);
+    mkChart('ux-latency',{type:'line',data:{labels:dl,datasets:[
+      {label:'p50',data:fr.map(d=>d.ux?.latP50?+(d.ux.latP50/1000).toFixed(2):null),borderColor:C.acc,backgroundColor:C.acc+'11',fill:true,borderWidth:1.5,pointRadius:0,tension:.3,spanGaps:true},
+      {label:'p90',data:fr.map(d=>d.ux?.latP90?+(d.ux.latP90/1000).toFixed(2):null),borderColor:C.amber,borderWidth:1.5,pointRadius:0,tension:.3,spanGaps:true,fill:false}]},
+      options:mergeOpts(baseOpts(),{scales:{y:{ticks:{callback:v=>(+v).toFixed(0)+'s'}}},plugins:{legend:{display:true},tooltip:{callbacks:{label:cx=>`${cx.dataset.label}: ${(+cx.parsed.y).toFixed(1)}s`}}},eventLines:evLines(DATA.stats,dl)})});
+  }
 }
 
 function buildCalendar(D){
@@ -4816,7 +4989,7 @@ function renderLLM(D,S){
   const fams=familyTotals(pd),types=meterTypeTotals(pd),cache=cachedShare(pd);
   const llmTot=Object.values(fams).reduce((a,b)=>a+b,0)||1;
   const famList=Object.entries(fams).filter(([,v])=>v>0.0005).sort((a,b)=>b[1]-a[1]).map(([name,cost])=>({name,cost,color:FAMILY_COL[name]||C.dim}));
-  const typeOrder=['input','cached input','output','embedding','unparsed'];
+  const typeOrder=['input','cached input','output','embedding','voice','unparsed'];
   const typeList=typeOrder.map(t=>({name:t,cost:types[t]||0,color:METER_TYPE_COL[t]})).filter(t=>t.cost>0||(t.name!=='unparsed'));
   // First / last billed day per family inside the range
   const famDays={};
@@ -4843,6 +5016,7 @@ function renderLLM(D,S){
         </div>`).join('')}
       </div>
     </div>
+    ${voiceCardHTML(pd)}
     ${chartBox('llm-daily',200,'Generation billed cost by family — model timeline','confirmed events marked · provisional days paler')}
     ${chartBox('llm-monthly',190,'Generation billed cost by family — monthly')}
     <div class="grid2">
@@ -4863,7 +5037,7 @@ function renderLLM(D,S){
               <div style="font-size:.63rem;color:var(--muted);margin-top:2px">${(t.cost/llmTot*100).toFixed(1)}%</div>
             </div>`).join('')}
         </div>
-        <div style="font-size:.63rem;color:var(--dim);margin-top:10px;font-family:'DM Mono',monospace">Shares of Foundry billed cost in the selected range. Embeddings are excluded from "generation" per-turn figures.</div>
+        <div style="font-size:.63rem;color:var(--dim);margin-top:10px;font-family:'DM Mono',monospace">Shares of Foundry billed cost in the selected range. Embeddings and voice (speech-to-text) are excluded from "generation" per-turn figures.</div>
       </div>
     </div>
   `;
@@ -4881,8 +5055,50 @@ function renderLLM(D,S){
   mkChart('llm-daily',{type:'bar',data:{labels,datasets:famList.map(m=>({label:m.name,data:vd.map(r=>+famOf(r,m.name).toFixed(3)),backgroundColor:provColors(vd,m.color,'cc'),stack:'s',maxBarThickness:28}))},
     options:mergeOpts(baseOpts(),{scales:{y:{stacked:true}},plugins:{legend:{display:true}},eventLines:evLines(S,labels),onClick:(e,els)=>{if(els.length)drillBucket(vd[els[0].index]);}})});
 
+  buildVoiceChart(vd);
   mkChart('llm-monthly',{type:'bar',data:{labels:filtMonthly.map(m=>m.label),datasets:famList.map(m=>({label:m.name,data:filtMonthly.map(mo=>+Object.values(mo.fam?.[m.name]||{}).reduce((s,x)=>s+x,0).toFixed(3)),backgroundColor:m.color+'99',stack:'s'}))},
     options:mergeOpts(baseOpts(),{scales:{y:{stacked:true}},onClick:(e,els)=>{if(els.length)openMonthPanel(filtMonthly[els[0].index].month);}})});
+}
+
+// Voice: billed cost only. The export has no minutes, characters or voice turn counts, so
+// nothing per-turn is shown here; a voice volume column in usage.csv would unlock that.
+function voiceTotals(rows){
+  let stt=0,tts=0,first=null,last=null;
+  rows.forEach(d=>{const v=d.voice||{};const c=(v.stt||0)+(v.tts||0);stt+=v.stt||0;tts+=v.tts||0;if(c>0){if(!first||d.date<first)first=d.date;if(!last||d.date>last)last=d.date;}});
+  return{stt,tts,total:stt+tts,first,last};
+}
+function voiceCardHTML(pd){
+  const all=voiceTotals(DATA.merged);
+  if(all.total<=0)return'';
+  const v=voiceTotals(pd);
+  const note='speech-to-text (gpt-4o-transcribe, Foundry Models) and text-to-speech (Neural TTS, Foundry Tools) · billed cost only — the export carries no minutes, characters or voice turn counts · excluded from generation cost per turn';
+  if(v.total<=0)return`<div class="card"><div class="card-title">Voice billed cost<span class="card-title-note">${note}</span></div>
+    <div style="font-size:.7rem;color:var(--muted)">No voice billing in the selected range. First billed ${fmtDate(all.first)}.</div></div>`;
+  const foundry=pd.reduce((s,d)=>s+(d.llm||0)+(d['Foundry Tools']||0),0);
+  const tile=(val,lbl,sub,col)=>`<div style="text-align:center;padding:12px;background:var(--bg);border-radius:6px">
+      <div style="font-size:1.1rem;font-weight:700;font-family:'DM Mono',monospace;color:${col}">${val}</div>
+      <div style="font-size:.6rem;color:var(--muted);text-transform:uppercase;letter-spacing:.08em;margin-top:3px">${lbl}</div>
+      <div style="font-size:.63rem;color:var(--muted);margin-top:2px">${sub}</div></div>`;
+  return`<div class="card"><div class="card-title">Voice billed cost<span class="card-title-note">${note}</span></div>
+    <div class="grid4">
+      ${tile(gbp(v.stt),'Speech-to-text','gpt-4o-transcribe · audio in + text out',METER_TYPE_COL.voice)}
+      ${tile(gbp(v.tts),'Text-to-speech','Neural TTS characters · Foundry Tools',C.purple)}
+      ${tile(foundry>0?(v.total/foundry*100).toFixed(2)+'%':'—','Share of Foundry billed cost','Foundry Models + Foundry Tools, selected range',C.muted)}
+      ${tile(fmtDate(v.first)+' → '+fmtDate(v.last),'Billed days in range',`first ever ${fmtDate(all.first)}`,C.muted)}
+    </div>
+    ${chartBox('llm-voice',170,'Voice billed cost — speech-to-text and text-to-speech','provisional days paler · pennies, not pounds')}
+  </div>`;
+}
+function buildVoiceChart(vd){
+  if(!document.getElementById('llm-voice'))return;
+  const labels=vd.map(d=>d.label);
+  const ds=[
+    {label:'Speech-to-text',data:vd.map(r=>+((r.voice?.stt||0)*100).toFixed(2)),backgroundColor:provColors(vd,METER_TYPE_COL.voice,'cc'),stack:'v',maxBarThickness:28},
+    {label:'Text-to-speech',data:vd.map(r=>+((r.voice?.tts||0)*100).toFixed(2)),backgroundColor:provColors(vd,C.purple,'cc'),stack:'v',maxBarThickness:28},
+  ];
+  mkChart('llm-voice',{type:'bar',data:{labels,datasets:ds},
+    options:mergeOpts(baseOpts(),{scales:{y:{stacked:true,ticks:{callback:v=>(+v).toFixed(1)+'p'}}},plugins:{legend:{display:true},tooltip:{callbacks:{label:cx=>`${cx.dataset.label}: ${(+cx.parsed.y).toFixed(2)}p`}}},
+      onClick:(e,els)=>{if(els.length)drillBucket(vd[els[0].index]);}})});
 }
 
 // ═══ BEFORE / AFTER (descriptive, keyed to confirmed events) ═════════
@@ -4902,6 +5118,7 @@ function renderImpact(D,S){
     return;
   }
   const rows=evs.map(e=>beforeAfter(e,28));
+  const ux=(DATA.usageQuality&&DATA.usageQuality.columns)||{},ncol=6+(ux.outcomes?1:0)+(ux.latency?1:0);
   const dash='<span style="color:var(--dim)">—</span>';
   const cell=(v,f,why)=>v==null?`<span title="${(why||'').replace(/"/g,'&quot;')}">${dash}</span>`:f(v);
   const num0=v=>Math.round(v).toLocaleString(),pence=v=>v.toFixed(2)+'p',money=v=>gbp(v,2);
@@ -4913,15 +5130,17 @@ function renderImpact(D,S){
       <td class="num" style="text-align:right;padding:8px 12px;font-family:'DM Mono',monospace;font-size:.85rem">${cell(P.valid?P.costPerDay:null,money,P.why)}</td>
       <td class="num" style="text-align:right;padding:8px 12px;font-family:'DM Mono',monospace;font-size:.85rem;color:${C.acc}">${cell(P.genPT,pence,P.why)}</td>
       <td class="num" style="text-align:right;padding:8px 12px;font-family:'DM Mono',monospace;font-size:.85rem;color:${C.amber}">${cell(P.totPT,pence,P.why)}</td>
+      ${ux.outcomes?`<td class="num" style="text-align:right;padding:8px 12px;font-family:'DM Mono',monospace;font-size:.85rem;color:${C.green}">${cell(P.answeredShare,v=>v.toFixed(1)+'%',P.why)}</td>`:''}
+      ${ux.latency?`<td class="num" style="text-align:right;padding:8px 12px;font-family:'DM Mono',monospace;font-size:.85rem">${cell(P.latP50,v=>(v/1000).toFixed(1)+'s',P.why)}</td>`:''}
     </tr>`;
   el.innerHTML=`
     <div class="card" style="margin-bottom:14px;overflow-x:auto">
       <div class="card-title">Before / after confirmed events<span class="card-title-note">equal windows of up to 28 days each side · settled join days · sum then divide</span></div>
       <table style="width:100%;border-collapse:collapse;min-width:640px">
-        <thead><tr style="border-bottom:2px solid var(--b2)">${th('Event','left')}${th('Window','left')}${th('Turns / day')}${th('Billed £ / day')}${th('Generation p / turn')}${th('Allocated total p / turn')}</tr></thead>
+        <thead><tr style="border-bottom:2px solid var(--b2)">${th('Event','left')}${th('Window','left')}${th('Turns / day')}${th('Billed £ / day')}${th('Generation p / turn')}${th('Allocated total p / turn')}${ux.outcomes?th('Answered share'):''}${ux.latency?th('Response p50'):''}</tr></thead>
         <tbody>
           ${rows.map(r=>`
-            <tr><td colspan="6" style="padding:12px 12px 4px;font-size:.78rem;color:var(--text);font-weight:600"><span style="display:inline-block;width:8px;height:8px;border-radius:2px;background:${eventColor(r.ev)};margin-right:8px"></span>${r.ev.title} <span style="color:var(--muted);font-weight:400;font-family:'DM Mono',monospace;font-size:.65rem">· ${r.ev.kind} · ${fmtDate(r.ev.start)}${r.ev.end&&r.ev.end!==r.ev.start?'–'+fmtDate(r.ev.end):''}${r.ev.evidence?' · evidence: '+r.ev.evidence:''}</span></td></tr>
+            <tr><td colspan="${ncol}" style="padding:12px 12px 4px;font-size:.78rem;color:var(--text);font-weight:600"><span style="display:inline-block;width:8px;height:8px;border-radius:2px;background:${eventColor(r.ev)};margin-right:8px"></span>${r.ev.title} <span style="color:var(--muted);font-weight:400;font-family:'DM Mono',monospace;font-size:.65rem">· ${r.ev.kind} · ${fmtDate(r.ev.start)}${r.ev.end&&r.ev.end!==r.ev.start?'–'+fmtDate(r.ev.end):''}${r.ev.evidence?' · evidence: '+r.ev.evidence:''}</span></td></tr>
             ${side(r.before,'Before','var(--muted)')}
             ${side(r.after,'After',C.acc)}
           `).join('')}
@@ -5873,6 +6092,7 @@ function renderDqStrip(){
     item('unparsed Foundry meters',(Q.unparsedMeters||[]).length,{amber:(Q.unparsedMeters||[]).length>0,title:list(Q.unparsedMeters)||'all Foundry meters mapped to a family and type'}),
     item('unassigned resources',(Q.unassignedResources||[]).length,{amber:(Q.unassignedResources||[]).length>0,title:list(Q.unassignedResources)||'all resources mapped to service / admin / shared'}),
     item('join window',S.joinDays?`${spanLabel(S.joinFrom,S.joinTo)} · ${S.joinDays}d`:'—',{title:'settled billing days with turns > 0; every per-turn figure is computed on these days'}),
+    (U.columns&&Object.values(U.columns).some(Boolean))||hasHours?item('usage detail',['outcomes','types','sources','latency','voice'].filter(k=>U.columns&&U.columns[k]).concat(hasHours?['hours']:[]).join(' · ')||'—',{title:'optional columns found in usage.csv, plus usage-hours.csv'}):'',
     item('events awaiting confirmation',cands,{amber:cands>0,title:'candidate events in events.json plus model events detected from billing'}),
     Q.badDates?item('cost dates rejected',Q.badDates,{amber:true,title:list(Q.badDateSamples)}):'',
     U.badDates?item('usage dates rejected',U.badDates,{amber:true,title:list(U.badDateSamples)}):'',
@@ -5985,6 +6205,7 @@ async function init(){
   try{ur=await loadCSV('usage.csv')}catch(e){}
   await loadGa4Files(); // site-analytics for the Reach tab (graceful if absent)
   await loadCategoryData(); // category demand for the Categories tab (graceful if absent)
+  await loadHoursFile(); // hour-of-day turns for the Usage pane (graceful if absent)
   await loadEvents(); // shared events (events.json) — only confirmed ones draw
   if(cr||ur)buildDashboard(cr,ur);
 }
@@ -6051,7 +6272,7 @@ init();
     if(/\bmodels?\b/.test(q)&&/which|what|most|biggest|cheapest|top|expensive|costliest|priciest/.test(q))return{kind:'topModel',label:'model'};
     // Model families are the CONFIG families; meters are matched through meterFamily().
     const famQ=(re,fam)=>re.test(q)?{kind:'model',match:k=>meterFamily(k)===fam,label:fam,fam}:null;
-    const fm=famQ(/\bgpt[- ]?5 ?mini\b/,'GPT 5 Mini')||famQ(/\bgpt[- ]?5 ?chat\b/,'GPT 5 Chat')||famQ(/chat[- ]?latest/,'chat-latest 05052026')||famQ(/\bgpt[- ]?5\b/,'GPT 5')||famQ(/\b(gpt[- ]?)?4o[- ]?mini\b/,'gpt-4o-mini 0718')||famQ(/\b(gpt[- ]?)?4o\b/,'gpt-4o 1120')||famQ(/\bembed/,'text-embedding-3-small');
+    const fm=famQ(/\b5[.·]4 ?mini\b/,'5.4 mini')||famQ(/\b5[.·]4\b/,'5.4')||famQ(/transcribe/,'gpt-4o-transcribe')||famQ(/\bgpt[- ]?5 ?mini\b/,'GPT 5 Mini')||famQ(/\bgpt[- ]?5 ?chat\b/,'GPT 5 Chat')||famQ(/chat[- ]?latest/,'chat-latest 05052026')||famQ(/\bgpt[- ]?5\b/,'GPT 5')||famQ(/\b(gpt[- ]?)?4o[- ]?mini\b/,'gpt-4o-mini 0718')||famQ(/\b(gpt[- ]?)?4o\b/,'gpt-4o 1120')||famQ(/\bembed/,'text-embedding-3-small');
     if(fm)return fm;
     if(/run ?rate/.test(q))return{kind:'runrate',yearly:/year/.test(q),label:(/year/.test(q)?'projected year total':'run rate, next 30 days')};
     // "which service / biggest cost driver / where does the money go" → compare services

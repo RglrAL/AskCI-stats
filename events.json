@@ -46,6 +46,15 @@
       "applies_to": "Foundry Models",
       "title": "Model change: GPT 5 Chat retired, chat-latest 05052026 added",
       "detail": "GPT 5 Chat last billed 30 Jun; chat-latest 05052026 first billed 1 Jul."
+    },
+    {
+      "start": "2026-09-14",
+      "kind": "model",
+      "status": "confirmed",
+      "evidence": "Azure billing export",
+      "applies_to": "Foundry Models",
+      "title": "Model change: GPT 5, GPT 5 Mini and chat-latest retired, 5.4 and 5.4 mini added; voice meters begin",
+      "detail": "GPT 5, GPT 5 Mini and chat-latest 05052026 last billed 14 Sep; 5.4 and 5.4 mini first billed 14 Sep. gpt-4o-transcribe (speech-to-text) and Neural Text To Speech under Foundry Tools also first billed 14 Sep."
     }
   ]
 }
