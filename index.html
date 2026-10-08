@@ -6751,8 +6751,42 @@ init();
     return{kind:'all',from:first,to:latest,label:'the full period'};
   }
   const SVC_ALIAS={'azure cognitive search':['search','cognitive','ai search'],'foundry models':['foundry'],'azure container apps':['container apps','container app','aca'],'azure cosmos db':['cosmos'],'storage':['blob'],'virtual network':['vnet'],'microsoft defender for cloud':['defender'],'bandwidth':['egress','data transfer'],'container registry':['registry','acr'],'azure monitor':['monitor','log analytics'],'key vault':['vault'],'azure app service':['app service']};
+  // Attributed categories (feed slugs) and the phrases people use for them.
+  const CAT_PHRASES=[['social-welfare',['social welfare','welfare']],['housing',['housing']],['employment',['employment','jobs','work']],['moving-country',['moving country','moving to ireland','immigration']],
+    ['money-and-tax',['money and tax','money & tax','tax','money']],['travel-and-recreation',['travel and recreation','travel','recreation','passport','driving']],['health',['health','medical']],
+    ['birth-family-relationships',['family and relationships','family','relationships','birth']],['returning-to-ireland',['returning to ireland','rti','returning']],['education',['education','school','college']],
+    ['justice',['justice','legal','garda','court']],['consumer',['consumer']],['death',['death','bereavement']],['government-in-ireland',['government in ireland','government']],['environment',['environment']]];
+  function parseCategory(q){
+    if(!/\b(in|for|on|about|within)\b/.test(q)&&!/\bcategory\b/.test(q))return null;
+    for(const[slug,phr]of CAT_PHRASES){for(const ph of phr){if(new RegExp('\\b(in|for|on|about|within)\\s+(the\\s+)?'+ph.replace(/[&]/g,'\\$&')+'\\b').test(q)||new RegExp('\\b'+ph+'\\s+category\\b').test(q))return slug;}}
+    return null;
+  }
+  // Source / question-type filter for outcome metrics ("not-found rate for modal", "cited rate for chips").
+  function parseFilter(q){
+    if(/\b(for|on|via|from|in)\s+(the\s+)?modal\b|\bmodal (users|turns|conversations|traffic)\b/.test(q))return{key:'modal',label:'Modal'};
+    if(/\b(for|on|via|from)\s+(the\s+)?web\b|\bweb (users|turns|conversations|traffic|site)\b/.test(q))return{key:'web',label:'Web'};
+    if(/\b(for|of|from)\s+(the\s+)?(suggested follow-?ups?|chips?|chip turns)\b|\bchip turns\b/.test(q))return{key:'sf',label:'suggested follow-ups'};
+    if(/\b(for|of|from)\s+(the\s+)?(typed|user) follow-?ups?\b/.test(q))return{key:'uf',label:'typed follow-ups'};
+    if(/\b(for|of|from)\s+(the\s+)?new topics?\b|\bfirst turns\b/.test(q))return{key:'nt',label:'new topics'};
+    return null;
+  }
   function parseMetric(q){
     const svcs=(have()&&DATA.allSvcs)||[];
+    // Conversation shape, operations detail, hours, voice, script, events (files generated from the feed)
+    if(/ended after (the )?first turn|single[- ]turn|one[- ]turn|abandon/.test(q))return{kind:'single',label:'ended after first turn'};
+    if(/chip use|used (a )?chip|suggested follow-?up use|follow-?up use/.test(q))return{kind:'chipuse',label:'suggested follow-up use'};
+    if(/how long|conversation (length|span|duration)|observed span|\bspan\b|duration/.test(q))return{kind:'span',label:'conversations over 5 minutes'};
+    if(/\bp99\b|99th/.test(q))return{kind:'p99',label:'response time p99'};
+    if(/\bp90\b|90th/.test(q))return{kind:'p90',label:'response time p90'};
+    if(/over 30|more than 30|above 30|30 ?s(ec|econds)?\b|slow (turns|answers|responses)/.test(q))return{kind:'over30',label:'turns over 30 s'};
+    if(/busiest hour|peak hour|quietest hour|what hour|which hour|hour of (the )?day/.test(q))return{kind:'hour',label:/quietest/.test(q)?'quietest hour':'busiest hour'};
+    if(/out[- ]of[- ]hours|outside (phone|office|service)( service)? hours|after hours|phone (service|line)s? (is |are )?closed|overnight|when the phone/.test(q))return{kind:'outofhours',label:'turns outside phone-service hours'};
+    if(/\bvoice\b|speech|text[- ]to[- ]speech|transcri/.test(q))return{kind:'voice',label:'voice billed cost'};
+    if(/cyrillic/.test(q))return{kind:'script',script:'scCyrillic',label:'Cyrillic-script share'};
+    if(/arabic/.test(q))return{kind:'script',script:'scArabic',label:'Arabic-script share'};
+    if(/non[- ]?latin|language|script|other languages|foreign/.test(q))return{kind:'script',script:null,label:'non-Latin-script share'};
+    if(/\bevents?\b|what changed in|changes in|milestones/.test(q))return{kind:'events',label:'events'};
+    if(/organic first turns|organic demand|organic/.test(q))return{kind:'organic',label:'organic first turns'};
     for(const s of svcs){if(q.includes(s.toLowerCase()))return{kind:'service',service:s,label:s};}
     for(const name in SVC_ALIAS){const real=svcs.find(s=>s.toLowerCase()===name);if(real&&SVC_ALIAS[name].some(a=>q.includes(a)))return{kind:'service',service:real,label:real};}
     // "which model … / most expensive model" → compare all models (none named)
@@ -6783,7 +6817,7 @@ init();
     if(/answered|answer rate|answer share/.test(q))return{kind:'answered',label:'answered share'};
     if(/latency|response time|how (fast|slow)|\bslow(est)?\b|\bfast(est)?\b|\bspeed\b|\bp50\b|median response/.test(q))return{kind:'latency',label:'response time p50',superl:/slowest|\bslow(est)? day/.test(q)?'max':/fastest|quickest/.test(q)?'min':null};
     if(/\bchips?\b|suggested follow|follow[- ]?ups?/.test(q))return{kind:'chips',label:'suggested follow-up share'};
-    if(/\bmodal\b|\bweb\b|by source|source split/.test(q))return{kind:'modal',label:'Modal share of conversations'};
+    if(/modal share|web share|share (of|on|from) (the )?(modal|web)|by source|source (split|mix|distribution)/.test(q))return{kind:'modal',label:'Modal share of conversations'};
     if(/citation/.test(q))return{kind:'citations',label:'citations'};
     if(/session|conversation/.test(q))return{kind:'sessions',label:'conversations'};
     if(/question|quer|asked|\bturns?\b/.test(q))return{kind:'questions',label:'turns'};
@@ -6835,16 +6869,17 @@ init();
       if(/\bweek(s|ly)?\b/.test(q))bucket='week';
       else if(/\bmonth(s|ly)?\b/.test(q)&&period.kind!=='month')bucket='month';
     }
+    const category=parseCategory(q),filter=parseFilter(q);
     const metricExplicit=metric.kind!=='spend'||/spend|cost|spent|bill|charge|how much|£/.test(q);
     const periodExplicit=!!period&&(period.kind!=='all'||/overall|all ?time|to date|so far|in total|entire|altogether/.test(q));
     const aggExplicit=agg!=='sum'||/\btotal\b|\bsum\b/.test(q);
-    return{q,period,metric,agg,bucket,metricExplicit,periodExplicit,aggExplicit};
+    return{q,period,metric,agg,bucket,category,filter,metricExplicit,periodExplicit,aggExplicit};
   }
   function parseAsk(orig){
     const d=parseDims(orig);
     if(!d.period)return null;
-    if(!d.metricExplicit&&!d.periodExplicit)return null; // too vague standalone → defer
-    return{raw:orig,period:d.period,metric:d.metric,agg:d.agg,bucket:d.bucket};
+    if(!d.metricExplicit&&!d.periodExplicit&&!d.category&&!d.filter)return null; // too vague standalone → defer
+    return{raw:orig,period:d.period,metric:d.metric,agg:d.agg,bucket:d.bucket,category:d.category,filter:d.filter};
   }
 
   // "Jan vs Feb", "this month vs last month", "compare X and Y" → two-period compare
@@ -6857,10 +6892,10 @@ init();
     const metric=parseMetric(low),agg=parseAgg(low);
     const A=parsePeriod(' '+parts[0].trim()+' '),B=parsePeriod(' '+parts[1].trim()+' ');
     if(!A||!B||A.kind==='all'||B.kind==='all')return null; // need two real periods
-    return{compare:true,raw:orig,metric,agg,periodA:A,periodB:B,bucket:'day'};
+    return{compare:true,raw:orig,metric,agg,periodA:A,periodB:B,bucket:'day',category:parseCategory(low),filter:parseFilter(low)};
   }
   function computeCompare(intent){
-    const sub=p=>compute({metric:intent.metric,period:p,agg:intent.agg,bucket:intent.bucket,raw:''});
+    const sub=p=>compute({metric:intent.metric,period:p,agg:intent.agg,bucket:intent.bucket,raw:'',category:intent.category,filter:intent.filter});
     return{compare:true,a:sub(intent.periodA),b:sub(intent.periodB),intent};
   }
 
@@ -6928,6 +6963,10 @@ init();
     const q=(' '+orig.toLowerCase().replace(/[?!.,]/g,' ').replace(/\s+/g,' ')+' ').replace(/\b(last|past|previous)\s+\d+\s+(days?|weeks?|months?)\b/g,' ');
     let entity=null;
     if(/\bservices\b|cost drivers\b/.test(q))entity='service';
+    else if(/\b(categories|category|topics?)\b/.test(q))entity='category';
+    else if(/cited pages|top pages|most cited|pages cited|\bpages\b|\burls?\b/.test(q))entity='page';
+    else if(/starter prompts?|\bprompts\b/.test(q)||(/\bchips\b/.test(q)&&!/rate|share|use|cited|found|for chips|of chips|from chips/.test(q)))entity='prompt';
+    else if(/journeys?|transitions|category steps|from .* to .* categor/.test(q))entity='journey';
     else if(/\bmodels\b/.test(q))entity='model';
     else if(/\bdays\b/.test(q))entity='day';
     else if(/\bweeks\b/.test(q))entity='week';
@@ -6937,11 +6976,15 @@ init();
     // N from "top N", "N most …", or "N services/models/weeks/months" (NOT "N days" — avoids "last 7 days")
     const nm=q.match(/\b(?:top|first|bottom)\s+(\d{1,2})\b/)||q.match(/\b(\d{1,2})\s+(?:most|biggest|largest|highest|busiest|cheapest|quietest|lowest|smallest|fewest|expensive|costliest|priciest|worst|best)\b/)||q.match(/\b(\d{1,2})\s+(?:services|models|weeks|months)\b/);
     let N=nm?+nm[1]:0;
-    if(!ranked&&N<2)return null;
-    N=Math.min(Math.max(N||5,2),20);
-    const dir=/cheapest|quietest|lowest|smallest|fewest|\bleast\b|\bbottom\b/.test(q)?'min':'max';
+    const listEntity=['page','prompt','journey','category'].includes(entity);
+    if(!ranked&&N<2&&!listEntity)return null;
+    N=Math.min(Math.max(N||(/\bwhich\b/.test(q)?5:listEntity?10:5),2),25);
+    const dir=/cheapest|quietest|lowest|smallest|fewest|\bleast\b|\bbottom\b|\bbest\b/.test(q)&&!/most/.test(q)?'min':'max';
     let metric='spend';
-    if(/quietest|busiest|\bbusy\b|\bquiet\b|traffic|usage|questions?|queries/.test(q)&&!/cost|spend|spent|£/.test(q))metric='questions';
+    if(entity==='category'){
+      metric=/not[- ]?found/.test(q)?'notfound':/cited|answer rate/.test(q)?'cited':/clarif/.test(q)?'clarification':/error/.test(q)?'error':/dislike/.test(q)?'dislikes':/organic|first turns/.test(q)?'organic':'turns';
+    }else if(listEntity)metric='count';
+    else if(/quietest|busiest|\bbusy\b|\bquiet\b|traffic|usage|questions?|queries/.test(q)&&!/cost|spend|spent|£/.test(q))metric='questions';
     else if(/\bllm\b|token|foundry/.test(q))metric='llm';
     return{topn:true,raw:orig,entity,N,dir,metric,period:parsePeriod(' '+orig.toLowerCase().replace(/[?!.,]/g,' ').replace(/\s+/g,' ')+' ')};
   }
@@ -6950,8 +6993,32 @@ init();
     const rows=DATA.merged.filter(d=>d.date>=period.from&&d.date<=period.to);
     if(!rows.length)return{topn:true,empty:true,intent};
     const valOf=d=>metric==='questions'?d.queries:(metric==='llm'?d.gen:d.total);
-    let items=[];
-    if(entity==='service'){
+    let items=[],fmt=null,by=null;
+    if(entity==='category'){
+      if(!hasCatOut)return{topn:true,empty:true,intent};
+      const agg={};rows.forEach(d=>{Object.entries(CATOUT[d.date]||{}).forEach(([c,o])=>{if(c==='unknown'||CAT_EXCLUDE.has(c))return;const a=agg[c]||(agg[c]={});Object.entries(o).forEach(([kk,v])=>{a[kk]=(a[kk]||0)+v;});});});
+      const rateOf=(o,n,d)=>rateOK(o[n]||0,o[d]||0).ok&&o[d]?(o[n]||0)/o[d]*100:null;
+      const spec={turns:[o=>o.Turns||0,v=>num(Math.round(v)),'turns'],organic:[o=>o.OrganicFirstTurns||0,v=>num(Math.round(v)),'organic first turns'],
+        notfound:[o=>rateOf(o,'NotFound','Scored'),pctF(1),'not-found rate'],cited:[o=>rateOf(o,'Cited','Scored'),pctF(1),'cited answer rate'],clarification:[o=>rateOf(o,'Clarification','Scored'),pctF(1),'clarification rate'],
+        error:[o=>rateOf(o,'Error','Turns'),pctF(1),'error rate'],dislikes:[o=>rateOK(o.DislikesOnCited||0,o.Cited||0).ok&&o.Cited?(o.DislikesOnCited||0)/o.Cited*1000:null,v=>v.toFixed(1),'dislikes per 1,000 cited answers']}[metric];
+      items=Object.entries(agg).map(([c,o])=>({label:catLabel(CAT_ALIAS[c]||c),act:['sub','categories'],v:spec[0](o),extra:` · ${num(o.Turns||0)} turns`})).filter(i=>i.v!=null);
+      fmt=spec[1];by=spec[2];
+    }else if(entity==='page'){
+      if(!hasCites)return{topn:true,empty:true,intent};
+      const months=[...new Set(rows.map(d=>d.month))],agg={};months.forEach(m=>(CITES[m]||[]).forEach(r=>{const a=agg[r.url]||(agg[r.url]={n:0,cat:r.cat});a.n+=r.n;}));
+      items=Object.entries(agg).map(([u,o])=>({label:u.replace(/^https?:\/\/(www\.)?citizensinformation\.ie\/en\//,'').replace(/^https?:\/\//,''),act:['url',u],v:o.n,extra:o.cat?' · '+catLabel(CAT_ALIAS[o.cat]||o.cat):''}));
+      fmt=v=>num(v);by='citations (months overlapping the period)';
+    }else if(entity==='prompt'){
+      if(!hasStarters)return{topn:true,empty:true,intent};
+      const months=[...new Set(rows.map(d=>d.month))],agg={};months.forEach(m=>(STARTERS[m]||[]).forEach(r=>{const a=agg[r.prompt]||(agg[r.prompt]={n:0,cited:0});a.n+=r.n;a.cited+=r.cited;}));
+      items=Object.entries(agg).map(([pr,o])=>({label:pr,act:['sub','convs'],v:o.n,extra:` · ${rateText(o.cited,o.n)} cited`}));
+      fmt=v=>num(v);by='first turns (months overlapping the period)';
+    }else if(entity==='journey'){
+      if(!hasJourneys)return{topn:true,empty:true,intent};
+      const months=[...new Set(rows.map(d=>d.month))],agg={};months.forEach(m=>(JOURNEYS[m]||[]).forEach(r=>{const kk=r.from+'→'+r.to;agg[kk]=(agg[kk]||0)+r.n;}));
+      items=Object.entries(agg).map(([kk,n])=>{const[a,b]=kk.split('→');return{label:catLabel(CAT_ALIAS[a]||a)+' → '+catLabel(CAT_ALIAS[b]||b),act:['sub','categories'],v:n};});
+      fmt=v=>num(v);by='category steps in mature conversations (months overlapping the period)';
+    }else if(entity==='service'){
       items=(DATA.allSvcs||[]).map(s=>({label:s===FOUNDRY?'Foundry Models (generation)':s,act:['service',s],v:rows.reduce((a,d)=>a+(d[s]||0),0)}));
     }else if(entity==='model'){
       const fam=familyTotals(rows);
@@ -6962,9 +7029,9 @@ init();
       const groups={};rows.forEach(d=>{const k=entity==='week'?d.week:d.month;(groups[k]=groups[k]||[]).push(d);});
       items=Object.keys(groups).map(k=>({label:entity==='week'?('week of '+fmtDate(k)):fmtMonth(k),act:entity==='month'?['month',k]:null,v:groups[k].reduce((a,d)=>a+valOf(d),0)}));
     }
-    items=items.filter(i=>i.v>0).sort((a,b)=>dir==='min'?a.v-b.v:b.v-a.v).slice(0,N);
+    items=items.filter(i=>i.v!=null&&(fmt||i.v>0)).sort((a,b)=>dir==='min'?a.v-b.v:b.v-a.v).slice(0,N);
     if(!items.length)return{topn:true,empty:true,intent};
-    return{topn:true,items,money:metric!=='questions',intent};
+    return{topn:true,items,money:!fmt&&metric!=='questions',fmt,by,intent};
   }
 
   // ── Forecast / projection ("projected spend this year", "what will we spend this month") ──
@@ -7019,8 +7086,9 @@ init();
     const {metric,period,agg}=intent;
     const rows=DATA.merged.filter(d=>d.date>=period.from&&d.date<=period.to);
     if(!rows.length)return{empty:true,intent};
-    const money=['spend','llm','service','model','fixed','variable'].includes(metric.kind);
+    const money=['spend','llm','service','model','fixed','variable','voice'].includes(metric.kind);
     let value=null,series=null,note='';
+    const special=computeSpecial(intent,rows);if(special)return special;
 
     // ── Run rate: the single forecast function on a 30-day calendar (or to year end) ──
     if(metric.kind==='runrate'){
@@ -7141,9 +7209,101 @@ init();
     const fmt=money?(v=>gbp(v,Math.abs(v)>=100?0:2)):(v=>num(Math.round(v)));
     return{value,fmt,series,note,intent};
   }
+  // ── Category dimension, source / type filters, and the metrics that live in the generated files ──
+  const pctF=dp=>v=>v==null?'—':v.toFixed(dp)+'%';
+  function computeSpecial(intent,rows){
+    const {metric,period,agg,category,filter}=intent,k=metric.kind;
+    const inRange=d=>d>=period.from&&d<=period.to;
+    const sumD=(get)=>rows.reduce((a,d)=>a+(get(d)||0),0);
+    const rateRes=(n,den,label,unit,dp=1)=>{const ok=rateOK(n,den);return{value:ok.ok&&den>0?n/den*100:null,fmt:pctF(dp),series:null,note:ok.ok?`${num(n)} of ${num(den)} ${unit}${label?' · '+label:''} · sum then divide`:`not shown: ${ok.why} (small-sample rule)`,intent};};
+    // Category dimension (category-outcomes-daily.csv)
+    if(category){
+      if(!hasCatOut)return{value:null,fmt:v=>'—',series:null,note:'no category-outcomes file loaded; regenerate from the QA feed',intent};
+      const cl=catLabel(CAT_ALIAS[category]||category);
+      const days=rows.map(d=>[d,(CATOUT[d.date]||{})[category]||{}]);
+      const S=f=>days.reduce((a,[,o])=>a+(o[f]||0),0);
+      const ser=f=>days.map(([,o])=>o[f]||null);
+      if(k==='questions'||k==='spend')return{value:S('Turns'),fmt:v=>num(Math.round(v)),series:ser('Turns'),note:`turns attributed to ${cl}`,intent,subj:'turns in '+cl};
+      if(k==='organic')return{value:S('OrganicFirstTurns'),fmt:v=>num(Math.round(v)),series:ser('OrganicFirstTurns'),note:`organic first turns attributed to ${cl}`,intent,subj:'organic first turns in '+cl};
+      if(k==='cited')return{...rateRes(S('Cited'),S('Scored'),'scored turns in '+cl,'scored turns'),subj:'cited answer rate in '+cl};
+      if(k==='notfound')return{...rateRes(S('NotFound'),S('Scored'),'scored turns in '+cl,'scored turns'),subj:'not-found rate in '+cl};
+      if(k==='clarification')return{...rateRes(S('Clarification'),S('Scored'),'scored turns in '+cl,'scored turns'),subj:'clarification rate in '+cl};
+      if(k==='error')return{...rateRes(S('Error'),S('Turns'),'turns in '+cl,'turns'),subj:'error rate in '+cl};
+      if(k==='dislikes'){const n=S('DislikesOnCited'),c=S('Cited'),ok=rateOK(n,c);return{value:ok.ok&&c>0?n/c*1000:null,fmt:v=>v==null?'—':v.toFixed(1),series:null,note:ok.ok?`${num(n)} dislikes on ${num(c)} cited answers in ${cl}`:`not shown: ${ok.why}`,intent,subj:'dislikes per 1,000 cited answers in '+cl};}
+      return{value:null,fmt:v=>'—',series:null,note:`${metric.label} is not available by category; try turns, cited, not-found, clarification, error or dislikes in ${cl}`,intent};
+    }
+    // Source / question-type filter (cross columns in usage.csv)
+    if(filter&&['cited','notfound','questions','sessions','spend'].includes(k)){
+      const f=filter.key,cap={modal:'modal',web:'web',sf:'sf',uf:'uf',nt:'nt'}[f];
+      if(!rows.some(d=>d.ux&&d.ux[cap+'Scored']!=null))return{value:null,fmt:v=>'—',series:null,note:'usage.csv has no source / question-type columns; regenerate from the QA feed',intent};
+      if(k==='cited')return{...rateRes(sumD(d=>d.ux?.[cap+'Cited']),sumD(d=>d.ux?.[cap+'Scored']),'scored '+filter.label+' turns','scored turns'),subj:'cited answer rate for '+filter.label};
+      if(k==='notfound')return{...rateRes(sumD(d=>d.ux?.[cap+'NotFound']),sumD(d=>d.ux?.[cap+'Scored']),'scored '+filter.label+' turns','scored turns'),subj:'not-found rate for '+filter.label};
+      const tk={modal:'modalTurns',web:'webTurns',sf:'suggestedFollowup',uf:'userFollowup',nt:'newTopic'}[f],sk={modal:'modalSessions',web:'webSessions'}[f];
+      if(k==='sessions'&&sk)return{value:sumD(d=>d.ux?.[sk]),fmt:v=>num(Math.round(v)),series:rows.map(d=>d.ux?.[sk]||0),note:'conversations started on '+filter.label,intent,subj:filter.label+' conversations'};
+      return{value:sumD(d=>d.ux?.[tk]),fmt:v=>num(Math.round(v)),series:rows.map(d=>d.ux?.[tk]||0),note:'turns · '+filter.label,intent,subj:filter.label+' turns'};
+    }
+    // Conversation shape (conversations-daily.csv)
+    if(['single','chipuse','span'].includes(k)){
+      if(!hasConv)return{value:null,fmt:v=>'—',series:null,note:'no conversations file loaded; regenerate from the QA feed',intent};
+      const cv=rows.map(d=>CONV[d.date]||{}),S=f=>cv.reduce((a,o)=>a+(o[f]||0),0),mature=S('Mature');
+      if(k==='single')return{...rateRes(S('Turns1'),mature,'mature conversations','mature conversations'),subj:'conversations that ended after the first turn'};
+      if(k==='chipuse')return{...rateRes(S('ChipUse'),mature,'mature conversations with at least one suggested follow-up','mature conversations'),subj:'suggested follow-up use'};
+      const multi=['Span0to1','Span2to5','Span6to15','Span16to60','SpanOver60'].reduce((a,f)=>a+S(f),0),over5=S('Span6to15')+S('Span16to60')+S('SpanOver60');
+      return{...rateRes(over5,multi,'multi-turn conversations lasting over 5 minutes, minute precision','multi-turn conversations'),subj:'conversations over 5 minutes'};
+    }
+    // Operations detail
+    if(k==='p90'||k==='p99'){
+      const f=k==='p90'?'latP90':'latP99';
+      if(!rows.some(d=>d.ux&&d.ux[f]))return{value:null,fmt:v=>'—',series:null,note:'usage.csv has no '+k+' column; regenerate from the QA feed',intent};
+      const w=rows.reduce((a,d)=>a+((d.ux?.[f]||0)*d.queries),0),q=rows.reduce((a,d)=>a+(d.ux?.[f]?d.queries:0),0);
+      return{value:q>0?w/q:null,fmt:v=>v==null?'—':(v/1000).toFixed(1)+'s',series:rows.map(d=>d.ux?.[f]||null),note:'turn-weighted mean of the daily '+k+(k==='p90'?` · provisional target ${(CONFIG.latency_target_p90_ms/1000).toFixed(0)} s`:''),intent,isMs:true};
+    }
+    if(k==='over30'){
+      const bands=['latU10','lat1020','lat2030','latO30'];if(!rows.some(d=>d.ux&&d.ux.latO30!=null))return{value:null,fmt:v=>'—',series:null,note:'usage.csv has no latency band columns; regenerate from the QA feed',intent};
+      const n=sumD(d=>d.ux?.latO30),t=bands.reduce((a,b)=>a+sumD(d=>d.ux?.[b]),0);
+      return{...rateRes(n,t,'timed turns over 30 seconds','timed turns'),subj:'turns over 30 s'};
+    }
+    // Hour of day (usage-hours.csv)
+    if(k==='hour'||k==='outofhours'){
+      if(!hasHours)return{value:null,fmt:v=>'—',series:null,note:'no hours file loaded; regenerate from the QA feed',intent};
+      const byH=Array(24).fill(0);let tot=0,out=0;const ps=CONFIG.phone_service;
+      rows.forEach(d=>{const a=HOURS[d.date];if(!a)return;const wd=isoDow(d.date);for(let h=0;h<24;h++){const t=a[h]?a[h].t:0;byH[h]+=t;tot+=t;if(!(ps.days.includes(wd)&&h>=ps.from&&h<ps.to))out+=t;}});
+      if(k==='outofhours')return{...rateRes(out,tot,ps.label+' · configured, '+ps.source,'turns'),subj:'turns outside phone-service hours'};
+      const min=/quietest/.test(metric.label);let bh=0;for(let h=1;h<24;h++){if(min?byH[h]<byH[bh]:byH[h]>byH[bh])bh=h;}
+      return{value:byH[bh],bigVal:String(bh).padStart(2,'0')+':00',fmt:v=>num(v),series:byH,hourSeries:true,note:`${num(byH[bh])} turns in that hour · Irish time`,intent,subj:metric.label};
+    }
+    if(k==='voice'){
+      const v=sumD(d=>(d.voice?.stt||0)+(d.voice?.tts||0));
+      return{value:v,fmt:v=>gbp(v,2),series:rows.map(d=>+(((d.voice?.stt||0)+(d.voice?.tts||0))).toFixed(4)),note:`speech-to-text ${gbp(sumD(d=>d.voice?.stt),2)} + text-to-speech ${gbp(sumD(d=>d.voice?.tts),2)} · billed cost only, no volume data`,intent,subj:'voice billed cost'};
+    }
+    if(k==='script'){
+      const keys=['scLatin','scCyrillic','scArabic','scCJK','scDevanagari','scOther'];
+      if(!rows.some(d=>d.ux&&d.ux.scLatin!=null))return{value:null,fmt:v=>'—',series:null,note:'usage.csv has no query-script columns; regenerate from the QA feed',intent};
+      const t=keys.reduce((a,kk)=>a+sumD(d=>d.ux?.[kk]),0),n=metric.script?sumD(d=>d.ux?.[metric.script]):t-sumD(d=>d.ux?.scLatin);
+      return{...rateRes(n,t,'a script, not a language','turns with letters',2),subj:metric.label};
+    }
+    if(k==='events'){
+      const evs=confirmedEvents().filter(e=>e.start<=period.to&&(e.end||e.start)>=period.from);
+      return{events:true,list:evs,intent};
+    }
+    if(k==='organic'){
+      if(!rows.some(d=>d.ux&&d.ux.organic!=null))return{value:null,fmt:v=>'—',series:null,note:'usage.csv has no starter-prompt columns; regenerate from the QA feed',intent};
+      return{value:sumD(d=>d.ux?.organic),fmt:v=>num(Math.round(v)),series:rows.map(d=>d.ux?.organic||0),note:'first turns that are not starter prompts',intent,subj:'organic first turns'};
+    }
+    return null;
+  }
+  function renderEvents(res){
+    const el=$('ask-answer'); if(!el)return;
+    const {list,intent}=res,p=intent.period;
+    const items=list.length?list.map(e=>`<li><span class="mono" style="color:${eventColor(e)}">${esc(fmtDate(e.start))}${e.end?'–'+esc(fmtDate(e.end)):''}</span> <b>${esc(e.title)}</b>${e.detail?` <span style="color:var(--muted)">— ${esc(e.detail.length>160?e.detail.slice(0,158)+'…':e.detail)}</span>`:''}</li>`).join(''):'<li style="color:var(--muted)">no confirmed events in this period</li>';
+    const ba=periodBtn(p);
+    el.innerHTML='<div class="ask-card" style="flex-direction:column;align-items:stretch"><div class="ask-card-q">'+esc(intent.raw)+'</div><div class="ask-card-sub">confirmed events '+(p.kind==='all'?'overall':'in '+esc(p.label))+' · from events.json · candidates are in the Events popover</div><ul class="ask-why">'+items+'</ul>'+
+      (p.kind!=='all'?'<div class="ask-card-actions" style="flex-direction:row;margin-top:var(--sp-2)"><button class="ask-action" data-act="'+ba[0]+'" data-arg="'+escA(ba[1])+'">'+esc(ba[2])+'</button></div>':'')+'</div>';
+    el.classList.add('show'); if(typeof renderIcons==='function')renderIcons();
+  }
   function context(intent,value){
     if(value==null||intent.agg!=='sum')return '';
-    if(['cpq_llm','cpq_tot','qps','cache','fixedshare','runrate','topService','topModel','answered','unanswered','flagged','chips','modal','latency','notfound','error','clarification','cited','partial','dislikes','feedback','starter'].includes(intent.metric.kind))return ''; // ratios: never summed
+    if(['cpq_llm','cpq_tot','qps','cache','fixedshare','runrate','topService','topModel','answered','unanswered','flagged','chips','modal','latency','notfound','error','clarification','cited','partial','dislikes','feedback','starter','single','chipuse','span','p90','p99','over30','hour','outofhours','script','events'].includes(intent.metric.kind)||intent.category||intent.filter)return ''; // ratios: never summed
     const p=intent.period; if(p.kind==='all'||p.kind==='year')return '';
     const days=Math.round((new Date(p.to)-new Date(p.from))/86400000)+1;
     const prevTo=addDays(p.from,-1),prevFrom=addDays(prevTo,-(days-1));
@@ -7251,15 +7411,15 @@ init();
     const el=$('ask-answer'); if(!el)return;
     if(res.empty){el.innerHTML=info('No data found for '+esc(res.intent.period.label)+'.');el.classList.add('show');if(typeof renderIcons==='function')renderIcons();return;}
     const {items,money,intent}=res;
-    const fmt=money?(v=>gbp(v,Math.abs(v)>=100?0:2)):(v=>num(Math.round(v)));
+    const fmt=res.fmt||(money?(v=>gbp(v,Math.abs(v)>=100?0:2)):(v=>num(Math.round(v))));
     const max=Math.max.apply(null,items.map(i=>i.v))||1;
     const rows=items.map((it,i)=>{
       const pct=Math.max(2,it.v/max*100);
       const at=it.act?' data-act="'+it.act[0]+'" data-arg="'+escA(it.act[1])+'"':'';
-      return '<button class="ask-topn-row"'+at+'><span class="ask-topn-rank">'+(i+1)+'</span><span class="ask-topn-lbl">'+esc(it.label)+'</span><span class="ask-topn-bar"><span style="width:'+pct.toFixed(1)+'%"></span></span><span class="ask-topn-val">'+fmt(it.v)+'</span></button>';
+      return '<button class="ask-topn-row"'+at+'><span class="ask-topn-rank">'+(i+1)+'</span><span class="ask-topn-lbl">'+esc(it.label)+(it.extra?'<span style="color:var(--dim)">'+esc(it.extra)+'</span>':'')+'</span><span class="ask-topn-bar"><span style="width:'+pct.toFixed(1)+'%"></span></span><span class="ask-topn-val">'+fmt(it.v)+'</span></button>';
     }).join('');
-    const ent={service:'services',model:'models',day:'days',week:'weeks',month:'months'}[intent.entity];
-    const by=intent.metric==='questions'?'turns':(intent.metric==='llm'?'generation cost':'spend');
+    const ent={service:'services',model:'models',day:'days',week:'weeks',month:'months',category:'categories',page:'pages',prompt:'starter prompts',journey:'journeys'}[intent.entity];
+    const by=res.by||(intent.metric==='questions'?'turns':(intent.metric==='llm'?'generation cost':'spend'));
     const where=intent.period.kind==='all'?'overall':'in '+intent.period.label;
     el.innerHTML='<div class="ask-card" style="flex-direction:column;align-items:stretch">'+
       '<div class="ask-card-q">'+esc(intent.raw)+'</div>'+
@@ -7342,17 +7502,18 @@ init();
 
   function render(res){
     const el=$('ask-answer'); if(!el)return;
+    if(res.events){renderEvents(res);return;}
     if(res.compare){renderCompare(res);return;}
     if(res.empty){el.innerHTML=info('No data found for '+esc(res.intent.period.label)+'.');el.classList.add('show');if(typeof renderIcons==='function')renderIcons();return;}
     const {value,fmt,series,note,intent}=res,m=intent.metric,p=intent.period,agg=intent.agg;
-    const aggWord={sum:'',avg:'average ',max:'peak ',min:'lowest '}[agg]||'';
-    const subj=(m.kind==='service'||m.kind==='model')?m.label+' cost':m.label;
+    const aggWord=res.subj?'':({sum:'',avg:'average ',max:'peak ',min:'lowest '}[agg]||'');
+    const subj=res.subj||((m.kind==='service'||m.kind==='model')?m.label+' cost':m.label);
     const where=p.kind==='all'?'overall':'in '+p.label;
     const ctx=res.headline?'':context(intent,value); // entity answers carry their own headline
     const headline=esc(res.headline||(aggWord+subj+' '+where+(note?' · '+note:'')+(ctx?' · '+ctx:'')));
     const bigVal=res.bigVal!=null?esc(res.bigVal):fmt(value);
     const acts=drillButtons(intent);
-    const hasChart=!res.bigVal&&Array.isArray(series)&&series.filter(v=>v!=null&&isFinite(v)).length>=2;
+    const hasChart=(!res.bigVal||res.hourSeries)&&Array.isArray(series)&&series.filter(v=>v!=null&&isFinite(v)).length>=2;
     const sv=(series||[]).map(v=>(v==null||!isFinite(v))?0:v);
     const spark=(!hasChart&&sv.filter(v=>v!==0).length>1)?'<div class="ask-card-spark">'+sparkline(sv,C.acc,240,46)+'</div>':'';
     el.innerHTML='<div class="ask-card"'+(hasChart?' style="flex-direction:column;align-items:stretch"':'')+'><div class="ask-card-main">'+
@@ -7364,12 +7525,12 @@ init();
     el.classList.add('show'); if(typeof renderIcons==='function')renderIcons();
     if(hasChart){
       const crows=DATA.merged.filter(d=>d.date>=p.from&&d.date<=p.to);
-      const labels=crows.map(d=>d.label);
-      const isRate=['cpq_llm','cpq_tot','qps','cache','fixedshare','answered','unanswered','flagged','chips','modal','latency','notfound','error','clarification','cited','partial','dislikes','feedback','starter'].includes(m.kind);
-      const isCount=['questions','sessions','citations'].includes(m.kind);
+      const labels=res.hourSeries?Array.from({length:24},(_,h)=>String(h).padStart(2,'0')+':00'):crows.map(d=>d.label);
+      const isRate=['cpq_llm','cpq_tot','qps','cache','fixedshare','answered','unanswered','flagged','chips','modal','latency','notfound','error','clarification','cited','partial','dislikes','feedback','starter','p90','p99'].includes(m.kind);
+      const isCount=['questions','sessions','citations','organic','hour'].includes(m.kind)||(intent.category&&['questions','spend'].includes(m.kind))||(intent.filter&&['questions','sessions','spend'].includes(m.kind));
       const col=C.acc, data=series.map(v=>(v==null||!isFinite(v))?null:+v);
       const pctKind=['cache','fixedshare','answered','unanswered','flagged','chips','modal','notfound','error','clarification','cited','partial','feedback','starter'].includes(m.kind);
-      const tick=m.kind==='latency'?(v=>(+v/1000).toFixed(1)+'s'):isRate?(v=>(+v).toFixed(pctKind?0:2)+(pctKind?'%':(m.kind==='qps'?'':'p'))):(isCount?(v=>num(v)):(v=>'£'+(+v).toFixed(0)));
+      const tick=(m.kind==='latency'||res.isMs)?(v=>(+v/1000).toFixed(1)+'s'):isRate?(v=>(+v).toFixed(pctKind?0:2)+(pctKind?'%':(m.kind==='qps'?'':'p'))):(isCount?(v=>num(v)):(v=>'£'+(+v).toFixed(0)));
       mountViz({type:isRate?'line':'bar',data:{labels:labels,datasets:[{label:subj,data:data,backgroundColor:isRate?(col+'22'):(col+'cc'),borderColor:col,borderWidth:isRate?2:0,borderRadius:isRate?0:3,pointRadius:0,tension:.3,fill:!!isRate,spanGaps:true,maxBarThickness:22}]},options:mergeOpts(baseOpts(),{plugins:{legend:{display:false}},scales:{y:{ticks:{callback:tick}}}})},{cols:['Date',subj],rows:labels.map((l,i)=>[l,data[i]]),fmt:res.fmt});
     }
     showFollowups(intent);
@@ -7427,24 +7588,26 @@ init();
     // 3. Standalone (both metric+period explicit) vs follow-up merge (inherit the rest)
     const d=parseDims(q);
     const standalone=d.metricExplicit&&d.periodExplicit;
-    if(!standalone&&lastIntent&&(d.metricExplicit||d.periodExplicit||d.aggExplicit)){
+    if(!standalone&&lastIntent&&(d.metricExplicit||d.periodExplicit||d.aggExplicit||d.category||d.filter)){
       const merged={raw:q,metric:lastIntent.metric,period:lastIntent.period,agg:lastIntent.agg,bucket:lastIntent.bucket||'day'};
       if(d.metricExplicit)merged.metric=d.metric;
       if(d.periodExplicit){merged.period=d.period;merged.bucket=d.bucket;}
       if(d.aggExplicit)merged.agg=d.agg;
+      if(d.category)merged.category=d.category;
+      if(d.filter)merged.filter=d.filter;
       lastIntent=merged;render(compute(merged));return;
     }
     const intent=parseAsk(q);
     if(intent){lastIntent=intent;render(compute(intent));return;}
     // 4. Not understood — say so; there is no model fallback.
-    ans.innerHTML=info('I couldn’t parse that. Try e.g. <b>spend in January 2026</b>, <b>quietest day this month</b>, <b>most expensive service</b>, <b>busiest week</b>, <b>GPT 5 Mini cost last 30 days</b>, <b>generation cost per turn last 3 months</b>, <b>fixed share this year</b> or <b>projected spend this month</b>.');
+    ans.innerHTML=info('I couldn’t parse that. Try e.g. <b>spend in January 2026</b>, <b>not-found rate in housing last month</b>, <b>which category has the most dislikes</b>, <b>cited rate for chips</b>, <b>most cited pages this year</b>, <b>busiest hour in September</b>, <b>p90 last 30 days</b>, <b>events in May</b>, <b>voice cost this month</b>, <b>generation cost per turn last 3 months</b>, <b>fixed share this year</b> or <b>projected spend this month</b>.');
     ans.classList.add('show');if(typeof renderIcons==='function')renderIcons();
   }
   function chips(){
     const el=$('ask-chips'); if(!el||!have())return;
     const m=DATA.merged.filter(d=>d.total>0);
     const lm=m.length?fmtMonth(m[m.length-1].date.slice(0,7)):'this month';
-    const ex=['Spend in '+lm,'Most expensive service','Generation cost per turn last 3 months','Not-found rate last month','Error rate this month','Projected spend this month'];
+    const ex=['Spend in '+lm,'Not-found rate last month','Which category has the highest not-found rate','Not-found rate for modal this month','Most cited pages last month','Busiest hour this month','Ended after first turn this year','Events in '+lm];
     el.innerHTML=ex.map(t=>'<button class="ask-chip" data-ex="'+escA(t)+'">'+esc(t)+'</button>').join('');
   }
   function applyRange(f,t){
@@ -7466,6 +7629,8 @@ init();
       else if(act==='service')openServicePanel(arg);
       else if(act==='meter')openMeterPanel(arg);
       else if(act==='range'){const i=arg.indexOf('|');applyRange(arg.slice(0,i),arg.slice(i+1));}
+      else if(act==='sub')activateSub(arg);
+      else if(act==='url')window.open(arg,'_blank','noopener');
     });
     // Voice input via Web Speech API — feature-detected; button stays hidden otherwise.
     const SR=window.SpeechRecognition||window.webkitSpeechRecognition;

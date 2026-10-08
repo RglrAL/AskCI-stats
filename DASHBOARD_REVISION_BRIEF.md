@@ -335,3 +335,15 @@ Still open from the mock-ups: Overview "organic demand by topic" bars (the data 
 - Latency by response length and by citation count: the redaction script keeps a response word count (a number, not text); the generator writes `latency-buckets-daily.csv` (Date, Kind, Bucket, Turns, LatencySumMs); Usage › Volume shows mean response time per bucket, labelled as a mean, buckets under 50 timed turns blank. Full range: 6.5 s for answers under 50 words rising to 18.2 s over 300; 9.4 s with no citation rising to about 15 s with four or more.
 
 Every tile in the six prototype screenshots that can be built from daily or monthly aggregates now exists here. The remaining ones (not-found work queue, top organic queries, disliked conversations, Explorer) need query text and stay in the admin app.
+
+## 22. Ask bar coverage (8 Oct 2026)
+
+The rule-based parser now reaches every generated file, so everything the panes show can be asked for.
+
+- **Category dimension.** "in housing", "for social welfare", "tax category" on turns, organic first turns, cited, not-found, clarification and error rates and dislikes per 1,000, from `category-outcomes-daily.csv`. "Which category has the highest not-found rate" ranks categories (five for "which", ten for "top"), with each row's turn count.
+- **Source and question-type filters.** "for modal", "on the web", "for chips", "for typed follow-ups", "for new topics" on cited and not-found rates (scored denominators from the cross columns) and on turns and conversations. "Modal share" and "by source" keep their old meaning.
+- **New metrics.** Ended after first turn, suggested follow-up use and conversations over 5 minutes (mature cohort); p90 and p99 (turn-weighted, with the provisional target on p90); turns over 30 s; busiest and quietest hour (hour series charted); out-of-hours share; voice billed cost; non-Latin, Cyrillic and Arabic script shares; organic first turns; confirmed events in a period.
+- **Lists.** Most cited pages (links open the page), starter prompts, category journeys.
+- The example chips and the "couldn't parse" hint show the new forms. Every rate goes through the small-sample rule; every answer names its denominator.
+
+Checked: twenty-five questions across the new forms answer correctly, including "cited rate for chips this year" (96.5%), "web conversations in September" (1,546), "p99 in April" (68.1 s), "busiest hour this month" (14:00) and "events in May" (two confirmed events).
