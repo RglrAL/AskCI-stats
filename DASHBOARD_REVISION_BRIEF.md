@@ -296,3 +296,16 @@ Generator additions from `brief/AGENT_BRIEF.md`: Likes, Dislikes and DislikesOnC
 July analysis (cost brief §5.7), written into the 1 July event: June to July, complete months, cited answer rate 86.2% → 91.8%, not found 8.2% → 3.5%, clarification 4.3% → 4.5%, cited but partial 3.0% → 14.0%, p50 11.3s → 12.5s, p90 16.3s → 17.0s, dislikes per 1,000 cited answers 1.73 → 1.19. The new model answers more often with a citation but hedges far more; descriptive only.
 
 Not committed: the `screenshots/` folder added alongside the briefs.
+
+## 19. First slice from the prototype mock-ups (8 Oct 2026)
+
+Reviewed the six prototype screenshots in `screenshots/` (not committed). Taken now:
+
+- Rate deltas in percentage points, latency deltas as percent with seconds, counts and money as percent (`deltaChip` units). The Overview tiles use them.
+- What changed statements carry a class chip: service failure, latency, quality, demand, product behaviour, or cost.
+- Generator: cited, not-found and scored counts by source (Modal, Web) and by question type (new topic, typed follow-up, suggested follow-up); latency p99 and the four latency bands (under 10, 10–20, 20–30, over 30 s), positive values only.
+- Usage › Volume: "Outcome by source and question type" table (small-sample rule per cell); Response time card gains p99, an "over 30 s" share, the band chart stacked to 100%, an errors-per-day bar, and a dashed p90 target line from `CONFIG.latency_target_p90_ms` (20 s, provisional; spec open question 13).
+
+Full range: Modal cited 87.6% and not found 6.0%; Web 91.9% and 5.1%; new topic 86.0% and 7.0%; typed follow-up 88.2% and 6.0%; suggested follow-up 96.5% and 2.4%. Latency bands: under 10 s 28%, 10–20 s 64%, 20–30 s 5%, over 30 s 2%; p99 28.0 s.
+
+Second slice, not started: conversation grouping in the generator for turns per conversation, length by first outcome, observed span and category journeys; category-by-outcome attribution; top cited pages; per-prompt starter table; heat-map metric toggle.

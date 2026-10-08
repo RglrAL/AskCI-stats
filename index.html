@@ -942,6 +942,7 @@ button:focus-visible,.pill:focus-visible{outline-offset:1px}
 .home-active #hero,.home-active #kpi-row,.home-active #kpi-more-btn{display:none!important}
 .home-headline{font-size:1rem;line-height:1.55;color:var(--text)}
 .home-headline b{font-weight:600}
+.wc-chip{display:inline-block;font-size:.6rem;font-family:'DM Mono',monospace;text-transform:uppercase;letter-spacing:.06em;padding:1px 6px;border-radius:3px;background:color-mix(in srgb,var(--acc) 14%,transparent);color:var(--acc);vertical-align:middle;margin-right:4px}
 .home-sub{font-size:var(--t-xs);color:var(--muted);margin-top:8px;font-family:'DM Mono',monospace}
 details.card>summary{cursor:pointer;list-style:none;display:flex;align-items:center;justify-content:space-between}
 details.card>summary::-webkit-details-marker{display:none}
@@ -1999,6 +2000,7 @@ const CONFIG={
   materiality:{ratio_pct:10,ratio_pence:0.2,total_pct:10,rate_pts:1,count_pct:10,latency_pct:10,latency_ms:2000}, // What changed thresholds: pence per turn 10% or 0.2p; rates 1 point; counts 10%; latency 10% or 2 s
   categories_year:2026,       // the citations file carries month names only
   launch_date:'2026-05-11',   // candidate public Modal launch; labels only, see events.json
+  latency_target_p90_ms:20000, // provisional p90 target (admin-app spec open question 13); drawn as a dashed line
   // Phone-service hours, used only for the "outside phone-service hours" share on the Usage pane.
   phone_service:{days:[1,2,3,4,5],from:9,to:20,label:'Mon–Fri 09:00–20:00',source:'Citizens Information Phone Service published hours — to confirm'},
 };
@@ -2421,8 +2423,12 @@ function parseUsage(rows){
     citations:col(/^citations$/i),latP50:col(/^latencyp50/i),latP90:col(/^latencyp90/i),voiceTurns:col(/^voiceturns$/i),voiceSessions:col(/^voicesessions$/i),
     likes:col(/^likes$/i),dislikes:col(/^dislikes$/i),dislikesCited:col(/^dislikesoncited$/i),starter:col(/^starterpromptfirstturns$/i),organic:col(/^organicfirstturns$/i),
     scLatin:col(/^scriptlatin$/i),scCyrillic:col(/^scriptcyrillic$/i),scArabic:col(/^scriptarabic$/i),scCJK:col(/^scriptcjk$/i),scDevanagari:col(/^scriptdevanagari$/i),scOther:col(/^scriptother$/i),scNone:col(/^scriptnone$/i),
+    latP99:col(/^latencyp99/i),latU10:col(/^latunder10s$/i),lat1020:col(/^lat10to20s$/i),lat2030:col(/^lat20to30s$/i),latO30:col(/^latover30s$/i),
+    modalCited:col(/^modalcited$/i),modalNotFound:col(/^modalnotfound$/i),modalScored:col(/^modalscored$/i),webCited:col(/^webcited$/i),webNotFound:col(/^webnotfound$/i),webScored:col(/^webscored$/i),
+    ntCited:col(/^newtopiccited$/i),ntNotFound:col(/^newtopicnotfound$/i),ntScored:col(/^newtopicscored$/i),ufCited:col(/^userfollowupcited$/i),ufNotFound:col(/^userfollowupnotfound$/i),ufScored:col(/^userfollowupscored$/i),
+    sfCited:col(/^suggestedcited$/i),sfNotFound:col(/^suggestednotfound$/i),sfScored:col(/^suggestedscored$/i),
     cited:col(/^cited$/i),notFound:col(/^notfound$/i),clarification:col(/^clarification$/i),error:col(/^error$/i),outOfScope:col(/^outofscope$/i),greeting:col(/^greeting$/i),uncited:col(/^uncited$/i),partial:col(/^partial$/i),scored:col(/^scored$/i)};
-  const columns={outcomes:!!UX.answered,types:!!UX.newTopic,sources:!!UX.modalSessions,latency:!!UX.latP50,voice:!!UX.voiceSessions,taxonomy:!!UX.cited,feedback:!!UX.likes,starter:!!UX.starter,script:!!UX.scLatin};
+  const columns={outcomes:!!UX.answered,types:!!UX.newTopic,sources:!!UX.modalSessions,latency:!!UX.latP50,voice:!!UX.voiceSessions,taxonomy:!!UX.cited,feedback:!!UX.likes,starter:!!UX.starter,script:!!UX.scLatin,cross:!!UX.modalScored,bands:!!UX.latU10,p99:!!UX.latP99};
   const rulesCol=col(/^outcomerules$/i);let outcomeRules='';
   rows.forEach(row=>{
     const raw=String(row[dk]||'').trim();
@@ -2818,6 +2824,8 @@ const WC_CANDIDATES=[
 ];
 // set: 'service' (Overview: quality, latency, demand, product) or 'cost' (Cost tab: unit cost,
 // billed and variable cost, fixed share; at most three statements). The two are never merged.
+const WC_CLASS={1:'service failure',2:'latency',3:'quality',4:'demand',5:'product behaviour'};
+function wcChip(st){const l=st.cost?'cost':WC_CLASS[st.cls]||'';return l?`<span class="wc-chip">${l}</span> `:'';}
 function whatChanged(rangeRows,set='service'){
   const empty={statements:[],events:[],A:null,B:null,valid:false,why:'no data in range',fallback:'',rule:'',set};
   if(!rangeRows||!rangeRows.length)return empty;
@@ -2843,7 +2851,7 @@ function whatChanged(rangeRows,set='service'){
     else if(c.kind==='pence'){score=Math.max(rel==null?0:Math.abs(rel)/M.ratio_pct,Math.abs(d)/M.ratio_pence);dTxt=`${sign}${Math.abs(d).toFixed(2)}p`+(rel!=null?` (${sign}${Math.abs(rel).toFixed(0)}%)`:'');}
     else{if(rel==null)return;score=Math.abs(rel)/M.count_pct;dTxt=`${sign}${Math.abs(rel).toFixed(0)}%`;}
     if(score<1)return;
-    out.push({name:c.name,cls:c.cls,a,b,d,rel,kind:c.kind,score,text:`${c.name}: ${fmt[c.kind](a)} (${A.span}) vs ${fmt[c.kind](b)} (${B.span}), ${dTxt}`});
+    out.push({name:c.name,cls:c.cls,cost:!!c.cost,a,b,d,rel,kind:c.kind,score,text:`${c.name}: ${fmt[c.kind](a)} (${A.span}) vs ${fmt[c.kind](b)} (${B.span}), ${dTxt}`});
   });
   out.sort((x,y)=>x.cls-y.cls||y.score-x.score);
   const perClass={},statements=[];
@@ -2899,14 +2907,14 @@ function rollUp(data,gran){
     DATA.allSvcs.forEach(s=>{e[s]+=(d[s]||0);});
     Object.keys(e.scope).forEach(k=>{e.scope[k]+=(d.scope?.[k]||0);});
     e.voice.stt+=(d.voice?.stt||0);e.voice.tts+=(d.voice?.tts||0);
-    if(d.ux){const x=e.ux||(e.ux={});Object.entries(d.ux).forEach(([k,v])=>{if(k==='latP50'||k==='latP90'){x[k+'W']=(x[k+'W']||0)+v*d.queries;x[k+'Q']=(x[k+'Q']||0)+d.queries;}else x[k]=(x[k]||0)+v;});}
+    if(d.ux){const x=e.ux||(e.ux={});Object.entries(d.ux).forEach(([k,v])=>{if(k==='latP50'||k==='latP90'||k==='latP99'){x[k+'W']=(x[k+'W']||0)+v*d.queries;x[k+'Q']=(x[k+'Q']||0)+d.queries;}else x[k]=(x[k]||0)+v;});}
     Object.entries(d.metersByDate||{}).forEach(([k,v])=>{e.metersByDate[k]=(e.metersByDate[k]||0)+v;});
     Object.entries(d.fam||{}).forEach(([f,types])=>{const t=e.fam[f]||(e.fam[f]={});Object.entries(types).forEach(([ty,v])=>{t[ty]=(t[ty]||0)+v;});});
   });
   const result=Object.values(map).sort((a,b)=>a.date.localeCompare(b.date));
   // Bucket ratios: sum then divide over the bucket's join days only.
   result.forEach(e=>{e.cpq_llm=e.queries>0&&e.hasCost?e.gen/e.queries*100:null;e.cpq_tot=e.queries>0&&e.hasCost?e.total/e.queries*100:null;
-    if(e.ux){['latP50','latP90'].forEach(k=>{if(e.ux[k+'Q'])e.ux[k]=e.ux[k+'W']/e.ux[k+'Q'];});}});
+    if(e.ux){['latP50','latP90','latP99'].forEach(k=>{if(e.ux[k+'Q'])e.ux[k]=e.ux[k+'W']/e.ux[k+'Q'];});}});
   return result;
 }
 // Month axis label from the monthly rollup, so partial months read "Aug 1–17".
@@ -3100,8 +3108,21 @@ function sparkline(values,color,w=72,h=20){
 }
 
 // Delta chip: pct change from prev → curr, optionally inverted (lower = good)
-function deltaChip(curr,prev,invert=false,suffix='%'){
-  if(prev==null||curr==null||!isFinite(prev)||!isFinite(curr)||prev===0)return '';
+// unit: '%' (relative change, counts and money), 'pts' (percentage points, for rates and shares), 'ms' (seconds and percent, latency).
+function deltaChip(curr,prev,invert=false,suffix='%',unit='%'){
+  if(prev==null||curr==null||!isFinite(prev)||!isFinite(curr)||(unit==='%'&&prev===0))return '';
+  if(unit==='pts'){
+    const d=curr-prev;
+    if(Math.abs(d)<0.05)return `<span class="impact-change" style="background:color-mix(in srgb,var(--muted) 14%,transparent);color:var(--muted)">— flat</span>`;
+    const up=d>0,good=invert?!up:up;
+    return`<span class="impact-change ${good?'pos':'neg'}">${up?'▲':'▼'} ${Math.abs(d).toFixed(1)} pp</span>`;
+  }
+  if(unit==='ms'){
+    const d=curr-prev,rel=prev?d/Math.abs(prev)*100:0;
+    if(Math.abs(d)<50)return `<span class="impact-change" style="background:color-mix(in srgb,var(--muted) 14%,transparent);color:var(--muted)">— flat</span>`;
+    const up=d>0,good=invert?!up:up;
+    return`<span class="impact-change ${good?'pos':'neg'}">${up?'▲':'▼'} ${Math.abs(rel).toFixed(0)}% (${Math.abs(d/1000).toFixed(1)} s)</span>`;
+  }
   const pct=(curr-prev)/Math.abs(prev)*100;
   if(Math.abs(pct)<0.5)return `<span class="impact-change" style="background:color-mix(in srgb,var(--muted) 14%,transparent);color:var(--muted)">— flat</span>`;
   const up=pct>0;
@@ -3117,7 +3138,7 @@ function kpi(val,lbl,sub,opts={}){
   if(typeof opts==='string')opts={color:opts}; // backwards-compat: kpi(v,l,s,'#color')
   const color=opts.color||C.acc;
   const sp=opts.trend?sparkline(opts.trend,color):'';
-  const dc=opts.delta?deltaChip(opts.delta.curr,opts.delta.prev,opts.delta.invert):'';
+  const dc=opts.delta?deltaChip(opts.delta.curr,opts.delta.prev,opts.delta.invert,'%',opts.delta.unit||'%'):'';
   // Budget pill (replaces delta chip when both are present, to avoid clutter)
   let budgetChip='';
   let stateRing='';
@@ -4182,7 +4203,7 @@ function renderHome(D,S){
   const fc=D.hasCost&&typeof forecastMonth==='function'?forecastMonth():null;
   const turns=pd.reduce((s,d)=>s+d.queries,0),convs=pd.reduce((s,d)=>s+d.sessions,0),days=pd.filter(d=>d.queries>0).length,spend=pd.reduce((s,d)=>s+d.total,0);
   const pct=v=>v==null?'—':v.toFixed(1)+'%',secs=v=>v==null?'—':(v/1000).toFixed(1)+'s',pence=v=>v==null?'—':v.toFixed(2)+'p';
-  const delta=(k,invert)=>B&&A&&A[k]!=null&&B[k]!=null?{curr:A[k],prev:B[k],invert}:null;
+  const delta=(k,invert,unit='%')=>B&&A&&A[k]!=null&&B[k]!=null?{curr:A[k],prev:B[k],invert,unit}:null;
   const ratioSub=P.valid?`settled join days · ${P.span}`:P.why;
   const parts=[];
   if(turns>0)parts.push(`Between <b>${fmtDate(pd[0].date)}</b> and <b>${fmtDate(pd[pd.length-1].date)}</b> AskCI received <b>${num(turns)} turns</b> in ${num(convs)} conversations, about ${num(Math.round(convs/Math.max(days,1)))} a day.`);
@@ -4192,9 +4213,9 @@ function renderHome(D,S){
   if(D.hasCost)parts.push(`Billed cost <b>${gbp(spend,0)}</b>${P.valid&&P.genPT!=null?`, generation ${pence(P.genPT)} per turn`:''}${fc?`; ${fc.monthName} projected at <b>${gbp(fc.forecast,0)}</b> (${fc.label})`:''}.`);
   const compare=wc.B?(wc.fallback||`compared with ${wc.rule}`)+` · ${wc.B.span}`:'';
   const tiles=[
-    cols.taxonomy?kpi(pct(P.citedRate),'Cited answer rate',P.valid?`of scored turns · ${P.span}`:P.why,{color:C.green,delta:delta('citedRate',false)}):(cols.outcomes?kpi(pct(P.answeredShare),'Answered share',ratioSub,{color:C.green,delta:delta('answeredShare',false)}):null),
-    cols.taxonomy?kpi(pct(P.notFoundRate),'Not-found rate',P.valid?'of scored turns':P.why,{color:C.red,delta:delta('notFoundRate',true)}):null,
-    cols.latency?kpi(secs(P.latP50),'Response time p50','turn-weighted daily median',{color:C.acc,delta:delta('latP50',true)}):null,
+    cols.taxonomy?kpi(pct(P.citedRate),'Cited answer rate',P.valid?`of scored turns · ${P.span}`:P.why,{color:C.green,delta:delta('citedRate',false,'pts')}):(cols.outcomes?kpi(pct(P.answeredShare),'Answered share',ratioSub,{color:C.green,delta:delta('answeredShare',false,'pts')}):null),
+    cols.taxonomy?kpi(pct(P.notFoundRate),'Not-found rate',P.valid?'of scored turns':P.why,{color:C.red,delta:delta('notFoundRate',true,'pts')}):null,
+    cols.latency?kpi(secs(P.latP50),'Response time p50','turn-weighted daily median',{color:C.acc,delta:delta('latP50',true,'ms')}):null,
     D.hasUsage?kpi(num(convs),'Conversations',`${num(Math.round(convs/Math.max(days,1)))} a day · ${num(turns)} turns`,{color:C.teal,delta:delta('convsPerDay',false)}):null,
     fc?kpi(gbp(fc.forecast,0),'Month forecast',`${fc.monthName} · ${fcLabel(fc)}`,{color:C.amber}):null,
     D.hasBoth?kpi(pence(P.genPT),'Generation cost per turn',ratioSub,{color:C.purple,delta:delta('genPT',true)}):null,
@@ -4203,7 +4224,7 @@ function renderHome(D,S){
   if(!wc.valid)ins.push(insight('',`Not enough settled data to compare windows: ${wc.why}.`));
   else if(!wc.statements.length)ins.push(insight('good',`No service metric moved beyond the materiality thresholds (rates ${CONFIG.materiality.rate_pts} point, counts ${CONFIG.materiality.count_pct}%, latency ${CONFIG.materiality.latency_pct}% or ${CONFIG.materiality.latency_ms/1000} s) against ${wc.rule} (${wc.B.span}).`));
   if(wc.fallback)ins.push(insight('',`Note: ${wc.fallback}.`));
-  wc.statements.forEach(st=>ins.push(insight('warn',st.text)));
+  wc.statements.forEach(st=>ins.push(insight('warn',wcChip(st)+st.text)));
   wc.events.forEach(e=>ins.push(insight('',`Event in range: <b>${e.title}</b>${e.detail?` — ${e.detail}`:''}`)));
   el.innerHTML=`
     <div class="card"><div class="home-headline">${parts.join(' ')}</div>${compare?`<div class="home-sub">${compare}</div>`:''}</div>
@@ -4275,7 +4296,7 @@ function renderOverview(D,S){
   if(!wc.valid)ins.push(insight('',`Not enough settled data to compare windows: ${wc.why}.`));
   else if(!wc.statements.length)ins.push(insight('good',`No candidate metric moved beyond the materiality thresholds (ratios ${CONFIG.materiality.ratio_pct}% or ${CONFIG.materiality.ratio_pence}p per turn; totals ${CONFIG.materiality.total_pct}%) between ${wc.A.span} and ${wc.B.span}.`));
   if(wc.fallback)ins.push(insight('',`Note: ${wc.fallback}.`));
-  wc.statements.forEach(s=>ins.push(insight('warn',s.text)));
+  wc.statements.forEach(s=>ins.push(insight('warn',wcChip(s)+s.text)));
   wc.events.forEach(e=>ins.push(insight('',`Event in range: <b>${e.title}</b>${e.detail?` — ${e.detail}`:''}`)));
   if(S.fixedShare!=null)ins.push(insight('',`Fixed share over all settled days: <span class="hl-b">${S.fixedShare.toFixed(0)}%</span> — fixed ${gbp(S.fixedTotal,0)}, variable ${gbp(S.variableTotal,0)}${S.unclassifiedTotal>0?`, unclassified ${gbp(S.unclassifiedTotal,2)}`:''}.`));
   document.getElementById('ov-ins').innerHTML=ins.join('');
@@ -5067,15 +5088,33 @@ function usageDetailHTML(fr){
       </div>
     </div>`;
   }
+  if(cols.cross){
+    const R=(n,d)=>rateText(n,d);
+    const row=(label,p)=>`<tr><td style="padding:6px 10px;font-size:.72rem;color:var(--text)">${label}</td><td class="num" style="text-align:right;padding:6px 10px;font-family:'DM Mono',monospace;color:${C.green}">${R(sum(p+'Cited'),sum(p+'Scored'))}</td><td class="num" style="text-align:right;padding:6px 10px;font-family:'DM Mono',monospace;color:${C.red}">${R(sum(p+'NotFound'),sum(p+'Scored'))}</td><td class="num" style="text-align:right;padding:6px 10px;font-family:'DM Mono',monospace;color:var(--muted)">${num(sum(p+'Scored'))}</td></tr>`;
+    const head=`<thead><tr style="border-bottom:1px solid var(--b2)"><th style="text-align:left;padding:6px 10px;font-size:.6rem;color:var(--muted);text-transform:uppercase;letter-spacing:.08em"></th><th style="text-align:right;padding:6px 10px;font-size:.6rem;color:var(--muted);text-transform:uppercase;letter-spacing:.08em">Cited</th><th style="text-align:right;padding:6px 10px;font-size:.6rem;color:var(--muted);text-transform:uppercase;letter-spacing:.08em">Not found</th><th style="text-align:right;padding:6px 10px;font-size:.6rem;color:var(--muted);text-transform:uppercase;letter-spacing:.08em">Scored</th></tr></thead>`;
+    h+=`<div class="card"><div class="card-title">Outcome by source and question type<span class="card-title-note">cited and not-found rates over scored turns · same period · small-sample rule applies · ${span}</span></div>
+      <div class="grid2">
+        <table style="width:100%;border-collapse:collapse">${head}<tbody>${row('Modal','modal')}${row('Web','web')}</tbody></table>
+        <table style="width:100%;border-collapse:collapse">${head}<tbody>${row('New topic','nt')}${row('Typed follow-up','uf')}${row('Suggested follow-up','sf')}</tbody></table>
+      </div>
+    </div>`;
+  }
   if(cols.latency){
     const w=k=>{const q=fr.reduce((s,d)=>s+(d.ux?.[k]?d.queries:0),0);return q>0?fr.reduce((s,d)=>s+((d.ux?.[k]||0)*d.queries),0)/q:null;};
-    const p50=w('latP50'),p90=w('latP90');
-    h+=`<div class="card"><div class="card-title">Response time<span class="card-title-note">turn-weighted mean of the daily p50 and p90 · positive values only · ${span}</span></div>
+    const p50=w('latP50'),p90=w('latP90'),p99=cols.p99?w('latP99'):null;
+    const bands=cols.bands?[['latU10','Under 10 s',C.green],['lat1020','10 to 20 s',C.amber],['lat2030','20 to 30 s',C.pink],['latO30','Over 30 s',C.red]]:null;
+    const bt=bands?bands.reduce((a,[k])=>a+sum(k),0):0;
+    const errs=sum('error');
+    h+=`<div class="card"><div class="card-title">Response time<span class="card-title-note">turn-weighted mean of the daily percentiles · positive values only · target p90 ${(CONFIG.latency_target_p90_ms/1000).toFixed(0)} s is provisional · ${span}</span></div>
       <div class="grid4">
         ${uxTile(p50!=null?(p50/1000).toFixed(1)+'s':'—','p50','daily median, weighted by turns',C.acc,'response-time-p50')}
-        ${uxTile(p90!=null?(p90/1000).toFixed(1)+'s':'—','p90','daily 90th percentile, weighted by turns',C.amber,'response-time-p90')}
+        ${uxTile(p90!=null?(p90/1000).toFixed(1)+'s':'—','p90',(p90!=null?(p90>CONFIG.latency_target_p90_ms?'above':'within')+' the provisional target · ':'')+'daily 90th percentile, weighted by turns',C.amber,'response-time-p90')}
+        ${cols.p99?uxTile(p99!=null?(p99/1000).toFixed(1)+'s':'—','p99','daily 99th percentile, weighted by turns',C.red):''}
+        ${bands&&bt>0?uxTile(rateText(sum('latO30'),bt),'Over 30 s',num(sum('latO30'))+' of '+num(bt)+' timed turns',C.red):''}
       </div>
-      ${chartBox('ux-latency',180,'Response time — daily p50 and p90','seconds · confirmed events marked · click a day')}
+      ${chartBox('ux-latency',180,'Response time — daily p50, p90'+(cols.p99?' and p99':''),'seconds · dashed line is the provisional p90 target · confirmed events marked · click a day')}
+      ${bands?chartBox('ux-bands',160,'Latency bands','share of timed turns, stacked to 100% · click a bar'):''}
+      ${cols.taxonomy?chartBox('ux-errors',140,'Errors — empty response, 0 ms',num(errs)+' in range · click a bar'):''}
     </div>`;
   }
   if(hasHours){
@@ -5128,11 +5167,22 @@ function buildUsageDetailCharts(fr){
     {label:'Web',data:vd.map(r=>g(r,'webSessions')),backgroundColor:C.teal+'cc',stack:'s',maxBarThickness:28}]},options:stacked});
   if(document.getElementById('ux-latency')){
     const dl=fr.map(d=>d.label);
+    const tgt=CONFIG.latency_target_p90_ms/1000;
     mkChart('ux-latency',{type:'line',data:{labels:dl,datasets:[
       {label:'p50',data:fr.map(d=>d.ux?.latP50?+(d.ux.latP50/1000).toFixed(2):null),borderColor:C.acc,backgroundColor:C.acc+'11',fill:true,borderWidth:1.5,pointRadius:0,tension:.3,spanGaps:true},
-      {label:'p90',data:fr.map(d=>d.ux?.latP90?+(d.ux.latP90/1000).toFixed(2):null),borderColor:C.amber,borderWidth:1.5,pointRadius:0,tension:.3,spanGaps:true,fill:false}]},
+      {label:'p90',data:fr.map(d=>d.ux?.latP90?+(d.ux.latP90/1000).toFixed(2):null),borderColor:C.amber,borderWidth:1.5,pointRadius:0,tension:.3,spanGaps:true,fill:false},
+      ...(fr.some(d=>d.ux?.latP99)?[{label:'p99',data:fr.map(d=>d.ux?.latP99?+(d.ux.latP99/1000).toFixed(2):null),borderColor:C.red,borderWidth:1,pointRadius:0,tension:.3,spanGaps:true,fill:false}]:[]),
+      {label:'p90 target (provisional)',data:fr.map(()=>tgt),borderColor:C.muted,borderDash:[5,4],borderWidth:1,pointRadius:0,fill:false}]},
       options:mergeOpts(baseOpts(),{scales:{y:{ticks:{callback:v=>(+v).toFixed(0)+'s'}}},plugins:{legend:{display:true},tooltip:{callbacks:{label:cx=>`${cx.dataset.label}: ${(+cx.parsed.y).toFixed(1)}s`}}},eventLines:evLines(DATA.stats,dl),onClick:(e,els)=>{if(els.length)openDayPanel(fr[els[0].index].date);}})});
   }
+  if(document.getElementById('ux-bands')){
+    const bands=[['latU10','Under 10 s',C.green],['lat1020','10 to 20 s',C.amber],['lat2030','20 to 30 s',C.pink],['latO30','Over 30 s',C.red]];
+    const tot=r=>bands.reduce((a,[k])=>a+(r.ux?.[k]||0),0);
+    mkChart('ux-bands',{type:'bar',data:{labels,datasets:bands.map(([k,l,c])=>({label:l,data:vd.map(r=>{const t=tot(r);return t>0?+((r.ux?.[k]||0)/t*100).toFixed(2):null;}),backgroundColor:c+'cc',stack:'b',maxBarThickness:28}))},
+      options:mergeOpts(stacked,{scales:{y:{max:100,ticks:{callback:v=>v+'%'}}},plugins:{tooltip:{callbacks:{label:cx=>`${cx.dataset.label}: ${(+cx.parsed.y).toFixed(1)}% (${num(vd[cx.dataIndex].ux?.[bands[cx.datasetIndex][0]]||0)})`}}}})});
+  }
+  if(document.getElementById('ux-errors'))mkChart('ux-errors',{type:'bar',data:{labels,datasets:[{label:'Errors',data:vd.map(r=>g(r,'error')),backgroundColor:C.pink+'cc',maxBarThickness:28}]},
+    options:mergeOpts(baseOpts(),{scales:{y:{ticks:{callback:v=>num(v)}}},plugins:{tooltip:{callbacks:{label:cx=>{const r=vd[cx.dataIndex];return `${num(cx.parsed.y)} errors · ${rateText(g(r,'error'),r.queries,2)} of ${num(r.queries)} turns`;}}}},onClick:(e,els)=>{if(els.length)drillBucket(vd[els[0].index]);}})});
 }
 
 function buildCalendar(D){

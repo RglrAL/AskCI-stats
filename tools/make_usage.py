@@ -10,6 +10,12 @@ Outputs (all daily counts; nothing per-turn and no text crosses into the dashboa
                          ScriptLatin, ScriptCyrillic, ScriptArabic, ScriptCJK, ScriptDevanagari, ScriptOther, ScriptNone
                                                                    only when the redacted feed carries Query Script
                          Cited, NotFound, Clarification, Error, OutOfScope, Greeting, Uncited, Partial, Scored, OutcomeRules
+                         ModalCited, ModalNotFound, ModalScored, WebCited, WebNotFound, WebScored,
+                         NewTopicCited, NewTopicNotFound, NewTopicScored, UserFollowupCited, UserFollowupNotFound,
+                         UserFollowupScored, SuggestedCited, SuggestedNotFound, SuggestedScored
+                                                                   outcome by source and by question type (with the taxonomy)
+                         LatencyP99ms, LatUnder10s, Lat10to20s, Lat20to30s, LatOver30s
+                                                                   latency p99 and bands, positive values only
                                                                    outcome taxonomy, only when the redacted feed carries an
                                                                    Outcome column (tools/redact_feed.py writes it)
                          NewTopic, UserFollowup, SuggestedFollowup  question types
@@ -147,7 +153,14 @@ def aggregate(files):
                     o = (row.get("Outcome") or "").strip()
                     c["o:" + o] += 1
                     if (row.get("Partial") or "").strip().lower() == "yes": c["o:partial"] += 1
-                    if o not in ("Greeting", "Error", "Out of scope"): c["o:scored"] += 1
+                    scored = o not in ("Greeting", "Error", "Out of scope")
+                    if scored: c["o:scored"] += 1
+                    srcg = (row.get("Source") or "").strip().lower()
+                    for grp in (srcg if srcg in ("modal", "web") else None, {"new_topic": "new_topic", "user_followup": "user_followup", "suggested_followup": "suggested"}.get((row.get("Question Type") or "").strip())):
+                        if not grp: continue
+                        if scored: c[f"x:{grp}:scored"] += 1
+                        if o == "Cited answer": c[f"x:{grp}:cited"] += 1
+                        elif o == "Not found": c[f"x:{grp}:notfound"] += 1
                     rules.add((row.get("Outcome Rules") or "").strip())
                 # question type
                 qt = (row.get("Question Type") or "").strip()
@@ -162,7 +175,9 @@ def aggregate(files):
                 # latency
                 try:
                     ms = int(float(row.get("Response Time (ms)") or ""))
-                    if ms > 0: lat[d].append(ms)
+                    if ms > 0:
+                        lat[d].append(ms)
+                        c["lat:" + ("u10" if ms < 10000 else "10_20" if ms < 20000 else "20_30" if ms < 30000 else "o30")] += 1
                 except ValueError:
                     pass
                 # voice
@@ -184,6 +199,9 @@ def aggregate(files):
 
 OUTCOME_COLS = [("Cited", "o:Cited answer"), ("NotFound", "o:Not found"), ("Clarification", "o:Clarification"), ("Error", "o:Error"),
                 ("OutOfScope", "o:Out of scope"), ("Greeting", "o:Greeting"), ("Uncited", "o:Uncited answer"), ("Partial", "o:partial"), ("Scored", "o:scored")]
+CROSS_COLS = [(p + k, f"x:{g}:{m}") for p, g in (("Modal", "modal"), ("Web", "web"), ("NewTopic", "new_topic"), ("UserFollowup", "user_followup"), ("Suggested", "suggested"))
+              for k, m in (("Cited", "cited"), ("NotFound", "notfound"), ("Scored", "scored"))]
+LAT_COLS = [("LatUnder10s", "lat:u10"), ("Lat10to20s", "lat:10_20"), ("Lat20to30s", "lat:20_30"), ("LatOver30s", "lat:o30")]
 
 
 SCRIPT_COLS = ["Latin", "Cyrillic", "Arabic", "CJK", "Devanagari", "Other", "None"]
@@ -196,7 +214,8 @@ def usage_rows(D, sess, lat, has_voice, has_outcome=False, rules="", has_starter
     cols += ["Likes", "Dislikes", "DislikesOnCited"]
     if has_starter: cols += ["StarterPromptFirstTurns", "OrganicFirstTurns"]
     if has_script: cols += ["Script" + k for k in SCRIPT_COLS]
-    if has_outcome: cols += [c for c, _ in OUTCOME_COLS] + ["OutcomeRules"]
+    cols += ["LatencyP99ms"] + [c for c, _ in LAT_COLS]
+    if has_outcome: cols += [c for c, _ in OUTCOME_COLS] + ["OutcomeRules"] + [c for c, _ in CROSS_COLS]
     out = []
     for d in sorted(D):
         c = D[d]; s = sess[d]; L = sorted(lat[d])
@@ -207,7 +226,8 @@ def usage_rows(D, sess, lat, has_voice, has_outcome=False, rules="", has_starter
         row += [c["likes"], c["dislikes"], c["dislikes_cited"]]
         if has_starter: row += [c["starter"], c["organic"]]
         if has_script: row += [c["script:" + k] for k in SCRIPT_COLS]
-        if has_outcome: row += [c[k] for _, k in OUTCOME_COLS] + [rules]
+        row += [pct(L, 99)] + [c[k] for _, k in LAT_COLS]
+        if has_outcome: row += [c[k] for _, k in OUTCOME_COLS] + [rules] + [c[k] for _, k in CROSS_COLS]
         out.append(row)
     return cols, out
 
