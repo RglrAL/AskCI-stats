@@ -309,3 +309,21 @@ Reviewed the six prototype screenshots in `screenshots/` (not committed). Taken 
 Full range: Modal cited 87.6% and not found 6.0%; Web 91.9% and 5.1%; new topic 86.0% and 7.0%; typed follow-up 88.2% and 6.0%; suggested follow-up 96.5% and 2.4%. Latency bands: under 10 s 28%, 10–20 s 64%, 20–30 s 5%, over 30 s 2%; p99 28.0 s.
 
 Second slice, not started: conversation grouping in the generator for turns per conversation, length by first outcome, observed span and category journeys; category-by-outcome attribution; top cited pages; per-prompt starter table; heat-map metric toggle.
+
+## 20. Second slice: conversation-level aggregates (8 Oct 2026)
+
+The generator now groups turns by conversation (a second pass over minimal per-turn records, no text) and writes five more files beside the four daily ones. Conversations start on the day of their first turn and are mature 24 h after it; depth metrics use the mature cohort only. Attributed category is a turn's own primary cited category, else the most frequent among the other turns of its conversation, else unknown; failed turns rarely carry their own category, so category failure rates are lower bounds and an Unknown row is always shown.
+
+| File | Grain | Used by |
+|---|---|---|
+| `conversations-daily.csv` | start day: started, mature, turns histogram 1–10+, span buckets, chip and typed use, per first outcome counts, singles and turn sums | Usage › Conversations |
+| `category-outcomes-daily.csv` | day × attributed category: turns by outcome, scored, organic first turns, dislikes on cited | Usage › Categories: demand and quality table, outcome heat map |
+| `citations-monthly.csv` | month × normalised URL with its category | Usage › Categories: top cited pages, distinct pages, external share |
+| `journeys-monthly.csv` | month × from × to category steps, mature conversations | Usage › Categories: journeys |
+| `starter-prompts-monthly.csv` | month × chip: count, cited, followed by typed or suggested turn 2 | Usage › Conversations: starter prompts table |
+
+`usage-hours.csv` gains NotFound, Errors, Timed and LatencySumMs per slot, so the hour-of-day heat map toggles between turns, conversations, not-found rate, error rate and mean response time (rates under the small-sample rule). The redaction script writes the matched chip text in Starter Prompt rather than Yes. The partial-day rule now skips only the newest export's own day.
+
+Diagnostics against the admin-app spec fixture (ours runs to 7 Oct, the fixture to 28 Sep): follow-ups within 1 h 98.88% (fixture 98.84%), within 24 h 99.96% (same); conversations with two or more category steps 8,013 (7,304), with a return journey 1,722 (1,565); not-found turns recovering a category 2,859 of 6,834 (2,479 of 5,949, the difference being our wider not-found pattern). Full range: 54.1% of mature conversations end after the first turn, mean 2.00 turns; chips used in 25.5% and typed follow-ups in 27.2%; conversations starting with a not-found answer average 1.43 turns and 79% end there; clarification starts average 2.60; category known for 93.4% of turns; 1,879 distinct citizensinformation.ie pages cited, external citations 0.20%; the top journey is Employment → Social welfare.
+
+Still open from the mock-ups: Overview "organic demand by topic" bars (the data now exists in category-outcomes-daily); the What changed "category accounted for X% of additional turns" clause; latency by response length and citation count, which would need per-turn word and citation counts kept at redaction.

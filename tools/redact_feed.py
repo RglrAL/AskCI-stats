@@ -19,8 +19,9 @@ feed mostly uses U+2019, which is why its printed not-found pattern under-counts
 Partial = a Cited answer whose text also matches the not-found pattern.
 
 Two more derived columns, both read from the query text before it is dropped:
-  Starter Prompt  Yes when a first turn's normalised query (lower case, trimmed, trailing
-                  punctuation removed, spaces collapsed) equals one of the configured chips
+  Starter Prompt  the matched chip text when a first turn's normalised query (lower case,
+                  trimmed, trailing punctuation removed, spaces collapsed) equals one of the
+                  configured chips; blank otherwise. The chip text is configuration, not citizen text
   Query Script    Unicode script of the first letter: Latin, Cyrillic, Arabic, CJK, Devanagari,
                   Other, or None when the query has no letter. A script, not a language. The output still contains per-turn
 rows, so it stays out of git (.gitignore covers qa-feed*.csv); only the daily aggregates
@@ -119,7 +120,8 @@ def redact(src, dst):
             if partial: counts["(partial)"] = counts.get("(partial)", 0) + 1
             row["Outcome"], row["Partial"], row["Outcome Rules"] = o, partial, OUTCOME_RULES_VERSION
             q = row.get("User Query") or ""
-            row["Starter Prompt"] = "Yes" if (row.get("Turn #") or "").strip() == "1" and normalise_query(q) in STARTER_PROMPTS else ""
+            nq = normalise_query(q)
+            row["Starter Prompt"] = nq if (row.get("Turn #") or "").strip() == "1" and nq in STARTER_PROMPTS else ""
             row["Query Script"] = query_script(q)
             if row["Starter Prompt"]: counts["(starter prompt)"] = counts.get("(starter prompt)", 0) + 1
             w.writerow(row)

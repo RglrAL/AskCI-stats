@@ -26,6 +26,23 @@ Outputs (all daily counts; nothing per-turn and no text crosses into the dashboa
   usage-hours.csv      Date, Hour, Turns, Sessions   (hour of day, Irish time)
   categories.csv       Category, Citations, Month    (current dashboard contract; display names)
   categories-daily.csv Date, Category, Citations     (slugs, by day)
+  conversations-daily.csv   by conversation start day: Started, Mature, Turns1..Turns9, Turns10plus, MatureTurns,
+                            Span0to1, Span2to5, Span6to15, Span16to60, SpanOver60 (mature multi-turn, minutes),
+                            ChipUse, TypedUse (mature conversations with at least one such turn), and per first
+                            outcome First<Outcome>, First<Outcome>Single, First<Outcome>Turns (mature)
+  category-outcomes-daily.csv  Date, Category (attributed slug or unknown), Turns, Cited, NotFound, Clarification,
+                            Error, OutOfScope, Greeting, Uncited, Scored, OrganicFirstTurns, DislikesOnCited
+  citations-monthly.csv     Month, URL (normalised), Citations, Category (known slug or blank)
+  journeys-monthly.csv      Month, From, To, Conversations (consecutive category steps, mature conversations)
+  starter-prompts-monthly.csv  Month, Prompt, Count, Cited, FollowedByTyped, FollowedBySuggested
+  usage-hours.csv also carries NotFound, Errors, Timed and LatencySumMs per hour slot.
+
+Conversation rules (admin-app spec): a conversation starts on the day of its first turn; it is
+mature when its first turn is at least 24 hours before the latest timestamp in the data, so
+depth metrics are computed only on mature conversations. Attributed category: a turn's own
+primary cited category, else the most frequent among the other turns of its conversation,
+else unknown (failed turns carry no category of their own, so category failure rates are
+lower bounds).
 
 Definitions:
   Questions   turns received (one feed row each)
@@ -68,6 +85,22 @@ CAT_NAME = {  # feed slug -> display name used by the existing categories.csv (l
     "government-in-ireland": "Government in Ireland", "environment": "Environment",
 }
 URL_RE = re.compile(r'https?://[^\s,;|"]+')
+MATURITY_HOURS = 24
+OUTCOMES = ["Cited answer", "Not found", "Clarification", "Error", "Out of scope", "Greeting", "Uncited answer"]
+OUT_KEY = {"Cited answer": "Cited", "Not found": "NotFound", "Clarification": "Clarification", "Error": "Error",
+           "Out of scope": "OutOfScope", "Greeting": "Greeting", "Uncited answer": "Uncited"}
+
+
+def norm_url(u):
+    u = u.strip().rstrip(".,;)")
+    m = re.match(r"^(https?)://([^/?#]+)([^?#]*)", u, re.I)
+    if not m:
+        return None
+    host = m.group(2).lower()
+    if host == "citizensinformation.ie":
+        host = "www.citizensinformation.ie"
+    path = m.group(3).rstrip("/") or "/"
+    return f"https://{host}{path}"
 # Category from a cited URL: citizensinformation.ie only, /en/<slug>/ or the old-site /<slug>/ with
 # underscores; the slug must be a known category or the hit is dropped (and counted).
 CAT_SEG_RE = re.compile(r'^https?://(?:www\.)?citizensinformation\.ie/(?:en/)?([^/?#]+)')
@@ -98,7 +131,7 @@ def find_col(fields, pattern):
 CATEGORY_RULE = "distinct"   # or "tokens": every Categories entry, repeats included, no URL fallback (old file's rule)
 
 
-def aggregate(files):
+def aggregate(files, skip_days=frozenset()):
     D = defaultdict(lambda: defaultdict(int))        # date -> counter name -> n
     sess = defaultdict(lambda: defaultdict(set))     # date -> set name -> conversation ids
     lat = defaultdict(list)                          # date -> latencies
@@ -106,6 +139,8 @@ def aggregate(files):
     hour_sess = defaultdict(set)                     # (date, hour) -> conversation ids (turn 1)
     cats = defaultdict(lambda: defaultdict(int))     # date -> slug -> hits
     bad = 0; has_voice = False; cat_dropped = 0; has_outcome = False; rules = set(); has_starter = False; has_script = False
+    recs = []                                        # per-turn minimal records for the conversation pass (no text)
+    cites_m = defaultdict(int)                       # (month, url) -> citations
     seen = set(); dupes = 0   # exports taken on different days overlap on their boundary day
     for f in files:
         with open(f, encoding="utf-8-sig", newline="") as fh:
@@ -129,6 +164,8 @@ def aggregate(files):
                     bad += 1
                     continue
                 d = t.date(); conv = row.get("Conversation ID") or ""
+                if d in skip_days:
+                    continue
                 first = (row.get("Turn #") or "").strip() == "1"
                 c = D[d]; c["turns"] += 1
                 if first: sess[d]["all"].add(conv)
@@ -184,6 +221,27 @@ def aggregate(files):
                 if voice_col and "voice" in (row.get(voice_col) or "").lower():
                     c["voice_turns"] += 1
                     if first: sess[d]["voice"].add(conv)
+                # per-turn record for the conversation pass
+                o_rec = (row.get("Outcome") or "").strip() if outcome_col else ""
+                own = next((x.strip() for x in (row.get("Categories") or "").split(",") if x.strip()), "")
+                if not own and urls: own = next((url_slug(u) for u in urls if url_slug(u)), "") or ""
+                try: tn = int((row.get("Turn #") or "0").strip() or 0)
+                except ValueError: tn = 0
+                recs.append((conv, tn, t, d, o_rec, own, (row.get("Question Type") or "").strip(),
+                             fb == "dislike" and o_rec == "Cited answer", (row.get("Starter Prompt") or "").strip() if has_starter else "",
+                             (row.get("Source") or "").strip()))
+                for u in urls:
+                    nu = norm_url(u)
+                    if nu: cites_m[(d.strftime("%Y-%m"), nu)] += 1
+                # hour-slot detail for the heat-map toggle
+                hv = hours[(d, t.hour)]
+                if o_rec == "Not found": hv["notfound"] += 1
+                if o_rec == "Error": hv["errors"] += 1
+                try:
+                    ms2 = int(float(row.get("Response Time (ms)") or ""))
+                    if ms2 > 0: hv["timed"] += 1; hv["latsum"] += ms2
+                except ValueError:
+                    pass
                 # categories: one hit per distinct category per turn
                 toks = [s.strip() for s in (row.get("Categories") or "").split(",") if s.strip()]
                 if CATEGORY_RULE == "tokens":          # old file's rule: column entries only, repeats included, no URL fallback
@@ -194,7 +252,116 @@ def aggregate(files):
                         cat_dropped += sum(1 for x in slugs if x is None)
                         toks = [x for x in slugs if x]
                     for s in set(toks): cats[d][s] += 1
-    return D, sess, lat, hours, hour_sess, cats, bad, has_voice, dupes, cat_dropped, has_outcome, rules, has_starter, has_script
+    return D, sess, lat, hours, hour_sess, cats, bad, has_voice, dupes, cat_dropped, has_outcome, rules, has_starter, has_script, recs, cites_m
+
+
+def conversation_pass(recs):
+    """Group turns by conversation; return the four conversation-level aggregates."""
+    from collections import Counter
+    convs = defaultdict(list)
+    for r in recs: convs[r[0]].append(r)
+    fresh = max((r[2] for r in recs), default=None)
+    cd = defaultdict(lambda: defaultdict(int))       # start date -> counters
+    co = defaultdict(lambda: defaultdict(int))       # (date, attributed category) -> counters
+    jm = defaultdict(int)                            # (month, from, to) -> conversations
+    sp = defaultdict(lambda: defaultdict(int))       # (month, prompt) -> counters
+    stats = {"convs": 0, "mature": 0, "multi_step": 0, "return": 0, "recovered": 0, "nf_total": 0, "fu_1h": 0, "fu_24h": 0, "fu": 0}
+    for cid, turns in convs.items():
+        turns.sort(key=lambda r: (r[1], r[2]))
+        first = turns[0]; start = first[3]; n = len(turns)
+        mature = fresh is not None and (fresh - first[2]).total_seconds() >= MATURITY_HOURS * 3600
+        stats["convs"] += 1; stats["mature"] += int(mature)
+        c = cd[start]; c["started"] += 1
+        # attributed category per turn: own, else most frequent own category among the other turns
+        owns = Counter(r[5] for r in turns if r[5])
+        for r in turns:
+            own = r[5]
+            if not own:
+                others = Counter(x[5] for x in turns if x is not r and x[5])
+                own = others.most_common(1)[0][0] if others else ""
+                if r[4] == "Not found":
+                    stats["nf_total"] += 1
+                    if own: stats["recovered"] += 1
+            key = (r[3], own or "unknown"); k = co[key]
+            k["turns"] += 1
+            if r[4]: k["o:" + r[4]] += 1
+            if r[4] and r[4] not in ("Greeting", "Error", "Out of scope"): k["scored"] += 1
+            if r[1] == 1 and not r[8]: k["organic"] += 1
+            if r[7]: k["dislikes_cited"] += 1
+        # follow-up gaps (fixture diagnostic)
+        for a, b in zip(turns, turns[1:]):
+            gap = (b[2] - a[2]).total_seconds(); stats["fu"] += 1
+            if gap <= 3600: stats["fu_1h"] += 1
+            if gap <= 86400: stats["fu_24h"] += 1
+        # starter prompt (first turns), with what followed
+        if first[8]:
+            p = sp[(start.strftime("%Y-%m"), first[8])]; p["count"] += 1
+            if first[4] == "Cited answer": p["cited"] += 1
+            if n > 1:
+                qt2 = turns[1][6]
+                if qt2 == "user_followup": p["typed2"] += 1
+                elif qt2 == "suggested_followup": p["suggested2"] += 1
+        if not mature:
+            continue
+        c["mature"] += 1; c["mature_turns"] += n
+        c["t" + (str(n) if n < 10 else "10plus")] += 1
+        if n > 1:
+            span = (turns[-1][2] - first[2]).total_seconds() / 60
+            c["span_" + ("0_1" if span <= 1 else "2_5" if span <= 5 else "6_15" if span <= 15 else "16_60" if span <= 60 else "over60")] += 1
+        if any(r[6] == "suggested_followup" for r in turns): c["chip_use"] += 1
+        if any(r[6] == "user_followup" for r in turns): c["typed_use"] += 1
+        fo = OUT_KEY.get(first[4])
+        if fo:
+            c["f:" + fo] += 1; c["f:" + fo + ":turns"] += n
+            if n == 1: c["f:" + fo + ":single"] += 1
+        # category journeys: consecutive distinct primary categories over category-bearing turns
+        seq = []
+        for r in turns:
+            if r[5] and (not seq or seq[-1] != r[5]): seq.append(r[5])
+        if len(seq) >= 2:
+            stats["multi_step"] += 1
+            if len(set(seq)) < len(seq): stats["return"] += 1
+            m = start.strftime("%Y-%m")
+            for a, b in zip(seq, seq[1:]): jm[(m, a, b)] += 1
+    return cd, co, jm, sp, stats
+
+
+def conversation_rows(cd):
+    cols = ["Date", "Started", "Mature"] + [f"Turns{i}" for i in range(1, 10)] + ["Turns10plus", "MatureTurns",
+            "Span0to1", "Span2to5", "Span6to15", "Span16to60", "SpanOver60", "ChipUse", "TypedUse"]
+    for o in OUTCOMES: cols += [f"First{OUT_KEY[o]}", f"First{OUT_KEY[o]}Single", f"First{OUT_KEY[o]}Turns"]
+    out = []
+    for d in sorted(cd):
+        c = cd[d]
+        row = [d.isoformat(), c["started"], c["mature"]] + [c["t" + str(i)] for i in range(1, 10)] + [c["t10plus"], c["mature_turns"],
+               c["span_0_1"], c["span_2_5"], c["span_6_15"], c["span_16_60"], c["span_over60"], c["chip_use"], c["typed_use"]]
+        for o in OUTCOMES:
+            k = OUT_KEY[o]; row += [c["f:" + k], c["f:" + k + ":single"], c["f:" + k + ":turns"]]
+        out.append(row)
+    return cols, out
+
+
+def category_outcome_rows(co):
+    cols = ["Date", "Category", "Turns"] + [OUT_KEY[o] for o in OUTCOMES] + ["Scored", "OrganicFirstTurns", "DislikesOnCited"]
+    out = []
+    for (d, cat) in sorted(co, key=lambda k: (k[0], k[1])):
+        k = co[(d, cat)]
+        out.append([d.isoformat(), cat, k["turns"]] + [k["o:" + o] for o in OUTCOMES] + [k["scored"], k["organic"], k["dislikes_cited"]])
+    return cols, out
+
+
+def citation_rows(cites_m):
+    rows = sorted(cites_m.items(), key=lambda kv: (kv[0][0], -kv[1], kv[0][1]))
+    return ["Month", "URL", "Citations", "Category"], [[m, u, n, url_slug(u) or ""] for (m, u), n in rows]
+
+
+def journey_rows(jm):
+    return ["Month", "From", "To", "Conversations"], [[m, a, b, n] for (m, a, b), n in sorted(jm.items(), key=lambda kv: (kv[0][0], -kv[1]))]
+
+
+def starter_rows(sp):
+    return ["Month", "Prompt", "Count", "Cited", "FollowedByTyped", "FollowedBySuggested"], \
+           [[m, p, c["count"], c["cited"], c["typed2"], c["suggested2"]] for (m, p), c in sorted(sp.items(), key=lambda kv: (kv[0][0], -kv[1]["count"]))]
 
 
 OUTCOME_COLS = [("Cited", "o:Cited answer"), ("NotFound", "o:Not found"), ("Clarification", "o:Clarification"), ("Error", "o:Error"),
@@ -233,7 +400,8 @@ def usage_rows(D, sess, lat, has_voice, has_outcome=False, rules="", has_starter
 
 
 def hours_rows(hours, hour_sess):
-    return ["Date", "Hour", "Turns", "Sessions"], [[d.isoformat(), h, v["turns"], len(hour_sess[(d, h)])] for (d, h), v in sorted(hours.items())]
+    return ["Date", "Hour", "Turns", "Sessions", "NotFound", "Errors", "Timed", "LatencySumMs"], \
+           [[d.isoformat(), h, v["turns"], len(hour_sess[(d, h)]), v["notfound"], v["errors"], v["timed"], v["latsum"]] for (d, h), v in sorted(hours.items())]
 
 
 def categories_rows(cats):
@@ -314,19 +482,19 @@ def main():
     ap.add_argument("--category-rule", choices=["distinct", "tokens"], default="distinct", help="distinct per turn with URL fallback (default), or every Categories entry incl. repeats and no fallback (old file's rule)")
     a = ap.parse_args()
     global CATEGORY_RULE; CATEGORY_RULE = a.category_rule
-    D, sess, lat, hours, hour_sess, cats, bad, has_voice, dupes, cat_dropped, has_outcome, rules, has_starter, has_script = aggregate(a.files)
+    # An export taken on day X contains only part of day X; skip those rows unless asked to keep them.
+    export_days = {datetime.strptime(m.group(1), "%Y%m%d").date() for m in (re.search(r"(\d{8})_\d{6}", os.path.basename(f)) for f in a.files) if m}
+    skip = frozenset() if (a.keep_partial or not export_days) else frozenset({max(export_days)})  # only the newest export's own day is partial
+    D, sess, lat, hours, hour_sess, cats, bad, has_voice, dupes, cat_dropped, has_outcome, rules, has_starter, has_script, recs, cites_m = aggregate(a.files, skip)
     rules = ", ".join(sorted(r for r in rules if r))
+    if skip and any(True for _ in skip): print(f"note: export day(s) {', '.join(str(x) for x in sorted(skip))} skipped as partial (--keep-partial to keep)")
+    cd, co, jm, sp, cstats = conversation_pass(recs)
+    print(f"conversations: {cstats['convs']} grouped, {cstats['mature']} mature; follow-ups within 1 h {cstats['fu_1h']/max(cstats['fu'],1)*100:.2f}%, within 24 h {cstats['fu_24h']/max(cstats['fu'],1)*100:.2f}%; "
+          f"category steps ≥2 in {cstats['multi_step']} conversations, {cstats['return']} with a return; not-found turns recovering a category {cstats['recovered']} of {cstats['nf_total']}")
     if bad: print(f"warning: {bad} rows with unreadable Timestamp skipped", file=sys.stderr)
     if dupes: print(f"note: {dupes} rows repeated across the input files (same conversation and turn) counted once")
     if cat_dropped: print(f"note: {cat_dropped} cited URLs on rows with a blank Categories column were not citizensinformation.ie category pages; not counted")
     if not D: sys.exit("no rows parsed")
-    # An export taken on day X contains only part of day X. Drop it unless asked to keep it.
-    export_days = {datetime.strptime(m.group(1), "%Y%m%d").date() for m in (re.search(r"(\d{8})_\d{6}", os.path.basename(f)) for f in a.files) if m}
-    last = max(D)
-    if last in export_days and not a.keep_partial:
-        print(f"note: {last} is the export day and partial; dropped (--keep-partial to keep it)")
-        for store in (D, sess, lat, cats): store.pop(last, None)
-        for k in [k for k in hours if k[0] == last]: hours.pop(k); hour_sess.pop(k, None)
     ucols, urows = usage_rows(D, sess, lat, has_voice, has_outcome, rules, has_starter, has_script)
     hcols, hrows = hours_rows(hours, hour_sess)
     (ccols, crows), (dcols, drows) = categories_rows(cats)
@@ -342,6 +510,11 @@ def main():
         write(os.path.join(a.out_dir, "usage-hours.csv"), hcols, hrows)
         write(os.path.join(a.out_dir, "categories.csv"), ccols, crows)
         write(os.path.join(a.out_dir, "categories-daily.csv"), dcols, drows)
+        write(os.path.join(a.out_dir, "conversations-daily.csv"), *conversation_rows(cd))
+        write(os.path.join(a.out_dir, "category-outcomes-daily.csv"), *category_outcome_rows(co))
+        write(os.path.join(a.out_dir, "citations-monthly.csv"), *citation_rows(cites_m))
+        write(os.path.join(a.out_dir, "journeys-monthly.csv"), *journey_rows(jm))
+        write(os.path.join(a.out_dir, "starter-prompts-monthly.csv"), *starter_rows(sp))
     elif a.out:
         write(a.out, ucols, urows)
     else:
