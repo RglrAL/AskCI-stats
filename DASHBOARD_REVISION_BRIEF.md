@@ -356,3 +356,9 @@ Checked: twenty-five questions across the new forms answer correctly, including 
 - Follow-up chips offer "by month" and "is it rising" on any answer.
 
 Checked: "not-found rate by month" (Jan 3.4% … Jun 8.2%, Jul 3.5% …), "p90 by week last 3 months", "cited rate for modal by month this year", "is the not-found rate rising" (3.1% → 7.0% over the last 90 days, rising), "trend of p90 since July" (16.5 s → 17.0 s, no material change), "is clarification rate increasing in housing this year" (2.2% → 5.2%, rising).
+
+## 24. Ask bar: "read as" chips and "what changed in <period>" (9 Oct 2026)
+
+- **Read as.** Every single, grouped and trend answer ends with a row of chips showing how the question was parsed: metric, period, category, filter, shape (single, by month, by week, trend) and aggregation. Each chip is a select listing the alternatives, including every service and model family, every month in the data and the sixteen categories. Changing one re-runs the answer from the adjusted intent without re-parsing, writes the resulting question into the input, and becomes the context for follow-ups. A wrong guess by the keyword matcher is a one-click fix, and the chips double as a map of what the bar can answer.
+- **What changed in a period.** "What changed in September", "what moved last month", "what changed" (last 28 days) return the dashboard's own What changed statements for the service set and the cost set separately, with their class chips, the comparison window and rule, and the confirmed events in range. "Why did spend change" keeps its cost attribution answer.
+- A grouped answer with no computable bucket now says why (for instance, p90 is not available by category) instead of "no data".

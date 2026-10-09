@@ -6799,7 +6799,7 @@ init();
     if(/cyrillic/.test(q))return{kind:'script',script:'scCyrillic',label:'Cyrillic-script share'};
     if(/arabic/.test(q))return{kind:'script',script:'scArabic',label:'Arabic-script share'};
     if(/non[- ]?latin|language|script|other languages|foreign/.test(q))return{kind:'script',script:null,label:'non-Latin-script share'};
-    if(/\bevents?\b|what changed in|changes in|milestones/.test(q))return{kind:'events',label:'events'};
+    if(/\bevents?\b|milestones/.test(q))return{kind:'events',label:'events'};
     if(/organic first turns|organic demand|organic/.test(q))return{kind:'organic',label:'organic first turns'};
     for(const s of svcs){if(q.includes(s.toLowerCase()))return{kind:'service',service:s,label:s};}
     for(const name in SVC_ALIAS){const real=svcs.find(s=>s.toLowerCase()===name);if(real&&SVC_ALIAS[name].some(a=>q.includes(a)))return{kind:'service',service:real,label:real};}
@@ -6952,6 +6952,45 @@ init();
     }
     for(const g of GLOSSARY){if(g.re.test(q)){const txt=knowledgeText(g);if(txt)return{knowledge:true,title:g.t,sub:'',body:txt};}}
     return null;
+  }
+
+  // ── "What changed in September?" — the dashboard's own What changed statements, both sets ──
+  function parseChanged(orig){
+    const q=' '+orig.toLowerCase().replace(/[?!.,]/g,' ').replace(/\s+/g,' ')+' ';
+    if(!/what (has |s )?changed|what s different|what was different|what moved|what shifted|changes (in|during|over)|summary of changes/.test(q))return null;
+    if(/\bwhy\b|what (drove|caused)/.test(q))return null;
+    if(/spend|cost|£|bill/.test(q)&&!/service|quality|usage|everything|both/.test(q))return null; // "what changed in spend" stays a cost attribution
+    let period=parsePeriod(q);
+    if(!period||period.kind==='all'){const latest=lastDate();period={kind:'range',from:addDays(latest,-27),to:latest,label:'the last 28 days'};}
+    return{changed:true,raw:orig,period};
+  }
+  function computeChanged(intent){
+    const rows=DATA.merged.filter(d=>d.date>=intent.period.from&&d.date<=intent.period.to);
+    if(!rows.length)return{changed:true,empty:true,intent};
+    return{changed:true,service:whatChanged(rows,'service'),cost:whatChanged(rows,'cost'),intent};
+  }
+  function renderChanged(res){
+    const el=$('ask-answer'); if(!el)return;
+    if(res.empty){el.innerHTML=info('No data found for '+esc(res.intent.period.label)+'.');el.classList.add('show');if(typeof renderIcons==='function')renderIcons();return;}
+    const {service:S,cost:K,intent}=res,p=intent.period;
+    const list=(wc,title)=>{
+      let body='';
+      if(!wc.valid)body='<li style="color:var(--muted)">not enough settled data: '+esc(wc.why)+'</li>';
+      else if(!wc.statements.length)body='<li style="color:var(--muted)">no metric moved beyond the materiality thresholds</li>';
+      else body=wc.statements.map(st=>'<li>'+wcChip(st)+esc(st.text)+'</li>').join('');
+      return '<div style="margin-top:var(--sp-2)"><div style="font-size:.6rem;color:var(--muted);text-transform:uppercase;letter-spacing:.08em;margin-bottom:4px">'+esc(title)+(wc.B?' · vs '+esc(wc.B.span):'')+'</div><ul class="ask-why">'+body+'</ul></div>';
+    };
+    const ev=(S.events||[]).map(e=>'<li><span class="mono" style="color:'+eventColor(e)+'">'+esc(fmtDate(e.start))+'</span> '+esc(e.title)+'</li>').join('');
+    const rule=S.fallback||('compared with '+S.rule);
+    const ba=periodBtn(p);
+    el.innerHTML='<div class="ask-card" style="flex-direction:column;align-items:stretch">'+
+      '<div class="ask-card-q">'+esc(intent.raw)+'</div>'+
+      '<div class="ask-card-sub">what changed in '+esc(p.label)+' · '+esc(rule)+' · deterministic statements, no causes claimed · at most six service and three cost statements</div>'+
+      list(S,'Service')+list(K,'Cost')+
+      (ev?'<div style="margin-top:var(--sp-2)"><div style="font-size:.6rem;color:var(--muted);text-transform:uppercase;letter-spacing:.08em;margin-bottom:4px">Events in range</div><ul class="ask-why">'+ev+'</ul></div>':'')+
+      '<div class="ask-card-actions" style="flex-direction:row;margin-top:var(--sp-2)"><button class="ask-action" data-act="'+ba[0]+'" data-arg="'+escA(ba[1])+'">'+esc(ba[2])+'</button></div>'+
+    '</div>';
+    el.classList.add('show'); if(typeof renderIcons==='function')renderIcons();
   }
 
   // ── "Why did spend change?" — attribute the period-over-period delta by service ──
@@ -7337,7 +7376,7 @@ init();
     const buckets=bucketsFor(intent.period,intent.groupBy);
     let fmt=null,subj=null,isRate=false,isMs=false;
     const items=buckets.map(b=>{const r=compute(subIntent(intent,b));if(r&&r.fmt&&!fmt){fmt=r.fmt;subj=r.subj||null;isMs=!!r.isMs;}const v=(r&&!r.empty)?r.value:null;return{...b,v:(v==null||!isFinite(v))?null:v,note:r&&r.note||''};});
-    if(!items.some(i=>i.v!=null))return{empty:true,intent};
+    if(!items.some(i=>i.v!=null))return{empty:true,intent,why:(items.find(i=>i.note)||{}).note||''};
     const m=intent.metric;
     isRate=['cpq_llm','cpq_tot','qps','cache','fixedshare','answered','unanswered','flagged','chips','modal','latency','notfound','error','clarification','cited','partial','dislikes','feedback','starter','single','chipuse','span','p90','p99','over30','outofhours','script'].includes(m.kind)||(intent.category&&!['questions','spend','citations','organic'].includes(m.kind))||(intent.filter&&['cited','notfound'].includes(m.kind));
     return{grouped:true,items,fmt:fmt||(v=>num(Math.round(v))),subj:subj||((m.kind==='service'||m.kind==='model')?m.label+' cost':m.label),subjNamed:!!subj,isRate,isMs:isMs||m.kind==='latency',intent};
@@ -7353,7 +7392,7 @@ init();
       '<div class="ask-card-sub">'+esc(subj+cat+flt+' by '+intent.groupBy+(p.kind==='all'?', overall':', '+p.label)+' · each bucket summed then divided'+dashNote)+'</div>'+
       vizBlock()+
       '<div class="ask-tbl-wrap" style="margin-top:var(--sp-2)"><table class="ask-tbl"><thead><tr><th>'+esc(intent.groupBy)+'</th><th style="text-align:right">'+esc(subj)+'</th></tr></thead><tbody>'+rows+'</tbody></table></div>'+
-      (p.kind!=='all'?'<div class="ask-card-actions" style="flex-direction:row;margin-top:var(--sp-2)"><button class="ask-action" data-act="range" data-arg="'+escA(p.from+'|'+p.to)+'">Set dashboard to this range</button></div>':'')+
+      (p.kind!=='all'?'<div class="ask-card-actions" style="flex-direction:row;margin-top:var(--sp-2)"><button class="ask-action" data-act="range" data-arg="'+escA(p.from+'|'+p.to)+'">Set dashboard to this range</button></div>':'')+readAsHTML(intent)+
     '</div>';
     el.classList.add('show'); if(typeof renderIcons==='function')renderIcons();
     const col=C.acc,tick=res.isMs?(v=>(+v/1000).toFixed(1)+'s'):res.isRate?(v=>(+v).toFixed(['cpq_llm','cpq_tot'].includes(intent.metric.kind)?2:0)+(['cpq_llm','cpq_tot'].includes(intent.metric.kind)?'p':(['qps','dislikes'].includes(intent.metric.kind)?'':'%'))):(['spend','llm','service','model','fixed','variable','voice'].includes(intent.metric.kind)&&!intent.category?(v=>'£'+(+v).toFixed(0)):(v=>num(v)));
@@ -7402,7 +7441,7 @@ init();
       '<div class="ask-cmp-row">'+side(A.label,va)+'<div class="ask-cmp-mid" style="color:var(--dim);font-size:.7rem">→</div>'+side(B.label,vb)+'</div>'+
       '<div class="ask-card-sub">'+esc(subj+cat+flt+': first half of '+(p.kind==='all'?'the full period':p.label)+' against the second · material when the change reaches '+thr+(why?' · '+why:'')+' · descriptive, no cause claimed')+'</div>'+
       (res.full&&Array.isArray(res.full.series)?vizBlock():'')+
-      (p.kind!=='all'?'<div class="ask-card-actions" style="flex-direction:row;margin-top:var(--sp-2)"><button class="ask-action" data-act="range" data-arg="'+escA(p.from+'|'+p.to)+'">Set dashboard to this range</button></div>':'')+
+      (p.kind!=='all'?'<div class="ask-card-actions" style="flex-direction:row;margin-top:var(--sp-2)"><button class="ask-action" data-act="range" data-arg="'+escA(p.from+'|'+p.to)+'">Set dashboard to this range</button></div>':'')+readAsHTML(intent)+
     '</div>';
     el.classList.add('show'); if(typeof renderIcons==='function')renderIcons();
     if(res.full&&Array.isArray(res.full.series)){
@@ -7453,6 +7492,74 @@ init();
     if(p.kind!=='all')b.push(['range',p.from+'|'+p.to,'Set dashboard to this range']);
     return b.map(a=>'<button class="ask-action" data-act="'+a[0]+'" data-arg="'+escA(a[1])+'">'+esc(a[2])+'</button>').join('');
   }
+
+  // ── "Read as" chips: the parsed dimensions, each a select so a wrong guess is a one-click fix ──
+  const READ_METRICS=[['spend','Total spend'],['llm','Generation cost'],['fixed','Fixed cost'],['variable','Variable cost'],['voice','Voice cost'],['fixedshare','Fixed share'],['cache','Cached-input cost share'],['cpq_llm','Generation cost per turn'],['cpq_tot','Allocated total cost per turn'],['runrate','Run rate, next 30 days'],
+    ['questions','Turns'],['sessions','Conversations'],['qps','Turns per conversation'],['organic','Organic first turns'],['citations','Citations'],['modal','Modal share of conversations'],
+    ['cited','Cited answer rate'],['notfound','Not-found rate'],['clarification','Clarification rate'],['error','Error rate'],['partial','Cited but partial'],['dislikes','Dislikes per 1,000 cited'],['feedback','Feedback rate'],['chips','Suggested follow-up share'],['starter','Starter-prompt share'],
+    ['latency','Response time p50'],['p90','Response time p90'],['p99','Response time p99'],['over30','Turns over 30 s'],['hour','Busiest hour'],['outofhours','Out-of-hours share'],
+    ['single','Ended after first turn'],['chipuse','Suggested follow-up use'],['span','Conversations over 5 min'],['script','Non-Latin script share'],['events','Events']];
+  function metricFromKey(key){
+    if(key.startsWith('svc:')){const sname=key.slice(4);return{kind:'service',service:sname,label:sname};}
+    if(key.startsWith('fam:')){const fam=key.slice(4);return{kind:'model',match:k=>meterFamily(k)===fam,label:fam,fam};}
+    if(key==='runrate')return{kind:'runrate',yearly:false,label:'run rate, next 30 days'};
+    if(key==='hour')return{kind:'hour',label:'busiest hour'};
+    if(key==='script')return{kind:'script',script:null,label:'non-Latin-script share'};
+    const m=READ_METRICS.find(x=>x[0]===key);return m?{kind:m[0],label:m[1].toLowerCase()}:{kind:'spend',label:'total spend'};
+  }
+  function metricKey(m){return m.kind==='service'?'svc:'+m.service:m.kind==='model'?'fam:'+(m.fam||m.label):m.kind;}
+  function periodOptions(){
+    const latest=lastDate(),out=[['last7','Last 7 days'],['last28','Last 28 days'],['last90','Last 90 days'],['thisMonth','This month'],['lastMonth','Last month'],['ytd','Year to date'],['all','Full period']];
+    (DATA.monthly||[]).forEach(mo=>out.push(['m:'+mo.month,mo.label]));
+    return out;
+  }
+  function periodFromKey(key){
+    const latest=lastDate();
+    if(key==='all')return{kind:'all',from:firstDate(),to:latest,label:'the full period'};
+    if(key==='ytd')return{kind:'range',from:latest.slice(0,4)+'-01-01',to:latest,label:'year-to-date'};
+    if(key==='thisMonth'){const mk=latest.slice(0,7);return{kind:'month',monthKey:mk,from:mk+'-01',to:latest,label:fmtMonth(mk)};}
+    if(key==='lastMonth'){const mk=prevMonth(latest.slice(0,7));return{kind:'month',monthKey:mk,from:mk+'-01',to:mk+'-'+String(dim(mk)).padStart(2,'0'),label:fmtMonth(mk)};}
+    if(key.startsWith('m:')){const mk=key.slice(2);return{kind:'month',monthKey:mk,from:mk+'-01',to:mk+'-'+String(dim(mk)).padStart(2,'0'),label:fmtMonth(mk)};}
+    const n={last7:7,last28:28,last90:90}[key]||28;return{kind:'range',from:addDays(latest,-(n-1)),to:latest,label:'the last '+n+' days'};
+  }
+  function periodKey(p){
+    if(!p)return 'all';if(p.kind==='all')return 'all';if(p.kind==='month')return 'm:'+(p.monthKey||p.from.slice(0,7));
+    if(p.label==='year-to-date')return 'ytd';const m=String(p.label||'').match(/last (\d+) days/);if(m&&['7','28','90'].includes(m[1]))return 'last'+m[1];return '';
+  }
+  function readAsHTML(intent){
+    if(!intent||!intent.metric)return '';
+    const sel=(name,opts,cur,allowCurrent)=>{const has=opts.some(o=>o[0]===cur);const list=(has||!allowCurrent?opts:[[cur,allowCurrent]].concat(opts));return '<label class="ask-read-chip"><span>'+esc(name)+'</span><select data-dim="'+name+'">'+list.map(o=>'<option value="'+escA(o[0])+'"'+(o[0]===cur?' selected':'')+'>'+esc(o[1])+'</option>').join('')+'</select></label>';};
+    const metrics=READ_METRICS.slice();(DATA.allSvcs||[]).forEach(sv=>metrics.push(['svc:'+sv,sv+' cost']));CONFIG.model_families.forEach(f=>metrics.push(['fam:'+f.family,f.family+' cost']));
+    const cats=[['','any category']].concat(CAT_PHRASES.map(([slug])=>[slug,catLabel(CAT_ALIAS[slug]||slug)]));
+    const filters=[['','all sources and types'],['modal','Modal'],['web','Web'],['nt','new topics'],['uf','typed follow-ups'],['sf','suggested follow-ups']];
+    const shapes=[['single','single value'],['month','by month'],['week','by week'],['trend','trend, first half vs second']];
+    const aggs=[['sum','total'],['avg','average per day'],['max','peak day'],['min','lowest day']];
+    const shape=intent.trend?'trend':intent.groupBy||'single';
+    const pk=periodKey(intent.period);
+    return '<div class="ask-read"><span class="ask-read-lbl">Read as</span>'+
+      sel('metric',metrics,metricKey(intent.metric),intent.metric.label)+
+      sel('period',periodOptions(),pk,intent.period?intent.period.label:'')+
+      sel('category',cats,intent.category||'')+
+      sel('filter',filters,intent.filter?intent.filter.key:'')+
+      sel('shape',shapes,shape)+
+      (shape==='single'?sel('agg',aggs,intent.agg||'sum'):'')+
+    '</div>';
+  }
+  function applyReadChange(dim,val){
+    if(!lastIntent)return;
+    const it={...lastIntent,raw:lastIntent.raw};
+    if(dim==='metric')it.metric=metricFromKey(val);
+    else if(dim==='period'){if(val)it.period=periodFromKey(val);}
+    else if(dim==='category')it.category=val||null;
+    else if(dim==='filter')it.filter=val?{key:val,label:{modal:'Modal',web:'Web',nt:'new topics',uf:'typed follow-ups',sf:'suggested follow-ups'}[val]}:null;
+    else if(dim==='shape'){it.groupBy=(val==='month'||val==='week')?val:null;it.trend=val==='trend';if(it.trend&&it.period&&it.period.kind==='all'){const latest=lastDate();it.period={kind:'range',from:addDays(latest,-89),to:latest,label:'the last 90 days'};}}
+    else if(dim==='agg')it.agg=val;
+    delete it.compare;delete it._sub;
+    it.raw=(it.metric.label||'')+(it.category?' in '+catLabel(CAT_ALIAS[it.category]||it.category):'')+(it.filter?' for '+it.filter.label:'')+(it.period&&it.period.kind!=='all'?' · '+it.period.label:'')+(it.groupBy?' by '+it.groupBy:'')+(it.trend?' · trend':'');
+    lastIntent=it;const inp=$('ask-input');if(inp)inp.value=it.raw;
+    render(compute(it));
+  }
+  (function(){var s=document.createElement('style');s.textContent='.ask-read{display:flex;flex-wrap:wrap;gap:6px;align-items:center;margin-top:var(--sp-2);padding-top:var(--sp-2);border-top:1px dashed var(--b2)}.ask-read-lbl{font-size:var(--t-2xs);color:var(--dim);text-transform:uppercase;letter-spacing:.08em;margin-right:2px}.ask-read-chip{display:inline-flex;align-items:center;gap:4px;background:var(--s2);border:1px solid var(--b2);border-radius:999px;padding:2px 8px;font-size:var(--t-2xs);color:var(--muted)}.ask-read-chip select{background:transparent;border:0;color:var(--text);font-size:var(--t-2xs);font-family:DM Mono,monospace;max-width:180px;cursor:pointer}.ask-read-chip select:focus{outline:none}';document.head.appendChild(s);})();
 
   // ── Render answer ──
   function info(msg){return '<div class="ask-card"><div class="ask-card-main"><div class="ask-card-sub">'+msg+'</div></div></div>';}
@@ -7646,7 +7753,7 @@ init();
       '<div class="ask-card-val">'+bigVal+'</div>'+
       '<div class="ask-card-sub">'+headline+'</div></div>'+
       (hasChart?vizBlock():spark)+
-      (acts?'<div class="ask-card-actions"'+(hasChart?' style="flex-direction:row;margin-top:var(--sp-2)"':'')+'>'+acts+'</div>':'')+'</div>';
+      (acts?'<div class="ask-card-actions"'+(hasChart?' style="flex-direction:row;margin-top:var(--sp-2)"':'')+'>'+acts+'</div>':'')+(intent.raw?readAsHTML(intent):'')+'</div>';
     el.classList.add('show'); if(typeof renderIcons==='function')renderIcons();
     if(hasChart){
       const crows=DATA.merged.filter(d=>d.date>=p.from&&d.date<=p.to);
@@ -7685,6 +7792,9 @@ init();
     // 0a. Knowledge / definition ("what is cost per question?", "what does Cognitive Search do?")
     const kn=parseKnowledge(q);
     if(kn){renderKnowledge(kn);return;}
+    // 0a2. The dashboard's What changed for a period ("what changed in September")
+    const ch=parseChanged(q);
+    if(ch){renderChanged(computeChanged(ch));return;}
     // 0b. Causal attribution ("why did spend go up in January?")
     const why=parseWhy(q);
     if(why){renderWhy(computeWhy(why));return;}
@@ -7735,7 +7845,7 @@ init();
     const el=$('ask-chips'); if(!el||!have())return;
     const m=DATA.merged.filter(d=>d.total>0);
     const lm=m.length?fmtMonth(m[m.length-1].date.slice(0,7)):'this month';
-    const ex=['Spend in '+lm,'Not-found rate by month','Is the not-found rate rising','Which category has the highest not-found rate','Not-found rate for modal this month','p90 by week last 3 months','Most cited pages last month','Events in '+lm];
+    const ex=['Spend in '+lm,'What changed in '+lm,'Not-found rate by month','Is the not-found rate rising','Which category has the highest not-found rate','Not-found rate for modal this month','p90 by week last 3 months','Most cited pages last month'];
     el.innerHTML=ex.map(t=>'<button class="ask-chip" data-ex="'+escA(t)+'">'+esc(t)+'</button>').join('');
   }
   function applyRange(f,t){
@@ -7749,6 +7859,7 @@ init();
     inp.addEventListener('focus',()=>{if(chipsEl&&!chipsEl.innerHTML)chips();});
     inp.addEventListener('input',()=>{if(!inp.value.trim()){if(ansEl)ansEl.classList.remove('show');chips();}});
     if(chipsEl)chipsEl.addEventListener('click',e=>{const b=e.target.closest('[data-ex]');if(!b)return;inp.value=b.dataset.ex;run();});
+    if(ansEl)ansEl.addEventListener('change',e=>{const sl=e.target.closest&&e.target.closest('.ask-read select');if(sl)applyReadChange(sl.dataset.dim,sl.value);});
     if(ansEl)ansEl.addEventListener('click',e=>{
       const b=e.target.closest('[data-act]'); if(!b)return;
       const act=b.dataset.act,arg=b.dataset.arg;
