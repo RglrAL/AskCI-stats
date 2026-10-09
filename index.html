@@ -6723,6 +6723,13 @@ init();
     const latest=lastDate(),first=firstDate(); if(!latest)return null;
     const mm=q.match(/\b(jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec)[a-z]*\b/);
     const yy=q.match(/\b(20\d{2})\b/);
+    const since=q.match(/\b(since|from|after)\s+(the\s+)?(start of\s+)?(jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec)[a-z]*\b/);
+    if(since&&!/\b(to|until|till|through)\b/.test(q)){
+      const mi=ABBR.indexOf(since[4].slice(0,3));
+      const year=yy?+yy[1]:((mi+1<=+latest.slice(5,7))?+latest.slice(0,4):+latest.slice(0,4)-1);
+      const from=year+'-'+String(mi+1).padStart(2,'0')+'-01';
+      return{kind:'range',from,to:latest,label:MONFULL[mi]+' '+year+' to date',since:true};
+    }
     if(mm){
       const mi=ABBR.indexOf(mm[1].slice(0,3));
       let year=yy?+yy[1]:((mi+1<=+latest.slice(5,7))?+latest.slice(0,4):+latest.slice(0,4)-1);
@@ -6877,16 +6884,21 @@ init();
       else if(/\bmonth(s|ly)?\b/.test(q)&&period.kind!=='month')bucket='month';
     }
     const category=parseCategory(q),filter=parseFilter(q);
+    // "by month", "monthly", "weekly" → one value per bucket; "is X rising", "trend of X" → first half vs second half
+    const groupBy=(agg==='sum'||agg==='avg')?(/\b(by|per|each|every)\s+month\b|\bmonthly\b|month by month|month on month/.test(q)?'month':/\b(by|per|each|every)\s+week\b|\bweekly\b|week by week|week on week/.test(q)?'week':null):null;
+    const trend=/\btrend(s|ing)?\b|rising|falling|going (up|down)|increas|decreas|improv|getting (better|worse)|worsen|climbing|dropping|on the (way )?(up|down)/.test(q)&&!/\bwhy\b|what (drove|caused)/.test(q);
     const metricExplicit=metric.kind!=='spend'||/spend|cost|spent|bill|charge|how much|£/.test(q);
     const periodExplicit=!!period&&(period.kind!=='all'||/overall|all ?time|to date|so far|in total|entire|altogether/.test(q));
     const aggExplicit=agg!=='sum'||/\btotal\b|\bsum\b/.test(q);
-    return{q,period,metric,agg,bucket,category,filter,metricExplicit,periodExplicit,aggExplicit};
+    return{q,period,metric,agg,bucket,category,filter,groupBy,trend,metricExplicit,periodExplicit,aggExplicit};
   }
   function parseAsk(orig){
     const d=parseDims(orig);
     if(!d.period)return null;
-    if(!d.metricExplicit&&!d.periodExplicit&&!d.category&&!d.filter)return null; // too vague standalone → defer
-    return{raw:orig,period:d.period,metric:d.metric,agg:d.agg,bucket:d.bucket,category:d.category,filter:d.filter};
+    if(!d.metricExplicit&&!d.periodExplicit&&!d.category&&!d.filter&&!d.groupBy&&!d.trend)return null; // too vague standalone → defer
+    let period=d.period;
+    if(d.trend&&period.kind==='all'&&!d.periodExplicit){const latest=lastDate();period={kind:'range',from:addDays(latest,-89),to:latest,label:'the last 90 days'};} // a trend needs a window; default to 90 days
+    return{raw:orig,period,metric:d.metric,agg:d.agg,bucket:d.bucket,category:d.category,filter:d.filter,groupBy:d.groupBy,trend:d.trend};
   }
 
   // "Jan vs Feb", "this month vs last month", "compare X and Y" → two-period compare
@@ -7095,6 +7107,8 @@ init();
     if(!rows.length)return{empty:true,intent};
     const money=['spend','llm','service','model','fixed','variable','voice'].includes(metric.kind);
     let value=null,series=null,note='';
+    if(intent.groupBy&&!intent._sub)return computeGrouped(intent);
+    if(intent.trend&&!intent._sub)return computeTrend(intent);
     const special=computeSpecial(intent,rows);if(special)return special;
 
     // ── Run rate: the single forecast function on a 30-day calendar (or to year end) ──
@@ -7304,6 +7318,103 @@ init();
     }
     return null;
   }
+  // ── Grouped: one value per month or week, computed exactly as the single answer would be (sum then divide per bucket) ──
+  const UNGROUPABLE=['events','hour','topService','topModel','runrate'];
+  function subIntent(intent,p){return{...intent,period:p,raw:'',_sub:true,groupBy:null,trend:false};}
+  function bucketsFor(period,groupBy){
+    const out=[];
+    if(groupBy==='month'){
+      let mk=period.from.slice(0,7);const end=period.to.slice(0,7);
+      while(mk<=end){const f=mk+'-01',t=mk+'-'+String(dim(mk)).padStart(2,'0');const from=f<period.from?period.from:f,to=t>period.to?period.to:t;out.push({key:mk,from,to,label:(from===f&&to===t)?fmtMonth(mk):spanLabel(from,to),act:['month',mk]});let y=+mk.slice(0,4),m=+mk.slice(5,7)+1;if(m>12){m=1;y++;}mk=y+'-'+String(m).padStart(2,'0');}
+    }else{
+      let ws=weekStart(period.from);
+      while(ws<=period.to){const we=addDays(ws,6);const from=ws<period.from?period.from:ws,to=we>period.to?period.to:we;out.push({key:ws,from,to,label:'w/c '+fmtDate(ws),act:['range',from+'|'+to]});ws=addDays(ws,7);}
+    }
+    return out;
+  }
+  function computeGrouped(intent){
+    if(UNGROUPABLE.includes(intent.metric.kind))return{empty:true,intent,why:'that metric has no per-'+intent.groupBy+' form'};
+    const buckets=bucketsFor(intent.period,intent.groupBy);
+    let fmt=null,subj=null,isRate=false,isMs=false;
+    const items=buckets.map(b=>{const r=compute(subIntent(intent,b));if(r&&r.fmt&&!fmt){fmt=r.fmt;subj=r.subj||null;isMs=!!r.isMs;}const v=(r&&!r.empty)?r.value:null;return{...b,v:(v==null||!isFinite(v))?null:v,note:r&&r.note||''};});
+    if(!items.some(i=>i.v!=null))return{empty:true,intent};
+    const m=intent.metric;
+    isRate=['cpq_llm','cpq_tot','qps','cache','fixedshare','answered','unanswered','flagged','chips','modal','latency','notfound','error','clarification','cited','partial','dislikes','feedback','starter','single','chipuse','span','p90','p99','over30','outofhours','script'].includes(m.kind)||(intent.category&&!['questions','spend','citations','organic'].includes(m.kind))||(intent.filter&&['cited','notfound'].includes(m.kind));
+    return{grouped:true,items,fmt:fmt||(v=>num(Math.round(v))),subj:subj||((m.kind==='service'||m.kind==='model')?m.label+' cost':m.label),subjNamed:!!subj,isRate,isMs:isMs||m.kind==='latency',intent};
+  }
+  function renderGrouped(res){
+    const el=$('ask-answer'); if(!el)return;
+    const {items,fmt,subj,intent}=res,p=intent.period;
+    const cat=!res.subjNamed&&intent.category?' in '+catLabel(CAT_ALIAS[intent.category]||intent.category):'',flt=!res.subjNamed&&intent.filter?' for '+intent.filter.label:'';
+    const rows=items.map(it=>'<tr><td><button class="ask-topn-row" style="padding:2px 0;background:none;border:0;color:var(--acc);cursor:pointer" data-act="'+it.act[0]+'" data-arg="'+escA(it.act[1])+'">'+esc(it.label)+'</button></td><td style="text-align:right;font-family:DM Mono,monospace">'+(it.v==null?'<span style="color:var(--dim)">—</span>':esc(fmt(it.v)))+'</td></tr>').join('');
+    const dashNote=items.some(i=>i.v==null)?' · a dash means the bucket fails the validity or small-sample rule':'';
+    el.innerHTML='<div class="ask-card" style="flex-direction:column;align-items:stretch">'+
+      '<div class="ask-card-q">'+esc(intent.raw)+'</div>'+
+      '<div class="ask-card-sub">'+esc(subj+cat+flt+' by '+intent.groupBy+(p.kind==='all'?', overall':', '+p.label)+' · each bucket summed then divided'+dashNote)+'</div>'+
+      vizBlock()+
+      '<div class="ask-tbl-wrap" style="margin-top:var(--sp-2)"><table class="ask-tbl"><thead><tr><th>'+esc(intent.groupBy)+'</th><th style="text-align:right">'+esc(subj)+'</th></tr></thead><tbody>'+rows+'</tbody></table></div>'+
+      (p.kind!=='all'?'<div class="ask-card-actions" style="flex-direction:row;margin-top:var(--sp-2)"><button class="ask-action" data-act="range" data-arg="'+escA(p.from+'|'+p.to)+'">Set dashboard to this range</button></div>':'')+
+    '</div>';
+    el.classList.add('show'); if(typeof renderIcons==='function')renderIcons();
+    const col=C.acc,tick=res.isMs?(v=>(+v/1000).toFixed(1)+'s'):res.isRate?(v=>(+v).toFixed(['cpq_llm','cpq_tot'].includes(intent.metric.kind)?2:0)+(['cpq_llm','cpq_tot'].includes(intent.metric.kind)?'p':(['qps','dislikes'].includes(intent.metric.kind)?'':'%'))):(['spend','llm','service','model','fixed','variable','voice'].includes(intent.metric.kind)&&!intent.category?(v=>'£'+(+v).toFixed(0)):(v=>num(v)));
+    mountViz({type:res.isRate?'line':'bar',data:{labels:items.map(i=>i.label),datasets:[{label:subj,data:items.map(i=>i.v),backgroundColor:res.isRate?(col+'22'):(col+'cc'),borderColor:col,borderWidth:res.isRate?2:0,borderRadius:res.isRate?0:3,pointRadius:3,tension:.3,fill:!!res.isRate,spanGaps:true,maxBarThickness:48}]},
+      options:mergeOpts(baseOpts(),{plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>fmt(c.parsed.y)}}},scales:{y:{ticks:{callback:tick}}},onClick:(e,els)=>{if(!els.length)return;const it=items[els[0].index];if(it.act[0]==='month')openMonthPanel(it.act[1]);else{const i=it.act[1].indexOf('|');applyRange(it.act[1].slice(0,i),it.act[1].slice(i+1));}}})},
+      {cols:[intent.groupBy,subj],rows:items.map(i=>[i.label,i.v==null?'':+(+i.v).toFixed(4)]),fmt:v=>v===''?'—':fmt(+v)});
+    showFollowups(intent);
+  }
+  // ── Trend: first half of the period against the second, judged by the dashboard's own materiality thresholds ──
+  function computeTrend(intent){
+    const m=intent.metric;if(UNGROUPABLE.includes(m.kind))return{empty:true,intent};
+    const p=intent.period,days=Math.round((new Date(p.to)-new Date(p.from))/864e5)+1;
+    if(days<14)return{empty:true,intent,why:'a trend needs at least 14 days'};
+    const mid=addDays(p.from,Math.floor(days/2)-1);
+    const A={from:p.from,to:mid,label:spanLabel(p.from,mid)},B={from:addDays(mid,1),to:p.to,label:spanLabel(addDays(mid,1),p.to)};
+    const ra=compute(subIntent(intent,A)),rb=compute(subIntent(intent,B));
+    const va=ra&&!ra.empty?ra.value:null,vb=rb&&!rb.empty?rb.value:null;
+    const full=compute(subIntent(intent,p));
+    const M=CONFIG.materiality;
+    const pct=['cache','fixedshare','answered','unanswered','flagged','chips','modal','notfound','error','clarification','cited','partial','feedback','starter','single','chipuse','span','over30','outofhours','script'].includes(m.kind)||(intent.category&&!['questions','spend','citations','organic','dislikes'].includes(m.kind))||(intent.filter&&['cited','notfound'].includes(m.kind));
+    const ms=['latency','p90','p99'].includes(m.kind),pence=['cpq_llm','cpq_tot'].includes(m.kind),perk=m.kind==='dislikes';
+    let verdict='',material=false,dTxt='';
+    if(va!=null&&vb!=null){
+      const d=vb-va,rel=va!==0?d/Math.abs(va)*100:null;
+      if(pct){material=Math.abs(d)>=M.rate_pts;dTxt=(d>0?'+':'−')+Math.abs(d).toFixed(1)+' pts';}
+      else if(ms){material=(rel!=null&&Math.abs(rel)>=M.latency_pct)||Math.abs(d)>=M.latency_ms;dTxt=(d>0?'+':'−')+(Math.abs(d)/1000).toFixed(1)+' s'+(rel!=null?' ('+(d>0?'+':'−')+Math.abs(rel).toFixed(0)+'%)':'');}
+      else if(pence){material=(rel!=null&&Math.abs(rel)>=M.ratio_pct)||Math.abs(d)>=M.ratio_pence;dTxt=(d>0?'+':'−')+Math.abs(d).toFixed(2)+'p';}
+      else if(perk){material=Math.abs(d)>=M.rate_pts;dTxt=(d>0?'+':'−')+Math.abs(d).toFixed(1)+' per 1,000';}
+      else{material=rel!=null&&Math.abs(rel)>=M.count_pct;dTxt=rel==null?'':(d>0?'+':'−')+Math.abs(rel).toFixed(0)+'%';}
+      verdict=!material?'flat':(d>0?'rising':'falling');
+    }
+    return{trend:true,A,B,va,vb,full,fmt:(ra&&ra.fmt)||(rb&&rb.fmt)||(v=>v==null?'—':String(v)),verdict,material,dTxt,subjNamed:!!((ra&&ra.subj)||(rb&&rb.subj)),subj:(ra&&ra.subj)||(rb&&rb.subj)||((m.kind==='service'||m.kind==='model')?m.label+' cost':m.label),why:(ra&&ra.note&&va==null?ra.note:'')||(rb&&rb.note&&vb==null?rb.note:''),isRate:pct||ms||pence||perk||['qps','cpq_llm','cpq_tot'].includes(m.kind),isMs:ms,intent};
+  }
+  function renderTrend(res){
+    const el=$('ask-answer'); if(!el)return;
+    const {A,B,va,vb,fmt,verdict,material,dTxt,subj,intent,why}=res,p=intent.period;
+    const cat=!res.subjNamed&&intent.category?' in '+catLabel(CAT_ALIAS[intent.category]||intent.category):'',flt=!res.subjNamed&&intent.filter?' for '+intent.filter.label:'';
+    const M=CONFIG.materiality;
+    const thr=res.isMs?`${M.latency_pct}% or ${M.latency_ms/1000} s`:['cpq_llm','cpq_tot'].includes(intent.metric.kind)?`${M.ratio_pct}% or ${M.ratio_pence}p`:res.isRate?`${M.rate_pts} point${M.rate_pts===1?'':'s'}`:`${M.count_pct}%`;
+    const headline=va==null||vb==null?'not enough data to judge':verdict==='flat'?'no material change':verdict;
+    const colour=verdict==='flat'||va==null||vb==null?'var(--muted)':(()=>{const invert=['cpq_llm','cpq_tot','spend','llm','service','model','fixed','variable','voice','notfound','error','unanswered','flagged','partial','latency','p90','p99','over30','dislikes','single','clarification'].includes(intent.metric.kind);const good=invert?verdict==='falling':verdict==='rising';return good?'var(--green)':'var(--red)';})();
+    const side=(lbl,v)=>'<div class="ask-cmp-side"><div class="ask-cmp-lbl">'+esc(lbl)+'</div><div class="ask-cmp-num">'+(v==null?'—':esc(fmt(v)))+'</div></div>';
+    el.innerHTML='<div class="ask-card" style="flex-direction:column;align-items:stretch">'+
+      '<div class="ask-card-q">'+esc(intent.raw)+'</div>'+
+      '<div class="ask-card-val" style="color:'+colour+'">'+esc(headline)+(dTxt&&va!=null&&vb!=null?' <span style="font-size:.6em;color:var(--muted)">'+esc(dTxt)+'</span>':'')+'</div>'+
+      '<div class="ask-cmp-row">'+side(A.label,va)+'<div class="ask-cmp-mid" style="color:var(--dim);font-size:.7rem">→</div>'+side(B.label,vb)+'</div>'+
+      '<div class="ask-card-sub">'+esc(subj+cat+flt+': first half of '+(p.kind==='all'?'the full period':p.label)+' against the second · material when the change reaches '+thr+(why?' · '+why:'')+' · descriptive, no cause claimed')+'</div>'+
+      (res.full&&Array.isArray(res.full.series)?vizBlock():'')+
+      (p.kind!=='all'?'<div class="ask-card-actions" style="flex-direction:row;margin-top:var(--sp-2)"><button class="ask-action" data-act="range" data-arg="'+escA(p.from+'|'+p.to)+'">Set dashboard to this range</button></div>':'')+
+    '</div>';
+    el.classList.add('show'); if(typeof renderIcons==='function')renderIcons();
+    if(res.full&&Array.isArray(res.full.series)){
+      const crows=DATA.merged.filter(d=>d.date>=p.from&&d.date<=p.to),labels=crows.map(d=>d.label),data=res.full.series.map(v=>(v==null||!isFinite(v))?null:+v);
+      const col=C.acc,tick=res.isMs?(v=>(+v/1000).toFixed(1)+'s'):res.isRate?(v=>(+v).toFixed(['cpq_llm','cpq_tot'].includes(intent.metric.kind)?2:0)+(['cpq_llm','cpq_tot'].includes(intent.metric.kind)?'p':(['qps','dislikes'].includes(intent.metric.kind)?'':'%'))):(['spend','llm','service','model','fixed','variable','voice'].includes(intent.metric.kind)&&!intent.category?(v=>'£'+(+v).toFixed(0)):(v=>num(v)));
+      const half=labels.indexOf(fmtDate(B.from));
+      mountViz({type:res.isRate?'line':'bar',data:{labels,datasets:[{label:subj,data,backgroundColor:res.isRate?(col+'22'):(col+'cc'),borderColor:col,borderWidth:res.isRate?2:0,borderRadius:res.isRate?0:3,pointRadius:0,tension:.3,fill:!!res.isRate,spanGaps:true}]},
+        options:mergeOpts(baseOpts(),{plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>fmt(c.parsed.y)}}},scales:{y:{ticks:{callback:tick}}},eventLines:half>=0?[{label:labels[half],color:C.muted,text:'second half',dash:[4,3]}]:[]})},
+        {cols:['day',subj],rows:crows.map((d,i)=>[d.label,data[i]==null?'':+(+data[i]).toFixed(4)]),fmt:v=>v===''?'—':fmt(+v)});
+    }
+    showFollowups(intent);
+  }
   function renderEvents(res){
     const el=$('ask-answer'); if(!el)return;
     const {list,intent}=res,p=intent.period;
@@ -7316,7 +7427,7 @@ init();
   function context(intent,value){
     if(value==null||intent.agg!=='sum')return '';
     if(['cpq_llm','cpq_tot','qps','cache','fixedshare','runrate','topService','topModel','answered','unanswered','flagged','chips','modal','latency','notfound','error','clarification','cited','partial','dislikes','feedback','starter','single','chipuse','span','p90','p99','over30','hour','outofhours','script','events'].includes(intent.metric.kind)||intent.category||intent.filter)return ''; // ratios: never summed
-    const p=intent.period; if(p.kind==='all'||p.kind==='year')return '';
+    const p=intent.period; if(p.kind==='all'||p.kind==='year'||p.since)return '';
     const days=Math.round((new Date(p.to)-new Date(p.from))/86400000)+1;
     const prevTo=addDays(p.from,-1),prevFrom=addDays(prevTo,-(days-1));
     const prev=DATA.merged.filter(d=>d.date>=prevFrom&&d.date<=prevTo);
@@ -7514,9 +7625,11 @@ init();
 
   function render(res){
     const el=$('ask-answer'); if(!el)return;
+    if(res.grouped){renderGrouped(res);return;}
+    if(res.trend){renderTrend(res);return;}
     if(res.events){renderEvents(res);return;}
     if(res.compare){renderCompare(res);return;}
-    if(res.empty){el.innerHTML=info('No data found for '+esc(res.intent.period.label)+'.');el.classList.add('show');if(typeof renderIcons==='function')renderIcons();return;}
+    if(res.empty){el.innerHTML=info(res.why?esc(res.why)+'.':'No data found for '+esc(res.intent.period.label)+'.');el.classList.add('show');if(typeof renderIcons==='function')renderIcons();return;}
     const {value,fmt,series,note,intent}=res,m=intent.metric,p=intent.period,agg=intent.agg;
     const aggWord=res.subj?'':({sum:'',avg:'average ',max:'peak ',min:'lowest '}[agg]||'');
     const subj=res.subj||((m.kind==='service'||m.kind==='model')?m.label+' cost':m.label);
@@ -7556,8 +7669,10 @@ init();
     if(['spend','llm'].includes(m.kind))c.push('by service');
     if(['month','year','range'].includes(intent.period.kind))c.push('vs last month');
     if(intent.agg==='sum'&&['spend','llm','questions','sessions','service','model'].includes(m.kind))c.push('per day');
+    if(!intent.groupBy&&!intent.trend&&['month','year','range','all'].includes(intent.period.kind))c.push('by month');
+    if(!intent.trend&&!intent.groupBy)c.push('is it rising');
     c.push(['questions','sessions','qps'].includes(m.kind)?'what about spend':'what about turns');
-    const chips=c.slice(0,3);
+    const chips=c.slice(0,4);
     el.innerHTML='<span class="ask-fu-lbl">Follow up</span>'+chips.map(t=>'<button class="ask-chip" data-ex="'+escA(t)+'">'+esc(t)+'</button>').join('');
   }
 
@@ -7600,13 +7715,14 @@ init();
     // 3. Standalone (both metric+period explicit) vs follow-up merge (inherit the rest)
     const d=parseDims(q);
     const standalone=d.metricExplicit&&d.periodExplicit;
-    if(!standalone&&lastIntent&&(d.metricExplicit||d.periodExplicit||d.aggExplicit||d.category||d.filter)){
+    if(!standalone&&lastIntent&&(d.metricExplicit||d.periodExplicit||d.aggExplicit||d.category||d.filter||d.groupBy||d.trend)){
       const merged={raw:q,metric:lastIntent.metric,period:lastIntent.period,agg:lastIntent.agg,bucket:lastIntent.bucket||'day'};
       if(d.metricExplicit)merged.metric=d.metric;
       if(d.periodExplicit){merged.period=d.period;merged.bucket=d.bucket;}
       if(d.aggExplicit)merged.agg=d.agg;
       if(d.category)merged.category=d.category;
       if(d.filter)merged.filter=d.filter;
+      merged.groupBy=d.groupBy||null;merged.trend=!!d.trend; // a follow-up decides its own shape
       lastIntent=merged;render(compute(merged));return;
     }
     const intent=parseAsk(q);
@@ -7619,7 +7735,7 @@ init();
     const el=$('ask-chips'); if(!el||!have())return;
     const m=DATA.merged.filter(d=>d.total>0);
     const lm=m.length?fmtMonth(m[m.length-1].date.slice(0,7)):'this month';
-    const ex=['Spend in '+lm,'Not-found rate last month','Which category has the highest not-found rate','Not-found rate for modal this month','Most cited pages last month','Busiest hour this month','Ended after first turn this year','Events in '+lm];
+    const ex=['Spend in '+lm,'Not-found rate by month','Is the not-found rate rising','Which category has the highest not-found rate','Not-found rate for modal this month','p90 by week last 3 months','Most cited pages last month','Events in '+lm];
     el.innerHTML=ex.map(t=>'<button class="ask-chip" data-ex="'+escA(t)+'">'+esc(t)+'</button>').join('');
   }
   function applyRange(f,t){

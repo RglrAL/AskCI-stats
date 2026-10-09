@@ -348,3 +348,11 @@ The rule-based parser now reaches every generated file, so everything the panes 
 - The example chips and the "couldn't parse" hint show the new forms. Every rate goes through the small-sample rule; every answer names its denominator.
 
 Checked: twenty-five questions across the new forms answer correctly, including "cited rate for chips this year" (96.5%), "web conversations in September" (1,546), "p99 in April" (68.1 s), "busiest hour this month" (14:00) and "events in May" (two confirmed events).
+
+## 23. Ask bar: by month or week, and trends (9 Oct 2026)
+
+- **Grouped answers.** "by month", "monthly", "by week", "weekly" on any metric, with any category or filter: each bucket is computed exactly as the single answer would be (sum then divide inside the bucket), partial months carry their span, buckets that fail validity or the small-sample rule show a dash. Rendered as chart, table and CSV; a month opens the month panel, a week sets the range. Superlatives ("busiest month") keep their old meaning. Events, hours, top-service and run-rate questions have no grouped form and say so.
+- **Trend answers.** "is X rising", "trend of X", "increasing", "getting worse" and similar compare the first half of the period with the second, judged by the dashboard's materiality thresholds (rates 1 point, counts 10%, latency 10% or 2 s, pence per turn 10% or 0.2p) and reported as rising, falling or no material change with both values, the delta and the threshold. A trend with no period defaults to the last 90 days; "since July" is a range from 1 July to the latest day. Descriptive wording only; the daily series is drawn with the half-way point marked.
+- Follow-up chips offer "by month" and "is it rising" on any answer.
+
+Checked: "not-found rate by month" (Jan 3.4% … Jun 8.2%, Jul 3.5% …), "p90 by week last 3 months", "cited rate for modal by month this year", "is the not-found rate rising" (3.1% → 7.0% over the last 90 days, rising), "trend of p90 since July" (16.5 s → 17.0 s, no material change), "is clarification rate increasing in housing this year" (2.2% → 5.2%, rising).
