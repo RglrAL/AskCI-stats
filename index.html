@@ -1860,6 +1860,10 @@ function loadPrefs(){
     }
   }catch(e){}
   if(!Array.isArray(PREFS.annotations))PREFS.annotations=[];
+  // Values from the URL are untrusted: an unknown view or range falls back to the default.
+  if(!['day','week','month'].includes(PREFS.gran))PREFS.gran=PREFS_DEFAULTS.gran;
+  if(!['7D','1M','3M','ALL'].includes(PREFS.range))PREFS.range=PREFS_DEFAULTS.range;
+  if(!['dark','light'].includes(PREFS.theme))PREFS.theme=PREFS_DEFAULTS.theme;
 }
 function savePrefs(){
   try{localStorage.setItem(PREFS_KEY,JSON.stringify(PREFS));}catch(e){}
@@ -2035,6 +2039,11 @@ const CONFIG={
   // surface's rate is "not measured", never 0%: the standalone site's tags show from 10 Mar; the pop-up's
   // pre-launch test traffic produced no tagged clicks, so it counts from the public launch.
   click_tracking_from:{app:'2026-03-10',embed:'2026-05-11'},
+  // Outcome classes come from text rules (tools/redact_feed.py). After the 14 Sep model change the cited
+  // share stepped from about 93% to 82% while "partial" doubled, which fits a change in the model's wording
+  // as well as worse answers. Until a hand-labelled sample settles it, outcome figures from this date carry
+  // a note. Set to null once the rules are checked against the new model.
+  outcome_rules_unvalidated_from:'2026-09-14',
   latency_target_p90_ms:20000, // provisional p90 target (admin-app spec open question 13); drawn as a dashed line
   // Phone-service hours, used only for the "outside phone-service hours" share on the Usage pane.
   phone_service:{days:[1,2,3,4,5],from:9,to:20,label:'Mon–Fri 09:00–20:00',source:'Citizens Information Phone Service published hours — to confirm'},
@@ -2042,7 +2051,7 @@ const CONFIG={
 const FOUNDRY='Foundry Models';
 const FAMILY_COL={'GPT 5 Chat':'#58a6ff','GPT 5 Mini':'#bc8cff','GPT 5':'#ff7b72','gpt-4o 1120':'#d29922','gpt-4o-mini 0718':'#e879f9','chat-latest 05052026':'#3fb950','5.4':'#39d353','5.4 mini':'#f0883e','gpt-4o-transcribe':'#79c0ff','text-embedding-3-small':'#8b949e','unparsed':'#6e7681'};
 const METER_TYPE_COL={'input':'#58a6ff','cached input':'#3fb950','output':'#f85149','embedding':'#8b949e','voice':'#79c0ff','unparsed':'#6e7681'};
-const EVENT_KIND_COL={model:'#58a6ff',launch:'#d29922',chips:'#bc8cff','observed change':'#39d353'};
+const EVENT_KIND_COL={model:'#58a6ff',launch:'#d29922',chips:'#bc8cff','observed change':'#39d353',other:'#f0883e'};
 
 // ═══ CLASSIFIERS ═══════════════════════════════════════════════════
 function classifyMeter(m){if(CONFIG.meters.fixed.includes(m))return'fixed';if(CONFIG.meters.variable.includes(m))return'variable';return'unclassified'}
@@ -2090,8 +2099,8 @@ function fmtWeek(iso){const dt=new Date(iso);return`${MON_S[dt.getMonth()]} ${dt
 function gbp(v,dp=2){if(v==null)return'—';const n=+v||0;const s=Math.abs(n).toFixed(dp);return`${n<0&&+s!==0?'−':''}£${s}`}
 function num(v){return(+v||0).toLocaleString()}
 function dow(iso){try{return new Date(iso).getDay()}catch{return-1}}
-function addDays(iso,n){const d=new Date(iso);d.setDate(d.getDate()+n);return d.toISOString().slice(0,10)}
-function weekStart(iso){const d=new Date(iso),day=d.getDay(),diff=d.getDate()-(day===0?6:day-1);d.setDate(diff);return d.toISOString().slice(0,10)}
+function addDays(iso,n){return isoAdd(iso,n)}   // UTC throughout: local-time arithmetic shifts a day west of Greenwich and across clock changes
+function weekStart(iso){const day=isoDow(iso);return isoAdd(iso,-(day===0?6:day-1))}   // Monday, UTC
 function shortMeter(k){return k.replace(/Glbl 1M Tokens|glbl Tokens|regional Tokens|1M Tokens/gi,'').replace(/cchd/gi,'cached').replace(/Inpt|Inp\b/gi,'In').replace(/outpt|Outp\b/gi,'Out').replace(/-glbl$/i,'').replace(/-$/,'').trim()}
 
 // ═══ CHART PLUGINS ══════════════════════════════════════════════════
@@ -2307,7 +2316,7 @@ function buildChartTable(id){
       const n=(typeof v==='number')?v:(v&&typeof v==='object'&&'y' in v?v.y:null);
       return{val:n,formatted:fmts[di](n)};
     });
-    return{label:lbl,cells};
+    return{label:lbl,cells,i};
   });
 
   // Initial sort state (date column ascending)
@@ -2327,12 +2336,12 @@ function renderChartTableBody(id){
   // Sort
   const sorted=[...rows];
   if(s.col===-1){
-    // sort by label string
-    sorted.sort((a,b)=>String(a.label).localeCompare(String(b.label)));
+    // the label column keeps the chart's own order (dates as plotted): label text sorts "10 Oct" before "2 Oct"
+    sorted.sort((a,b)=>a.i-b.i);
   }else{
     sorted.sort((a,b)=>{
-      const av=a.cells[s.col]?.val??-Infinity;
-      const bv=b.cells[s.col]?.val??-Infinity;
+      const av=a.cells[s.col]?.val,bv=b.cells[s.col]?.val;
+      if(av==null&&bv==null)return a.i-b.i;if(av==null)return -1;if(bv==null)return 1;   // blanks first, so -Infinity arithmetic cannot give NaN
       return av-bv;
     });
   }
@@ -2699,7 +2708,7 @@ function analyse(costData,usageByDate){
     x.fixed+=d.fixed;x.variable+=d.variable;x.unclassified+=d.unclassified;
     if(d.hasCost){if(!x.costFirst||d.date<x.costFirst)x.costFirst=d.date;if(!x.costLast||d.date>x.costLast)x.costLast=d.date;}
     if(d.queries>0){if(!x.usageFirst||d.date<x.usageFirst)x.usageFirst=d.date;if(!x.usageLast||d.date>x.usageLast)x.usageLast=d.date;}
-    (isoWeekend(d.date)?x.weQ:x.wdQ).push(d.queries);
+    if(d.queries>0){x.usageDays=(x.usageDays||0)+1;(isoWeekend(d.date)?x.weQ:x.wdQ).push(d.queries);}   // a cost-only day is not a zero-usage day
     Object.entries(d.metersByDate||{}).forEach(([k,v])=>{x.meters[k]=(x.meters[k]||0)+v;});
     Object.entries(d.fam||{}).forEach(([f,types])=>{const t=x.fam[f]||(x.fam[f]={});Object.entries(types).forEach(([ty,v])=>{t[ty]=(t[ty]||0)+v;});});
   });
@@ -2766,39 +2775,49 @@ function rateText(n,d,dp=1){const r=rateOK(n,d);return r.ok?(n/d*100).toFixed(dp
 
 // Sum-then-divide per-turn metrics over the settled join days in `rows`. Never averages
 // daily ratios. Invalid (too few days or turns) → per-turn fields are null and `why` says so.
+// Cost-per-turn figures use settled join days (billing settled and turns > 0). Feed-only figures (outcome
+// rates, latency, feedback, volumes per day) use every day with usage data: billing settlement has no
+// bearing on them, and restricting them to join days dropped the latest days and split the Overview from
+// the Usage tab and the Ask bar.
 function perTurnStats(rows){
-  const j=rows.filter(d=>d.join);
+  const j=rows.filter(d=>d.join),u=rows.filter(d=>d.ux&&d.queries>0);
   const sum=k=>j.reduce((s,d)=>s+(d[k]||0),0);
   const turns=sum('queries'),convs=sum('sessions'),gen=sum('gen'),tot=sum('total'),vr=sum('variable'),fx=sum('fixed'),un=sum('unclassified');
   const days=j.length,from=days?j[0].date:null,to=days?j[days-1].date:null;
   const valid=days>=CONFIG.min_settled_join_days&&turns>=CONFIG.min_rate_denominator;
+  const uturns=u.reduce((s,d)=>s+d.queries,0),uconvs=u.reduce((s,d)=>s+d.sessions,0),udays=u.length,ufrom=udays?u[0].date:null,uto=udays?u[udays-1].date:null;
+  // Feed figures follow the small-sample rule (rateOK on each rate); the day minimum is for cost joins.
+  const uvalid=udays>=1&&uturns>=CONFIG.min_rate_denominator;
   const pt=(c,n)=>valid&&n>0?c/n*100:null;
-  const hasAns=j.some(d=>d.ux&&d.ux.answered!=null),ans=j.reduce((s,d)=>s+(d.ux?.answered||0),0),flg=j.reduce((s,d)=>s+(d.ux?.flagged||0),0);
-  const latW=j.reduce((s,d)=>s+((d.ux?.latP50||0)*d.queries),0),latQ=j.reduce((s,d)=>s+(d.ux?.latP50?d.queries:0),0);
-  const ux=k=>j.reduce((s,d)=>s+(d.ux?.[k]||0),0),hasTax=j.some(d=>d.ux&&d.ux.cited!=null);
+  const hasAns=u.some(d=>d.ux&&d.ux.answered!=null),ans=u.reduce((s,d)=>s+(d.ux?.answered||0),0),flg=u.reduce((s,d)=>s+(d.ux?.flagged||0),0);
+  const latW=u.reduce((s,d)=>s+((d.ux?.latP50||0)*d.queries),0),latQ=u.reduce((s,d)=>s+(d.ux?.latP50?d.queries:0),0);
+  const ux=k=>u.reduce((s,d)=>s+(d.ux?.[k]||0),0),hasTax=u.some(d=>d.ux&&d.ux.cited!=null);
   const cited=ux('cited'),nf=ux('notFound'),cl=ux('clarification'),er=ux('error'),sc=ux('scored'),pa=ux('partial'),unc=ux('uncited'),oos=ux('outOfScope');
   const ms=ux('modalSessions'),ws=ux('webSessions'),sf=ux('suggestedFollowup'),hasTypes=j.some(d=>d.ux&&d.ux.suggestedFollowup!=null),hasSrc=j.some(d=>d.ux&&d.ux.modalSessions!=null);
-  const vrate=(n,d)=>valid?rate(n,d):null;
+  const vrate=(n,d)=>uvalid?rate(n,d):null;
   const likes=ux('likes'),dislikes=ux('dislikes'),dk=ux('dislikesCited'),hasFb=j.some(d=>d.ux&&d.ux.likes!=null);
-  const dpk=hasFb&&valid&&rateOK(dk,cited).ok&&cited>0?dk/cited*1000:null;
+  const dpk=hasFb&&uvalid&&rateOK(dk,cited).ok&&cited>0?dk/cited*1000:null;
   // Conversations that reached a cited answer: mature conversations by start day, over every usage day in
   // the window (not only settled join days; this is a feed measure with no cost component).
   const cv=rows.filter(d=>CONV[d.date]&&CONV[d.date].ReachedCited!=null),cvMat=cv.reduce((s,d)=>s+CONV[d.date].Mature,0),cvR=cv.reduce((s,d)=>s+CONV[d.date].ReachedCited,0);
   return{days,from,to,turns,convs,gen,tot,variable:vr,fixed:fx,unclassified:un,valid,
+    udays,ufrom,uto,uturns,uconvs,uvalid,uspan:udays?spanLabel(ufrom,uto,true):'no usage days',
     reachedCited:cv.length?rate(cvR,cvMat):null,
     scored:sc,cited,notFound:nf,errors:er,
     citedRate:hasTax?vrate(cited,sc):null,notFoundRate:hasTax?vrate(nf,sc):null,clarRate:hasTax?vrate(cl,sc):null,uncitedRate:hasTax?vrate(unc,sc):null,
-    errorRate:hasTax?vrate(er,turns):null,outOfScopeShare:hasTax?vrate(oos,turns):null,partialRate:hasTax?vrate(pa,cited):null,
-    chipsShare:hasTypes?vrate(sf,turns):null,modalShare:hasSrc?vrate(ms,ms+ws):null,
-    likes,dislikes,dislikesPerK:dpk,feedbackRate:hasFb?vrate(likes+dislikes,turns):null,
-    convsPerDay:days?convs/days:null,turnsPerConv:convs>0?turns/convs:null,varPerDay:days?vr/days:null,
-    answered:ans,answeredShare:hasAns&&valid&&turns>0?ans/turns*100:null,flaggedShare:hasAns&&valid&&turns>0?flg/turns*100:null,genPA:hasAns?pt(gen,ans):null,latP50:valid&&latQ>0?latW/latQ:null,
+    errorRate:hasTax?vrate(er,uturns):null,outOfScopeShare:hasTax?vrate(oos,uturns):null,partialRate:hasTax?vrate(pa,cited):null,
+    chipsShare:hasTypes?vrate(sf,uturns):null,modalShare:hasSrc?vrate(ms,ms+ws):null,
+    likes,dislikes,dislikesPerK:dpk,feedbackRate:hasFb?vrate(likes+dislikes,uturns):null,
+    convsPerDay:udays?uconvs/udays:null,turnsPerConv:uconvs>0?uturns/uconvs:null,varPerDay:days?vr/days:null,
+    answered:ans,answeredShare:hasAns&&uvalid&&uturns>0?ans/uturns*100:null,flaggedShare:hasAns&&uvalid&&uturns>0?flg/uturns*100:null,
+    genPA:hasAns?pt(gen,j.reduce((s,d)=>s+(d.ux?.answered||0),0)):null,latP50:uvalid&&latQ>0?latW/latQ:null,
     genPT:pt(gen,turns),totPT:pt(tot,turns),varPT:pt(vr,turns),
     genPC:pt(gen,convs),totPC:pt(tot,convs),varPC:pt(vr,convs),
     fixedShare:(fx+vr)>0?fx/(fx+vr)*100:null,
-    turnsPerDay:days?turns/days:null,costPerDay:days?tot/days:null,
+    turnsPerDay:udays?uturns/udays:null,costPerDay:days?tot/days:null,
     span:days?spanLabel(from,to,true):'no settled join days',
-    why:valid?'':(days<CONFIG.min_settled_join_days?`${days} settled join day${days===1?'':'s'}, minimum ${CONFIG.min_settled_join_days}`:`${turns} turns, minimum ${CONFIG.min_rate_denominator}`)};
+    why:valid?'':(days<CONFIG.min_settled_join_days?`${days} settled join day${days===1?'':'s'}, minimum ${CONFIG.min_settled_join_days}`:`${turns} turns, minimum ${CONFIG.min_rate_denominator}`),
+    uwhy:uvalid?'':(udays<1?'no usage days':`${uturns} turns, minimum ${CONFIG.min_rate_denominator}`)};
 }
 // Cached-input billed-cost share = cached-input cost ÷ (input + cached-input cost). This is a
 // share of billed cost, not a cache-hit rate: cached input is priced lower, so it understates
@@ -2921,17 +2940,23 @@ function wcChip(st){const l=st.cost?'cost':WC_CLASS[st.cls]||'';return l?`<span 
 function whatChanged(rangeRows,set='service'){
   const empty={statements:[],events:[],A:null,B:null,valid:false,why:'no data in range',fallback:'',rule:'',set};
   if(!rangeRows||!rangeRows.length)return empty;
-  const from=rangeRows[0].date,to=rangeRows[rangeRows.length-1].date;
+  // Each set compares windows on its own basis, so both windows are complete and of equal length: the
+  // service set on days with usage data, the cost set on settled join days (the range's trailing
+  // provisional and cost-only days would otherwise shorten the current window only).
+  const isCost=set==='cost',keep=d=>isCost?d.join:(d.ux&&d.queries>0);
+  const base=rangeRows.filter(keep);if(!base.length)return{...empty,why:isCost?'no settled join days in range':'no usage days in range'};
+  const from=base[0].date,to=base[base.length-1].date;
   const W=comparisonWindow(from,to);
-  let A=perTurnStats(rangeRows),B=perTurnStats(DATA.merged.filter(d=>d.date>=W.from&&d.date<=W.to)),fallback='';
-  if(!B.days&&rangeRows.length>56){
-    // Nothing precedes the range (e.g. All): compare the last 28 settled join days with the 28 before.
-    const j=rangeRows.filter(d=>d.join);
-    if(j.length>=56){A=perTurnStats(j.slice(-28));B=perTurnStats(j.slice(-56,-28));fallback='the range has no preceding window, so the last 28 settled join days are compared with the 28 before';}
+  let A=perTurnStats(base),B=perTurnStats(DATA.merged.filter(d=>d.date>=W.from&&d.date<=W.to&&keep(d))),fallback='';
+  const bDays=b=>isCost?b.days:b.udays;
+  if(!bDays(B)&&base.length>56){
+    // Nothing precedes the range (e.g. All): compare the last 28 days of the basis with the 28 before.
+    A=perTurnStats(base.slice(-28));B=perTurnStats(base.slice(-56,-28));fallback=`the range has no preceding window, so the last 28 ${isCost?'settled join days':'days with usage data'} are compared with the 28 before`;
   }else if(W.rule!=='the preceding window of equal length')fallback='compared with '+W.rule;
   const M=CONFIG.materiality,out=[];
   const fmt={pts:v=>v.toFixed(1)+'%',ms:v=>(v/1000).toFixed(1)+'s',pence:v=>v.toFixed(2)+'p',count:v=>num(Math.round(v)),gbp:v=>gbp(v,Math.abs(v)>=100?0:2),perk:v=>v.toFixed(1)};
-  const valid=A.valid&&B.valid;
+  const MIN_WC_DAYS=5;   // a service comparison needs at least five usage days on each side
+  const valid=isCost?A.valid&&B.valid:A.uvalid&&B.uvalid&&A.udays>=MIN_WC_DAYS&&B.udays>=MIN_WC_DAYS,spanOf=(X,c)=>c.cost?X.span:X.uspan;
   const cands=WC_CANDIDATES.filter(c=>set==='all'||(set==='cost'?c.cost:!c.cost)),limit=set==='cost'?3:6;
   if(valid)cands.forEach(c=>{
     const a=A[c.k],b=B[c.k];if(a==null||b==null)return;
@@ -2943,24 +2968,25 @@ function whatChanged(rangeRows,set='service'){
     else if(c.kind==='pence'){score=Math.max(rel==null?0:Math.abs(rel)/M.ratio_pct,Math.abs(d)/M.ratio_pence);dTxt=`${sign}${Math.abs(d).toFixed(2)}p`+(rel!=null?` (${sign}${Math.abs(rel).toFixed(0)}%)`:'');}
     else{if(rel==null)return;score=Math.abs(rel)/M.count_pct;dTxt=`${sign}${Math.abs(rel).toFixed(0)}%`;}
     if(score<1)return;
-    out.push({name:c.name,k:c.k,cls:c.cls,cost:!!c.cost,a,b,d,rel,kind:c.kind,score,text:`${c.name}: ${fmt[c.kind](a)} (${A.span}) vs ${fmt[c.kind](b)} (${B.span}), ${dTxt}`});
+    out.push({name:c.name,k:c.k,cls:c.cls,cost:!!c.cost,a,b,d,rel,kind:c.kind,score,text:`${c.name}: ${fmt[c.kind](a)} (${spanOf(A,c)}) vs ${fmt[c.kind](b)} (${spanOf(B,c)}), ${dTxt}`});
   });
   // Demand attribution (admin-app spec): for count-like increases, name the attributed category behind
   // 30% or more of the additional turns (or additional not-found turns). Descriptive, from the category file.
-  if(hasCatOut&&A.from&&B.from)out.forEach(st=>{
+  if(hasCatOut&&A.ufrom&&B.ufrom)out.forEach(st=>{
     if(st.d<=0)return;
     const field=st.k==='turnsPerDay'?'Turns':st.k==='notFoundRate'?'NotFound':null;if(!field)return;
     const sumCat=(from,to)=>{const m={};Object.entries(CATOUT).forEach(([d,cats])=>{if(d<from||d>to)return;Object.entries(cats).forEach(([c,o])=>{m[c]=(m[c]||0)+(o[field]||0);});});return m;};
-    const a=sumCat(A.from,A.to),b=sumCat(B.from,B.to);
-    const totA=Object.values(a).reduce((x,y)=>x+y,0),totB=Object.values(b).reduce((x,y)=>x+y,0),add=totA-totB;if(add<=0)return;
-    let best=null;Object.keys(a).forEach(c=>{if(c==='unknown')return;const dd=(a[c]||0)-(b[c]||0);if(dd>0&&(!best||dd>best.d))best={c,d:dd};});
+    const a=sumCat(A.ufrom,A.uto),b=sumCat(B.ufrom,B.uto),na=A.udays||1,nb=B.udays||1;   // per day, so window lengths cannot distort it
+    const totA=Object.values(a).reduce((x,y)=>x+y,0)/na,totB=Object.values(b).reduce((x,y)=>x+y,0)/nb,add=totA-totB;if(add<=0)return;
+    let best=null;Object.keys(a).forEach(c=>{if(c==='unknown')return;const dd=(a[c]||0)/na-(b[c]||0)/nb;if(dd>0&&(!best||dd>best.d))best={c,d:dd};});
     if(best&&best.d/add>=0.3)st.text+=` ${catLabel(CAT_ALIAS[best.c]||best.c)} accounted for ${Math.round(best.d/add*100)}% of the additional ${field==='Turns'?'turns':'not-found turns'}.`;
   });
   out.sort((x,y)=>x.cls-y.cls||y.score-x.score);
   const perClass={},statements=[];
   out.forEach(st=>{if(statements.length>=limit)return;perClass[st.cls]=(perClass[st.cls]||0);if(perClass[st.cls]>=2)return;perClass[st.cls]++;statements.push(st);});
   return{statements,events:eventsInRange(from,to),A,B,valid,fallback,rule:W.rule,set,
-    why:valid?'':(A.valid?`previous window (${B.span}): ${B.why||'no settled join days'}`:`selected window (${A.span}): ${A.why||'no settled join days'}`)};
+    why:valid?'':isCost?(A.valid?`previous window (${B.span}): ${B.why||'no settled join days'}`:`selected window (${A.span}): ${A.why||'no settled join days'}`)
+                       :(!A.uvalid||A.udays<MIN_WC_DAYS?`selected window (${A.uspan}): ${A.uwhy||A.udays+' usage days, minimum '+MIN_WC_DAYS}`:`previous window (${B.uspan}): ${B.uwhy||B.udays+' usage days, minimum '+MIN_WC_DAYS}`)};
 }
 // Descriptive before/after around a confirmed event: equal windows of up to `maxDays`,
 // settled join days only. Labelled before/after — not impact.
@@ -2983,7 +3009,7 @@ function filterRange(data){
   if(timeRange==='ALL')return data;
   const last=data[data.length-1]?.date;if(!last)return data;
   const days={'7D':7,'1M':30,'3M':91}[timeRange]||9999;
-  return data.filter(d=>d.date>=addDays(last,-days));
+  return data.filter(d=>d.date>=addDays(last,-(days-1)));   // 7D = the last 7 days, last day included
 }
 
 function applyCustomDates(){
@@ -3006,7 +3032,8 @@ function rollUp(data,gran){
     if(!map[key]){map[key]={date:key,label:gran==='week'?fmtWeek(key):monthLabel(key),total:0,llm:0,gen:0,queries:0,sessions:0,fixed:0,variable:0,unclassified:0,count:0,settledDays:0,joinDays:0,hasCost:false,fam:{},scope:{service:0,admin:0,shared:0,unassigned:0},voice:{stt:0,tts:0}};DATA.allSvcs.forEach(s=>{map[key][s]=0;});map[key].metersByDate={};}
     const e=map[key];
     e.total+=d.total;e.llm+=d.llm;e.gen+=d.gen;e.queries+=d.queries;e.sessions+=d.sessions;e.fixed+=d.fixed;e.variable+=d.variable;e.unclassified+=d.unclassified;e.count++;
-    if(d.hasCost)e.hasCost=true;if(d.settled)e.settledDays++;if(d.join)e.joinDays++;
+    if(d.hasCost)e.hasCost=true;if(d.settled)e.settledDays++;
+    if(d.join){e.joinDays++;e.jGen=(e.jGen||0)+d.gen;e.jTot=(e.jTot||0)+d.total;e.jQ=(e.jQ||0)+d.queries;}
     DATA.allSvcs.forEach(s=>{e[s]+=(d[s]||0);});
     Object.keys(e.scope).forEach(k=>{e.scope[k]+=(d.scope?.[k]||0);});
     e.voice.stt+=(d.voice?.stt||0);e.voice.tts+=(d.voice?.tts||0);
@@ -3016,7 +3043,7 @@ function rollUp(data,gran){
   });
   const result=Object.values(map).sort((a,b)=>a.date.localeCompare(b.date));
   // Bucket ratios: sum then divide over the bucket's join days only.
-  result.forEach(e=>{e.cpq_llm=e.queries>0&&e.hasCost?e.gen/e.queries*100:null;e.cpq_tot=e.queries>0&&e.hasCost?e.total/e.queries*100:null;
+  result.forEach(e=>{e.join=e.joinDays>0;e.cpq_llm=e.jQ>0?e.jGen/e.jQ*100:null;e.cpq_tot=e.jQ>0?e.jTot/e.jQ*100:null;
     if(e.ux){['latP50','latP90','latP99'].forEach(k=>{if(e.ux[k+'Q'])e.ux[k]=e.ux[k+'W']/e.ux[k+'Q'];});}});
   return result;
 }
@@ -3368,15 +3395,21 @@ function cpqBreakdownHTML(D,S,pd,svcP,totSvc){
 }
 
 // Event markers — confirmed shared events draw solid (●); personal annotations draw dashed (◆).
+// The label of the bucket containing a date on a day, week or month axis: charts label days "5 Oct",
+// weeks "Oct 5" (week start) and months "Oct'26", so a day label alone never matched in Week or Month view.
+function bucketLabel(date,labels){
+  const d=String(date||''),day=d.length===7?d+'-01':d;if(!/^\d{4}-\d{2}-\d{2}$/.test(day))return null;
+  return[d.length===7?null:fmtDate(day),fmtWeek(weekStart(day)),monthLabel(day.slice(0,7)),fmtMonth(day.slice(0,7))].find(l=>l&&labels.includes(l))||null;
+}
 function evLines(S,labels){
   const el=[];
   confirmedEvents().forEach(ev=>{
-    const lbl=fmtDate(ev.start);
-    if(labels.includes(lbl))el.push({label:lbl,color:eventColor(ev),text:'● '+(ev.title.length>30?ev.title.slice(0,28)+'…':ev.title),dash:[]});
+    const lbl=bucketLabel(ev.start,labels);
+    if(lbl)el.push({label:lbl,color:eventColor(ev),text:'● '+(ev.title.length>30?ev.title.slice(0,28)+'…':ev.title),dash:[]});
   });
   (PREFS.annotations||[]).forEach(a=>{
-    const lbl=fmtDate(a.date);
-    if(labels.includes(lbl))el.push({label:lbl,color:annoColor(a.color),text:'◆ '+a.label,dash:[5,3]});
+    const lbl=bucketLabel(a.date,labels);
+    if(lbl)el.push({label:lbl,color:annoColor(a.color),text:'◆ '+a.label,dash:[5,3]});
   });
   return el;
 }
@@ -3733,8 +3766,8 @@ function buildReportNarrative(ctx){
   parts.push(`Between <b>${fmt(from)}</b> and <b>${fmt(to)}</b>, AskCI was billed <b>${gbp(settledSpend+provSpend,0)}</b> on Azure${provSpend>0?` (${gbp(provSpend,0)} of it provisional)`:''}${turns>0?` and received <b>${num(turns)} turns</b>`:''}.`);
   if(P.valid)parts.push(`Over the settled join window (${P.span}) generation cost <b>${P.genPT.toFixed(2)}p</b> per turn; the allocated total was <b>${P.totPT.toFixed(2)}p</b> per turn, of which ${P.varPT.toFixed(2)}p was variable.`);
   else parts.push(`No per-turn figure is shown for this window: ${P.why}.`);
-  if(P.valid&&P.citedRate!=null)parts.push(`Of the scored turns on those days (greetings, errors and refusals excluded), <b>${P.citedRate.toFixed(1)}%</b> were cited answers${P.notFoundRate!=null?`, ${P.notFoundRate.toFixed(1)}% not found`:''}${P.clarRate!=null?` and ${P.clarRate.toFixed(1)}% clarifications`:''}${P.errorRate!=null?`; errors were ${P.errorRate.toFixed(1)}% of all turns`:''}${P.latP50!=null?`; the median response time was <b>${(P.latP50/1000).toFixed(1)}s</b> (turn-weighted daily p50)`:''}.`);
-  else if(P.valid&&P.answeredShare!=null)parts.push(`Of the turns on those days, <b>${P.answeredShare.toFixed(1)}%</b> were answered with a citation${P.flaggedShare!=null?` and ${P.flaggedShare.toFixed(1)}% were flagged`:''}${P.latP50!=null?`; the median response time was <b>${(P.latP50/1000).toFixed(1)}s</b> (turn-weighted daily p50)`:''}.`);
+  if(P.uvalid&&P.citedRate!=null)parts.push(`Of the scored turns from ${P.uspan} (greetings, errors and refusals excluded), <b>${P.citedRate.toFixed(1)}%</b> were cited answers${P.notFoundRate!=null?`, ${P.notFoundRate.toFixed(1)}% not found`:''}${P.clarRate!=null?` and ${P.clarRate.toFixed(1)}% clarifications`:''}${P.errorRate!=null?`; errors were ${P.errorRate.toFixed(1)}% of all turns`:''}${P.latP50!=null?`; the typical response time (median by day, weighted by turns) was <b>${(P.latP50/1000).toFixed(1)}s</b> (turn-weighted daily p50)`:''}.`);
+  else if(P.uvalid&&P.answeredShare!=null)parts.push(`Of the turns from ${P.uspan}, <b>${P.answeredShare.toFixed(1)}%</b> were answered with a citation${P.flaggedShare!=null?` and ${P.flaggedShare.toFixed(1)}% were flagged`:''}${P.latP50!=null?`; the typical response time (median by day, weighted by turns) was <b>${(P.latP50/1000).toFixed(1)}s</b> (turn-weighted daily p50)`:''}.`);
   if(wcS&&wcS.valid&&wcS.statements.length)parts.push(`What changed in service${wcS.fallback?' ('+wcS.fallback+')':' against '+wcS.rule}: ${wcS.statements.map(s=>s.text).join('; ')}.`);
   if(wc.valid&&wc.statements.length)parts.push(`What changed in cost${wc.fallback?' ('+wc.fallback+')':' against '+wc.rule}: ${wc.statements.map(s=>s.text).join('; ')}.`);
   else if(wc.valid)parts.push(`No cost metric moved beyond the materiality thresholds against ${wc.rule} (${wc.B.span}).`);
@@ -3896,14 +3929,14 @@ document.addEventListener('keydown',e=>{
   add('cited-answer-rate','Cited answer rate','check-circle','green','Cited answers as a share of the day\'s scored turns (turns excluding greeting, error and out of scope). Small-sample rule applies per day.',dayRate('cited','scored'),pct,false);
   add('not-found-rate','Not-found rate','search-x','red','Not-found replies as a share of the day\'s scored turns.',dayRate('notFound','scored'),pct,true);
   add('clarification-rate','Clarification rate','help-circle','amber','Clarifying questions as a share of the day\'s scored turns. Reported separately, not as a failure.',dayRate('clarification','scored'),pct,true);
-  add('uncited-answer-rate','Uncited answer rate','file-question','teal','Substantive replies with no citation and no rule match, as a share of scored turns.',dayRate('uncited','scored'),pct,true);
+  add('uncited-answer-rate','Uncited answer rate','file-question','acc','Substantive replies with no citation and no rule match, as a share of scored turns.',dayRate('uncited','scored'),pct,true);
   add('error-rate','Error rate','alert-triangle','pink','Empty responses with 0 ms response time, as a share of all turns received.',dayRate('error',d=>d.queries),pct,true);
   add('out-of-scope-share','Out-of-scope share','ban','purple','Refusals by pattern or the feed\'s legacy flag, as a share of all turns.',dayRate('outOfScope',d=>d.queries),pct,true);
   const convRate=(n,den)=>d=>{const c=CONV[d.date];return c&&c[n]!=null&&c[den]>=CONFIG.min_rate_denominator?c[n]/c[den]*100:null;};
   add('reached-cited','Conversations that reached a cited answer','check-check','green','Mature conversations (24 h after their first turn) in which at least one answer cited a citizensinformation.ie page, as a share of mature conversations, by the day the conversation started.',convRate('ReachedCited','Mature'),pct,false);
   add('nf-later-cited','Not found, then a later cited answer','corner-down-right','green','Not-found answers after which a later question in the same conversation got a cited answer, as a share of not-found answers (mature conversations). Counted per answer; the later answer may be to a different question.',convRate('NFLaterCited','NFTurns'),pct,false);
   add('clar-later-cited','Clarification, then a later cited answer','corner-down-right','green','Clarification answers after which a later question in the same conversation got a cited answer, as a share of clarification answers (mature conversations). Counted per answer.',convRate('ClarLaterCited','ClarTurns'),pct,false);
-  add('click-through-rate','Click-through rate','mouse-pointer-click','acc','GA4 page views of citizensinformation.ie pages carrying AskCI citation tags, per 100 cited answers, counted from 11 May 2026 when both the pop-up and the standalone site are measured. A minimum: GA4 counts only visitors who accept analytics cookies.',d=>{const x=typeof clickDay==='function'?clickDay(d,'all'):null;return x&&x.den>=CONFIG.min_rate_denominator?x.n/x.den*100:null;},v=>v==null?'—':v.toFixed(1),false);
+  add('click-through-rate','Click-through rate','mouse-pointer-click','acc','GA4 page views of citizensinformation.ie pages carrying AskCI citation tags, per 100 cited answers, counted from 11 May 2026 when both the pop-up and the standalone site are measured. A minimum: GA4 counts only visitors who accept analytics cookies.',d=>{const x=typeof clickDay==='function'?clickDay(d,'all'):null;return x&&rateOK(x.n,x.den).ok?x.n/x.den*100:null;},v=>v==null?'—':v.toFixed(1),false);
   add('partial-answer-rate','Cited but partial','circle-dashed','muted','Cited answers whose text also says something could not be found, as a share of cited answers.',dayRate('partial','cited'),pct,true);
   add('dislikes-per-1000-cited','Dislikes per 1,000 cited answers','thumbs-down','amber','Dislikes on cited answers per thousand cited answers that day. Small-sample rule applies, so most single days show a dash; use week or month ranges.',dd=>dd.ux&&dd.ux.dislikesCited!=null&&rateOK(dd.ux.dislikesCited,dd.ux.cited).ok&&dd.ux.cited>0?dd.ux.dislikesCited/dd.ux.cited*1000:null,v=>v==null?'—':v.toFixed(1),true);
   add('starter-prompt-share','Starter-prompt share of first turns','sparkles','purple','First turns whose query matched a configured chip, as a share of first turns that day.',dd=>dd.ux&&dd.ux.starter!=null?rate(dd.ux.starter,dd.ux.starter+dd.ux.organic):null,pct,false);
@@ -4305,7 +4338,7 @@ function renderPane(id){
 function outcomeMixChart(id,vd,extra={}){
   if(!document.getElementById(id))return;
   const g=(r,k)=>r.ux?.[k]||0,sh=(r,k)=>r.queries>0?+((g(r,k))/r.queries*100).toFixed(2):null;
-  const series=[['cited','Cited answer',C.green],['notFound','Not found',C.red],['clarification','Clarification',C.amber],['error','Error',C.pink],['outOfScope','Out of scope',C.purple],['greeting','Greeting',C.dim],['uncited','Uncited answer',C.teal]];
+  const series=[['cited','Cited answer',C.green],['notFound','Not found',C.red],['clarification','Clarification',C.amber],['error','Error',C.pink],['outOfScope','Out of scope',C.purple],['greeting','Greeting',C.dim],['uncited','Uncited answer',C.acc]];
   mkChart(id,{type:'bar',data:{labels:vd.map(d=>d.label),datasets:series.map(([k,l,c])=>({label:l,data:vd.map(r=>sh(r,k)),backgroundColor:c+'cc',stack:'o',maxBarThickness:28}))},
     options:mergeOpts(baseOpts(),{scales:{y:{stacked:true,max:100,ticks:{callback:v=>v+'%'}},x:{stacked:true}},plugins:{legend:{display:true},tooltip:{callbacks:{label:cx=>`${cx.dataset.label}: ${(+cx.parsed.y).toFixed(1)}% (${num(g(vd[cx.dataIndex],series[cx.datasetIndex][0]))})`}}},onClick:(e,els)=>{if(els.length)drillBucket(vd[els[0].index]);},...extra})});
 }
@@ -4334,15 +4367,16 @@ function renderHome(D,S){
   const delta=(k,invert,unit='%')=>B&&A&&A[k]!=null&&B[k]!=null?{curr:A[k],prev:B[k],invert,unit}:null;
   const ratioSub=P.valid?`settled join days · ${P.span}`:P.why;
   const parts=[];
-  if(turns>0)parts.push(`Between <b>${fmtDate(pd[0].date)}</b> and <b>${fmtDate(pd[pd.length-1].date)}</b> AskCI received <b>${num(turns)} turns</b> in ${num(convs)} conversations, about ${num(Math.round(convs/Math.max(days,1)))} a day.`);
-  if(P.valid&&P.citedRate!=null)parts.push(`Of scored turns, <b>${P.citedRate.toFixed(1)}%</b> were cited answers and <b>${P.notFoundRate==null?'—':P.notFoundRate.toFixed(1)+'%'}</b> not found${P.latP50!=null?`; the median response time was <b>${secs(P.latP50)}</b>`:''}.`);
-  else if(P.valid&&P.answeredShare!=null)parts.push(`<b>${P.answeredShare.toFixed(1)}%</b> of turns were answered with a citation${P.latP50!=null?`; the median response time was <b>${secs(P.latP50)}</b>`:''}.`);
-  else if(!P.valid)parts.push(`No per-turn figure yet for this window: ${P.why}.`);
+  const ud=pd.filter(d=>d.queries>0);   // the range's cost days can run past the last usage day
+  if(turns>0)parts.push(`Between <b>${fmtDate(ud[0].date)}</b> and <b>${fmtDate(ud[ud.length-1].date)}</b> AskCI received <b>${num(turns)} turns</b> in ${num(convs)} conversations, about ${num(Math.round(convs/Math.max(days,1)))} a day.`);
+  if(P.uvalid&&P.citedRate!=null)parts.push(`Of scored turns, <b>${P.citedRate.toFixed(1)}%</b> were cited answers and <b>${P.notFoundRate==null?'—':P.notFoundRate.toFixed(1)+'%'}</b> not found${P.latP50!=null?`; the typical response time (median by day, weighted by turns) was <b>${secs(P.latP50)}</b>`:''}.`);
+  else if(P.uvalid&&P.answeredShare!=null)parts.push(`<b>${P.answeredShare.toFixed(1)}%</b> of turns were answered with a citation${P.latP50!=null?`; the typical response time (median by day, weighted by turns) was <b>${secs(P.latP50)}</b>`:''}.`);
+  else if(!P.uvalid)parts.push(`No outcome figure yet for this window: ${P.uwhy}.`);
   if(D.hasCost)parts.push(`Billed cost <b>${gbp(spend,0)}</b>${P.valid&&P.genPT!=null?`, generation ${pence(P.genPT)} per turn`:''}${fc?`; ${fc.monthName} projected at <b>${gbp(fc.forecast,0)}</b> (${fc.label})`:''}.`);
-  const compare=wc.B?(wc.fallback||`compared with ${wc.rule}`)+` · ${wc.B.span}`:'';
+  const compare=wc.B?(wc.fallback||`compared with ${wc.rule}`)+` · ${wc.B.uspan}`:'';
   const tiles=[
-    cols.taxonomy?kpi(pct(P.citedRate),'Cited answer rate',P.valid?`of scored turns · ${P.span}`:P.why,{color:C.green,delta:delta('citedRate',false,'pts')}):(cols.outcomes?kpi(pct(P.answeredShare),'Answered share',ratioSub,{color:C.green,delta:delta('answeredShare',false,'pts')}):null),
-    cols.taxonomy?kpi(pct(P.notFoundRate),'Not-found rate',P.valid?'of scored turns':P.why,{color:C.red,delta:delta('notFoundRate',true,'pts')}):null,
+    cols.taxonomy?kpi(pct(P.citedRate),'Cited answer rate',P.uvalid?`of scored turns · ${P.uspan}`:P.uwhy,{color:C.green,delta:delta('citedRate',false,'pts')}):(cols.outcomes?kpi(pct(P.answeredShare),'Answered share',P.uvalid?`of turns · ${P.uspan}`:P.uwhy,{color:C.green,delta:delta('answeredShare',false,'pts')}):null),
+    cols.taxonomy?kpi(pct(P.notFoundRate),'Not-found rate',P.uvalid?'of scored turns':P.uwhy,{color:C.red,delta:delta('notFoundRate',true,'pts')}):null,
     cols.latency?kpi(secs(P.latP50),'Response time p50','turn-weighted daily median',{color:C.acc,delta:delta('latP50',true,'ms')}):null,
     D.hasUsage?kpi(num(convs),'Conversations',`${num(Math.round(convs/Math.max(days,1)))} a day · ${num(turns)} turns`,{color:C.teal,delta:delta('convsPerDay',false)}):null,
     fc?kpi(gbp(fc.forecast,0),'Month forecast',`${fc.monthName} · ${fcLabel(fc)}`,{color:C.amber}):null,
@@ -4357,6 +4391,7 @@ function renderHome(D,S){
   if(wc.fallback)ins.push(insight('',`Note: ${wc.fallback}.`));
   wc.statements.forEach(st=>ins.push(insight('warn',wcChip(st)+st.text)));
   wc.events.forEach(e=>ins.push(insight('',`Event in range: <b>${e.title}</b>${e.detail?` — ${e.detail}`:''}`)));
+  {const oc=outcomeCaveat(pd,false);if(oc)ins.unshift(oc);}
   el.innerHTML=`
     <div class="card"><div class="home-headline">${parts.join(' ')}</div>${compare?`<div class="home-sub">${compare}</div>`:''}</div>
     <div class="kpi-grid${tileCols===4?' kpi-grid-4':''}" style="margin-bottom:var(--sp-4)">${tiles.join('')}</div>
@@ -4377,7 +4412,7 @@ function renderHome(D,S){
   outcomeMixChart('home-mix',vd);
   if(hasCatOut&&document.getElementById('home-topic')){
     const agg={};pd.forEach(d=>{const m=CATOUT[d.date];if(!m)return;Object.entries(m).forEach(([c,o])=>{const a=agg[c]||(agg[c]={});Object.entries(o).forEach(([k,v])=>{a[k]=(a[k]||0)+v;});});});
-    const OUT=[['OrganicCited','Cited answer',C.green],['OrganicNotFound','Not found',C.red],['OrganicClarification','Clarification',C.amber],['OrganicOutOfScope','Out of scope',C.purple],['OrganicGreeting','Greeting',C.dim],['OrganicError','Error',C.pink],['OrganicUncited','Uncited answer',C.teal]];
+    const OUT=[['OrganicCited','Cited answer',C.green],['OrganicNotFound','Not found',C.red],['OrganicClarification','Clarification',C.amber],['OrganicOutOfScope','Out of scope',C.purple],['OrganicGreeting','Greeting',C.dim],['OrganicError','Error',C.pink],['OrganicUncited','Uncited answer',C.acc]];
     const known=Object.entries(agg).filter(([c])=>c!=='unknown'&&!CAT_EXCLUDE.has(c)).sort((a,b)=>(b[1].OrganicFirstTurns||0)-(a[1].OrganicFirstTurns||0)).slice(0,8);
     const rowsT=[...known,['unknown',agg['unknown']||{}]];
     const totOrg=Object.values(agg).reduce((a,o)=>a+(o.OrganicFirstTurns||0),0),unkOrg=(agg['unknown']||{}).OrganicFirstTurns||0;
@@ -4406,7 +4441,7 @@ function renderOverview(D,S){
     <div id="ov-timeline"></div>
     <div class="grid2">
       ${chartBox('ov-donut',170,'Fixed / variable / generation — selected period')}
-      <div class="card"><div class="card-title">What changed<span class="card-title-note">vs the preceding window of equal length · settled join days</span></div><div id="ov-ins"></div></div>
+      <div class="card"><div class="card-title">What changed<span class="card-title-note">settled join days · the comparison window is named in each statement</span></div><div id="ov-ins"></div></div>
     </div>
     <div class="card"><div class="card-title">Cost by Service — Selected Period</div><div id="ov-svc-bars"></div></div>
     <div id="ov-detail"></div>
@@ -4903,6 +4938,14 @@ function renderReach(D,S){
       if(elapsed/dim<MONTH_COMPLETE){months.pop();partial={label:lm.label,elapsed,dim};}
     }
   }
+  // Likewise a leading month the range clips (e.g. 1M starting mid-month) would read low as a whole month.
+  if(months.length>1){
+    const firstDate=days[0].date,fm=months[0];
+    if(firstDate.slice(0,7)===fm.month&&+firstDate.slice(8,10)>1){
+      const[y,mo]=fm.month.split('-').map(Number),dimF=new Date(y,mo,0).getDate(),covered=dimF-+firstDate.slice(8,10)+1;
+      if(covered/dimF<MONTH_COMPLETE)months.shift();
+    }
+  }
   const last=months[months.length-1],prev=months.length>1?months[months.length-2]:null;
   // Information-seeking share — action-level: of all information-seeking actions (searches carried
   // out + questions asked), what share were chatbot questions. Apples-to-apples (both
@@ -4917,29 +4960,30 @@ function renderReach(D,S){
   const dArrow=(c,f,dp)=>`<span class="reach-delta ${c>=f?'up':'down'}">${c>=f?'▲':'▼'} from ${f.toFixed(dp)}% in ${months[0].label}</span>`;
 
   el.innerHTML=`
+    <div class="reach-note"><i data-lucide="info" class="i-sm"></i><span><b>Upper bounds.</b> GA4 counts only visitors who accept analytics cookies, so site searches and site sessions are undercounted while AskCI questions and conversations are counted in full. Both shares on this tab are therefore <b>at most</b> the values shown.</span></div>
     ${partial?`<div class="reach-note"><i data-lucide="clock" class="i-sm"></i><span><b>${partial.label} in progress</b> (${partial.elapsed} of ${partial.dim} days) — figures below show the last complete month; ${partial.label} appears once it's ~${Math.round(MONTH_COMPLETE*100)}% through.</span></div>`:''}
     <div class="grid4" style="margin-bottom:14px">
-      ${kpi(hs.toFixed(1)+'%','Share of information-seeking',`questions vs site searches · ${last.label}`,{color:C.amber,delta:prev?{curr:hs,prev:helpShare(prev)}:null})}
-      ${kpi(ad.toFixed(2)+'%','Adoption rate',`chat ÷ all site sessions · ${last.label}`,{color:C.acc,delta:prev?{curr:ad,prev:adoption(prev)}:null})}
+      ${kpi('≤ '+hs.toFixed(1)+'%','Share of information-seeking',`at most · questions vs site searches · ${last.label}`,{color:C.amber,delta:prev?{curr:hs,prev:helpShare(prev),unit:'pts'}:null})}
+      ${kpi('≤ '+ad.toFixed(2)+'%','Adoption rate',`at most · conversations ÷ site sessions · ${last.label}`,{color:C.acc,delta:prev?{curr:ad,prev:adoption(prev),unit:'pts'}:null})}
       ${kpi(num(last.chatQ),'Questions asked',last.label,{color:C.green})}
       ${kpi(num(last.siteSess),'Site sessions',last.label,{color:C.purple})}
     </div>
     <div class="card">
       <div class="reach-hero">
-        <div class="reach-hero-num">${hs.toFixed(1)}%${months.length>1?dArrow(hs,hsFirst,1):''}</div>
-        <div class="reach-hero-lbl">of information-seeking (site searches and AskCI questions) now goes to AskCI · ${last.label}</div>
+        <div class="reach-hero-num">≤ ${hs.toFixed(1)}%${months.length>1?dArrow(hs,hsFirst,1):''}</div>
+        <div class="reach-hero-lbl">at most this share of information-seeking (site searches and AskCI questions) goes to AskCI · ${last.label}</div>
       </div>
       <div class="chart-wrap" id="rc-help-wrap" style="height:250px"><canvas id="rc-help"></canvas></div>
     </div>
     <div class="card">
       <div class="reach-hero">
-        <div class="reach-hero-num" style="font-size:var(--t-xl)">${ad.toFixed(2)}%${months.length>1?dArrow(ad,adFirst,2):''}</div>
-        <div class="reach-hero-lbl">of all ${num(last.siteSess)} site visits used AskCI · ${last.label}</div>
+        <div class="reach-hero-num" style="font-size:var(--t-xl)">≤ ${ad.toFixed(2)}%${months.length>1?dArrow(ad,adFirst,2):''}</div>
+        <div class="reach-hero-lbl">AskCI conversations (pop-up and standalone site) as a share of ${num(last.siteSess)} citizensinformation.ie site visits, at most · ${last.label}</div>
       </div>
       <div class="chart-wrap" id="rc-vol-wrap" style="height:220px"><canvas id="rc-vol"></canvas></div>
     </div>
     <div class="card"><div class="card-title">Key Insight</div><div id="rc-ins"></div></div>
-    <div class="reach-foot"><i data-lucide="info" class="i-sm"></i><span>"Site visits" here means <b>sessions</b> (one per visit, summed daily) — the right basis for adoption, which compares visits to AskCI use. The count of <b>unique people</b> over a period is lower, because GA4 deduplicates anyone who returns on multiple days (e.g. ~2.6M unique users Jan–May ≈ 17k/day, vs ~35k sessions/day).</span></div>
+    <div class="reach-foot"><i data-lucide="info" class="i-sm"></i><span>"Site visits" here means <b>sessions</b> (one per visit, summed daily) — the right basis for adoption, which compares visits to AskCI use. The count of <b>unique people</b> over a period is lower, because GA4 deduplicates anyone who returns on several days.</span></div>
   `;
   const labels=months.map(m=>m.label);
   // Hero — two volume lines (searches vs questions) + information-seeking % as a soft area (right axis)
@@ -4961,8 +5005,8 @@ function renderReach(D,S){
       scales:{y:{ticks:{callback:v=>num(v)}},yPct:{position:'right',min:0,grid:{display:false},border:{display:false},ticks:{color:C.muted,font:{size:10,family:'DM Mono'},callback:v=>v.toFixed(1)+'%'}}}})});
   // Insight — adoption story + the carefully-hedged substitution signal
   const ins=[];
-  ins.push(insight('good',`<span class="hl-g">${helpShare(last).toFixed(1)}% of information-seeking actions now go through AskCI</span> (${last.label}) — ${num(last.chatQ)} questions vs ${num(last.searchEv)} search queries — up from ${helpShare(months[0]).toFixed(1)}% in ${months[0].label}.`));
-  ins.push(insight('',`Against <em>all</em> site traffic, adoption is <span class="hl-b">${adoption(last).toFixed(2)}%</span> of sessions — small, because the site sees ${num(last.siteSess)} sessions/month, but climbing.`));
+  ins.push(insight('good',`<span class="hl-g">At most ${helpShare(last).toFixed(1)}% of information-seeking actions now go through AskCI</span> (${last.label}) — ${num(last.chatQ)} questions vs ${num(last.searchEv)} search queries — up from ${helpShare(months[0]).toFixed(1)}% in ${months[0].label}.`));
+  ins.push(insight('',`Against <em>all</em> site traffic, adoption is at most <span class="hl-b">${adoption(last).toFixed(2)}%</span> of sessions — small, because the site sees ${num(last.siteSess)} sessions/month, but climbing.`));
   ins.push(insight('warn',`AskCI usage rose sharply in <span class="hl-b">${infl.label}</span>${(()=>{const lv=confirmedEvents().find(e=>e.kind==='launch');return lv?` (around ${lv.title}, ${fmtDate(lv.start)})`:'';})()}, while site searches have declined gradually since ${months[0].label} (${num(months[0].searchEv)} → ${num(last.searchEv)} searches) — a trend that <b>predates the release</b>. Some substitution is plausible, but the data does not establish that AskCI caused it.`));
   document.getElementById('rc-ins').innerHTML=ins.join('');
 }
@@ -4975,7 +5019,7 @@ function renderCategories(D,S){
 function appendCategoryDetail(D){
   const el=document.getElementById('pane-categories');
   const fr=filterRange(D.merged);if(!fr.length)return;
-  const span=spanLabel(fr[0].date,fr[fr.length-1].date),months=monthsIn(fr);
+  const span=usageSpan(fr),months=monthsIn(fr);
   const td=(v,col,right=true,extra='')=>`<td class="num" style="text-align:${right?'right':'left'};padding:6px 10px;font-family:'DM Mono',monospace;font-size:.78rem${col?';color:'+col:''}${extra}">${v}</td>`;
   const th=(t,right=true)=>`<th style="text-align:${right?'right':'left'};padding:6px 10px;font-size:.6rem;color:var(--muted);text-transform:uppercase;letter-spacing:.08em">${t}</th>`;
   let h='';
@@ -4991,7 +5035,7 @@ function appendCategoryDetail(D){
       <div class="tbl-wrap"><table style="width:100%;border-collapse:collapse;min-width:720px"><thead><tr style="border-bottom:1px solid var(--b2)">${th('Category',false)}${th('Organic first turns')}${th('Share')}${th('Cited')}${th('Not found')}${th('Clarification')}${th('Dislikes / 1,000')}</tr></thead>
       <tbody>${rows.map(([c,o])=>line(c,o,false)).join('')}${line('unknown',unknown,true)}</tbody></table></div>
     </div>`;
-    const OUT=[['Cited','Cited answer',C.green],['NotFound','Not found',C.red],['Clarification','Clarification',C.amber],['OutOfScope','Out of scope',C.purple],['Greeting','Greeting',C.dim],['Error','Error',C.pink],['Uncited','Uncited answer',C.teal]];
+    const OUT=[['Cited','Cited answer',C.green],['NotFound','Not found',C.red],['Clarification','Clarification',C.amber],['OutOfScope','Out of scope',C.purple],['Greeting','Greeting',C.dim],['Error','Error',C.pink],['Uncited','Uncited answer',C.acc]];
     const cell=(o,k,col)=>{const t=o.Turns||0,v=o[k]||0,r=rateOK(v,t);if(!r.ok)return td('—','var(--dim)');const pct=v/t*100;const a=Math.round(0x10+Math.min(1,pct/100)*0xa0).toString(16).padStart(2,'0');return td(pct.toFixed(1)+'%','',true,`;background:${col}${a}`);};
     const byVol=[...rows].sort((a,b)=>(b[1].Turns||0)-(a[1].Turns||0));
     h+=`<div class="card"><div class="card-title">Outcome share by attributed category<span class="card-title-note">each row sums to 100% of its turns · cells under the small-sample rule show a dash · sorted by volume</span></div>
@@ -5270,7 +5314,7 @@ function renderConvs(D,S){
   const started=sum('Started'),mature=sum('Mature'),span=spanLabel(fr[0].date,fr[fr.length-1].date);
   const single=sum('Turns1'),mt=sum('MatureTurns');
   const hist=[...Array.from({length:9},(_,i)=>['Turns'+(i+1),String(i+1)]),['Turns10plus','10+']];
-  const OUT=[['Cited','Cited answer',C.green],['NotFound','Not found',C.red],['Clarification','Clarification',C.amber],['OutOfScope','Out of scope',C.purple],['Greeting','Greeting',C.dim],['Error','Error',C.pink],['Uncited','Uncited answer',C.teal]];
+  const OUT=[['Cited','Cited answer',C.green],['NotFound','Not found',C.red],['Clarification','Clarification',C.amber],['OutOfScope','Out of scope',C.purple],['Greeting','Greeting',C.dim],['Error','Error',C.pink],['Uncited','Uncited answer',C.acc]];
   const cohort=`<span class="card-title-note">${num(mature)} mature of ${num(started)} started · a conversation is mature 24 h after its first turn · ${span}</span>`;
   const td=(v,col,right=true)=>`<td class="num" style="text-align:${right?'right':'left'};padding:7px 10px;font-family:'DM Mono',monospace;font-size:.8rem${col?';color:'+col:''}">${v}</td>`;
   const th=(t,right=true)=>`<th style="text-align:${right?'right':'left'};padding:7px 10px;font-size:.6rem;color:var(--muted);text-transform:uppercase;letter-spacing:.08em">${t}</th>`;
@@ -5285,6 +5329,9 @@ function renderConvs(D,S){
   months.forEach(m=>(STARTERS[m]||[]).forEach(r=>{const o=sp[r.prompt]||(sp[r.prompt]={n:0,cited:0,typed:0,sugg:0});o.n+=r.n;o.cited+=r.cited;o.typed+=r.typed;o.sugg+=r.sugg;}));
   const spRows=Object.entries(sp).sort((a,b)=>b[1].n-a[1].n);
   const spTotal=spRows.reduce((a,[,o])=>a+o.n,0);
+  // The prompt file is monthly, so its shares divide by conversations started in the same whole months,
+  // never by the range's own conversations (a 7-day range against whole months overstated them 3 to 4 times).
+  const spStarted=D.merged.filter(d=>months.includes(d.month)).reduce((a,d)=>a+d.sessions,0);
   // Where conversations ended up: outcomes before activity. Mature conversations by start day; the
   // setback rows count answers, not conversations, and a later cited answer may be to another question.
   const hasOut=fr.some(d=>CONV[d.date].ReachedCited!=null);
@@ -5310,6 +5357,7 @@ function renderConvs(D,S){
         </div>
         ${spark?`<div class="conv-hero-spark">${spark}<span>by week</span></div>`:''}
       </div>
+      ${outcomeCaveat(fr,true)}
     </div>
     ${SB.length?`<div class="grid2 grid-wide-left">
       ${chartBox('cv-setback',Math.max(150,SB.length*46+50),'After a not-found, clarification or error answer','per answer · a later cited answer may be to a different question')}
@@ -5357,9 +5405,9 @@ function renderConvs(D,S){
         <div class="chart-wrap" style="height:190px"><canvas id="cv-span"></canvas></div>
       </div>
     </div>
-    ${spRows.length?`<div class="card"><div class="card-title">Starter prompts<span class="card-title-note">configured chips matched on first turns · months overlapping the range (${months.map(fmtMonth).join(', ')}) · ${rateText(spTotal,started)} of ${num(started)} first turns</span></div>
+    ${spRows.length?`<div class="card"><div class="card-title">Starter prompts<span class="card-title-note">configured chips matched on first turns · months overlapping the range (${months.map(fmtMonth).join(', ')}) · ${rateText(spTotal,spStarted)} of ${num(spStarted)} conversations started in those months</span></div>
       <table style="width:100%;border-collapse:collapse"><thead><tr style="border-bottom:1px solid var(--b2)">${th('Prompt',false)}${th('Count')}${th('Share of first turns')}${th('Own outcome cited')}${th('Followed by typed turn 2')}${th('Followed by suggested turn 2')}</tr></thead>
-      <tbody>${spRows.map(([pr,o])=>`<tr style="border-bottom:1px solid var(--b2)">${td(pr,C.acc,false)}${td(num(o.n))}${td(rateText(o.n,started))}${td(rateText(o.cited,o.n),C.green)}${td(rateText(o.typed,o.n))}${td(rateText(o.sugg,o.n))}</tr>`).join('')}</tbody></table>
+      <tbody>${spRows.map(([pr,o])=>`<tr style="border-bottom:1px solid var(--b2)">${td(pr,C.acc,false)}${td(num(o.n))}${td(rateText(o.n,spStarted))}${td(rateText(o.cited,o.n),C.green)}${td(rateText(o.typed,o.n))}${td(rateText(o.sugg,o.n))}</tr>`).join('')}</tbody></table>
     </div>`:''}
   `;
   mkChart('cv-hist',{type:'bar',data:{labels:hist.map(h=>h[1]),datasets:[{label:'Mature conversations',data:hist.map(h=>sum(h[0])),backgroundColor:C.acc+'cc',maxBarThickness:36}]},
@@ -5394,12 +5442,14 @@ function renderUsage(D,S){
 
   const fr=filterRange(D.merged);
   const mm={};
-  fr.forEach(d=>{
+  fr.filter(d=>d.queries>0).forEach(d=>{   // usage days only: a cost-only day would count as a zero-turn day
     const m=d.month;
-    if(!mm[m])mm[m]={month:m,label:(D.monthly.find(x=>x.month===m)||{}).usageLabel||fmtMonth(m),questions:0,sessions:0,days:0,wdQ:[],weQ:[]};
-    mm[m].questions+=d.queries;mm[m].sessions+=d.sessions;mm[m].days++;
+    if(!mm[m])mm[m]={month:m,label:(D.monthly.find(x=>x.month===m)||{}).usageLabel||fmtMonth(m),questions:0,sessions:0,days:0,wdQ:[],weQ:[],first:d.date,last:d.date};
+    mm[m].questions+=d.queries;mm[m].sessions+=d.sessions;mm[m].days++;mm[m].last=d.date;
     const dw=dow(d.date);(dw===0||dw===6?mm[m].weQ:mm[m].wdQ).push(d.queries);
   });
+  // A month the range clips at its start is labelled with the days it covers, not the month's name alone.
+  Object.values(mm).forEach(x=>{if(+x.first.slice(8)>1)x.label=`${MON_S[+x.month.slice(5)-1]} ${+x.first.slice(8)}–${+x.last.slice(8)}`;});
   const fm=Object.values(mm).sort((a,b)=>a.month.localeCompare(b.month));
   const totQ=fr.reduce((s,d)=>s+d.queries,0),totS=fr.reduce((s,d)=>s+d.sessions,0);
   const peakD=fr.reduce((b,d)=>d.queries>b.queries?d:b,fr[0]||{queries:0});
@@ -5458,13 +5508,13 @@ function usageOutcomesHTML(fr){
   const sum=k=>fr.reduce((s,d)=>s+(d.ux?.[k]||0),0);
   const turns=fr.reduce((s,d)=>s+d.queries,0),convs=fr.reduce((s,d)=>s+d.sessions,0);
   const pc=(a,b)=>b>0?(a/b*100).toFixed(1)+'%':'—';
-  const span=spanLabel(fr[0].date,fr[fr.length-1].date);
+  const span=usageSpan(fr);
   let h='';
   if(cols.taxonomy){
     const P=perTurnStats(fr),cited=sum('cited'),nf=sum('notFound'),cl=sum('clarification'),er=sum('error'),oos=sum('outOfScope'),gr=sum('greeting'),unc=sum('uncited'),pa=sum('partial'),sc=sum('scored');
     const rt=(n,d,col)=>{const r=rateOK(n,d);return[r.ok?(n/d*100).toFixed(1)+'%':'—',r.ok?'':r.why];};
     const T=(n,d,lbl,sub,col,key)=>{const[v,why]=rt(n,d);return uxTile(v,lbl,why||sub,col,key);};
-    h+=`<div class="card"><div class="card-title">Answer outcomes<span class="card-title-note">one outcome per turn, rules ${DATA.usageQuality.outcomeRules||''} applied at redaction · rates over scored turns (excluding greeting, error and out of scope) · error over all turns · ${span}</span></div>
+    h+=`<div class="card">${outcomeCaveat(fr,false)}<div class="card-title">Answer outcomes<span class="card-title-note">one outcome per turn, rules ${DATA.usageQuality.outcomeRules||''} applied at redaction · rates over scored turns (excluding greeting, error and out of scope) · error over all turns · ${span}</span></div>
       <div class="grid4">
         ${T(cited,sc,'Cited answer rate',num(cited)+' of '+num(sc)+' scored turns'+(sum('citations')>0&&cited>0?` · ${(sum('citations')/cited).toFixed(2)} citations each`:''),C.green,'cited-answer-rate')}
         ${T(nf,sc,'Not-found rate',num(nf)+' turns',C.red,'not-found-rate')}
@@ -5475,7 +5525,7 @@ function usageOutcomesHTML(fr){
         ${T(pa,cited,'Cited but partial',num(pa)+' cited answers that also say they could not find something',C.muted,'partial-answer-rate')}
         ${T(oos,turns,'Out of scope',num(oos)+' turns · refusal by pattern or the feed\'s legacy flag',C.purple,'out-of-scope-share')}
         ${T(gr,turns,'Greeting',num(gr)+' turns',C.dim)}
-        ${T(unc,sc,'Uncited answer',num(unc)+' turns · substantive reply, no citation, no rule matched',C.teal,'uncited-answer-rate')}
+        ${T(unc,sc,'Uncited answer',num(unc)+' turns · substantive reply, no citation, no rule matched',C.acc,'uncited-answer-rate')}
       </div>
       ${uxTile(P.genPA!=null?P.genPA.toFixed(2)+'p':'—','Generation cost per cited answer',P.valid?'settled join days · '+P.span:P.why,C.acc,'generation-cost-per-answered-turn').replace('text-align:center','text-align:center;max-width:320px;margin-bottom:12px')}
       ${chartBox('ux-outcomes',200,'Outcome mix — selected range','shares of turns, stacked to 100% · click a bar')}
@@ -5500,7 +5550,7 @@ function usageDetailHTML(fr){
   const sum=k=>fr.reduce((s,d)=>s+(d.ux?.[k]||0),0);
   const turns=fr.reduce((s,d)=>s+d.queries,0),convs=fr.reduce((s,d)=>s+d.sessions,0);
   const pc=(a,b)=>b>0?(a/b*100).toFixed(1)+'%':'—';
-  const span=spanLabel(fr[0].date,fr[fr.length-1].date);
+  const span=usageSpan(fr);
   let h='';
   if(cols.feedback){
     const li=sum('likes'),di=sum('dislikes'),dk=sum('dislikesCited'),ci=sum('cited');
@@ -5583,19 +5633,20 @@ function usageDetailHTML(fr){
   }
   if(hasHours){
     const ps=CONFIG.phone_service,grid=Array.from({length:7},()=>Array(24).fill(0)),den=Array.from({length:7},()=>Array(24).fill(0));
-    const MODES={turns:['t',null,'turns'],sessions:['s',null,'conversations'],notfound:['nf','t','not-found rate'],errors:['err','t','error rate'],latency:['lat','timed','mean response time']};
+    const MODES={turns:['t',null,'turns'],sessions:['s',null,'conversations'],notfound:['nf','t','not-found share of turns'],errors:['err','t','error rate'],latency:['lat','timed','mean response time']};
     const [nk,dk,unit]=MODES[hoursMode]||MODES.turns,isRate=!!dk,hk=isRate?'t':nk;
     const best=Array.from({length:7},()=>Array(24).fill(null)); // busiest day per weekday-hour slot, for the click
+    const tgrid=Array.from({length:7},()=>Array(24).fill(0));    // turns, whatever the mode: the busiest hour is always by turns
     let tot=0,out=0,days=0;
     fr.forEach(d=>{const a=HOURS[d.date];if(!a)return;days++;const k=isoDow(d.date);
-      for(let hh=0;hh<24;hh++){const c=a[hh]||{},t=c[hk]||0;grid[k][hh]+=c[nk]||0;den[k][hh]+=dk?(c[dk]||0):0;tot+=t;if(t>0&&(!best[k][hh]||t>best[k][hh].t))best[k][hh]={date:d.date,t};if(!(ps.days.includes(k)&&hh>=ps.from&&hh<ps.to))out+=t;}});
+      for(let hh=0;hh<24;hh++){const c=a[hh]||{},t=c[hk]||0;grid[k][hh]+=c[nk]||0;tgrid[k][hh]+=c.t||0;den[k][hh]+=dk?(c[dk]||0):0;tot+=t;if(t>0&&(!best[k][hh]||t>best[k][hh].t))best[k][hh]={date:d.date,t};if(!(ps.days.includes(k)&&hh>=ps.from&&hh<ps.to))out+=t;}});
     if(tot>0){
       const order=[1,2,3,4,5,6,0],names=['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
       // cell value: a count, or a rate / mean under the small-sample rule (null → dash)
       const val=(k,hh)=>{if(!isRate)return grid[k][hh];const n=grid[k][hh],d=den[k][hh];if(hoursMode==='latency')return d>=CONFIG.min_rate_denominator?n/d:null;return rateOK(n,d).ok&&d>0?n/d*100:null;};
       const vals=[];for(let k=0;k<7;k++)for(let hh=0;hh<24;hh++){const v=val(k,hh);if(v!=null)vals.push(v);}
       const max=vals.length?Math.max(...vals):0,min=isRate&&vals.length?Math.min(...vals):0;
-      let bh=0,bt=-1;for(let hh=0;hh<24;hh++){const t=grid.reduce((s,r)=>s+r[hh],0);if(t>bt){bt=t;bh=hh;}}
+      let bh=0,bt=-1;for(let hh=0;hh<24;hh++){const t=tgrid.reduce((s,r)=>s+r[hh],0);if(t>bt){bt=t;bh=hh;}}
       const fmtV=v=>v==null?'—':hoursMode==='latency'?(v/1000).toFixed(1)+'s':isRate?v.toFixed(1)+'%':num(v);
       const col=hoursMode==='notfound'||hoursMode==='errors'?C.red:hoursMode==='latency'?C.amber:C.acc;
       const cell=(k,hh)=>{const v=val(k,hh),b=best[k][hh];const t=max>min?((v==null?0:(v-min))/(max-min)):0;const a=v==null?0x08:Math.round(0x12+(0xee-0x12)*t);
@@ -5604,7 +5655,7 @@ function usageDetailHTML(fr){
           <span class="pill-group" style="margin-left:auto"><button class="pill${hoursMode==='turns'?' active':''}" onclick="setHoursMode('turns')">Turns</button><button class="pill${hoursMode==='sessions'?' active':''}" onclick="setHoursMode('sessions')">Conversations</button>${Object.values(HOURS)[0]?.find(x=>x&&x.detail)?`<button class="pill${hoursMode==='notfound'?' active':''}" onclick="setHoursMode('notfound')">Not-found rate</button><button class="pill${hoursMode==='errors'?' active':''}" onclick="setHoursMode('errors')">Error rate</button><button class="pill${hoursMode==='latency'?' active':''}" onclick="setHoursMode('latency')">Mean response</button>`:''}</span></div>
         <div class="grid4">
           ${uxTile(pc(out,tot),'Outside phone-service hours',ps.label+' · configured, '+ps.source+' · by turns',C.amber)}
-          ${uxTile(String(bh).padStart(2,'0')+':00','Busiest hour',num(bt)+' '+(isRate?'turns':unit)+' in range',C.acc)}
+          ${uxTile(String(bh).padStart(2,'0')+':00','Busiest hour',num(bt)+' turns in range',C.acc)}
         </div>
         <div style="display:grid;grid-template-columns:34px repeat(24,1fr);gap:2px;align-items:center">
           <div></div>${Array.from({length:24},(_,hh)=>`<div style="font-size:.55rem;color:var(--dim);text-align:center;font-family:'DM Mono',monospace">${hh%3===0?hh:''}</div>`).join('')}
@@ -5621,7 +5672,7 @@ function buildUsageDetailCharts(fr){
   const tax=vd.some(r=>r.ux&&r.ux.cited!=null);
   if(document.getElementById('ux-outcomes')&&tax){
     const sh=(r,k)=>r.queries>0?+((g(r,k))/r.queries*100).toFixed(2):null;
-    const series=[['cited','Cited answer',C.green],['notFound','Not found',C.red],['clarification','Clarification',C.amber],['error','Error',C.pink],['outOfScope','Out of scope',C.purple],['greeting','Greeting',C.dim],['uncited','Uncited answer',C.teal]];
+    const series=[['cited','Cited answer',C.green],['notFound','Not found',C.red],['clarification','Clarification',C.amber],['error','Error',C.pink],['outOfScope','Out of scope',C.purple],['greeting','Greeting',C.dim],['uncited','Uncited answer',C.acc]];
     mkChart('ux-outcomes',{type:'bar',data:{labels,datasets:series.map(([k,l,c])=>({label:l,data:vd.map(r=>sh(r,k)),backgroundColor:c+'cc',stack:'o',maxBarThickness:28}))},
       options:mergeOpts(stacked,{scales:{y:{max:100,ticks:{callback:v=>v+'%'}}},plugins:{tooltip:{callbacks:{label:cx=>`${cx.dataset.label}: ${(+cx.parsed.y).toFixed(1)}% (${num(g(vd[cx.dataIndex],series[cx.datasetIndex][0]))})`}}}})});
   }
@@ -5888,7 +5939,9 @@ function buildVoiceChart(vd){
 // ═══ BEFORE / AFTER (descriptive, keyed to confirmed events) ═════════
 function renderImpact(D,S){
   const el=document.getElementById('pane-impact');
-  const evs=confirmedEvents().filter(e=>D.merged.some(d=>d.date===e.start));
+  // Only events that start a lasting change get a 28-day before/after; a one-off day (kind 'other',
+  // e.g. Budget Day) draws on charts but a before/after around it would describe a spike, not a change.
+  const evs=confirmedEvents().filter(e=>e.kind!=='other'&&D.merged.some(d=>d.date===e.start));
   if(!D.hasBoth||!evs.length){
     el.innerHTML=emptyState(
       'git-compare',
@@ -6357,6 +6410,14 @@ function dayClicksHTML(day){
     ${top.map(([u,n])=>row(`<a href="${u}" target="_blank" rel="noopener" style="color:${C.acc};text-decoration:none">${shortCiUrl(u)}</a>`,num(n))).join('')}
   </div>`;
 }
+// Note shown wherever outcome-based figures cover days on or after CONFIG.outcome_rules_unvalidated_from.
+function outcomeCaveat(rows,compact){
+  const f=CONFIG.outcome_rules_unvalidated_from;if(!f||!rows||!rows.some(d=>d.date>=f))return'';
+  const t=`Outcome figures from ${fmtDate(f)} are not yet validated: the model changed that day and the cited share stepped down while “partial” doubled, which fits a change in the model's wording as well as worse answers. A hand-labelled sample will settle which.`;
+  return compact?`<div class="share-foot" style="color:var(--amber)">${t}</div>`:insight('warn',t);
+}
+// Period label for usage figures: the range's cost days can run past the last day with usage data.
+function usageSpan(fr){const u=fr.filter(d=>d.queries>0);return u.length?spanLabel(u[0].date,u[u.length-1].date):spanLabel(fr[0].date,fr[fr.length-1].date);}
 const shortCiUrl=u=>String(u).replace(/^https?:\/\/(www\.)?citizensinformation\.ie\/en\//,'').replace(/^https?:\/\//,'');
 function renderDayPanel(day){
   const dateEl=document.getElementById('day-panel-date');
@@ -6598,8 +6659,9 @@ function openMonthPanel(monthKey){
   const meterSorted=Object.entries(monthMeters).sort((a,b)=>b[1]-a[1]);
   const maxMeter=meterSorted.length?meterSorted[0][1]:1;
 
+  const nDays=monthRows.length,dimM=daysInMonth(mo.month||monthKey);
   document.getElementById('day-panel-date').textContent=
-    `${mo.label} — Full Month`;
+    nDays>=dimM?`${mo.label} — full month`:`${mo.label} — ${nDays} of ${dimM} days`;
 
   document.getElementById('day-panel-body').innerHTML=`
     <div class="day-kpi-grid">
@@ -6613,11 +6675,11 @@ function openMonthPanel(monthKey){
       </div>
       <div class="day-kpi" style="border-top-color:${C.amber}">
         <div class="day-kpi-val" style="color:${C.amber}">${gbp(mo.llm)}</div>
-        <div class="day-kpi-lbl">LLM spend</div>
+        <div class="day-kpi-lbl">Foundry spend (generation, embeddings, voice)</div>
       </div>
       <div class="day-kpi" style="border-top-color:${C.purple}">
-        <div class="day-kpi-val" style="color:${C.purple}">${mo.questions>0?(mo.cost/mo.questions*100).toFixed(2)+'p':'—'}</div>
-        <div class="day-kpi-lbl">Cost per question</div>
+        <div class="day-kpi-val" style="color:${C.purple}">${(()=>{const P=perTurnStats(monthRows);return P.valid&&P.totPT!=null?P.totPT.toFixed(2)+'p':'—';})()}</div>
+        <div class="day-kpi-lbl">Allocated cost per turn · settled join days</div>
       </div>
     </div>
 
@@ -6650,11 +6712,11 @@ function openMonthPanel(monthKey){
       ${[
         ['Sessions',num(mo.sessions)],
         ['Questions/session',mo.sessions>0?(mo.questions/mo.sessions).toFixed(1):'—'],
-        ['Avg questions/day',Math.round(mo.questions/(mo.days||1)).toLocaleString()],
+        ['Avg questions/day',Math.round(mo.questions/(mo.usageDays||1)).toLocaleString()],
         ['Weekday avg',mo.wdQ?.length?Math.round(mo.wdQ.reduce((a,b)=>a+b,0)/mo.wdQ.length).toLocaleString():'—'],
         ['Weekend avg',mo.weQ?.length?Math.round(mo.weQ.reduce((a,b)=>a+b,0)/mo.weQ.length).toLocaleString():'—'],
         ['Fixed costs',gbp(mo.fixed)],
-        ['Variable costs',gbp(mo.cost-mo.fixed)],
+        ['Variable and unclassified',gbp(mo.cost-mo.fixed)],
       ].map(([l,v])=>`<div class="day-compare">
         <span class="day-compare-label">${l}</span>
         <span class="day-compare-val" style="color:var(--text)">${v}</span>
@@ -6684,12 +6746,13 @@ function openMonthPanel(monthKey){
 // ═══ METER PANEL ═════════════════════════════════════════════════════
 function openMeterPanel(meterKey){
   if(!DATA)return;
-  const total=DATA.meterTotals[meterKey]||0;
-  const llmTotal=Object.values(DATA.meterTotals).reduce((s,v)=>s+v,0);
+  // Everything over the selected range: the all-time meter total over the range's turns inflated cost per turn.
+  const pd=filterRange(DATA.merged),mOf=d=>(d.metersByDate||{})[meterKey]||0;
+  const total=pd.reduce((s,d)=>s+mOf(d),0);
+  const llmTotal=pd.reduce((s,d)=>s+Object.values(d.metersByDate||{}).reduce((a,v)=>a+v,0),0);
   const pct=llmTotal>0?total/llmTotal*100:0;
-  const pd=filterRange(DATA.merged);
-  const periodQ=pd.reduce((s,d)=>s+d.queries,0);
-  const cpq=periodQ>0&&total>0?total/periodQ*100:0;
+  const jd=pd.filter(d=>d.join),periodQ=jd.reduce((s,d)=>s+d.queries,0),jTotal=jd.reduce((s,d)=>s+mOf(d),0);
+  const cpq=periodQ>0&&jTotal>0?jTotal/periodQ*100:0;   // settled join days, as every per-turn figure
 
   const ml=meterKey.toLowerCase();
   let typeDesc='',typeColor=C.acc;
@@ -6712,7 +6775,7 @@ function openMeterPanel(meterKey){
     <div class="day-kpi-grid">
       <div class="day-kpi" style="border-top-color:${typeColor}">
         <div class="day-kpi-val" style="color:${typeColor}">${gbp(total)}</div>
-        <div class="day-kpi-lbl">Total cost</div>
+        <div class="day-kpi-lbl">Cost in range</div>
       </div>
       <div class="day-kpi" style="border-top-color:${C.amber}">
         <div class="day-kpi-val" style="color:${C.amber}">${pct.toFixed(1)}%</div>
@@ -6898,7 +6961,7 @@ function renderDqStrip(){
     item('unparsed Foundry meters',(Q.unparsedMeters||[]).length,{amber:(Q.unparsedMeters||[]).length>0,title:list(Q.unparsedMeters)||'all Foundry meters mapped to a family and type'}),
     item('unassigned resources',(Q.unassignedResources||[]).length,{amber:(Q.unassignedResources||[]).length>0,title:list(Q.unassignedResources)||'all resources mapped to service / admin / shared'}),
     item('join window',S.joinDays?`${spanLabel(S.joinFrom,S.joinTo)} · ${S.joinDays}d`:'—',{title:'settled billing days with turns > 0; every per-turn figure is computed on these days'}),
-    U.outcomeRules?item('outcome rules',U.outcomeRules,{title:'rule-set version written by tools/redact_feed.py; a change replays from the raw feed'}):'',
+    U.outcomeRules?item('outcome rules',U.outcomeRules+(CONFIG.outcome_rules_unvalidated_from?` · unvalidated from ${fmtDate(CONFIG.outcome_rules_unvalidated_from)}`:''),{amber:!!CONFIG.outcome_rules_unvalidated_from,title:'rule-set version written by tools/redact_feed.py; a change replays from the raw feed'+(CONFIG.outcome_rules_unvalidated_from?'. Not yet checked against the model in use from '+fmtDate(CONFIG.outcome_rules_unvalidated_from):'')}):'',
     (U.columns&&Object.values(U.columns).some(Boolean))||hasHours?item('usage detail',['outcomes','types','sources','latency','voice'].filter(k=>U.columns&&U.columns[k]).concat(hasHours?['hours']:[]).join(' · ')||'—',{title:'optional columns found in usage.csv, plus usage-hours.csv'}):'',
     hasClicks?item('click-throughs',`${spanLabel(clickRange.from,clickRange.to)}`,{title:'GA4 page views of CI pages carrying AskCI citation tags (tools/make_clicks.py); consenting visitors only, so a minimum. Rates count the standalone site from '+fmtDate(CONFIG.click_tracking_from.app)+' and the pop-up from '+fmtDate(CONFIG.click_tracking_from.embed)}):'',
     item('events awaiting confirmation',cands,{amber:cands>0,title:'candidate events in events.json plus model events detected from billing'}),
@@ -6939,17 +7002,17 @@ function rebuildKpiRow(){
   const trendQ=last30.map(d=>d.queries||null);
   const trendFixed=last30.map(d=>d.hasCost&&(d.fixed+d.variable)>0?d.fixed/(d.fixed+d.variable)*100:null);
 
-  // Week-over-week deltas on the per-day series (descriptive chips only)
-  const wow=(key,filter=()=>true)=>{
-    const recent=DATA.merged.slice(-7).filter(filter),prior=DATA.merged.slice(-14,-7).filter(filter);
-    const r=recent.length?recent.reduce((s,d)=>s+(key(d)||0),0)/recent.length:null;
-    const p=prior.length ?prior.reduce ((s,d)=>s+(key(d)||0),0)/prior.length :null;
-    return{curr:r,prev:p};
+  // Week-over-week chips: the last 7 qualifying days against the 7 before, so provisional, cost-only and
+  // usage-only days never enter a comparison. Per-turn chips sum then divide; daily chips are means.
+  const wow=(num,den,filter)=>{
+    const rows=DATA.merged.filter(filter),recent=rows.slice(-7),prior=rows.slice(-14,-7);
+    const f=r=>{if(r.length<7)return null;const d=den?r.reduce((s,x)=>s+den(x),0):r.length;return d>0?r.reduce((s,x)=>s+num(x),0)/d:null;};
+    return{curr:f(recent),prev:f(prior)};
   };
-  const dGen  =wow(d=>d.cpq_llm,d=>d.join);
-  const dTot  =wow(d=>d.cpq_tot,d=>d.join);
-  const dDaily=wow(d=>d.total,  d=>d.hasCost);
-  const dQ    =wow(d=>d.queries,d=>d.queries>0);
+  const dGen  =wow(d=>d.gen*100,  d=>d.queries,d=>d.join);
+  const dTot  =wow(d=>d.total*100,d=>d.queries,d=>d.join);
+  const dDaily=wow(d=>d.total,    null,       d=>d.settled);
+  const dQ    =wow(d=>d.queries,  null,       d=>d.queries>0);
 
   const pence=v=>v==null?'—':v.toFixed(2)+'p';
   const ratioSub=P.valid?`ratios cover ${P.span}`:P.why;
@@ -7042,9 +7105,25 @@ init();
   // ── Intent parsing (rule-based) ──
   function parsePeriod(q){
     const latest=lastDate(),first=firstDate(); if(!latest)return null;
-    const mm=q.match(/\b(jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec)[a-z]*\b/);
+    // An ISO date first: its "2026" would otherwise read as the whole year.
+    const iso0=q.match(/\b(20\d{2}-\d{2}-\d{2})\b/);
+    if(iso0)return{kind:'day',from:iso0[1],to:iso0[1],label:fmtDate(iso0[1])};
+    // Whole month names or their abbreviations only: "[a-z]*" read "decreasing" as December and "marked" as March.
+    const MRE='(jan(?:uary)?|feb(?:ruary)?|mar(?:ch)?|apr(?:il)?|may|june?|july?|aug(?:ust)?|sept?(?:ember)?|oct(?:ober)?|nov(?:ember)?|dec(?:ember)?)';
+    // Explicit ranges: "15 March to 30 April", "March to May" (each month in its latest year up to the data's end).
+    const yrOf=mi=>yy0?+yy0[1]:((mi+1<=+latest.slice(5,7))?+latest.slice(0,4):+latest.slice(0,4)-1),yy0=q.match(/\b(20\d{2})\b/);
+    const D_='(\\d{1,2})(?:st|nd|rd|th)?\\s+(?:of\\s+)?',TO='\\s+(?:to|until|till|through|and)\\s+';
+    const rd=q.match(new RegExp('\\b'+D_+MRE+TO+D_+MRE+'\\b'));
+    if(rd){const m1=ABBR.indexOf(rd[2].slice(0,3)),m2=ABBR.indexOf(rd[4].slice(0,3)),y1=yrOf(m1),y2=yrOf(m2);
+      const f=`${y1}-${String(m1+1).padStart(2,'0')}-${String(+rd[1]).padStart(2,'0')}`,t=`${y2}-${String(m2+1).padStart(2,'0')}-${String(+rd[3]).padStart(2,'0')}`;
+      if(f<=t)return{kind:'range',from:f,to:t,label:fmtDate(f)+' to '+fmtDate(t)};}
+    const rm=q.match(new RegExp('\\b'+MRE+TO+MRE+'\\b'));
+    if(rm){const m1=ABBR.indexOf(rm[1].slice(0,3)),m2=ABBR.indexOf(rm[2].slice(0,3)),y1=yrOf(m1),y2=yrOf(m2),k2=`${y2}-${String(m2+1).padStart(2,'0')}`;
+      const f=`${y1}-${String(m1+1).padStart(2,'0')}-01`,t=`${k2}-${String(dim(k2)).padStart(2,'0')}`;
+      if(f<=t)return{kind:'range',from:f,to:t,label:MONFULL[m1]+' to '+MONFULL[m2]+' '+y2};}
+    const mm=q.match(new RegExp('\\b'+MRE+'\\b'));
     const yy=q.match(/\b(20\d{2})\b/);
-    const since=q.match(/\b(since|from|after)\s+(the\s+)?(start of\s+)?(jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec)[a-z]*\b/);
+    const since=q.match(new RegExp('\\b(since|from|after)\\s+(the\\s+)?(start of\\s+)?'+MRE+'\\b'));
     if(since&&!/\b(to|until|till|through)\b/.test(q)){
       const mi=ABBR.indexOf(since[4].slice(0,3));
       const year=yy?+yy[1]:((mi+1<=+latest.slice(5,7))?+latest.slice(0,4):+latest.slice(0,4)-1);
@@ -7080,6 +7159,9 @@ init();
     if(iso)return{kind:'day',from:iso[1],to:iso[1],label:fmtDate(iso[1])};
     return{kind:'all',from:first,to:latest,label:'the full period'};
   }
+  // A service alias must match as whole words: substring tests read "across" as acr (Container Registry),
+  // "research" as search and "vacation" as aca.
+  const aliasHit=(q,a)=>new RegExp('\\b'+a.replace(/[.*+?^${}()|[\]\\]/g,'\\$&')+'\\b').test(q);
   const SVC_ALIAS={'azure cognitive search':['search','cognitive','ai search'],'foundry models':['foundry'],'azure container apps':['container apps','container app','aca'],'azure cosmos db':['cosmos'],'storage':['blob'],'virtual network':['vnet'],'microsoft defender for cloud':['defender'],'bandwidth':['egress','data transfer'],'container registry':['registry','acr'],'azure monitor':['monitor','log analytics'],'key vault':['vault'],'azure app service':['app service']};
   // Attributed categories (feed slugs) and the phrases people use for them.
   const CAT_PHRASES=[['social-welfare',['social welfare','welfare']],['housing',['housing']],['employment',['employment','jobs','work']],['moving-country',['moving country','moving to ireland','immigration']],
@@ -7127,7 +7209,7 @@ init();
     if(/\bevents?\b|milestones/.test(q))return{kind:'events',label:'events'};
     if(/organic first turns|organic demand|organic/.test(q))return{kind:'organic',label:'organic first turns'};
     for(const s of svcs){if(q.includes(s.toLowerCase()))return{kind:'service',service:s,label:s};}
-    for(const name in SVC_ALIAS){const real=svcs.find(s=>s.toLowerCase()===name);if(real&&SVC_ALIAS[name].some(a=>q.includes(a)))return{kind:'service',service:real,label:real};}
+    for(const name in SVC_ALIAS){const real=svcs.find(s=>s.toLowerCase()===name);if(real&&SVC_ALIAS[name].some(a=>aliasHit(q,a)))return{kind:'service',service:real,label:real};}
     // "which model … / most expensive model" → compare all models (none named)
     if(/\bmodels?\b/.test(q)&&/which|what|most|biggest|cheapest|top|expensive|costliest|priciest/.test(q))return{kind:'topModel',label:'model'};
     // Model families are the CONFIG families; meters are matched through meterFamily().
@@ -7201,7 +7283,7 @@ init();
   // Parse the three query dimensions and flag which were EXPLICITLY stated
   // (vs defaulted) — the explicitness flags drive follow-up inheritance.
   function parseDims(orig){
-    const q=' '+orig.toLowerCase().replace(/[?!.,]/g,' ').replace(/\s+/g,' ')+' ';
+    const q=' '+orig.toLowerCase().replace(/[?!,]|\.(?!\d)/g,' ').replace(/\s+/g,' ')+' ';
     const period=parsePeriod(q),metric=parseMetric(q),agg=parseAgg(q);
     let bucket='day';
     if((agg==='max'||agg==='min')&&!/\bday\b|\bdaily\b/.test(q)){
@@ -7228,7 +7310,7 @@ init();
 
   // "Jan vs Feb", "this month vs last month", "compare X and Y" → two-period compare
   function parseCompare(orig){
-    const low=' '+orig.toLowerCase().replace(/[?!.,]/g,' ').replace(/\s+/g,' ')+' ';
+    const low=' '+orig.toLowerCase().replace(/[?!,]|\.(?!\d)/g,' ').replace(/\s+/g,' ')+' ';
     let parts=null,m;
     if((m=low.match(/\bcompare\b(.+?)\b(?:and|vs\.?|versus|to|with)\b(.+)/)))parts=[m[1],m[2]];
     else if((m=low.match(/(.+?)\b(?:vs\.?|versus|compared to|against)\b(.+)/)))parts=[m[1],m[2]];
@@ -7270,10 +7352,11 @@ init();
     if(/\bwhy\b|driv|drove|caused|changed|increase|decrease|went? up|go up|higher|lower|spike/.test(q))return null; // why/data, not a definition
     const per=parsePeriod(q);
     if(per&&per.kind!=='all')return null; // a concrete period → it's a data query
+    if(/\b(share|rate|percent|percentage|how many|how much|proportion)\b/.test(q))return null; // asks for a number, not a definition
     if(typeof SVC_META!=='undefined'){
       const svcs=(have()&&DATA.allSvcs)||[];
       for(const s of svcs){if(q.includes(s.toLowerCase())&&SVC_META[s])return svcKnow(s);}
-      for(const name in SVC_ALIAS){const real=svcs.find(x=>x.toLowerCase()===name);if(real&&SVC_META[real]&&SVC_ALIAS[name].some(a=>q.includes(a)))return svcKnow(real);}
+      for(const name in SVC_ALIAS){const real=svcs.find(x=>x.toLowerCase()===name);if(real&&SVC_META[real]&&SVC_ALIAS[name].some(a=>aliasHit(q,a)))return svcKnow(real);}
     }
     for(const g of GLOSSARY){if(g.re.test(q)){const txt=knowledgeText(g);if(txt)return{knowledge:true,title:g.t,sub:'',body:txt};}}
     return null;
@@ -7281,7 +7364,7 @@ init();
 
   // ── "What changed in September?" — the dashboard's own What changed statements, both sets ──
   function parseChanged(orig){
-    const q=' '+orig.toLowerCase().replace(/[?!.,]/g,' ').replace(/\s+/g,' ')+' ';
+    const q=' '+orig.toLowerCase().replace(/[?!,]|\.(?!\d)/g,' ').replace(/\s+/g,' ')+' ';
     if(!/what (has |s )?changed|what s different|what was different|what moved|what shifted|changes (in|during|over)|summary of changes/.test(q))return null;
     if(/\bwhy\b|what (drove|caused)/.test(q))return null;
     if(/spend|cost|£|bill/.test(q)&&!/service|quality|usage|everything|both/.test(q))return null; // "what changed in spend" stays a cost attribution
@@ -7343,10 +7426,10 @@ init();
   // ── Top-N ranked lists ("top 3 services", "5 most expensive days", "top models") ──
   function parseTopN(orig){
     // "last 3 months" is a period, not a ranking — strip relative-period phrases before sniffing.
-    const q=(' '+orig.toLowerCase().replace(/[?!.,]/g,' ').replace(/\s+/g,' ')+' ').replace(/\b(last|past|previous)\s+\d+\s+(days?|weeks?|months?)\b/g,' ');
+    const q=(' '+orig.toLowerCase().replace(/[?!,]|\.(?!\d)/g,' ').replace(/\s+/g,' ')+' ').replace(/\b(last|past|previous)\s+\d+\s+(days?|weeks?|months?)\b/g,' ');
     let entity=null;
     if(/\bservices\b|cost drivers\b/.test(q))entity='service';
-    else if(/\b(categories|category|topics?)\b/.test(q))entity='category';
+    else if(/\b(categories|category)\b|(?<!new )\btopics?\b/.test(q))entity='category';   // "new topics" is a question-type filter, not the topic list
     else if(/cited pages|top pages|most cited|pages cited|\bpages\b|\burls?\b/.test(q))entity=/click/.test(q)?'clickpage':'page';
     else if(/starter prompts?|\bprompts\b/.test(q)||(/\bchips\b/.test(q)&&!/rate|share|use|cited|found|for chips|of chips|from chips/.test(q)))entity='prompt';
     else if(/journeys?|transitions|category steps|from .* to .* categor/.test(q))entity='journey';
@@ -7369,7 +7452,7 @@ init();
     }else if(listEntity)metric='count';
     else if(/quietest|busiest|\bbusy\b|\bquiet\b|traffic|usage|questions?|queries/.test(q)&&!/cost|spend|spent|£/.test(q))metric='questions';
     else if(/\bllm\b|token|foundry/.test(q))metric='llm';
-    return{topn:true,raw:orig,entity,N,dir,metric,period:parsePeriod(' '+orig.toLowerCase().replace(/[?!.,]/g,' ').replace(/\s+/g,' ')+' ')};
+    return{topn:true,raw:orig,entity,N,dir,metric,period:parsePeriod(' '+orig.toLowerCase().replace(/[?!,]|\.(?!\d)/g,' ').replace(/\s+/g,' ')+' ')};
   }
   function computeTopN(intent){
     const {entity,N,dir,metric,period}=intent;
@@ -7424,7 +7507,7 @@ init();
 
   // ── Forecast / projection ("projected spend this year", "what will we spend this month") ──
   function parseForecast(orig){
-    const q=' '+orig.toLowerCase().replace(/[?!.,]/g,' ').replace(/\s+/g,' ')+' ';
+    const q=' '+orig.toLowerCase().replace(/[?!,]|\.(?!\d)/g,' ').replace(/\s+/g,' ')+' ';
     if(!/project|forecast|on track|will (we |i )?spend|expected (spend|cost|to spend)|by (the )?year ?end|end of (the )?(year|month|week)|year ?end/.test(q))return null;
     const scope=/\bweek\b/.test(q)?'week':(/\byear\b/.test(q)?'year':'month');
     return{forecast:true,raw:orig,scope};
@@ -7442,7 +7525,7 @@ init();
 
   // ── Digest ("what happened on 11 May", "recap last month") ──
   function parseDigest(orig){
-    const q=' '+orig.toLowerCase().replace(/[?!.,]/g,' ').replace(/\s+/g,' ')+' ';
+    const q=' '+orig.toLowerCase().replace(/[?!,]|\.(?!\d)/g,' ').replace(/\s+/g,' ')+' ';
     if(!/what happened|what went on|\brecap\b|summar(y|ise|ize)|day summary|how did (it|things|the day)|give me a (rundown|summary)|rundown/.test(q))return null;
     // "what happened X vs Y" → two-period digest comparison
     const cm=q.match(/(.+?)\b(?:vs\.?|versus|compared to|against)\b(.+)/);
@@ -7478,6 +7561,19 @@ init();
     let value=null,series=null,note='';
     if(intent.groupBy&&!intent._sub)return computeGrouped(intent);
     if(intent.trend&&!intent._sub)return computeTrend(intent);
+    // Highest / lowest week or month of a ratio: each bucket's own rate, sum then divide, before any branch
+    // that would otherwise pick a single day.
+    if((agg==='max'||agg==='min')&&intent.bucket&&intent.bucket!=='day'&&RATIO_KINDS.includes(metric.kind)&&!intent._sub){
+      const groups={};rows.forEach(d=>{const k=intent.bucket==='week'?d.week:d.month;(groups[k]=groups[k]||[]).push(d);});
+      let rfmt=null;
+      const buckets=Object.keys(groups).sort().map(k=>{const rs=groups[k];
+        const r=compute({...intent,agg:'sum',bucket:'day',period:{kind:'range',from:rs[0].date,to:rs[rs.length-1].date,label:''},raw:'',_sub:true,groupBy:null,trend:false});
+        if(r&&r.fmt&&!rfmt)rfmt=r.fmt;return{key:k,label:intent.bucket==='week'?('week of '+fmtDate(k)):fmtMonth(k),v:r&&!r.empty?r.value:null};}).filter(b=>b.v!=null);
+      if(!buckets.length)return{empty:true,intent};
+      const pick=buckets.reduce((a,b)=>(agg==='min'?b.v<a.v:b.v>a.v)?b:a);
+      if(intent.bucket==='month')intent._month=pick.key;
+      return{value:pick.v,fmt:rfmt||(v=>v==null?'—':v.toFixed(1)),series:null,note:(agg==='max'?'highest ':'lowest ')+pick.label+' · each '+intent.bucket+' summed then divided',intent};
+    }
     const special=computeSpecial(intent,rows);if(special)return special;
 
     // ── Run rate: the single forecast function on a 30-day calendar (or to year end) ──
@@ -7572,11 +7668,16 @@ init();
     if((agg==='max'||agg==='min')&&intent.bucket&&intent.bucket!=='day'){
       const groups={};
       rows.forEach(d=>{const k=intent.bucket==='week'?d.week:d.month;(groups[k]=groups[k]||[]).push(d);});
-      const buckets=Object.keys(groups).map(k=>({key:k,label:intent.bucket==='week'?('week of '+fmtDate(k)):fmtMonth(k),v:groups[k].reduce((s,d)=>s+rowVal(d,metric),0)})).filter(b=>b.v>0);
+      // A ratio is computed per bucket (sum then divide over that bucket's days), never by adding daily ratios.
+      const ratio=RATIO_KINDS.includes(metric.kind);let rfmt=null;
+      const bval=(k,rs)=>{if(!ratio)return rs.reduce((s,d)=>s+rowVal(d,metric),0);
+        const r=compute({...intent,agg:'sum',bucket:'day',period:{kind:'range',from:rs[0].date,to:rs[rs.length-1].date,label:''},raw:'',_sub:true,groupBy:null,trend:false});
+        if(r&&r.fmt&&!rfmt)rfmt=r.fmt;return r&&!r.empty?r.value:null;};
+      const buckets=Object.keys(groups).map(k=>({key:k,label:intent.bucket==='week'?('week of '+fmtDate(k)):fmtMonth(k),v:bval(k,groups[k])})).filter(b=>b.v!=null&&(ratio||b.v>0));
       if(!buckets.length)return{empty:true,intent};
       const pick=buckets.reduce((a,b)=>(agg==='min'?b.v<a.v:b.v>a.v)?b:a);
       if(intent.bucket==='month')intent._month=pick.key;
-      return{value:pick.v,fmt:money?(v=>gbp(v,Math.abs(v)>=100?0:2)):(v=>num(Math.round(v))),series:null,note:(agg==='max'?'peak ':'lowest ')+pick.label,intent};
+      return{value:pick.v,fmt:rfmt||(money?(v=>gbp(v,Math.abs(v)>=100?0:2)):(v=>num(Math.round(v)))),series:null,note:(agg==='max'?'peak ':'lowest ')+pick.label+(ratio?' · each '+intent.bucket+' summed then divided':''),intent};
     }
 
     if(metric.kind==='cpq_llm'||metric.kind==='cpq_tot'){
@@ -7641,9 +7742,10 @@ init();
     if(k==='clicks'||k==='ctr'){
       if(!hasClicks)return{value:null,fmt:v=>'—',series:null,note:'no click-through files loaded; run tools/make_clicks.py on the GA4 exports',intent};
       if(k==='clicks')return{value:sumD(d=>clickViews(CLICKS[d.date])),fmt:v=>num(Math.round(v)),series:rows.map(d=>clickViews(CLICKS[d.date])),note:'GA4 page views from AskCI citation links, reloads included · a minimum: consenting visitors only',intent,subj:'click-throughs'};
-      const x=clickRate(rows,'all');
-      if(!x.days)return{value:null,fmt:v=>'—',series:null,note:`not measured: both surfaces are tracked from ${fmtDate(CONFIG.click_tracking_from.embed)}`,intent};
-      return{...rateRes(x.n,x.den,'a minimum: GA4 counts consenting visitors only','cited answers'),fmt:v=>v==null?'—':v.toFixed(1),intent,subj:'click-throughs per 100 cited answers'};
+      // Same rule as the Click-throughs tab: both surfaces once both are measured, else the standalone site alone.
+      const all=clickRate(rows,'all'),app=clickRate(rows,'app'),x=all.days?all:app,only=!all.days;
+      if(!x.days)return{value:null,fmt:v=>'—',series:null,note:`not measured: the standalone site is tracked from ${fmtDate(CONFIG.click_tracking_from.app)} and the pop-up from ${fmtDate(CONFIG.click_tracking_from.embed)}`,intent};
+      return{...rateRes(x.n,x.den,(only?'standalone site only (pop-up measured from '+fmtDate(CONFIG.click_tracking_from.embed)+') · ':'')+'a minimum: GA4 counts consenting visitors only','cited answers'),fmt:v=>v==null?'—':v.toFixed(1),intent,subj:'click-throughs per 100 cited answers'+(only?' (standalone site)':'')};
     }
     // Conversation outcomes (conversations-daily.csv, mature conversations by start day)
     if(k==='reached'||k==='latercited'){
@@ -7704,6 +7806,8 @@ init();
   }
   // ── Grouped: one value per month or week, computed exactly as the single answer would be (sum then divide per bucket) ──
   const UNGROUPABLE=['events','hour','topService','topModel','runrate'];
+  // Metrics that are ratios: never summed across days or buckets.
+  const RATIO_KINDS=['cpq_llm','cpq_tot','qps','cache','fixedshare','answered','unanswered','flagged','chips','modal','latency','notfound','error','clarification','cited','partial','dislikes','feedback','starter','single','chipuse','span','p90','p99','over30','outofhours','script','ctr','reached','latercited'];
   function subIntent(intent,p){return{...intent,period:p,raw:'',_sub:true,groupBy:null,trend:false};}
   function bucketsFor(period,groupBy){
     const out=[];
@@ -8161,7 +8265,7 @@ init();
     if(lastIntent&&lastIntent.metric.kind!=='topService'&&lastIntent.metric.kind!=='topModel'){
       const fu=q.toLowerCase().match(/\b(?:vs\.?|versus|compared to|against|compare(?:\s+(?:it|this|that))?\s+(?:to|with|against))\s+(.+)/);
       if(fu){
-        const other=parsePeriod(' '+fu[1].replace(/[?!.,]/g,' ').trim()+' ');
+        const other=parsePeriod(' '+fu[1].replace(/[?!,]|\.(?!\d)/g,' ').trim()+' ');
         if(other&&other.kind!=='all'){
           const ci={compare:true,raw:q,metric:lastIntent.metric,agg:lastIntent.agg,periodA:lastIntent.period,periodB:other,bucket:lastIntent.bucket||'day'};
           render(computeCompare(ci));lastIntent={raw:q,metric:lastIntent.metric,period:other,agg:lastIntent.agg,bucket:lastIntent.bucket||'day'};return;
