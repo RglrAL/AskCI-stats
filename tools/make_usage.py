@@ -29,7 +29,13 @@ Outputs (all daily counts; nothing per-turn and no text crosses into the dashboa
   conversations-daily.csv   by conversation start day: Started, Mature, Turns1..Turns9, Turns10plus, MatureTurns,
                             Span0to1, Span2to5, Span6to15, Span16to60, SpanOver60 (mature multi-turn, minutes),
                             ChipUse, TypedUse (mature conversations with at least one such turn), and per first
-                            outcome First<Outcome>, First<Outcome>Single, First<Outcome>Turns (mature)
+                            outcome First<Outcome>, First<Outcome>Single, First<Outcome>Turns (mature), then (mature):
+                            ReachedCited (at least one cited answer); per setback answer P in NF (not found),
+                            Clar (clarification), Err (error): PTurns, PLaterCited (a later turn in the same
+                            conversation got a cited answer, not necessarily to the same question), PEnded (it was
+                            the last turn), PNextTyped/PNextChip/PNextNew/PNextOther (type of the next question);
+                            WithTopic, MultiTopic (2+ topics in sequence), TopicReturn (a topic comes back);
+                            Gap0to1..GapOver60 (minutes between consecutive questions)
   category-outcomes-daily.csv  Date, Category (attributed slug or unknown), Turns, Cited, NotFound, Clarification,
                             Error, OutOfScope, Greeting, Uncited, Scored, OrganicFirstTurns, DislikesOnCited
   citations-monthly.csv     Month, URL (normalised), Citations, Category (known slug or blank)
@@ -332,10 +338,29 @@ def conversation_pass(recs):
         if fo:
             c["f:" + fo] += 1; c["f:" + fo + ":turns"] += n
             if n == 1: c["f:" + fo + ":single"] += 1
+        # what happened after a not-found, clarification or error answer (per answer, not per conversation;
+        # a later cited answer may be to a different question, so this never claims the setback was resolved)
+        if any(r[4] == "Cited answer" for r in turns): c["reached_cited"] += 1
+        for i, r in enumerate(turns):
+            p = SETBACK.get(r[4])
+            if not p: continue
+            c[p + ":turns"] += 1
+            if i == n - 1:
+                c[p + ":ended"] += 1
+                continue
+            if any(x[4] == "Cited answer" for x in turns[i + 1:]): c[p + ":later_cited"] += 1
+            c[p + ":next:" + NEXT_TYPE.get(turns[i + 1][6], "other")] += 1
+        # pace: minutes between consecutive questions
+        for a, b in zip(turns, turns[1:]):
+            gap = (b[2] - a[2]).total_seconds() / 60
+            c["gap_" + ("0_1" if gap <= 1 else "2_5" if gap <= 5 else "6_15" if gap <= 15 else "16_60" if gap <= 60 else "over60")] += 1
         # category journeys: consecutive distinct primary categories over category-bearing turns
         seq = []
         for r in turns:
             if r[5] and (not seq or seq[-1] != r[5]): seq.append(r[5])
+        if seq: c["with_topic"] += 1
+        if len(seq) >= 2: c["multi_topic"] += 1
+        if len(set(seq)) < len(seq): c["topic_return"] += 1
         if len(seq) >= 2:
             stats["multi_step"] += 1
             if len(set(seq)) < len(seq): stats["return"] += 1
@@ -344,10 +369,18 @@ def conversation_pass(recs):
     return cd, co, jm, sp, stats
 
 
+SETBACK = {"Not found": "NF", "Clarification": "Clar", "Error": "Err"}
+NEXT_TYPE = {"user_followup": "Typed", "suggested_followup": "Chip", "new_topic": "New"}
+GAP_COLS = [("Gap0to1", "gap_0_1"), ("Gap2to5", "gap_2_5"), ("Gap6to15", "gap_6_15"), ("Gap16to60", "gap_16_60"), ("GapOver60", "gap_over60")]
+
+
 def conversation_rows(cd):
     cols = ["Date", "Started", "Mature"] + [f"Turns{i}" for i in range(1, 10)] + ["Turns10plus", "MatureTurns",
             "Span0to1", "Span2to5", "Span6to15", "Span16to60", "SpanOver60", "ChipUse", "TypedUse"]
     for o in OUTCOMES: cols += [f"First{OUT_KEY[o]}", f"First{OUT_KEY[o]}Single", f"First{OUT_KEY[o]}Turns"]
+    cols += ["ReachedCited"]
+    for p in SETBACK.values(): cols += [f"{p}Turns", f"{p}LaterCited", f"{p}Ended", f"{p}NextTyped", f"{p}NextChip", f"{p}NextNew", f"{p}NextOther"]
+    cols += ["WithTopic", "MultiTopic", "TopicReturn"] + [k for k, _ in GAP_COLS]
     out = []
     for d in sorted(cd):
         c = cd[d]
@@ -355,6 +388,10 @@ def conversation_rows(cd):
                c["span_0_1"], c["span_2_5"], c["span_6_15"], c["span_16_60"], c["span_over60"], c["chip_use"], c["typed_use"]]
         for o in OUTCOMES:
             k = OUT_KEY[o]; row += [c["f:" + k], c["f:" + k + ":single"], c["f:" + k + ":turns"]]
+        row += [c["reached_cited"]]
+        for p in SETBACK.values():
+            row += [c[p + ":turns"], c[p + ":later_cited"], c[p + ":ended"]] + [c[p + ":next:" + t] for t in ("Typed", "Chip", "New", "other")]
+        row += [c["with_topic"], c["multi_topic"], c["topic_return"]] + [c[k] for _, k in GAP_COLS]
         out.append(row)
     return cols, out
 
@@ -512,7 +549,7 @@ def main():
     if skip and any(True for _ in skip): print(f"note: export day(s) {', '.join(str(x) for x in sorted(skip))} skipped as partial (--keep-partial to keep)")
     cd, co, jm, sp, cstats = conversation_pass(recs)
     print(f"conversations: {cstats['convs']} grouped, {cstats['mature']} mature; follow-ups within 1 h {cstats['fu_1h']/max(cstats['fu'],1)*100:.2f}%, within 24 h {cstats['fu_24h']/max(cstats['fu'],1)*100:.2f}%; "
-          f"category steps ≥2 in {cstats['multi_step']} conversations, {cstats['return']} with a return; not-found turns recovering a category {cstats['recovered']} of {cstats['nf_total']}")
+          f"category steps ≥2 in {cstats['multi_step']} conversations, {cstats['return']} with a return; not-found turns attributed a category from other turns {cstats['recovered']} of {cstats['nf_total']}")
     if bad: print(f"warning: {bad} rows with unreadable Timestamp skipped", file=sys.stderr)
     if dupes: print(f"note: {dupes} rows repeated across the input files (same conversation and turn) counted once")
     if cat_dropped: print(f"note: {cat_dropped} cited URLs on rows with a blank Categories column were not citizensinformation.ie category pages; not counted")

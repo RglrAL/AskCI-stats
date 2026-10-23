@@ -52,7 +52,7 @@ for r, t in T:
     c['fb:' + r['Feedback'].strip().lower()] += 1
     if first: starter_vals['chip' if r['Starter Prompt'].strip() else 'blank'] += 1
     hrs[(d, t.hour)]['turns'] += 1
-    convs[r['Conversation ID']].append((int(r['Turn #']), t))
+    convs[r['Conversation ID']].append((int(r['Turn #']), t, r['Outcome'].strip()))
 print(f'feed recount: {len(T)} turns, {len(convs)} conversations, {len(day)} days {min(day)}..{max(day)}')
 
 # ── 2. usage.csv against the recount and its own identities ──────────────────
@@ -128,6 +128,30 @@ for d, r in CV.items():
 check('conversations: length histogram = Mature, spans and first outcomes within Mature', bad_c == 0, f'{bad_c} days')
 immature = [d for d in CV if I(CV[d]['Mature']) < I(CV[d]['Started'])]
 check('conversations: only the last day(s) immature', all(d >= days[-2] for d in immature), str(immature[:5]))
+
+# conversation outcomes: identities, then an independent recount of ReachedCited and NFLaterCited
+if 'ReachedCited' in next(iter(CV.values())):
+    bad_o = 0
+    for d, r in CV.items():
+        for p in ('NF', 'Clar', 'Err'):
+            t = I(r[p + 'Turns'])
+            if I(r[p + 'LaterCited']) + I(r[p + 'Ended']) > t or sum(I(r[p + 'Next' + k]) for k in ('Typed', 'Chip', 'New', 'Other')) + I(r[p + 'Ended']) != t: bad_o += 1
+        if I(r['ReachedCited']) > I(r['Mature']) or I(r['MultiTopic']) > I(r['WithTopic']) or I(r['TopicReturn']) > I(r['MultiTopic']) or I(r['WithTopic']) > I(r['Mature']): bad_o += 1
+        if sum(I(r[k]) for k in ('Gap0to1', 'Gap2to5', 'Gap6to15', 'Gap16to60', 'GapOver60')) != I(r['MatureTurns']) - I(r['Mature']): bad_o += 1
+    check('conversations: setback, topic and gap columns add up on every day', bad_o == 0, f'{bad_o} day/field failures')
+    fresh = max(t for v in convs.values() for _, t, _ in v)
+    rc = C.Counter(); nf = C.Counter(); nfl = C.Counter()
+    for v in convs.values():
+        v = sorted(v); start = v[0][1]
+        if (fresh - start).total_seconds() < 24 * 3600: continue
+        d = start.date().isoformat()
+        if any(o == 'Cited answer' for _, _, o in v): rc[d] += 1
+        for i, (_, _, o) in enumerate(v):
+            if o == 'Not found':
+                nf[d] += 1
+                if i < len(v) - 1 and any(x[2] == 'Cited answer' for x in v[i + 1:]): nfl[d] += 1
+    check('conversations.ReachedCited matches feed recount on every day', all(I(CV[d]['ReachedCited']) == rc[d] for d in CV), str([(d, CV[d]['ReachedCited'], rc[d]) for d in CV if I(CV[d]['ReachedCited']) != rc[d]][:5]))
+    check('conversations.NFTurns and NFLaterCited match feed recount on every day', all(I(CV[d]['NFTurns']) == nf[d] and I(CV[d]['NFLaterCited']) == nfl[d] for d in CV))
 
 # ── 5. category files ────────────────────────────────────────────────────────
 CD = rd('categories-daily.csv'); CM = rd('categories.csv'); CO = rd('category-outcomes-daily.csv')
@@ -235,6 +259,21 @@ for d, u, v in rows:
     if d <= days[-1]: ctr[d] += v
 hi = [(d, ctr[d], U[d]['Cited']) for d in days if I(U[d]['Cited']) >= 50 and ctr[d] / I(U[d]['Cited']) > 0.15]
 check('click-throughs never exceed 15% of cited answers on a day (sanity)', not hi, str(hi[:5]))
+
+raw_total = sum(v for _, _, v in rows)
+if os.path.exists(REPO + '/ga4/clicks-daily.csv'):
+    CK = rd('ga4/clicks-daily.csv'); CP = rd('ga4/clicks-pages-daily.csv')
+    check('clicks-daily total = raw exports total', sum(I(r['Views']) for r in CK) == raw_total, f"{sum(I(r['Views']) for r in CK)} vs {raw_total}")
+    check('clicks-pages-daily total = raw exports total', sum(I(r['Views']) for r in CP) == raw_total)
+    by_d = C.Counter(); by_p = C.Counter()
+    for r in CK: by_d[(r['Date'], r['Source'])] += I(r['Views'])
+    for r in CP: by_p[(r['Date'], r['Source'])] += I(r['Views'])
+    check('clicks-daily and clicks-pages-daily agree by day and source', by_d == by_p)
+    check('clicks-daily devices sum to views on every row', all(I(r['Mobile']) + I(r['Desktop']) + I(r['Tablet']) + I(r.get('OtherDevice')) == I(r['Views']) for r in CK))
+    stale = max(r['Date'] for r in CK) < max(x[0] for x in rows)[:4] + '-' + max(x[0] for x in rows)[4:6] + '-' + max(x[0] for x in rows)[6:]
+    check('clicks files are up to date with the raw exports (re-run tools/make_clicks.py)', not stale)
+else:
+    warn('clicks', 'ga4/clicks-daily.csv missing: run tools/make_clicks.py')
 
 # ── 10. events.json ──────────────────────────────────────────────────────────
 E = json.load(open(REPO + '/events.json'))['events']

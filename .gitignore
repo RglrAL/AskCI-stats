@@ -9,3 +9,4 @@ qa-feed*.csv
 
 # Review folders written by the feed droplet
 askci-export-*/
+__pycache__/
