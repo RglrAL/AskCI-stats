@@ -1509,19 +1509,41 @@ input[type=date]{color-scheme:dark}
 .ask-card{display:flex;align-items:center;gap:var(--sp-5);background:var(--s2);
   border:1px solid var(--b2);border-radius:var(--r-lg);padding:var(--sp-4) var(--sp-5)}
 .ask-card{flex-wrap:wrap}
+.ask-card[style*="column"]{flex-wrap:nowrap}   /* a wrapping column sizes itself to its widest item, not the screen */
 .ask-card-main{flex:1 1 auto;min-width:0}
 .ask-card>.ask-read{flex-basis:100%}
-.ask-card-q{font-size:var(--t-2xs);color:var(--dim);font-family:'DM Mono',monospace;
-  text-transform:uppercase;letter-spacing:.06em;margin-bottom:6px}
+.ask-card-q{font-size:var(--t-xs);color:var(--dim);margin-bottom:10px}
+.ask-card-q::before{content:'“'}.ask-card-q::after{content:'”'}
 .ask-card-val{font-family:'DM Mono',monospace;font-variant-numeric:tabular-nums;
-  font-size:var(--t-xl);font-weight:600;color:var(--text);line-height:1}
-.ask-card-sub{font-size:var(--t-sm);color:var(--muted);margin-top:6px}
+  font-size:clamp(2.1rem,1.2rem + 2.4vw,2.9rem);font-weight:600;color:var(--text);line-height:1.05;letter-spacing:-.02em;white-space:nowrap}
+.ask-card-val.txt{white-space:normal;overflow-wrap:anywhere}
+.ask-card-val.txt{font-size:clamp(1.5rem,1rem + 1.4vw,2rem)}
+.ask-card-sub{font-size:var(--t-md);color:var(--text);margin-top:8px;line-height:1.45}
+.ask-card-how{font-size:var(--t-xs);color:var(--muted)}
+.ask-hero{display:grid;grid-template-columns:auto 1fr;align-items:center;column-gap:14px}
+.ask-hero>.ask-card-val{grid-column:1;grid-row:1}
+.ask-hero>.ask-delta{grid-column:2;grid-row:1;justify-self:start}
+.ask-hero>.ask-card-sub{grid-column:1/-1;grid-row:2}
+.ask-hero>.ask-second{grid-column:1/-1}
+.ask-delta{display:inline-flex;align-items:center;gap:4px;padding:4px 10px;border-radius:999px;font-size:var(--t-xs);font-weight:600;font-variant-numeric:tabular-nums;border:1px solid transparent;white-space:nowrap}
+.ask-delta.good{color:var(--green);background:color-mix(in srgb,var(--green) 12%,transparent);border-color:color-mix(in srgb,var(--green) 30%,transparent)}
+.ask-delta.bad{color:var(--red);background:color-mix(in srgb,var(--red) 12%,transparent);border-color:color-mix(in srgb,var(--red) 30%,transparent)}
+.ask-delta.neu{color:var(--text);background:var(--s1);border-color:var(--b2)}
+details.ask-read{display:block}
+details.ask-read>summary .ask-read-lbl{white-space:nowrap}
+details.ask-read>summary{cursor:pointer;list-style:none;display:flex;align-items:center;gap:8px;font-size:var(--t-2xs);color:var(--muted)}
+details.ask-read>summary::-webkit-details-marker{display:none}
+details.ask-read>summary::after{content:'▾';color:var(--dim)}
+details.ask-read[open]>summary::after{content:'▴'}
+.ask-read-sum{font-family:'DM Mono',monospace;color:var(--muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0}
+.ask-read-body{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px}
 .ask-card-spark{flex-shrink:0;opacity:.9}
 .ask-card-actions{display:flex;flex-direction:column;gap:6px;flex-shrink:0}
-.ask-action{background:var(--s3);border:1px solid var(--b2);color:var(--text);
-  border-radius:var(--r-sm);padding:6px 12px;font-size:var(--t-2xs);cursor:pointer;
-  white-space:nowrap;transition:border-color .15s}
-.ask-action:hover{border-color:var(--acc)}
+.ask-action{background:color-mix(in srgb,var(--acc) 8%,transparent);border:1px solid color-mix(in srgb,var(--acc) 28%,transparent);color:var(--acc);
+  border-radius:999px;padding:6px 14px;font-size:var(--t-xs);font-weight:500;cursor:pointer;
+  white-space:nowrap;transition:background .15s,border-color .15s}
+.ask-action::after{content:' →'}
+.ask-action:hover{background:color-mix(in srgb,var(--acc) 16%,transparent);border-color:var(--acc)}
 .ask-hint{color:var(--dim)}
 .ask-more{margin-top:var(--sp-2)}
 .ask-more>summary{cursor:pointer;font-size:var(--t-2xs);color:var(--acc);font-family:'DM Mono',monospace;padding:4px 0}
@@ -1548,7 +1570,7 @@ input[type=date]{color-scheme:dark}
 .ask-topn-row{display:flex;align-items:center;gap:var(--sp-3);width:100%;background:none;border:none;cursor:pointer;padding:6px;border-radius:var(--r-sm);text-align:left;color:var(--text);font-family:inherit}
 .ask-topn-row:hover{background:var(--s1)}
 .ask-topn-rank{font-family:'DM Mono',monospace;font-size:var(--t-2xs);color:var(--muted);width:14px;flex-shrink:0;text-align:right}
-.ask-topn-lbl{flex:0 0 30%;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:var(--t-sm)}
+.ask-topn-lbl{flex:0 0 38%;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:var(--t-sm)}
 .ask-topn-bar{flex:1;height:8px;background:var(--s1);border-radius:4px;overflow:hidden}
 .ask-topn-bar>span{display:block;height:100%;background:var(--acc);border-radius:4px}
 .ask-topn-val{flex-shrink:0;font-family:'DM Mono',monospace;font-variant-numeric:tabular-nums;font-size:var(--t-sm);min-width:62px;text-align:right}
@@ -1560,6 +1582,10 @@ input[type=date]{color-scheme:dark}
   .ask-card{flex-direction:column;align-items:stretch;gap:var(--sp-3)}
   .ask-card-actions{flex-direction:row;flex-wrap:wrap}
   .ask-card-main,.ask-breakdown{flex:none}
+  .ask-card{flex-wrap:nowrap}
+  .ask-hero{grid-template-columns:1fr}
+  .ask-hero>.ask-delta{grid-column:1;grid-row:2;margin-top:8px}
+  .ask-hero>.ask-card-sub{grid-row:3}
   .ask-topn-lbl{flex-basis:44%}
 }
 
@@ -2112,7 +2138,7 @@ function parseDate(s){
 function fmtDate(iso){if(!iso)return'';const[,m,d]=iso.split('-');return`${+d} ${MON_S[+m-1]}`}
 function fmtMonth(ym){if(!ym)return'';return MON_S[+ym.split('-')[1]-1]+'\''+ym.split('-')[0].slice(2)}
 function fmtWeek(iso){const dt=new Date(iso);return`${MON_S[dt.getMonth()]} ${dt.getDate()}`}
-function gbp(v,dp=2){if(v==null)return'—';const n=+v||0;const s=Math.abs(n).toFixed(dp);return`${n<0&&+s!==0?'−':''}£${s}`}
+function gbp(v,dp=2){if(v==null)return'—';const n=+v||0;const a=+Math.abs(n).toFixed(dp);const s=a.toLocaleString('en-IE',{minimumFractionDigits:dp,maximumFractionDigits:dp});return`${n<0&&a!==0?'−':''}£${s}`}
 function num(v){return(+v||0).toLocaleString()}
 function dow(iso){try{return new Date(iso).getDay()}catch{return-1}}
 function addDays(iso,n){return isoAdd(iso,n)}   // UTC throughout: local-time arithmetic shifts a day west of Greenwich and across clock changes
@@ -2210,7 +2236,17 @@ const bubbleLabelPlugin={
     }catch(e){}
   }
 };
-Chart.register(eventLinesPlugin,crosshairPlugin,dumbbellPlugin,bubbleLabelPlugin);
+// A dashed horizontal reference (an average or the period's rate) with its value at the right.
+// Reads chart.config.options.refLine = {y, text, color}.
+const refLinePlugin={id:'refLine',afterDatasetsDraw(chart){
+  const o=chart.config.options.refLine;if(!o||o.y==null||!chart.scales.y)return;
+  try{const y=chart.scales.y.getPixelForValue(o.y),a=chart.chartArea;if(y<a.top||y>a.bottom)return;const c=chart.ctx;c.save();
+    c.setLineDash([4,4]);c.strokeStyle=o.color;c.globalAlpha=.8;c.lineWidth=1;c.beginPath();c.moveTo(a.left,y);c.lineTo(a.right,y);c.stroke();
+    c.setLineDash([]);c.globalAlpha=1;c.font="600 10px 'DM Mono'";c.textAlign='right';c.textBaseline='bottom';
+    const w=c.measureText(o.text).width;c.fillStyle=getComputedStyle(chart.canvas).getPropertyValue('--s2').trim()||'transparent';c.globalAlpha=.88;c.fillRect(a.right-w-6,y-15,w+6,13);c.globalAlpha=1;
+    c.fillStyle=o.color;c.fillText(o.text,a.right-3,y-3);c.restore();}catch(e){}
+}};
+Chart.register(eventLinesPlugin,crosshairPlugin,dumbbellPlugin,bubbleLabelPlugin,refLinePlugin);
 
 // ═══ CHART HELPERS ══════════════════════════════════════════════════
 const charts={};
@@ -2246,7 +2282,7 @@ function baseOpts(){return{
     y:{
       grid:{color:C.border+'1a',drawTicks:false},
       border:{display:false},
-      ticks:{color:C.muted,font:{size:10,family:'DM Mono'},maxTicksLimit:5,padding:8,callback:v=>`£${(+v).toFixed(0)}`},
+      ticks:{color:C.muted,font:{size:10,family:'DM Mono'},maxTicksLimit:5,padding:8,callback:v=>gbp(+v,0)},
     },
   },
 };}
@@ -6157,7 +6193,7 @@ function renderProjections(D,S){
       legend:{display:true,position:'bottom',align:'start',labels:{color:C.muted,font:{size:11,family:'DM Sans'},boxWidth:8,boxHeight:8,padding:14,usePointStyle:true,pointStyle:'rectRounded'}},
       tooltip:{callbacks:{label:c=>`${c.dataset.label}: ${gbp(c.parsed.y,0)}/mo`}},
     },
-    scales:{y:{stacked:true,ticks:{callback:v=>`£${(+v).toFixed(0)}`}}},
+    scales:{y:{stacked:true,ticks:{callback:v=>gbp(+v,0)}}},
   })});
 
   mkChart('pj-cpq',{type:'line',data:{labels:curve.map(q=>q>=1000?`${q/1000}k`:String(q)),datasets:[
@@ -6662,7 +6698,7 @@ function openServicePanel(svcName){
         data:{labels:monthlyTrend.map(m=>m.label),datasets:[{data:monthlyTrend.map(m=>+m.cost.toFixed(2)),backgroundColor:svcCol(svcName)+'88',borderRadius:3}]},
         options:{responsive:true,maintainAspectRatio:false,animation:{duration:300},
           plugins:{legend:{display:false},tooltip:{backgroundColor:C.s3,bodyColor:C.muted,borderColor:C.border,borderWidth:1,callbacks:{label:c=>gbp(c.parsed.y)}}},
-          scales:{x:{grid:{display:false},ticks:{color:C.muted,font:{size:8,family:'DM Mono'}}},y:{grid:{color:C.border+'33'},ticks:{color:C.muted,font:{size:8,family:'DM Mono'},callback:v=>`£${(+v).toFixed(0)}`}}}}});
+          scales:{x:{grid:{display:false},ticks:{color:C.muted,font:{size:8,family:'DM Mono'}}},y:{grid:{color:C.border+'33'},ticks:{color:C.muted,font:{size:8,family:'DM Mono'},callback:v=>gbp(+v,0)}}}}});
     }
   });
 }
@@ -7556,12 +7592,12 @@ init();
     }else if(entity==='clickpage'){
       if(!hasClicks)return{topn:true,empty:true,intent};
       const agg={};rows.forEach(d=>(CLICKPAGES[d.date]||[]).forEach(p=>{agg[p.url]=(agg[p.url]||0)+p.n;}));
-      items=Object.entries(agg).map(([u,n])=>({label:shortCiUrl(u),act:['url',u],v:n,extra:''}));
+      items=Object.entries(agg).map(([u,n])=>({label:ciPageName(u),act:['url',u],v:n,extra:ciPageSection(u),title:u}));
       fmt=v=>num(v);by='click-throughs from AskCI citation links (GA4, a minimum)';
     }else if(entity==='page'){
       if(!hasCites)return{topn:true,empty:true,intent};
       const months=[...new Set(rows.map(d=>d.month))],agg={};months.forEach(m=>(CITES[m]||[]).forEach(r=>{if(intent.category&&(CAT_ALIAS[r.cat]||r.cat)!==intent.category)return;const a=agg[r.url]||(agg[r.url]={n:0,cat:r.cat});a.n+=r.n;}));
-      items=Object.entries(agg).map(([u,o])=>({label:u.replace(/^https?:\/\/(www\.)?citizensinformation\.ie\/en\//,'').replace(/^https?:\/\//,''),act:['url',u],v:o.n,extra:o.cat?' · '+catLabel(CAT_ALIAS[o.cat]||o.cat):''}));
+      items=Object.entries(agg).map(([u,o])=>({label:ciPageName(u),act:['url',u],v:o.n,extra:ciPageSection(u),title:u}));
       fmt=v=>num(v);by='citations (months overlapping the period)'+(intent.category?' · '+catLabel(CAT_ALIAS[intent.category]||intent.category)+' pages':'');
     }else if(entity==='prompt'){
       if(!hasStarters)return{topn:true,empty:true,intent};
@@ -7572,7 +7608,7 @@ init();
       if(!hasJourneys)return{topn:true,empty:true,intent};
       const months=[...new Set(rows.map(d=>d.month))],agg={},fromC=intent.category||null;
       months.forEach(m=>(JOURNEYS[m]||[]).forEach(r=>{if(fromC&&(CAT_ALIAS[r.from]||r.from)!==fromC)return;const kk=r.from+'→'+r.to;agg[kk]=(agg[kk]||0)+r.n;}));
-      items=Object.entries(agg).map(([kk,n])=>{const[a,b]=kk.split('→');return{label:catLabel(CAT_ALIAS[a]||a)+' → '+catLabel(CAT_ALIAS[b]||b),act:['sub','categories'],v:n};});
+      items=Object.entries(agg).map(([kk,n])=>{const[a,b]=kk.split('→');return{label:(fromC?'→ ':catLabel(CAT_ALIAS[a]||a)+' → ')+catLabel(CAT_ALIAS[b]||b),act:['sub','categories'],v:n};});
       fmt=v=>num(v);by='category steps in mature conversations (months overlapping the period)'+(fromC?' · from '+catLabel(CAT_ALIAS[fromC]||fromC):'');
     }else if(entity==='service'){
       items=(DATA.allSvcs||[]).map(s=>({label:s===FOUNDRY?'Foundry Models (generation)':s,act:['service',s],v:rows.reduce((a,d)=>a+(d[s]||0),0)}));
@@ -7834,7 +7870,8 @@ init();
       rows.filter(d=>d.queries>0).forEach(d=>{const w=isoDow(d.date);t[w]+=d.queries;n[w]++;});
       const av=t.map((x,i)=>n[i]?x/n[i]:null),idx=[0,1,2,3,4,5,6].filter(i=>av[i]!=null);if(!idx.length)return{empty:true,intent};
       const pick=idx.reduce((a,b)=>(/quietest/.test(metric.label)?av[b]<av[a]:av[b]>av[a])?b:a);
-      return{value:av[pick],fmt:v=>num(Math.round(v)),series:null,note:`${DN[pick]} · questions per day by weekday: `+[1,2,3,4,5,6,0].filter(i=>av[i]!=null).map(i=>DN[i].slice(0,3)+' '+num(Math.round(av[i]))).join(', '),intent,subj:metric.label+' ('+DN[pick]+'), questions per day'};}
+      const ord=[1,2,3,4,5,6,0];
+      return{value:av[pick],fmt:v=>num(Math.round(v)),series:ord.map(i=>av[i]),labels:ord.map(i=>DN[i].slice(0,3)),pickIdx:ord.indexOf(pick),note:'average questions per day for each day of the week',intent,subj:metric.label+' ('+DN[pick]+'), questions per day'};}
     if(k==='adoption'||k==='infoshare'){
       if(!hasGa4)return{value:null,fmt:v=>'—',series:null,note:'no GA4 site files loaded',intent};
       const j=rows.filter(d=>GA4[d.date]&&d.queries>0);let a=0,b=0;
@@ -8076,9 +8113,10 @@ init();
       (p.kind!=='all'?'<div class="ask-card-actions" style="flex-direction:row;margin-top:var(--sp-2)"><button class="ask-action" data-act="range" data-arg="'+escA(p.from+'|'+p.to)+'">Set dashboard to this range</button></div>':'')+readAsHTML(intent)+
     '</div>';
     el.classList.add('show'); if(typeof renderIcons==='function')renderIcons();
-    const col=C.acc,tick=res.isMs?(v=>(+v/1000).toFixed(1)+'s'):res.isRate?(v=>(+v).toFixed(mIs(intent.metric.kind,x=>x.unit==='pence')?2:0)+(mIs(intent.metric.kind,x=>x.unit==='pence')?'p':(mIs(intent.metric.kind,x=>x.unit==='ratio'||x.unit==='perk')?'':'%'))):(isMoneyK(intent.metric.kind)&&!intent.category?(v=>'£'+(+v).toFixed(0)):(v=>num(v)));
+    const col=C.acc,tick=res.isMs?(v=>(+v/1000).toFixed(1)+'s'):res.isRate?(v=>(+v).toFixed(mIs(intent.metric.kind,x=>x.unit==='pence')?2:0)+(mIs(intent.metric.kind,x=>x.unit==='pence')?'p':(mIs(intent.metric.kind,x=>x.unit==='ratio'||x.unit==='perk')?'':'%'))):(isMoneyK(intent.metric.kind)&&!intent.category?(v=>gbp(+v,0)):(v=>num(v)));
     mountViz({type:res.isRate?'line':'bar',data:{labels:items.map(i=>i.label),datasets:[{label:subj,data:items.map(i=>i.v),backgroundColor:res.isRate?(col+'22'):(col+'cc'),borderColor:col,borderWidth:res.isRate?2:0,borderRadius:res.isRate?0:3,pointRadius:3,tension:.3,fill:!!res.isRate,spanGaps:true,maxBarThickness:48}]},
-      options:mergeOpts(baseOpts(),{plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>fmt(c.parsed.y)}}},scales:{y:{ticks:{callback:tick}}},onClick:(e,els)=>{if(!els.length)return;const it=items[els[0].index];if(it.act[0]==='month')openMonthPanel(it.act[1]);else{const i=it.act[1].indexOf('|');applyRange(it.act[1].slice(0,i),it.act[1].slice(i+1));}}})},
+      options:mergeOpts(baseOpts(),{plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>fmt(c.parsed.y)}}},scales:{y:{ticks:{callback:tick}}},eventLines:askEvents(items),
+        refLine:(()=>{const v=items.map(i=>i.v).filter(x=>x!=null);if(v.length<3||res.isRate)return null;const a=v.reduce((x,y)=>x+y,0)/v.length;return{y:a,text:'average '+fmt(a)+' a '+intent.groupBy,color:C.muted};})(),onClick:(e,els)=>{if(!els.length)return;const it=items[els[0].index];if(it.act[0]==='month')openMonthPanel(it.act[1]);else{const i=it.act[1].indexOf('|');applyRange(it.act[1].slice(0,i),it.act[1].slice(i+1));}}})},
       {cols:[intent.groupBy,subj],rows:items.map(i=>[i.label,i.v==null?'':+(+i.v).toFixed(4)]),fmt:v=>v===''?'—':fmt(+v)});
     showFollowups(intent);
   }
@@ -8127,10 +8165,10 @@ init();
     el.classList.add('show'); if(typeof renderIcons==='function')renderIcons();
     if(res.full&&Array.isArray(res.full.series)){
       const crows=DATA.merged.filter(d=>d.date>=p.from&&d.date<=p.to),labels=crows.map(d=>d.label),data=res.full.series.map(v=>(v==null||!isFinite(v))?null:+v);
-      const col=C.acc,tick=res.isMs?(v=>(+v/1000).toFixed(1)+'s'):res.isRate?(v=>(+v).toFixed(mIs(intent.metric.kind,x=>x.unit==='pence')?2:0)+(mIs(intent.metric.kind,x=>x.unit==='pence')?'p':(mIs(intent.metric.kind,x=>x.unit==='ratio'||x.unit==='perk')?'':'%'))):(isMoneyK(intent.metric.kind)&&!intent.category?(v=>'£'+(+v).toFixed(0)):(v=>num(v)));
+      const col=C.acc,tick=res.isMs?(v=>(+v/1000).toFixed(1)+'s'):res.isRate?(v=>(+v).toFixed(mIs(intent.metric.kind,x=>x.unit==='pence')?2:0)+(mIs(intent.metric.kind,x=>x.unit==='pence')?'p':(mIs(intent.metric.kind,x=>x.unit==='ratio'||x.unit==='perk')?'':'%'))):(isMoneyK(intent.metric.kind)&&!intent.category?(v=>gbp(+v,0)):(v=>num(v)));
       const half=labels.indexOf(fmtDate(B.from));
       mountViz({type:res.isRate?'line':'bar',data:{labels,datasets:[{label:subj,data,backgroundColor:res.isRate?(col+'22'):(col+'cc'),borderColor:col,borderWidth:res.isRate?2:0,borderRadius:res.isRate?0:3,pointRadius:0,tension:.3,fill:!!res.isRate,spanGaps:true}]},
-        options:mergeOpts(baseOpts(),{plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>fmt(c.parsed.y)}}},scales:{y:{ticks:{callback:tick}}},eventLines:half>=0?[{label:labels[half],color:C.muted,text:'second half',dash:[4,3]}]:[]})},
+        options:mergeOpts(baseOpts(),{plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>fmt(c.parsed.y)}}},scales:{y:{ticks:{callback:tick}}},eventLines:(half>=0?[{label:labels[half],color:C.muted,text:'second half',dash:[4,3]}]:[]).concat(askEvents(crows.map(d=>({label:d.label,from:d.date,to:d.date}))).filter(e=>e.label!==labels[half]))})},
         {cols:['day',subj],rows:crows.map((d,i)=>[d.label,data[i]==null?'':+(+data[i]).toFixed(4)]),fmt:v=>v===''?'—':fmt(+v)});
     }
     showFollowups(intent);
@@ -8227,14 +8265,15 @@ init();
     const aggs=[['sum','total'],['avg','average per day'],['max','peak day'],['min','lowest day']];
     const shape=intent.trend?'trend':intent.groupBy||'single';
     const pk=periodKey(intent.period);
-    return '<div class="ask-read"><span class="ask-read-lbl">Read as</span>'+
+    const sum=[intent.metric.label,intent.period?intent.period.label:'',intent.category?catLabel(CAT_ALIAS[intent.category]||intent.category):'',intent.filter?intent.filter.label:'',shape!=='single'?(shapes.find(x=>x[0]===shape)||[])[1]:(aggs.find(x=>x[0]===(intent.agg||'sum'))||[])[1]].filter(Boolean).join(' · ');
+    return '<details class="ask-read"><summary><span class="ask-read-lbl">Read as</span><span class="ask-read-sum">'+esc(sum)+'</span></summary><div class="ask-read-body">'+
       sel('metric',metrics,metricKey(intent.metric),intent.metric.label)+
       sel('period',periodOptions(),pk,intent.period?intent.period.label:'')+
       sel('category',cats,intent.category||'')+
       sel('filter',filters,intent.filter?intent.filter.key:'')+
       sel('shape',shapes,shape)+
       (shape==='single'?sel('agg',aggs,intent.agg||'sum'):'')+
-    '</div>';
+    '</div></details>';
   }
   function applyReadChange(dim,val){
     if(!lastIntent)return;
@@ -8335,6 +8374,14 @@ init();
         {cols:['Driver','Change (£)'],rows:ch.map(c=>[c.name,Math.round(c.d)]),fmt:v=>(v>=0?'+£':'−£')+Math.abs(v)});
     }
   }
+  // A citizensinformation.ie address as the page's name ("Fuel Allowance") and its section ("Social Welfare").
+  function ciPageName(u){
+    const path=String(u).replace(/^https?:\/\/(www\.)?citizensinformation\.ie\/(en\/)?/,'').replace(/^https?:\/\//,'').replace(/[?#].*$/,'').replace(/\/+$/,'');
+    const last=path.split('/').pop()||path;return /^[a-z0-9-]+$/.test(last)?catLabel(last).replace(/\bAnd\b/g,'and'):last;
+  }
+  function ciPageSection(u){
+    const m=String(u).match(/citizensinformation\.ie\/(?:en\/)?([a-z0-9-]+)\//);return m?' · '+catLabel(m[1]):'';
+  }
   function renderTopN(res){
     const el=$('ask-answer'); if(!el)return;
     if(res.empty){el.innerHTML=info('No data found for '+esc(res.intent.period.label)+'.');el.classList.add('show');if(typeof renderIcons==='function')renderIcons();return;}
@@ -8344,7 +8391,7 @@ init();
     const rows=items.map((it,i)=>{
       const pct=Math.max(2,it.v/max*100);
       const at=it.act?' data-act="'+it.act[0]+'" data-arg="'+escA(it.act[1])+'"':'';
-      return '<button class="ask-topn-row"'+at+'><span class="ask-topn-rank">'+(i+1)+'</span><span class="ask-topn-lbl">'+esc(it.label)+(it.extra?'<span style="color:var(--dim)">'+esc(it.extra)+'</span>':'')+'</span><span class="ask-topn-bar"><span style="width:'+pct.toFixed(1)+'%"></span></span><span class="ask-topn-val">'+fmt(it.v)+'</span></button>';
+      return '<button class="ask-topn-row"'+at+(it.title?' title="'+escA(it.title)+'"':'')+'><span class="ask-topn-rank">'+(i+1)+'</span><span class="ask-topn-lbl">'+esc(it.label)+(it.extra?'<span style="color:var(--dim)">'+esc(it.extra)+'</span>':'')+'</span><span class="ask-topn-bar"><span style="width:'+pct.toFixed(1)+'%"></span></span><span class="ask-topn-val">'+fmt(it.v)+'</span></button>';
     }).join('');
     const ent={service:'services',model:'models',day:'days',week:'weeks',month:'months',category:'categories',page:'pages',clickpage:'clicked pages',prompt:'starter prompts',journey:'journeys'}[intent.entity];
     const by=res.by||(intent.metric==='questions'?'turns':(intent.metric==='llm'?'generation cost':'spend'));
@@ -8428,6 +8475,21 @@ init();
   document.addEventListener('click',e=>{const b=e.target&&e.target.closest&&e.target.closest('[data-viz]');if(b)askSetView(b.dataset.viz);});
   (function(){var s=document.createElement('style');s.textContent='.ask-viz-btn{background:var(--s2);border:1px solid var(--b2);color:var(--muted);border-radius:var(--r-sm);padding:3px 10px;font-size:var(--t-2xs);font-family:DM Mono,monospace;cursor:pointer}.ask-viz-btn.active{color:var(--text);border-color:var(--acc)}.ask-tbl{width:100%;border-collapse:collapse;font-size:var(--t-xs)}.ask-tbl th{text-align:left;color:var(--muted);font-weight:500;padding:4px 8px;border-bottom:1px solid var(--b2)}.ask-tbl td{padding:4px 8px;border-bottom:1px solid var(--b2);font-family:DM Mono,monospace}';document.head.appendChild(s);})();
 
+  // Events on an Ask chart, matched by date to each bucket ({label, from, to}), with short whole-word labels.
+  function askEvents(buckets){
+    const out=[];
+    confirmedEvents().forEach(ev=>{const b=buckets.find(x=>ev.start>=x.from&&ev.start<=x.to);if(!b)return;
+      let t=String(ev.title).split(/[:(—]/)[0].trim();if(t.length>18)t=t.slice(0,18).replace(/\s+\S*$/,'')+'…';
+      out.push({label:b.label,color:eventColor(ev),text:'● '+t,dash:[]});});
+    return out;
+  }
+  // The change against the prior window as a chip, coloured by whether that direction is good for the measure.
+  function deltaChip(ctx,kind){
+    if(!ctx)return '';
+    const dir=/^up /.test(ctx)?1:/^down /.test(ctx)?-1:0,pol=(MET[kind]||{}).polarity;
+    const good=dir===0||!pol||pol==='neutral'?null:(pol==='up')===(dir>0);
+    return '<span class="ask-delta '+(good==null?'neu':good?'good':'bad')+'">'+(dir>0?'▲ ':dir<0?'▼ ':'')+esc(ctx)+'</span>';
+  }
   function render(res){
     const el=$('ask-answer'); if(!el)return;
     if(res.grouped){renderGrouped(res);return;}
@@ -8440,29 +8502,53 @@ init();
     const subj=res.subj||((m.kind==='service'||m.kind==='model')?m.label+' cost':m.label);
     const where=p.kind==='all'?'overall':'in '+p.label;
     const ctx=res.headline?'':context(intent,value); // entity answers carry their own headline
-    const headline=esc(res.headline||(aggWord+subj+' '+where+(note?' · '+note:'')+(ctx?' · '+ctx:'')));
+    const headline=res.headline?esc(res.headline):esc(aggWord+subj+' '+where)+(note?'<span class="ask-card-how"> · '+esc(note)+'</span>':'');
     const bigVal=res.bigVal!=null?esc(res.bigVal):fmt(value);
+    const bigTxt=res.bigVal!=null&&!/^[\d£≤≥.,:%p×s −-]+$/.test(String(res.bigVal));
     const acts=drillButtons(intent);
     const hasChart=!res.breakdown&&(!res.bigVal||res.hourSeries)&&Array.isArray(series)&&series.filter(v=>v!=null&&isFinite(v)).length>=2;
     const sv=(series||[]).map(v=>(v==null||!isFinite(v))?0:v);
     const spark=(!hasChart&&sv.filter(v=>v!==0).length>1)?'<div class="ask-card-spark">'+sparkline(sv,C.acc,240,46)+'</div>':'';
     el.innerHTML='<div class="ask-card"'+(hasChart?' style="flex-direction:column;align-items:stretch"':'')+'><div class="ask-card-main">'+
       '<div class="ask-card-q">'+esc(intent.raw)+'</div>'+
-      '<div class="ask-card-val">'+bigVal+'</div>'+
-      '<div class="ask-card-sub">'+headline+'</div></div>'+
+      '<div class="ask-hero"><div class="ask-card-val'+(bigTxt?' txt':'')+'">'+bigVal+'</div>'+
+      '<div class="ask-card-sub">'+headline+'</div>'+deltaChip(ctx,m.kind)+'</div></div>'+
       (res.breakdown?'<div class="ask-topn ask-breakdown" style="flex-basis:100%">'+(()=>{const mx=Math.max.apply(null,res.breakdown.map(b=>b.v))||1;return res.breakdown.map((b,i)=>'<div class="ask-topn-row" style="cursor:default"><span class="ask-topn-rank">'+(i+1)+'</span><span class="ask-topn-lbl">'+esc(b.label)+(b.extra?'<span style="color:var(--dim)">'+esc(b.extra)+'</span>':'')+'</span><span class="ask-topn-bar"><span style="width:'+Math.max(2,b.v/mx*100).toFixed(1)+'%"></span></span><span class="ask-topn-val">'+fmt(b.v)+'</span></div>').join('');})()+'</div>':'')+
       (hasChart?vizBlock():spark)+
       (acts?'<div class="ask-card-actions"'+(hasChart?' style="flex-direction:row;margin-top:var(--sp-2)"':'')+'>'+acts+'</div>':'')+(intent.raw?readAsHTML(intent):'')+'</div>';
     el.classList.add('show'); if(typeof renderIcons==='function')renderIcons();
     if(hasChart){
-      const crows=DATA.merged.filter(d=>d.date>=p.from&&d.date<=p.to);
-      const labels=res.hourSeries?Array.from({length:24},(_,h)=>String(h).padStart(2,'0')+':00'):crows.map(d=>d.label);
+      const crows=DATA.merged.filter(d=>d.date>=p.from&&d.date<=p.to&&(!intent.days||intent.days.set.includes(isoDow(d.date))));
+      let labels=res.labels||(res.hourSeries?Array.from({length:24},(_,h)=>String(h).padStart(2,'0')+':00'):crows.map(d=>d.label));
       const isRate=isRatioK(m.kind);
-      const isCount=mIs(m.kind,x=>x.unit==='count'||x.unit==='hour')||(intent.category&&['questions','spend','citations'].includes(m.kind))||(intent.filter&&['questions','sessions','spend'].includes(m.kind));
-      const col=C.acc, data=series.map(v=>(v==null||!isFinite(v))?null:+v);
+      const isCount=mIs(m.kind,x=>x.unit==='count'||x.unit==='hour'||x.unit==='weekday')||(intent.category&&['questions','spend','citations'].includes(m.kind))||(intent.filter&&['questions','sessions','spend'].includes(m.kind));
+      const col=C.acc;let data=series.map(v=>(v==null||!isFinite(v))?null:+v),unit=res.hourSeries?'hour':res.labels?'':'day';
+      // More than about two months of days reads as noise: show weeks (counts summed; rates summed then divided per week).
+      if(unit==='day'&&labels.length>62){
+        const wk=[],at={};crows.forEach((d,i)=>{let w=at[d.week];if(!w){w=at[d.week]={k:d.week,from:d.date,to:d.date,sum:0,any:false};wk.push(w);}w.to=d.date;if(data[i]!=null){w.sum+=data[i];w.any=true;}});
+        labels=wk.map(w=>'w/c '+fmtDate(w.k));
+        data=wk.map(w=>{if(!isRate&&!res.isMs)return w.any?w.sum:null;const r=compute(subIntent(intent,{kind:'range',from:w.from,to:w.to,label:''}));return r&&!r.empty&&r.value!=null&&isFinite(r.value)?+r.value:null;});
+        unit='week';
+        if(intent._day)res._pickWeek=wk.findIndex(w=>intent._day>=w.from&&intent._day<=w.to);
+        res._buckets=wk.map((w,i)=>({label:labels[i],from:w.from,to:w.to}));
+      }
       const pctKind=isPctK(m.kind);
-      const tick=(m.kind==='latency'||res.isMs)?(v=>(+v/1000).toFixed(1)+'s'):isRate?(v=>(+v).toFixed(pctKind?0:2)+(pctKind?'%':(m.kind==='qps'?'':'p'))):(isCount?(v=>num(v)):(v=>'£'+(+v).toFixed(0)));
-      mountViz({type:isRate?'line':'bar',data:{labels:labels,datasets:[{label:subj,data:data,backgroundColor:isRate?(col+'22'):(col+'cc'),borderColor:col,borderWidth:isRate?2:0,borderRadius:isRate?0:3,pointRadius:0,tension:.3,fill:!!isRate,spanGaps:true,maxBarThickness:22}]},options:mergeOpts(baseOpts(),{plugins:{legend:{display:false}},scales:{y:{ticks:{callback:tick}}}})},{cols:['Date',subj],rows:labels.map((l,i)=>[l,data[i]]),fmt:res.fmt});
+      const tick=(m.kind==='latency'||res.isMs)?(v=>(+v/1000).toFixed(1)+'s'):isRate?(v=>(+v).toFixed(pctKind?0:2)+(pctKind?'%':(m.kind==='qps'?'':'p'))):(isCount?(v=>num(v)):(v=>gbp(v,0)));
+      // The answer's own bar or point: the busiest hour or weekday, or the peak or lowest day.
+      let pick=res.pickIdx!=null?res.pickIdx:res.hourSeries?labels.indexOf(res.bigVal):-1;
+      if(pick<0&&unit==='day'&&intent._day)pick=crows.findIndex(d=>d.date===intent._day);
+      if(pick<0&&unit==='week'&&res._pickWeek!=null)pick=res._pickWeek;
+      // Reference line: the period's own rate for a rate, else the average per bucket.
+      const vals=data.filter(v=>v!=null),avg=vals.length?vals.reduce((a,b)=>a+b,0)/vals.length:null;
+      const refY=(isRate||res.isMs)&&agg==='sum'&&value!=null&&isFinite(value)?+value:avg;
+      const refTxt=refY==null||vals.length<3?'':((isRate||res.isMs)&&agg==='sum'?'period ':'average ')+fmt(refY)+(unit&&!(isRate||res.isMs)?' a '+unit:'');
+      const asLine=isRate||res.isMs;
+      mountViz({type:asLine?'line':'bar',data:{labels:labels,datasets:[{label:subj,data:data,
+        backgroundColor:asLine?(col+'22'):data.map((_,i)=>pick<0?col+'cc':i===pick?col:col+'55'),borderColor:col,borderWidth:asLine?2:0,borderRadius:asLine?0:4,
+        pointRadius:asLine?data.map((_,i)=>i===pick?5:0):0,pointBackgroundColor:col,pointBorderColor:C.s2||col,pointBorderWidth:2,tension:.3,fill:!!asLine,spanGaps:true,maxBarThickness:28}]},
+        options:mergeOpts(baseOpts(),{plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>fmt(c.parsed.y)+(unit==='week'?' that week':'')}}},scales:{y:{ticks:{callback:tick}}},
+          refLine:refTxt?{y:refY,text:refTxt,color:C.muted}:null,eventLines:unit==='week'?askEvents(res._buckets):unit==='day'?askEvents(crows.map(d=>({label:d.label,from:d.date,to:d.date}))):[]})},
+        {cols:[unit==='week'?'Week':unit==='hour'?'Hour':unit===''?'':'Date',subj],rows:labels.map((l,i)=>[l,data[i]]),fmt:res.fmt});
     }
     showFollowups(intent);
   }
@@ -9166,7 +9252,7 @@ h1{letter-spacing:-.025em;font-weight:600}
         legend:{display:true,position:'bottom',align:'start',labels:{color:c.muted,font:{size:11,family:'DM Sans'},boxWidth:8,boxHeight:8,padding:12,usePointStyle:true,pointStyle:'rectRounded'}},
         tooltip:{callbacks:{label:cx=>`${cx.dataset.label}: ${G(cx.parsed.y)}`,title:items=>`Day ${items[0].label}`}},
       },
-      scales:{y:{ticks:{callback:v=>`£${(+v).toFixed(0)}`}},x:{ticks:{maxTicksLimit:8}}},
+      scales:{y:{ticks:{callback:v=>gbp(+v,0)}},x:{ticks:{maxTicksLimit:8}}},
     })});
   }
 

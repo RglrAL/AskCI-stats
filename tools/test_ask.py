@@ -45,7 +45,9 @@ async function go(){
   for(const c of __C){
     window.__resetAsk();let ans='';
     for(const q of [c.q,...(c.then||[])]){window.askQuery(q);await sleep(%d);const a=document.getElementById('ask-answer');
-      ans=(a?a.innerText:'').replace(/\s+/g,' ').replace(/READ AS.*/,'').trim();}
+      // the card repeats the question; leave it out, so "not" checks test the answer and not the question asked
+      const echo=a?[...a.querySelectorAll('.ask-card-q')]:[];echo.forEach(e=>e.style.display='none');
+      ans=(a?a.innerText:'').replace(/\s+/g,' ').replace(/READ AS.*/,'').trim();echo.forEach(e=>e.style.display='');}
     out.push(ans);
   }
   document.body.setAttribute('data-test',JSON.stringify({out,errs:window.__errs.concat((window.__askRegistryProblems||[]).map(x=>'registry: '+x))}));
@@ -70,22 +72,18 @@ NOTICE_RE = re.compile(r"^((?:[A-Z][^.]*?(?:\.|”\.)\s)+?)(?=[A-Z0-9 ’'“”
 
 
 def key_parts(q, ans):
-    """What --record pins for a case: any notice above the answer, then either the answer's value (the first
-    number after the echoed question) with the word that follows it, or, for a card with no echo (a decline or
-    a "which measure?" prompt), its heading."""
+    """What --record pins for a case: any notices above the answer (sentences ending in a full stop before the
+    first number), then the answer's value (the first number) with the word that follows it; for an answer with
+    no number (a decline or a "which measure?" prompt), its first five words."""
     parts = []
-    echo = q.upper().split("|")[-1]
-    i = ans.upper().find(echo[:30])
-    if i > 0:
-        lead = ans[:i].strip()
-        if lead: parts.append(lead)
-    if i >= 0:
-        rest = ans[i + len(echo):].strip()
-        m = re.search(r"[≤≥]?\s?£?\d[\d,.]*(?:%|p|s|×| pts)?(?:\s+[A-Za-z’'-]+)?", rest)
-        if m: parts.append(m.group(0).strip())
-        else: parts.append(rest[:40])
-    else:
-        parts.append(" ".join(ans.split()[:5]))
+    m = re.search(r"[≤≥]?\s?£?\d[\d,.]*(?:%|p|s|×| pts)?(?:\s+[A-Za-z’'-]+)?", ans)
+    if not m:
+        return [" ".join(ans.split()[:5])]
+    lead = ans[:m.start()].rstrip()
+    k = lead.rfind(".")
+    if k > 0:
+        parts.append(lead[:k + 1].strip())
+    parts.append(m.group(0).strip())
     return parts
 
 

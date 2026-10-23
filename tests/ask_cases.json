@@ -396,15 +396,15 @@
   "group": "content",
   "expect": [
    "Social Welfare pages",
-   "fuel-allowance"
+   "Fuel Allowance"
   ]
  },
  {
   "q": "top 5 cited pages in October",
   "group": "content",
   "expect": [
-   "budget-2027",
-   "fuel-allowance"
+   "Budget 2027",
+   "Fuel Allowance"
   ]
  },
  {
@@ -446,7 +446,7 @@
   "group": "content",
   "expect": [
    "from Social Welfare",
-   "Social Welfare → Money and Tax 585"
+   "→ Money and Tax 585"
   ]
  },
  {
@@ -575,7 +575,7 @@
   "q": "how much did we spend last month",
   "group": "cost",
   "expect": [
-   "£1010 total"
+   "£1,010 total"
   ]
  },
  {
@@ -604,14 +604,14 @@
   "q": "what is our monthly run rate",
   "group": "cost",
   "expect": [
-   "£1089 run"
+   "£1,089 run"
   ]
  },
  {
   "q": "what will October cost",
   "group": "cost",
   "expect": [
-   "£1176 projected"
+   "£1,176 projected"
   ]
  },
  {
@@ -626,7 +626,7 @@
   "group": "cost",
   "expect": [
    "Azure Cognitive Search top service",
-   "£3031"
+   "£3,031"
   ]
  },
  {
@@ -1223,7 +1223,7 @@
   "q": "most cited pages",
   "group": "verified",
   "expect": [
-   "fuel-allowance",
+   "Fuel Allowance",
    "4,291"
   ]
  },
@@ -1231,7 +1231,7 @@
   "q": "which page do people read most",
   "group": "verified",
   "expect": [
-   "fuel-allowance 185"
+   "Fuel Allowance · Social Welfare 185"
   ]
  },
  {
@@ -1618,7 +1618,7 @@
  {
   "q": "spent in september",
   "expect": [
-   "£1010"
+   "£1,010"
   ],
   "not": [
    "Read “"

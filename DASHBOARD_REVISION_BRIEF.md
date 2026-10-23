@@ -479,3 +479,21 @@ Screenshots of 26 kinds of answer (dark and light themes, desktop, and phone wid
 The earlier finding that answers overflow a phone screen was wrong: headless Chrome has a 500 px minimum window, so the screenshots were cropped. In a real 390 px frame the page is exactly 390 px wide.
 
 Next, step 2: the answer card itself (larger headline, a coloured change chip, a one-line "Read as"), and chart rules by answer type (weekly roll-up for long ranges, highlighted busiest bar, event flags, average line, page names in ranked lists).
+
+## 35. Ask bar visual audit, step 2: the answer card and its charts (23 Oct 2026)
+
+- **Headline.** The number is about twice the size (2.1–2.9 rem). The change against the prior window is a chip beside it, green or red by the measure's polarity from the registry (grey where up or down is neither good nor bad); on a phone it sits on its own line. Under it is one plain sentence, with the method ("1,249 of 20,790 scored turns · sum then divide") in smaller type. The question echo is in normal case and quoted, not capitals.
+- **Read as.** Folded to one line ("Read as: not-found rate · September 2026 · total ▾") that opens the six controls on click.
+- **Actions.** "Open September 2026 detail →" and the like are accent-coloured pill links.
+- **Charts.**
+  - Daily answers longer than about two months show weeks: counts are summed, and rates are recomputed per week (sum then divide).
+  - A dashed reference line shows the period's rate for a rate, or the average per day, week, hour or month for a count, with its value.
+  - Confirmed events are flagged on daily, weekly, monthly and trend charts. They are matched by date to the bar's span, with short labels.
+  - The answer's own bar or point is highlighted: the busiest hour, the busiest weekday, the peak day, or the week holding the peak day.
+  - "Busiest day of the week" now has a 7-bar chart.
+- **Ranked lists.** Page names and their section ("Fuel Allowance · Social Welfare"), with the full address on hover, instead of truncated paths. Journeys from one topic no longer repeat it on every row.
+- **Money.** Thousands separators everywhere (£1,010, £3,031), on the dashboard and on chart axes too.
+- **Phone.** Fixed a cause of answers wider than the screen: stacked cards that also wrapped sized themselves to their widest content. Checked at 390 px in a real frame.
+- **Tests.** The regression harness now leaves the echoed question out of the answer text, so "must not contain" checks test the answer, and `--record` no longer depends on the echo. Expectations updated for the deliberate changes (money separators, page names, journey labels); 204 pass.
+
+Next, step 3: the special answers (the "How AskCI is doing" summary, growth, combined questions, "What changed", events).
