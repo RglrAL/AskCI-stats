@@ -2497,5 +2497,116 @@
   ],
   "group": "suggest",
   "note": "a finished word is read"
+ },
+ {
+  "q": "are AskCI's answers accurate",
+  "group": "mgmt",
+  "lists": [
+   "monthly"
+  ],
+  "copy": true,
+  "note": "management question: decline wording pinned (brief §48 Phase A step 1)",
+  "expect": [
+   "Whether an answer is correct isn’t measured",
+   "|| COPY **Whether an answer is correct isn’t measured**",
+   "the dislikes people gave: “cited answer rate”; “not found rate”",
+   "#ask=are%20AskCI's%20answers%20accurate",
+   "Source: AskCI dashboard"
+  ]
+ },
+ {
+  "q": "has AskCI taken pressure off the phones",
+  "group": "mgmt",
+  "lists": [
+   "monthly"
+  ],
+  "copy": true,
+  "note": "management question: decline wording pinned",
+  "expect": [
+   "Phone and centre demand isn’t in this data",
+   "|| COPY **Phone and centre demand isn’t in this data**",
+   "“out of hours share”"
+  ]
+ },
+ {
+  "q": "how does this compare with last year",
+  "group": "mgmt",
+  "lists": [
+   "monthly"
+  ],
+  "copy": true,
+  "note": "management question: decline wording pinned",
+  "expect": [
+   "Not enough history for year on year",
+   "|| COPY **Not enough history for year on year**"
+  ]
+ },
+ {
+  "q": "what if volume doubled",
+  "group": "mgmt",
+  "lists": [
+   "monthly"
+  ],
+  "copy": true,
+  "note": "management question: points to the Scenario planner",
+  "expect": [
+   "Use the Scenario planner for “what if”",
+   "Open the Scenario planner",
+   "It is a model, not data."
+  ]
+ },
+ {
+  "q": "cited answer rate in September",
+  "group": "mgmt",
+  "lists": [
+   "monthly"
+  ],
+  "copy": true,
+  "note": "copy carries the definition, the unvalidated caveat and the footer",
+  "expect": [
+   "86.5% cited answer rate in September 2026",
+   "|| COPY **Q: cited answer rate in September** **86.5%**",
+   "| 15 Sep | 81.7% |",
+   "Definition: Answers that cite at least one citizensinformation.ie page",
+   "Caveats: - Outcome figures from 14 Sep are unvalidated",
+   "outcome rules 2026.10.08-1 (unvalidated from 14 Sep 2026)",
+   "usage data to 22 Oct 2026"
+  ]
+ },
+ {
+  "q": "click-through rate in September",
+  "group": "mgmt",
+  "lists": [
+   "monthly"
+  ],
+  "copy": true,
+  "note": "copy carries the minimums caveat",
+  "expect": [
+   "5.5 click-throughs per 100 cited answers in September 2026",
+   "Definition: Click-throughs per 100 cited answers",
+   "click-throughs are minimums: GA4 counts consenting visitors only"
+  ],
+  "not": [
+   "Caveats:",
+   "(unvalidated"
+  ]
+ },
+ {
+  "q": "questions by month",
+  "group": "mgmt",
+  "lists": [
+   "monthly"
+  ],
+  "copy": true,
+  "note": "copy carries the table",
+  "expect": [
+   "| Sep'26 | 21,718 |",
+   "Definition: A turn is one question and its answer",
+   "#ask=questions%20by%20month"
+  ],
+  "not": [
+   "(unvalidated",
+   "Caveats:"
+  ]
  }
 ]

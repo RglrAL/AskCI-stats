@@ -3,6 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="askci-build" content="page=local data=local"><!-- stamped with the commits at deploy (.github/workflows/publish.yml) -->
 <title>AskCI Cost Intelligence</title>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
@@ -1562,6 +1563,10 @@ details.ask-read[open]>summary::after{content:'▴'}
 .ask-read-body{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px}
 .ask-card-spark{flex-shrink:0;opacity:.9}
 .ask-card-actions{display:flex;flex-direction:column;gap:6px;flex-shrink:0}
+.copy-bar{display:flex;flex-wrap:wrap;gap:6px;margin-top:var(--sp-3);padding-top:var(--sp-2);border-top:1px solid var(--b2)}
+.copy-btn{display:inline-flex;align-items:center;gap:6px;background:transparent;border:1px solid var(--border);color:var(--muted);border-radius:6px;padding:4px 10px;font:inherit;font-size:12px;cursor:pointer}
+.copy-btn:hover{color:var(--text);border-color:var(--muted)}
+.copy-btn .i-sm{width:13px;height:13px}
 .ask-action{background:color-mix(in srgb,var(--acc) 8%,transparent);border:1px solid color-mix(in srgb,var(--acc) 28%,transparent);color:var(--acc);
   border-radius:999px;padding:6px 14px;font-size:var(--t-xs);font-weight:500;cursor:pointer;
   white-space:nowrap;transition:background .15s,border-color .15s}
@@ -1850,7 +1855,7 @@ Date,Questions,Sessions
 <!-- Report mode overlay container -->
 <div id="report-mode-container" style="display:none"></div>
 
-<div class="share-toast" id="share-toast"><i data-lucide="check-circle-2" class="i-sm"></i><span>Link copied to clipboard</span></div>
+<div class="share-toast" id="share-toast"><i data-lucide="check-circle-2" class="i-sm"></i><span id="share-toast-msg">Link copied to clipboard</span></div>
 
 <!-- Command palette -->
 <div id="palette-overlay" role="dialog" aria-label="Command palette" aria-modal="true" onclick="if(event.target===this)closePalette()">
@@ -3762,6 +3767,128 @@ async function copyShareLink(btn){
   }
 }
 
+// ═══ COPY WITH DEFINITION (brief §48, Phase A step 1) ═════════════
+// A figure pasted into an email or a report carries its definition, its caveats, a link that re-asks it and a
+// footer saying which data and which version of the page produced it.
+function showToast(msg){
+  const toast=document.getElementById('share-toast'),m=document.getElementById('share-toast-msg');if(!toast)return;
+  if(m)m.textContent=msg;toast.classList.add('show');renderIcons();
+  clearTimeout(showToast.t);showToast.t=setTimeout(()=>{toast.classList.remove('show');if(m)m.textContent='Link copied to clipboard';},2200);
+}
+function buildStamp(){
+  const c=(document.querySelector('meta[name="askci-build"]')||{}).content||'';
+  const g=k=>((c.match(new RegExp(k+'=(\\S+)'))||[])[1]||'local');
+  return {page:g('page'),data:g('data')};
+}
+const fdY=d=>fmtDate(d)+' '+String(d).slice(0,4);   // dates in a copied footer carry their year
+function lastUsageDay(){return ((DATA&&DATA.merged||[]).filter(d=>d.queries>0).slice(-1)[0]||{}).date||'';}
+// o.outcome: the figure depends on the outcome rules · o.clicks: it counts click-throughs (a minimum)
+function reportFooter(o={}){
+  const U=(DATA&&DATA.usageQuality)||{},b=buildStamp(),uv=CONFIG.outcome_rules_unvalidated_from,m=CONFIG.outcome_rules_measured;
+  const lu=lastUsageDay();
+  return ['Source: AskCI dashboard',
+    lu?'usage data to '+fdY(lu):'',DATA&&DATA.latest?'billing to '+fdY(DATA.latest):'',
+    'config '+CONFIG.version,
+    U.outcomeRules?'outcome rules '+U.outcomeRules+(o.outcome&&uv&&!m?' (unvalidated from '+fdY(uv)+')':''):'',
+    o.clicks?'click-throughs are minimums: GA4 counts consenting visitors only':'',
+    'page '+b.page,'data '+b.data].filter(Boolean).join(' · ');
+}
+const escH=s=>String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+// A copy: {title, figure, sentence, table:{cols,rows}, definition, caveats[], link, linkText, footer}
+//   → Markdown for plain-text paste, HTML for Word/Outlook/Docs, both on the clipboard together.
+function copyPack(p){
+  const md=[],h=[];const cell=v=>String(v==null?'':v).replace(/\|/g,'\\|').replace(/\s+/g,' ');
+  if(p.title){md.push('**'+p.title+'**');h.push('<p style="margin:0 0 4px;color:#57606a">'+escH(p.title)+'</p>');}
+  if(p.figure||p.sentence){md.push([p.figure?'**'+p.figure+'**':'',p.sentence||''].filter(Boolean).join(' '));
+    h.push('<p style="margin:0 0 10px">'+(p.figure?'<b style="font-size:18px">'+escH(p.figure)+'</b> ':'')+escH(p.sentence||'')+'</p>');}
+  if(p.table&&p.table.rows&&p.table.rows.length){
+    md.push('','| '+p.table.cols.map(cell).join(' | ')+' |','|'+p.table.cols.map((c,i)=>i?' ---: ':' --- ').join('|')+'|',...p.table.rows.map(r=>'| '+r.map(cell).join(' | ')+' |'));
+    h.push('<table style="border-collapse:collapse;margin:0 0 10px;font-size:13px"><thead><tr>'+p.table.cols.map((c,i)=>'<th style="border:1px solid #d0d7de;padding:4px 8px;background:#f0f2f5;text-align:'+(i?'right':'left')+'">'+escH(c)+'</th>').join('')+'</tr></thead><tbody>'+
+      p.table.rows.map(r=>'<tr>'+r.map((v,i)=>'<td style="border:1px solid #d0d7de;padding:4px 8px;text-align:'+(i?'right':'left')+'">'+escH(v)+'</td>').join('')+'</tr>').join('')+'</tbody></table>');}
+  if(p.definition){md.push('','Definition: '+p.definition);h.push('<p style="margin:0 0 6px"><b>Definition.</b> '+escH(p.definition)+'</p>');}
+  const cv=(p.caveats||[]).filter(Boolean);
+  if(cv.length){md.push('','Caveats:',...cv.map(c=>'- '+c));h.push('<p style="margin:0 0 2px"><b>Caveats.</b></p><ul style="margin:0 0 6px">'+cv.map(c=>'<li>'+escH(c)+'</li>').join('')+'</ul>');}
+  if(p.link){md.push('',(p.linkText||'Link')+': '+p.link);h.push('<p style="margin:0 0 6px"><a href="'+escH(p.link)+'">'+escH(p.linkText||'Link')+'</a></p>');}
+  if(p.footer){md.push('','_'+p.footer+'_');h.push('<p style="margin:0;font-size:11px;color:#57606a">'+escH(p.footer)+'</p>');}
+  return {text:md.join('\n'),html:'<div style="font-family:Arial,Helvetica,sans-serif;font-size:14px;color:#1f2328;line-height:1.45">'+h.join('')+'</div>'};
+}
+function tsvOf(t){const c=v=>String(v==null?'':v).replace(/[\t\r\n]+/g,' ');return [t.cols.map(c).join('\t'),...t.rows.map(r=>r.map(c).join('\t'))].join('\n');}
+async function writeClipboard(text,html){
+  try{
+    if(html&&window.ClipboardItem&&navigator.clipboard&&navigator.clipboard.write){
+      await navigator.clipboard.write([new ClipboardItem({'text/plain':new Blob([text],{type:'text/plain'}),'text/html':new Blob([html],{type:'text/html'})})]);return true;}
+    await navigator.clipboard.writeText(text);return true;
+  }catch(e){
+    const ta=document.createElement('textarea');ta.value=text;ta.style.position='fixed';ta.style.left='-9999px';
+    document.body.appendChild(ta);ta.select();let ok=false;try{ok=document.execCommand('copy');}catch(_){}document.body.removeChild(ta);return ok;
+  }
+}
+// The chart redrawn in the light theme (whatever the page's theme), with the title and period above it and the
+// footer below, as a PNG: what a report or a slide needs. Colours in the chart's config are mapped from the live
+// palette to the light one; scriptable colours read C, which is the light palette while the copy is drawn.
+function lightChartPng(chart,head,sub,footer){
+  return new Promise(resolve=>{
+    if(!chart||!chart.config||!chart.config._config){resolve(null);return;}
+    const live=C,map=new Map();Object.keys(LIGHT).forEach(k=>{[live[k],DARK[k]].forEach(v=>{if(v)map.set(String(v).toLowerCase(),LIGHT[k]);});});
+    const recol=v=>{if(typeof v!=='string')return v;const lo=v.toLowerCase();for(const [d,l] of map){if(lo.startsWith(d))return l+v.slice(d.length);}return v;};
+    const clone=(o,depth=0)=>{if(depth>12||o==null)return o;if(typeof o==='string')return recol(o);if(typeof o!=='object'||typeof o==='function')return o;
+      if(Array.isArray(o))return o.map(x=>clone(x,depth+1));if(Object.getPrototypeOf(o)!==Object.prototype)return o;
+      const r={};for(const k of Object.keys(o))r[k]=clone(o[k],depth+1);return r;};
+    const raw=chart.config._config,W=960,CH=360,dpr=2;
+    const cfg={type:raw.type,data:clone(raw.data),options:clone(raw.options||{}),plugins:raw.plugins};
+    cfg.options.responsive=false;cfg.options.maintainAspectRatio=false;cfg.options.animation=false;cfg.options.devicePixelRatio=dpr;
+    cfg.options.plugins=cfg.options.plugins||{};cfg.options.plugins.tooltip={enabled:false};
+    const host=document.createElement('div');host.style.cssText='position:fixed;left:-20000px;top:0;width:'+W+'px;height:'+CH+'px';
+    const cv=document.createElement('canvas');cv.width=W;cv.height=CH;cv.style.width=W+'px';cv.style.height=CH+'px';host.appendChild(cv);document.body.appendChild(host);
+    const saved=C,savedDef=Chart.defaults.color,savedB=Chart.defaults.borderColor;let tmp=null;
+    try{C=LIGHT;Chart.defaults.color=LIGHT.muted;Chart.defaults.borderColor=LIGHT.border;tmp=new Chart(cv,cfg);}
+    catch(e){}finally{C=saved;Chart.defaults.color=savedDef;Chart.defaults.borderColor=savedB;}
+    if(!tmp){host.remove();resolve(null);return;}
+    // compose: title, period, chart, footer on white
+    const out=document.createElement('canvas'),x=out.getContext('2d'),pad=24;
+    const wrap=(t,font,maxW)=>{x.font=font;const words=String(t||'').split(/\s+/),lines=[];let cur='';words.forEach(w=>{const n=cur?cur+' '+w:w;if(x.measureText(n).width>maxW&&cur){lines.push(cur);cur=w;}else cur=n;});if(cur)lines.push(cur);return lines;};
+    const F1='600 20px "DM Sans",Arial,sans-serif',F2='14px "DM Sans",Arial,sans-serif',F3='11px "DM Sans",Arial,sans-serif';
+    out.width=1;const tl=wrap(head,F1,W-2*pad),sl=wrap(sub,F2,W-2*pad),fl=wrap(footer,F3,W-2*pad);
+    const H=pad+tl.length*26+sl.length*20+12+CH+12+fl.length*15+pad;
+    out.width=W*dpr;out.height=H*dpr;x.scale(dpr,dpr);x.fillStyle='#ffffff';x.fillRect(0,0,W,H);x.textBaseline='top';
+    let y=pad;x.fillStyle=LIGHT.text;x.font=F1;tl.forEach(l=>{x.fillText(l,pad,y);y+=26;});
+    x.fillStyle=LIGHT.muted;x.font=F2;sl.forEach(l=>{x.fillText(l,pad,y);y+=20;});y+=12;
+    x.drawImage(cv,0,y,W,CH);y+=CH+12;
+    x.fillStyle=LIGHT.muted;x.font=F3;fl.forEach(l=>{x.fillText(l,pad,y);y+=15;});
+    tmp.destroy();host.remove();
+    out.toBlob(b=>resolve(b),'image/png');
+  });
+}
+async function copyPng(blobP,name){
+  // the image goes on the clipboard where the browser allows it; otherwise it is downloaded
+  try{if(window.ClipboardItem&&navigator.clipboard&&navigator.clipboard.write){await navigator.clipboard.write([new ClipboardItem({'image/png':blobP})]);return 'copied';}}catch(e){}
+  try{const b=await blobP;if(!b)return null;const a=document.createElement('a');a.href=URL.createObjectURL(b);a.download=name||'askci-chart.png';a.click();return 'downloaded';}catch(e){return null;}
+}
+const OUTCOME_KPI=/cited|not-found|clarification|partial|uncited|out-of-scope|dislike|like|feedback|answered|reached|later/;
+// Copy from a tile's history window: the tile's figure for the selected range, its definition, a link to this view.
+async function copyKpi(key){
+  const meta=KPI_CATALOG[key];if(!meta)return;
+  const tile=KPI_MODAL_TILE&&document.body.contains(KPI_MODAL_TILE)?KPI_MODAL_TILE:[...document.querySelectorAll('[data-kpi-key="'+key+'"]')].find(t=>t.offsetParent);
+  const T=sel=>{const n=tile&&tile.querySelector(sel);if(!n)return '';const c=n.cloneNode(true);c.querySelectorAll('.sr-only,[aria-hidden="true"]').forEach(z=>z.remove());return c.textContent.replace(/\s+/g,' ').trim();};
+  const rows=filterRange(DATA.merged),from=rows[0]&&rows[0].date,to=rows.length&&rows[rows.length-1].date;
+  const per=from?spanLabel(from,to):'';const delta=T('.impact-change'),sub=T('.kpi-sub');
+  const clicks=/click/.test(key),outcome=OUTCOME_KPI.test(key);
+  const uv=CONFIG.outcome_rules_unvalidated_from;
+  savePrefs();
+  const p=copyPack({title:(meta.title||T('.kpi-lbl'))+(per?', '+per:''),figure:T('.kpi-val')||'',
+    sentence:[sub,delta?'('+delta+' against the comparison period)':''].filter(Boolean).join(' '),
+    definition:meta.desc,
+    caveats:[outcome&&uv&&!CONFIG.outcome_rules_measured&&to>=uv?'Outcome figures from '+fmtDate(uv)+' are unvalidated: the rules that classify answers haven’t been re-checked against the model in use since then.':'',
+      clicks?'Click-throughs are minimums: GA4 counts only visitors who accept analytics cookies.':''],
+    link:location.href,linkText:'Open this view on the dashboard',footer:reportFooter({outcome,clicks})});
+  const ok=await writeClipboard(p.text,p.html);showToast(ok?'Copied with its definition':'Copy failed');
+}
+async function copyKpiChart(key){
+  const meta=KPI_CATALOG[key];if(!meta)return;
+  const r=await copyPng(lightChartPng(charts['kpi-modal'],meta.title+', daily','dashed line: the median day',reportFooter({outcome:OUTCOME_KPI.test(key),clicks:/click/.test(key)})),'askci-'+key+'.png');
+  showToast(r==='copied'?'Chart image copied':r==='downloaded'?'Chart image downloaded':'Copy failed');
+}
+
 // ═══ REPORT MODE ═══════════════════════════════════════════════════
 // One-page printable summary. Hides everything else and renders a clean
 // document-style view that fits on a single Letter/A4 page.
@@ -4033,6 +4160,7 @@ document.addEventListener('click',e=>{
   const tile=e.target.closest('[data-kpi-key]');
   if(!tile)return;
   const key=tile.dataset.kpiKey;
+  KPI_MODAL_TILE=tile;
   if(KPI_CATALOG[key])openKpiModal(key);
 });
 // Keyboard activation for focusable (clickable) KPI tiles
@@ -4042,6 +4170,7 @@ document.addEventListener('keydown',e=>{
   if(!tile)return;
   e.preventDefault();
   const key=tile.dataset.kpiKey;
+  KPI_MODAL_TILE=tile;
   if(KPI_CATALOG[key])openKpiModal(key);
 });
 
@@ -4084,6 +4213,7 @@ document.addEventListener('keydown',e=>{
   KPI_CATALOG['reached-a-cited-answer']=KPI_CATALOG['reached-cited'];
   KPI_CATALOG['per-100-cited-answers']=KPI_CATALOG['click-through-rate'];
 })();
+let KPI_MODAL_TILE=null;   // the tile the history window was opened from: its figure is what Copy copies
 function openKpiModal(key){
   const meta=KPI_CATALOG[key];
   if(!meta||!DATA)return;
@@ -4157,6 +4287,9 @@ function openKpiModal(key){
     </div>
   `;
 
+  body.insertAdjacentHTML('beforeend',`<div class="copy-bar" role="group" aria-label="Copy for a report">
+    <button type="button" class="copy-btn" onclick="copyKpi('${key}')" title="The tile's figure for the selected range, with its definition, caveats, a link to this view and the data versions"><i data-lucide="clipboard-copy" class="i-sm"></i><span>Copy with definition</span></button>
+    <button type="button" class="copy-btn" onclick="copyKpiChart('${key}')" title="This chart in the light theme, with its title and the data versions, as an image"><i data-lucide="image" class="i-sm"></i><span>Copy chart image</span></button></div>`);
   document.getElementById('kpi-modal-overlay').classList.add('open');
   renderIcons();
 
@@ -8972,6 +9105,10 @@ init();
         tp?['questions about '+catLabel(CAT_ALIAS[tp]||tp)+' by month','not-found rate in '+catLabel(CAT_ALIAS[tp]||tp)]:['top topics','questions on Budget Day','top topics on Budget Day']);return true;}
     if(/\b(better|worse|cheaper|faster|slower) than\b.*\b(phone|helpline|staff|centres?|people|humans?)\b|\b(replace|replacing|instead of|compared? (to|with)) (the )?(phone|helpline|centres?)\b/.test(q)){
       showCard('Not something this data can show','The dashboard has no phone-service or centre data, so it cannot compare AskCI with them. It can show when people use AskCI while the phone line is closed.',['out of hours share','questions after 8pm on Budget Day']);return true;}
+    if(/\b(taken?|takes|took|taking|reduced?|reducing|eased?|easing|relieved?|lightened?)\b.*\b(pressure|load|demand|calls?|workload)\b.*\b(phones?|helpline|call cent(re|er)s?|centres?|staff)\b|\bfewer (phone )?calls\b|\b(calls?|phone) (volumes?|demand) (fell|dropped|down|reduced)\b/.test(q)){
+      showCard('Phone and centre demand isn’t in this data','The dashboard has no phone-service or centre figures, so it can’t show whether AskCI took demand off them. It can show how much AskCI is used while the phone line is closed, and how usage has grown:',['out of hours share','questions after 8pm on Budget Day','how much has usage grown since April']);return true;}
+    if(/\bwhat if\b|\bscenarios?\b|\b(doubled?|doubling|tripled?|tripling|twice|halved?)\b.*\b(volume|usage|questions|traffic|turns|demand)\b|\b(volume|usage|questions|traffic|turns|demand)\b.*\b(doubled?|doubles|doubling|tripled?|triples|tripling|halved?)\b/.test(q)){
+      showCard('Use the Scenario planner for “what if”','The Ask bar answers from what happened. The Scenario planner models cost at another daily volume, from the last 28 settled days: fixed cost held at its current level, per-turn cost scaled with volume. It is a model, not data. <button class="ask-action" data-act="sub" data-arg="projections">Open the Scenario planner</button>',['spend per day by month','generation cost per turn by month']);return true;}
     if(/\b(irish|gaeilge|polish|ukrainian|french|spanish|portuguese|romanian|lithuanian|latvian|russian|chinese|arabic speakers?|hindi|urdu|portuguese)\b|\b(in|written in|asked in) (arabic|chinese|japanese|korean)\b/.test(q)&&!/\b(arabic|cyrillic) script\b/.test(q)){
       showCard('Languages aren’t detected','The feed records only the alphabet a question starts in (Latin, Cyrillic, Arabic and so on), not its language. Irish, Polish and English all use the Latin alphabet, so they can’t be told apart.',['how many questions in other languages','non-latin script share by month']);return true;}
     if(/\b(bank holiday|public holiday|holidays?|christmas|easter|st\.? patrick'?s|halloween|summer|winter|spring|autumn|half[- ]term|mid[- ]term)\b/.test(q)&&!/\bholiday pay|annual leave\b/.test(q)){
@@ -9034,18 +9171,84 @@ init();
     const q0=(inp.value||'').trim(); if(!q0||!have())return;
     if(!/^what can i ask\??$/i.test(q0))recentAdd(q0);
     NOTICES=[];ALSO=null;SECOND=null;
-    const q=normaliseQ(q0);
+    const q=normaliseQ(q0);const before=lastIntent;
     const handled=guard(' '+q+' ')||pageAnswer(' '+q+' ');
     if(!handled)route(q);
+    ANS={q:q0,intent:!handled&&lastIntent!==before?lastIntent:null,second:SECOND};
     const el=$('ask-answer');
     if(el)el.querySelectorAll('.ask-card-q').forEach(x=>{x.textContent=q0;});   // the question as typed, not as normalised
     if(el&&ALSO&&el.innerHTML)el.insertAdjacentHTML('afterbegin','<div class="ask-also"><span>Also read as</span>'+exChip(ALSO)+'</div>');
     if(el&&NOTICES.length&&el.innerHTML)el.insertAdjacentHTML('afterbegin','<div class="ask-notice"><i data-lucide="alert-circle" class="i-sm"></i><span>'+NOTICES.map(esc).join(' ')+'</span></div>');
+    if(el&&el.innerHTML&&!/^what can i ask\??$/i.test(q0))addCopyBar(el);
     if(typeof renderIcons==='function')renderIcons();
     // Announce a short summary (notices, the headline figure and its sentence), not the whole card; focus stays in
     // the box so a follow-up can be typed straight away.
     const live=$('ask-live');if(live&&el){const pick=sel=>[...el.querySelectorAll(sel)].map(x=>x.textContent.trim()).filter(Boolean);
       live.textContent=[...pick('.ask-notice'),...pick('.ask-card-val'),...pick('.ask-card-sub'),...pick('.ask-know-title')].slice(0,5).map(t=>t.replace(/[.\s]+$/,'')).join('. ').replace(/\s+/g,' ').slice(0,400);}
+  }
+  // ── Copy with definition (brief §48, Phase A step 1) ──
+  // Built from the answer as drawn, so every kind of card copies the same way: the question, the figure and its
+  // sentence, the table, the measure's definition, the notices as caveats, a link that asks the question again, and
+  // the footer.
+  let ANS=null;
+  const CLICK_KINDS=new Set(['clicks','ctr','clickpages']);
+  function reaskLink(q){return location.origin+location.pathname+'#ask='+encodeURIComponent(String(q||'').slice(0,200));}
+  function askTable(card){
+    const T=n=>n.textContent.replace(/\s+/g,' ').trim();
+    if(card.querySelector('#ask-chart')&&askViz)return {cols:askViz.cols.slice(0,2),rows:askViz.rows.map(r=>[String(r[0]),askViz.fmt?askViz.fmt(r[1]):String(r[1])])};
+    const tb=[...card.querySelectorAll('table')].find(t=>!t.closest('#ask-viz-table'));
+    if(tb){const head=[...tb.querySelectorAll('thead th')].map(T),rows=[...tb.querySelectorAll('tbody tr')].map(tr=>[...tr.children].map(T));
+      if(rows.length)return {cols:head.length?head:rows[0].map((_,i)=>i?'Value':''),rows};}
+    const tn=[...card.querySelectorAll('.ask-topn-row')];
+    if(tn.length)return {cols:['#','Item','Value'],rows:tn.map((r,i)=>[String(i+1),T(r.querySelector('.ask-topn-lbl')),T(r.querySelector('.ask-topn-val'))])};
+    return null;
+  }
+  function askCopyPayload(){
+    const el=$('ask-answer');const card=el&&el.querySelector('.ask-card');if(!card)return null;
+    const T=n=>{if(!n)return '';const c=n.cloneNode(true);c.querySelectorAll('.sr-only,[aria-hidden="true"],button,select,.ask-guard-chips').forEach(z=>z.remove());return c.textContent.replace(/\s+/g,' ').trim();};
+    const q=(ANS&&ANS.q)||T(card.querySelector('.ask-card-q'));
+    const know=card.classList.contains('ask-know');
+    const chips=[...card.querySelectorAll('.ask-guard-chips .ask-chip')].map(c=>'“'+c.textContent.trim()+'”');
+    const m=ANS&&ANS.intent&&ANS.intent.metric,met=m&&(MET[m.kind]||m);
+    const kinds=[m&&m.kind,ANS&&ANS.second&&ANS.second.metric&&ANS.second.metric.kind].filter(Boolean);
+    const clicks=kinds.some(k=>CLICK_KINDS.has(k)),outcome=kinds.some(k=>OUTCOME_KINDS.has(k));
+    const duo=[...el.querySelectorAll('.ask-duo-tile')].map(d=>T(d.querySelector('.ask-card-val'))+' '+T(d.querySelector('.ask-card-sub'))+(d.querySelector('.ask-delta')?' ('+T(d.querySelector('.ask-delta'))+')':''));
+    const delta=T(card.querySelector('.ask-delta'));
+    const caveats=[...el.querySelectorAll('.ask-notice')].map(T);
+    const subT=T(card.querySelector('.ask-card-sub'));
+    if(clicks&&!/minimum/i.test(subT)&&!caveats.some(c=>/minimum/i.test(c)))caveats.push('Click-throughs are minimums: GA4 counts only visitors who accept analytics cookies.');
+    const pack={title:know?T(card.querySelector('.ask-know-title')):'Q: '+q,
+      figure:know?'':T(card.querySelector('.ask-card-val')),
+      sentence:know?T(card.querySelector('.ask-know-body')).replace(/:\s*$/,'')+(chips.length?': '+chips.join('; ')+'.':''):[T(card.querySelector('.ask-card-sub')),delta?'('+delta+')':''].filter(Boolean).join(' ')+(duo.length?' · '+duo.join(' · '):''),
+      table:askTable(card),definition:met&&met.def||'',caveats,
+      link:reaskLink(q),linkText:'Ask this again on the dashboard',footer:reportFooter({outcome,clicks})};
+    return {pack,q,outcome,clicks,...copyPack(pack)};
+  }
+  function addCopyBar(el){
+    const card=el.querySelector('.ask-card');if(!card)return;
+    const P=askCopyPayload();if(!P)return;
+    const chart=!!card.querySelector('#ask-chart'),tbl=!!P.pack.table;
+    const b=(act,ic,lbl,tip)=>'<button type="button" class="copy-btn" data-copy="'+act+'" title="'+escA(tip)+'"><i data-lucide="'+ic+'" class="i-sm"></i><span>'+lbl+'</span></button>';
+    el.insertAdjacentHTML('beforeend','<div class="copy-bar" role="group" aria-label="Copy for a report">'+
+      b('answer','clipboard-copy','Copy answer','The answer with its definition, caveats, a link that asks it again and the data versions; pastes formatted into Word or Outlook, as Markdown elsewhere')+
+      (chart?b('chart','image','Copy chart image','The chart in the light theme with the question and the data versions, as an image'):'')+
+      (tbl?b('table','table','Copy table','The table as tab-separated text, for a spreadsheet'):'')+
+      b('link','link','Copy link','A link that asks this question again on the dashboard')+'</div>');
+    el.querySelector('.copy-bar').addEventListener('click',async e=>{
+      const btn=e.target.closest('[data-copy]');if(!btn)return;const P2=askCopyPayload();if(!P2)return;const a=btn.dataset.copy;
+      if(a==='answer'){showToast(await writeClipboard(P2.text,P2.html)?'Copied with its definition and caveats':'Copy failed');}
+      else if(a==='table'){showToast(await writeClipboard(tsvOf(P2.pack.table))?'Table copied: paste it into a spreadsheet':'Copy failed');}
+      else if(a==='link'){showToast(await writeClipboard(P2.pack.link)?'Link copied: it asks this question again':'Copy failed');}
+      else if(a==='chart'){const r=await copyPng(lightChartPng(charts['ask-chart'],P2.q,[P2.pack.figure,P2.pack.sentence].filter(Boolean).join(' '),P2.pack.footer),'askci-answer.png');
+        showToast(r==='copied'?'Chart image copied':r==='downloaded'?'Chart image downloaded':'Copy failed');}
+    });
+  }
+  // A link made by Copy link opens the page and asks its question. The hash is untrusted: it only ever becomes the
+  // text of the question box (never markup), trimmed to 200 characters with control characters removed.
+  function askFromHash(h){
+    let q='';try{q=new URLSearchParams(String(h||'').replace(/^#/,'')).get('ask')||'';}catch(e){return false;}
+    q=q.replace(/[\u0000-\u001f\u007f]+/g,' ').trim().slice(0,200);if(!q)return false;
+    const go=(n)=>{if(have()&&$('ask-input')){window.askQuery(q);}else if(n<150)setTimeout(()=>go(n+1),200);};go(0);return true;
   }
   // A different measure that explains nearly as much of the question as the chosen one is offered with one click.
   function alsoReadAs(q,intent){
@@ -9414,6 +9617,9 @@ init();
   }
   // Exposed for the ⌘K command palette: jump straight to an answer from there.
   window.askQuery=function(t){const inp=$('ask-input');if(!inp)return;inp.value=t;const w=document.getElementById('ask-wrap');if(w)w.scrollIntoView({block:'start',behavior:'smooth'});run();};
+  window.askCopyPayload=()=>{const P=askCopyPayload();return P&&{text:P.text,html:P.html};};
+  window.askFromHash=askFromHash;
+  if(/[#&]ask=/.test(location.hash))askFromHash(location.hash);
   window.askParseable=function(t){try{return !!(parseCompare(t)||parseAsk(t));}catch(e){return false;}};
   if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',install);
   else install();

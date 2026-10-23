@@ -30,6 +30,11 @@ Chrome and checks each answer. It takes a few seconds.
   suggestion dropdown: its preview line, its options, `aria-expanded` and `aria-activedescendant`. With
   `"keys"` (e.g. `["ArrowDown", "Enter"]`) it presses them; with Enter it checks the answer instead. `"q": ""`
   makes a typing-only case.
+- **Copy cases.** A case with `"copy": true` appends what *Copy answer* would put on the clipboard (the plain
+  Markdown form) after ` || COPY `, so the definition, caveats, re-ask link and footer can be pinned.
+- **Tags.** `"lists": ["monthly"]` marks the questions management asks each month (brief §48): their answers,
+  and their declines, are pinned so the wording doesn't drift. Report lists (Phase A step 2) will be built from these tags.
+- **Re-ask links.** Every run also opens a `#ask=` link whose question is markup; it must arrive as plain text.
 - **Suggestions.** Every suggestion the dropdown can offer is asked through the page on every run; any that
   gives a "not understood" card fails the run, as does a suggestion template whose backing case is not in
   `ask_cases.json`.

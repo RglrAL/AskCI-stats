@@ -6,7 +6,8 @@ answer against what it should say. The page under test is the CURRENT index.html
 the git commit named in tests/ask_fixture_ref, so data refreshes never change the expected answers.
 
 Each case: {"q": "question", "then": ["follow-up", ...]?, "expect": ["text the answer must contain", ...],
-"not": ["text it must not contain", ...]?, "note": "why"?}. A follow-up runs after the question without a
+"not": ["text it must not contain", ...]?, "note": "why"?, "copy": true?}. With "copy", the plain text that Copy answer
+would put on the clipboard is appended to the answer after " || COPY ", so its definition, caveats and footer can be checked. A follow-up runs after the question without a
 reset, as a person would type it. Before each case the Ask bar's memory of the previous answer is cleared.
 A case with "type" (and optional "keys", e.g. ["ArrowDown", "Enter"]) types that text into the box after any
 "q"/"then" and checks the suggestion dropdown (its preview line and options); with "Enter" among the keys it
@@ -55,6 +56,8 @@ async function go(){
       // the card repeats the question; leave it out, so "not" checks test the answer and not the question asked
       const echo=a?[...a.querySelectorAll('.ask-card-q')]:[];echo.forEach(e=>e.style.display='none');
       ans=(a?a.innerText:'').replace(/\s+/g,' ').replace(/READ AS.*/,'').trim();echo.forEach(e=>e.style.display='');}
+    // "copy": true appends what Copy answer would put on the clipboard (its plain-text form)
+    if(c.copy){const P=window.askCopyPayload&&window.askCopyPayload();ans+=' || COPY '+(P?P.text.replace(/\s+/g,' '):'(none)');}
     if(c.type!==undefined){const inp=document.getElementById('ask-input');inp.focus();inp.value=c.type;inp.dispatchEvent(new Event('input',{bubbles:true}));
       if(!c.type)inp.dispatchEvent(new Event('focus'));await sleep(400);
       for(const k of (c.keys||[])){inp.dispatchEvent(new KeyboardEvent('keydown',{key:k,bubbles:true,cancelable:true}));if(k==='Enter'&&!document.getElementById('ask-sg').hidden===false){} await sleep(300);}
@@ -68,6 +71,11 @@ async function go(){
   if(window.__askSuggest){const S=window.__askSuggest();tpl=S.templates;
     for(const q of S.all){window.__resetAsk();window.askQuery(q);await sleep(60);const t=(document.getElementById('ask-answer').innerText||'').replace(/\s+/g,' ');
       if(/isn’t a topic or measure|aren’t topics or measures|couldn’t parse|Which measure|isn’t split by/.test(t))sgBad.push(q+' => '+t.slice(0,120));}}
+  // a re-ask link is untrusted input: its question must arrive as text, never as markup
+  window.__resetAsk();window.askFromHash('#ask='+encodeURIComponent('<img src=x onerror="window.__pwn=1">money and tax questions'));await sleep(600);
+  {const inp=document.getElementById('ask-input'),inj=document.querySelector('#ask-answer img,#ask-answer [onerror]');
+    if(window.__pwn||inj||!document.getElementById('ask-answer').innerHTML||inp.value!=='<img src=x onerror="window.__pwn=1">money and tax questions')window.__errs.push('re-ask link: the hash was not treated as plain text ('+inp.value+')');
+    inp.value='';}
   document.body.setAttribute('data-test',JSON.stringify({out,sgBad,tpl,errs:window.__errs.concat((window.__askRegistryProblems||[]).map(x=>'registry: '+x))}));
 }
 </script>"""
@@ -130,7 +138,7 @@ def run(cases, ref, browser, page_path):
     tmp = tempfile.mkdtemp(prefix="asktest-")
     try:
         page = build_site(tmp, ref, page_path)
-        payload = [{k: c[k] for k in ("q", "then", "type", "keys") if k in c} for c in cases]
+        payload = [{k: c[k] for k in ("q", "then", "type", "keys", "copy") if k in c} for c in cases]
         with open(os.path.join(tmp, "index.html"), "w", encoding="utf-8") as fh:
             fh.write(page.replace("</body>", HARNESS % (json.dumps(payload), WAIT_MS) + "</body>", 1))
         with socket.socket() as s:

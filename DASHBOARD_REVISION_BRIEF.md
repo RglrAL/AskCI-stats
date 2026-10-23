@@ -794,3 +794,44 @@ Agreed after two rounds of proposal and critique. The aim of the second half is 
 - the request to the AskCI team (Phase C): version columns, token counts per turn, the caching and model experiments.
 
 The strip keeps saying "unvalidated" (`CONFIG.outcome_rules_measured` stays null). Work continues on what one analyst can do from the data on hand: Phase A, and the parts of Phase B that need neither labels nor new columns. Those findings about the 14 Sep change say "the outcome rules are unvalidated" next to them.
+
+## 49. Reports, Phase A step 1: copy with definition (23 Oct 2026)
+
+A figure pasted into an email or a report now takes its definition, caveats and provenance along with it.
+
+- **Ask answers** get a copy bar under the card, built from the answer as drawn, so every kind of card copies the same way:
+  - **Copy answer** puts two formats on the clipboard together: formatted HTML (for Word, Outlook and Docs) and Markdown as plain text. It holds:
+    - the question;
+    - the figure and its sentence, including the change against the comparison period;
+    - the table (chart values, grouped or top-N rows);
+    - the measure's registry definition;
+    - every notice above the answer, as a caveat;
+    - for click-throughs, the minimums caveat when the answer doesn't already say it;
+    - a re-ask link;
+    - the footer.
+  - A declined question copies its explanation and the questions it suggests instead.
+  - **Copy chart image:** the chart is redrawn in the light theme whatever the page theme, with the question, its sentence and the footer, as a PNG. If the browser blocks image copying, the PNG is downloaded instead.
+  - **Copy table** copies tab-separated text for a spreadsheet; **Copy link** copies the re-ask link.
+- **Tiles:** the history window that opens from a tile has **Copy with definition**, with these parts:
+  - the tile's figure for the selected range, its sub-line and its change;
+  - the catalogue definition;
+  - the unvalidated caveat on outcome tiles and the minimums caveat on click-through tiles;
+  - a link to the same dashboard view;
+  - the footer.
+
+  It also has **Copy chart image**.
+- **Re-ask link:** `#ask=<question>`. The hash is untrusted. It only ever becomes the text of the question box: control characters are removed and it is cut to 200 characters. The test suite opens a link whose question is markup on every run.
+- **Footer:**
+  - "Source: AskCI dashboard";
+  - the usage-data and billing end dates, with years;
+  - the config version;
+  - the outcome rules version, marked "unvalidated from 14 Sep 2026" when the figure depends on the outcome rules and they haven't been measured;
+  - the click-through minimums note where relevant;
+  - the page commit and the data commit. These come from a new deploy step that stamps `<meta name="askci-build">` after the tests, using the last commit to `index.html` and the last commit to the data files. A local copy says "local".
+- **Management questions** are now cases tagged `"lists": ["monthly"]`, with the decline wording pinned:
+  - "Are AskCI's answers accurate?" says correctness isn't measured.
+  - "Has AskCI taken pressure off the phones?" is a new decline: there is no phone or centre data.
+  - "How does this compare with last year?" says there isn't enough history.
+  - "What if volume doubled?" is a new card that points to the Scenario planner, which is a model rather than data.
+
+  Three copy cases pin the definition, the caveats and the footer.
