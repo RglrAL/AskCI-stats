@@ -1,0 +1,50 @@
+# Publish the dashboard to GitHub Pages with the Azure subscription ID redacted from costs.csv.
+# Runs on every push to main, including "Add files via upload" from the web, which skips the
+# local pre-commit hook. The site is deployed from the redacted tree, so it never serves the ID;
+# the redacted file is then committed back so the repo's current costs.csv is clean too.
+# (Pushes made with GITHUB_TOKEN do not trigger workflows, so the commit-back does not loop.)
+name: Publish site
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deploy.outputs.page_url }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Redact subscription ID from costs.csv
+        id: redact
+        run: |
+          python3 tools/redact_costs.py costs.csv
+          if git diff --quiet -- costs.csv; then echo "changed=false" >> "$GITHUB_OUTPUT"; else echo "changed=true" >> "$GITHUB_OUTPUT"; fi
+
+      - uses: actions/configure-pages@v5
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: .
+      - id: deploy
+        uses: actions/deploy-pages@v4
+
+      - name: Commit redacted costs.csv back to main
+        if: steps.redact.outputs.changed == 'true'
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git commit -m "Redact the Azure subscription ID from costs.csv (automatic)" -- costs.csv
+          git push origin HEAD:main
