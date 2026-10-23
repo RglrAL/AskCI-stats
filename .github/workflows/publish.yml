@@ -1,4 +1,6 @@
-# Publish the dashboard to GitHub Pages with the Azure subscription ID redacted from costs.csv.
+# Publish the dashboard to GitHub Pages with the Azure subscription ID redacted from costs.csv,
+# and only when the data audit and the Ask bar regression test pass: a failing check blocks the deploy
+# and the last good version stays live (the cause is in the run's log).
 # Runs on every push to main, including "Add files via upload" from the web, which skips the
 # local pre-commit hook. The site is deployed from the redacted tree, so it never serves the ID;
 # the redacted file is then committed back so the repo's current costs.csv is clean too.
@@ -27,12 +29,22 @@ jobs:
       url: ${{ steps.deploy.outputs.page_url }}
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0   # the Ask bar test reads its frozen data from an earlier commit
 
       - name: Redact subscription ID from costs.csv
         id: redact
         run: |
           python3 tools/redact_costs.py costs.csv
           if git diff --quiet -- costs.csv; then echo "changed=false" >> "$GITHUB_OUTPUT"; else echo "changed=true" >> "$GITHUB_OUTPUT"; fi
+
+      # Every file the dashboard reads has the columns it reads, and the files agree with each other
+      # (the feed recount needs the feed, which never leaves the analyst's machine).
+      - name: Audit the data files
+        run: python3 tools/audit_data.py --files-only
+
+      - name: Ask bar regression test
+        run: python3 tools/test_ask.py
 
       - uses: actions/configure-pages@v5
       - uses: actions/upload-pages-artifact@v3
@@ -41,8 +53,9 @@ jobs:
       - id: deploy
         uses: actions/deploy-pages@v4
 
+      # Runs even when a check above failed, so an unredacted upload never stays in the repo.
       - name: Commit redacted costs.csv back to main
-        if: steps.redact.outputs.changed == 'true'
+        if: ${{ !cancelled() && steps.redact.outputs.changed == 'true' }}
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"

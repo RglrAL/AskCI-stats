@@ -6998,6 +6998,8 @@ function showLoadError(msgs){
   if(btn){btn.classList.remove('loading');btn.querySelector('.btn-label').textContent='Load Dashboard';btn.disabled=!(costFile||usageFile);}
 }
 
+// The columns tools/make_usage.py writes beyond Date, Questions and Sessions (Voice columns are optional).
+const USAGE_FEED_COLUMNS='Answered Unanswered Flagged NewTopic UserFollowup SuggestedFollowup ModalTurns WebTurns OtherTurns ModalSessions WebSessions Citations LatencyP50ms LatencyP90ms LatencyP99ms Likes Dislikes DislikesOnCited StarterPromptFirstTurns OrganicFirstTurns ScriptLatin ScriptCyrillic ScriptArabic ScriptCJK ScriptDevanagari ScriptOther ScriptNone LatUnder10s Lat10to20s Lat20to30s LatOver30s Cited NotFound Clarification Error OutOfScope Greeting Uncited Partial Scored OutcomeRules ModalCited ModalNotFound ModalScored WebCited WebNotFound WebScored'.split(' ');
 function buildDashboard(costRows,usageRows){
   const cd=costRows?parseCosts(costRows):emptyCostData();
   const ud=usageRows?parseUsage(usageRows):{byDate:{},quality:{rowsRaw:0,rowsKept:0,badDates:0,badDateSamples:[],badDateShare:0}};
@@ -7005,6 +7007,18 @@ function buildDashboard(costRows,usageRows){
   const dateMsg=(name,q)=>`<code>${name}</code> refused: ${q.badDates} of ${q.rowsRaw} rows (${(q.badDateShare*100).toFixed(1)}%) have unreadable dates, e.g. ${q.badDateSamples.map(x=>`“${x}”`).join(', ')}. Accepted formats: DD/MM/YYYY, D-Mon-YY, YYYY-MM-DD.`;
   if(costRows&&cd.quality.badDateShare>0.01)problems.push(dateMsg(costFile?costFile.name:'costs.csv',cd.quality));
   if(usageRows&&ud.quality.badDateShare>0.01)problems.push(dateMsg(usageFile?usageFile.name:'usage.csv',ud.quality));
+  // A usage file is either the full feed form (every column tools/make_usage.py writes) or the minimal form
+  // (date, questions, conversations). Anything in between is a damaged or wrongly exported file: refuse it and
+  // name what is missing, rather than draw a dashboard with outcomes silently gone. tools/audit_data.py runs the
+  // same check before every deploy.
+  if(usageRows&&usageRows.length){
+    const uname=usageFile?usageFile.name:'usage.csv',have=new Set(Object.keys(usageRows[0]).map(k=>k.trim().toLowerCase())),keys=[...have];
+    const base=[['a date',/date/],['a questions',/question|turn/],['a conversations',/session|conversation/]].filter(([,re])=>!keys.some(k=>re.test(k))).map(x=>x[0]);
+    const miss=USAGE_FEED_COLUMNS.filter(c=>!have.has(c.toLowerCase()));
+    if(base.length)problems.push(`<code>${uname}</code> refused: it has no ${base.join(', ')} column.`);
+    else if(miss.length&&miss.length<USAGE_FEED_COLUMNS.length)problems.push(`<code>${uname}</code> refused: it has some feed columns but is missing ${miss.slice(0,8).join(', ')}${miss.length>8?` and ${miss.length-8} more`:''}. Regenerate it with <code>tools/make_usage.py</code>, or use the minimal form (Date, Questions, Sessions).`);
+    else if(miss.length)ud.quality.minimal=true;
+  }
   if(problems.length){showLoadError(problems);return;}
   const err=document.getElementById('load-error');if(err)err.remove();
 
@@ -7059,6 +7073,7 @@ function renderDqStrip(){
     U.outcomeRules?item('outcome rules',U.outcomeRules+(CONFIG.outcome_rules_unvalidated_from?` · unvalidated from ${fmtDate(CONFIG.outcome_rules_unvalidated_from)}`:''),{amber:!!CONFIG.outcome_rules_unvalidated_from,title:'rule-set version written by tools/redact_feed.py; a change replays from the raw feed'+(CONFIG.outcome_rules_unvalidated_from?'. Not yet checked against the model in use from '+fmtDate(CONFIG.outcome_rules_unvalidated_from):'')}):'',
     (U.columns&&Object.values(U.columns).some(Boolean))||hasHours?item('usage detail',['outcomes','types','sources','latency','voice'].filter(k=>U.columns&&U.columns[k]).concat(hasHours?['hours']:[]).join(' · ')||'—',{title:'optional columns found in usage.csv, plus usage-hours.csv'}):'',
     hasClicks?item('click-throughs',`${spanLabel(clickRange.from,clickRange.to)}`,{title:'GA4 page views of CI pages carrying AskCI citation tags (tools/make_clicks.py); consenting visitors only, so a minimum. Rates count the standalone site from '+fmtDate(CONFIG.click_tracking_from.app)+' and the pop-up from '+fmtDate(CONFIG.click_tracking_from.embed)}):'',
+    U.minimal?item('usage columns','minimal',{amber:true,title:'usage.csv has only date, questions and conversations: outcomes, sources, latency and feedback are not shown. Regenerate it from the QA feed with tools/make_usage.py.'}):'',
     item('events awaiting confirmation',cands,{amber:cands>0,title:'candidate events in events.json plus model events detected from billing'}),
     Q.badDates?item('cost dates rejected',Q.badDates,{amber:true,title:list(Q.badDateSamples)}):'',
     U.badDates?item('usage dates rejected',U.badDates,{amber:true,title:list(U.badDateSamples)}):'',

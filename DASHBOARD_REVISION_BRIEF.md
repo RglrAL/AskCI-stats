@@ -525,3 +525,15 @@ All 26 answer types were screenshotted again in the dark theme on desktop, with 
 - **Also:** the cost-change chart's axis is fitted to the changes, so the bars aren't squeezed on a phone. The screenshot harness now switches the dashboard's theme properly rather than setting the attribute alone.
 
 205 regression cases pass. Two trend expectations gained the chip's arrow ("rising ▲ +39%").
+
+## 38. Checks before every deploy (23 Oct 2026)
+
+The publish workflow used to redact `costs.csv` and deploy whatever was pushed, so a wrong-shaped upload went live. In one incident a three-column `usage.csv` uploaded through the GitHub website replaced the full file. Now:
+
+- **`tools/audit_data.py --files-only`** runs in the workflow before deployment. The feed recount needs the feed, which never leaves the analyst's machine, so it is skipped. Every other check runs: a new schema check that each of the 13 files the dashboard reads has the columns it reads, the cross-file identities, the click-through checks and the sanity checks. A schema failure stops the audit with the missing columns named. 83 checks pass in this mode, and 105 with the feed.
+- **New join-rate check:** at least 99% of click-throughs must land on a page AskCI cited that month. It is 99.96% now (4,881 of 4,883).
+- **The Ask bar regression test** (`tools/test_ask.py`, 205 questions) also runs in the workflow, since web uploads skip the local pre-commit hook. The checkout fetches full history because the test reads its frozen data from an earlier commit.
+- **When either check fails, nothing is deployed** and the last good version stays live. The redacted `costs.csv` is still committed back, so an unredacted upload never stays in the repository.
+- **The page itself refuses a damaged usage file.** One with some feed columns but not all is refused, with the missing columns named. The minimal form (date, questions, conversations) still loads, with an amber "usage columns: minimal" item in the data-quality strip.
+
+Checked by replacing `usage.csv` with its first 3 columns (the audit fails on the schema; the page loads with the warning) and with its first 20 (the page refuses it).

@@ -9,6 +9,8 @@ Run it after copying a feed refresh into the dashboard and before committing.
 Usage:
     python3 tools/audit_data.py                                   # newest exports/askci-export-*/ folder
     python3 tools/audit_data.py exports/askci-export-2026-10-23   # a given review folder
+    python3 tools/audit_data.py --files-only                      # no feed (the publish workflow): the schema,
+                                                                  # cross-file and sanity checks, not the recount
 
 Exit status 1 when any check fails. WARN lines are things to look at, not failures.
 """
@@ -16,10 +18,15 @@ import csv, glob, os, sys, json, re, collections as C
 from datetime import datetime, date
 
 REPO = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-_dirs = sys.argv[1:] or sorted(glob.glob(REPO + '/exports/askci-export-*/'), key=os.path.getmtime)[-1:]
-if not _dirs: sys.exit('no redacted feed folder: pass one, e.g. exports/askci-export-2026-10-23')
-FEED = sorted(glob.glob(os.path.join(_dirs[0], 'qa-feed-redacted_*.csv')))
-if not FEED: sys.exit(f'no qa-feed-redacted_*.csv in {_dirs[0]}')
+FILES_ONLY = '--files-only' in sys.argv
+_args = [a for a in sys.argv[1:] if not a.startswith('--')]
+if FILES_ONLY:
+    FEED = []   # the feed never leaves the analyst's machine; the published files are checked against each other
+else:
+    _dirs = _args or sorted(glob.glob(REPO + '/exports/askci-export-*/'), key=os.path.getmtime)[-1:]
+    if not _dirs: sys.exit('no redacted feed folder: pass one, e.g. exports/askci-export-2026-10-23 (or --files-only)')
+    FEED = sorted(glob.glob(os.path.join(_dirs[0], 'qa-feed-redacted_*.csv')))
+    if not FEED: sys.exit(f'no qa-feed-redacted_*.csv in {_dirs[0]}')
 csv.field_size_limit(2**31 - 1)
 FAIL = []; WARN = []; OK = []
 def check(name, cond, detail=''):
@@ -27,6 +34,32 @@ def check(name, cond, detail=''):
 def warn(name, detail): WARN.append(f'{name} — {detail}')
 def rd(p): return list(csv.DictReader(open(f'{REPO}/{p}', encoding='utf-8-sig')))
 I = lambda x: int(x or 0)
+
+# ── 0. Schema: every file the dashboard reads has the columns it reads ────────
+# A file uploaded in the wrong shape (a three-column usage.csv once replaced the full one) stops here, with
+# the missing columns named, before any check can crash on it.
+SCHEMA = {
+    'usage.csv': 'Date Questions Sessions Answered Unanswered Flagged NewTopic UserFollowup SuggestedFollowup ModalTurns WebTurns OtherTurns ModalSessions WebSessions Citations LatencyP50ms LatencyP90ms LatencyP99ms Likes Dislikes DislikesOnCited StarterPromptFirstTurns OrganicFirstTurns ScriptLatin ScriptCyrillic ScriptArabic ScriptCJK ScriptDevanagari ScriptOther ScriptNone LatUnder10s Lat10to20s Lat20to30s LatOver30s Cited NotFound Clarification Error OutOfScope Greeting Uncited Partial Scored OutcomeRules ModalCited ModalNotFound ModalScored WebCited WebNotFound WebScored',
+    'usage-hours.csv': 'Date Hour Turns Sessions NotFound Errors Timed LatencySumMs',
+    'conversations-daily.csv': 'Date Started Mature Turns1 Turns10plus MatureTurns Span0to1 Span2to5 Span6to15 Span16to60 SpanOver60 ChipUse ReachedCited NFTurns NFLaterCited',
+    'category-outcomes-daily.csv': 'Date Category Turns Cited NotFound Clarification Error OutOfScope Greeting Uncited Scored OrganicFirstTurns',
+    'categories-daily.csv': 'Date Category Citations',
+    'categories.csv': 'Month Citations',
+    'citations-monthly.csv': 'Month URL Citations',
+    'journeys-monthly.csv': 'From To Conversations',
+    'starter-prompts-monthly.csv': 'Month Count Cited FollowedByTyped FollowedBySuggested',
+    'latency-buckets-daily.csv': 'Date Kind Turns LatencySumMs',
+    'costs.csv': 'UsageDate Cost Currency ResourceId',
+    'ga4/clicks-daily.csv': 'Date Source Views Sessions Mobile Desktop Tablet OtherDevice',
+    'ga4/clicks-pages-daily.csv': 'Date URL Source Views',
+}
+for f, cols in SCHEMA.items():
+    if not os.path.exists(f'{REPO}/{f}'): FAIL.append(f'schema: {f} is missing'); continue
+    have = set(next(csv.reader(open(f'{REPO}/{f}', encoding='utf-8-sig')), []))
+    miss = [c for c in cols.split() if c not in have]
+    check(f'schema: {f} has the columns the dashboard reads', not miss, 'missing ' + ', '.join(miss[:8]) + (' …' if len(miss) > 8 else ''))
+if FAIL:   # the checks below index these columns; stop with the schema failures rather than a traceback
+    print('=== FAIL ({}) ==='.format(len(FAIL))); [print('  ✗', x) for x in FAIL]; sys.exit(1)
 
 # ── 1. Independent recount from the redacted feed ─────────────────────────────
 seen = set(); T = []
@@ -53,14 +86,15 @@ for r, t in T:
     if first: starter_vals['chip' if r['Starter Prompt'].strip() else 'blank'] += 1
     hrs[(d, t.hour)]['turns'] += 1
     convs[r['Conversation ID']].append((int(r['Turn #']), t, r['Outcome'].strip()))
-print(f'feed recount: {len(T)} turns, {len(convs)} conversations, {len(day)} days {min(day)}..{max(day)}')
+if FEED: print(f'feed recount: {len(T)} turns, {len(convs)} conversations, {len(day)} days {min(day)}..{max(day)}')
+else: print('--files-only: no feed recount; schema, cross-file and sanity checks only')
 
 # ── 2. usage.csv against the recount and its own identities ──────────────────
 U = {r['Date']: r for r in rd('usage.csv')}
 days = sorted(U)
 d0, d1 = date.fromisoformat(days[0]), date.fromisoformat(days[-1])
 check('usage: one row per day, no gaps', len(days) == (d1 - d0).days + 1 and len(set(days)) == len(days), f'{len(days)} rows for {(d1-d0).days+1} days')
-check('usage: same days as feed', set(days) == set(day), f'{set(days) ^ set(day)}')
+if FEED: check('usage: same days as feed', set(days) == set(day), f'{set(days) ^ set(day)}')
 OC = {'Cited': 'Cited answer', 'NotFound': 'Not found', 'Clarification': 'Clarification', 'Error': 'Error', 'OutOfScope': 'Out of scope', 'Greeting': 'Greeting', 'Uncited': 'Uncited answer'}
 mism = C.Counter()
 for d in days:
@@ -90,21 +124,21 @@ for d in days:
     }
     for k, ok in ident.items():
         if not ok: mism['identity: ' + k] += 1
-for col in ['Questions', 'Sessions', 'Citations', 'ModalTurns', 'WebTurns', 'NewTopic', 'UserFollowup', 'SuggestedFollowup', 'Likes', 'Dislikes'] + list(OC):
+for col in (['Questions', 'Sessions', 'Citations', 'ModalTurns', 'WebTurns', 'NewTopic', 'UserFollowup', 'SuggestedFollowup', 'Likes', 'Dislikes'] + list(OC) if FEED else []):
     check(f'usage.{col} matches feed recount on every day', mism[col] == 0, f'{mism[col]} days differ')
 for k in [k for k in mism if k.startswith('identity')] + [f'identity: {k}' for k in ident if f'identity: {k}' not in mism]:
     check(f'usage {k[10:]}', mism[k] == 0, f'fails on {mism[k]} days')
-print('first-turn Starter Prompt values in feed:', dict(starter_vals), '| usage StarterPromptFirstTurns total:', sum(I(U[d]['StarterPromptFirstTurns']) for d in days))
+if FEED: print('first-turn Starter Prompt values in feed:', dict(starter_vals), '| usage StarterPromptFirstTurns total:', sum(I(U[d]['StarterPromptFirstTurns']) for d in days))
 
 # ── 3. usage-hours.csv ───────────────────────────────────────────────────────
 H = rd('usage-hours.csv'); hd = C.Counter(); hs = C.Counter(); bad_h = 0
 for r in H:
     hd[r['Date']] += I(r['Turns']); hs[r['Date']] += I(r['Sessions'])
     if not 0 <= I(r['Hour']) <= 23 or I(r['Timed']) > I(r['Turns']) or I(r['NotFound']) + I(r['Errors']) > I(r['Turns']): bad_h += 1
-    if I(r['Turns']) != hrs[(r['Date'], I(r['Hour']))]['turns']: bad_h += 1
+    if FEED and I(r['Turns']) != hrs[(r['Date'], I(r['Hour']))]['turns']: bad_h += 1
 check('hours: turns per day = usage.Questions', all(hd[d] == I(U[d]['Questions']) for d in days), str([d for d in days if hd[d] != I(U[d]['Questions'])][:5]))
 check('hours: sessions per day = usage.Sessions', all(hs[d] == I(U[d]['Sessions']) for d in days))
-check('hours: rows valid and match feed per hour', bad_h == 0, f'{bad_h} bad rows')
+check('hours: rows valid' + (' and match feed per hour' if FEED else ''), bad_h == 0, f'{bad_h} bad rows')
 hn = C.Counter(); he = C.Counter()
 for r in H: hn[r['Date']] += I(r['NotFound']); he[r['Date']] += I(r['Errors'])
 check('hours: NotFound/Errors per day = usage', all(hn[d] == I(U[d]['NotFound']) and he[d] == I(U[d]['Error']) for d in days))
@@ -116,7 +150,7 @@ check('hours: Timed per day = latency bands total', all(timed[d] == sum(I(U[d][k
 CV = {r['Date']: r for r in rd('conversations-daily.csv')}
 check('conversations: one row per day', set(CV) == set(days), f'{set(CV) ^ set(days)}')
 starts = C.Counter(min(x)[1].date().isoformat() for x in convs.values())
-check('conversations: Started = recount (by first-turn day)', all(I(CV[d]['Started']) == starts[d] for d in CV), str([(d, CV[d]['Started'], starts[d]) for d in CV if I(CV[d]['Started']) != starts[d]][:5]))
+if FEED: check('conversations: Started = recount (by first-turn day)', all(I(CV[d]['Started']) == starts[d] for d in CV), str([(d, CV[d]['Started'], starts[d]) for d in CV if I(CV[d]['Started']) != starts[d]][:5]))
 dd = [(d, CV[d]['Started'], U[d]['Sessions']) for d in CV if I(CV[d]['Started']) != I(U[d]['Sessions'])]
 if dd: warn('conversations.Started vs usage.Sessions', f'{len(dd)} days differ, e.g. {dd[:3]} (Started counts every conversation by its first row; Sessions needs a Turn # 1 row)')
 bad_c = 0
@@ -139,19 +173,20 @@ if 'ReachedCited' in next(iter(CV.values())):
         if I(r['ReachedCited']) > I(r['Mature']) or I(r['MultiTopic']) > I(r['WithTopic']) or I(r['TopicReturn']) > I(r['MultiTopic']) or I(r['WithTopic']) > I(r['Mature']): bad_o += 1
         if sum(I(r[k]) for k in ('Gap0to1', 'Gap2to5', 'Gap6to15', 'Gap16to60', 'GapOver60')) != I(r['MatureTurns']) - I(r['Mature']): bad_o += 1
     check('conversations: setback, topic and gap columns add up on every day', bad_o == 0, f'{bad_o} day/field failures')
-    fresh = max(t for v in convs.values() for _, t, _ in v)
-    rc = C.Counter(); nf = C.Counter(); nfl = C.Counter()
-    for v in convs.values():
-        v = sorted(v); start = v[0][1]
-        if (fresh - start).total_seconds() < 24 * 3600: continue
-        d = start.date().isoformat()
-        if any(o == 'Cited answer' for _, _, o in v): rc[d] += 1
-        for i, (_, _, o) in enumerate(v):
-            if o == 'Not found':
-                nf[d] += 1
-                if i < len(v) - 1 and any(x[2] == 'Cited answer' for x in v[i + 1:]): nfl[d] += 1
-    check('conversations.ReachedCited matches feed recount on every day', all(I(CV[d]['ReachedCited']) == rc[d] for d in CV), str([(d, CV[d]['ReachedCited'], rc[d]) for d in CV if I(CV[d]['ReachedCited']) != rc[d]][:5]))
-    check('conversations.NFTurns and NFLaterCited match feed recount on every day', all(I(CV[d]['NFTurns']) == nf[d] and I(CV[d]['NFLaterCited']) == nfl[d] for d in CV))
+    if FEED:
+        fresh = max(t for v in convs.values() for _, t, _ in v)
+        rc = C.Counter(); nf = C.Counter(); nfl = C.Counter()
+        for v in convs.values():
+            v = sorted(v); start = v[0][1]
+            if (fresh - start).total_seconds() < 24 * 3600: continue
+            d = start.date().isoformat()
+            if any(o == 'Cited answer' for _, _, o in v): rc[d] += 1
+            for i, (_, _, o) in enumerate(v):
+                if o == 'Not found':
+                    nf[d] += 1
+                    if i < len(v) - 1 and any(x[2] == 'Cited answer' for x in v[i + 1:]): nfl[d] += 1
+        check('conversations.ReachedCited matches feed recount on every day', all(I(CV[d]['ReachedCited']) == rc[d] for d in CV), str([(d, CV[d]['ReachedCited'], rc[d]) for d in CV if I(CV[d]['ReachedCited']) != rc[d]][:5]))
+        check('conversations.NFTurns and NFLaterCited match feed recount on every day', all(I(CV[d]['NFTurns']) == nf[d] and I(CV[d]['NFLaterCited']) == nfl[d] for d in CV))
 
 # ── 5. category files ────────────────────────────────────────────────────────
 CD = rd('categories-daily.csv'); CM = rd('categories.csv'); CO = rd('category-outcomes-daily.csv')
@@ -194,7 +229,7 @@ for d in days: sm[d[:7]] += I(U[d]['Sessions'])
 usm = C.Counter()
 for d in days: usm[d[:7]] += I(U[d]['StarterPromptFirstTurns'])
 check('usage.StarterPromptFirstTurns by month = starter-prompts-monthly', usm == spm, str({m: (usm[m], spm[m]) for m in set(usm) | set(spm) if usm[m] != spm[m]}))
-check('usage.StarterPromptFirstTurns total = feed first turns with a chip', sum(usm.values()) == starter_vals['chip'], f"{sum(usm.values())} vs {starter_vals['chip']}")
+if FEED: check('usage.StarterPromptFirstTurns total = feed first turns with a chip', sum(usm.values()) == starter_vals['chip'], f"{sum(usm.values())} vs {starter_vals['chip']}")
 check('starter + organic first turns = conversations by month (category-outcomes)', all(spm[m] + og[m] == sm[m] for m in sm), str({m: (spm[m], og[m], sm[m]) for m in sm if spm[m] + og[m] != sm[m]}))
 LB = rd('latency-buckets-daily.csv'); lb = C.defaultdict(C.Counter)
 for r in LB: lb[(r['Date'], r['Kind'])]['t'] += I(r['Turns']); lb[(r['Date'], r['Kind'])]['s'] += I(r['LatencySumMs'])
@@ -270,6 +305,12 @@ if os.path.exists(REPO + '/ga4/clicks-daily.csv'):
     for r in CP: by_p[(r['Date'], r['Source'])] += I(r['Views'])
     check('clicks-daily and clicks-pages-daily agree by day and source', by_d == by_p)
     check('clicks-daily devices sum to views on every row', all(I(r['Mobile']) + I(r['Desktop']) + I(r['Tablet']) + I(r.get('OtherDevice')) == I(r['Views']) for r in CK))
+    # Join rate: a click-through follows a citation, so almost every clicked page should be a cited page that month.
+    cited = {(r['Month'], r['URL']) for r in CI}
+    jv = C.Counter()
+    for r in CP: jv['in' if (r['Date'][:7], r['URL']) in cited else 'out'] += I(r['Views'])
+    jr = jv['in'] / max(1, jv['in'] + jv['out'])
+    check('clicked pages match cited pages (same month) for at least 99% of click-throughs', jr >= 0.99, f'{jr:.2%}')
     stale = max(r['Date'] for r in CK) < max(x[0] for x in rows)[:4] + '-' + max(x[0] for x in rows)[4:6] + '-' + max(x[0] for x in rows)[6:]
     check('clicks files are up to date with the raw exports (re-run tools/make_clicks.py)', not stale)
 else:
