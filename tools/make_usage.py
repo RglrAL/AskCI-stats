@@ -190,7 +190,7 @@ def aggregate(files, skip_days=frozenset()):
                     c["dislikes"] += 1
                     if (row.get("Outcome") or "").strip() == "Cited answer": c["dislikes_cited"] += 1
                 if first and "Starter Prompt" in row:
-                    c["starter" if (row.get("Starter Prompt") or "").strip().lower() == "yes" else "organic"] += 1
+                    c["starter" if (row.get("Starter Prompt") or "").strip() else "organic"] += 1   # holds the chip text, blank when organic
                 if "Query Script" in row: c["script:" + ((row.get("Query Script") or "").strip() or "None")] += 1
                 if outcome_col:
                     o = (row.get("Outcome") or "").strip()
@@ -435,9 +435,9 @@ def categories_rows(cats):
         print(f"warning: categories.csv has no year column and the feed spans {sorted(years)}; the dashboard assumes CONFIG.categories_year", file=sys.stderr)
     out = []
     for (y, mo) in sorted(monthly):
-        for s, n in sorted(monthly[(y, mo)].items(), key=lambda kv: -kv[1]):
+        for s, n in sorted(monthly[(y, mo)].items(), key=lambda kv: (-kv[1], kv[0])):
             out.append([CAT_NAME.get(s, s.replace("-", " ").title()), n, MONTHS[mo - 1]])
-    daily = [[d.isoformat(), s, n] for d in sorted(cats) for s, n in sorted(cats[d].items(), key=lambda kv: -kv[1])]
+    daily = [[d.isoformat(), s, n] for d in sorted(cats) for s, n in sorted(cats[d].items(), key=lambda kv: (-kv[1], kv[0]))]   # ties by slug: stable across runs
     return (["Category", "Citations", "Month"], out), (["Date", "Category", "Citations"], daily)
 
 
