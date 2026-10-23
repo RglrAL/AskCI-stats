@@ -4,6 +4,8 @@
 -- Build:  osacompile -o "tools/AskCI Feed Export.app" tools/feed_droplet.applescript
 
 property defaultRepo : "/Users/alan/AskCI-stats"
+-- Every aggregate make_usage.py writes; all are copied together so no file is left on an older period.
+property aggregateFiles : "usage.csv usage-hours.csv categories.csv categories-daily.csv category-outcomes-daily.csv conversations-daily.csv citations-monthly.csv journeys-monthly.csv starter-prompts-monthly.csv latency-buckets-daily.csv"
 
 on run
 	set picked to choose file with prompt "Choose one or more AskCI QA feed exports (qa-feed_*.csv)" with multiple selections allowed
@@ -37,9 +39,14 @@ on open theFiles
 	if choice = "Open folder" then
 		do shell script "open " & quoted form of outDir
 	else if choice = "Copy into dashboard…" then
-		set ok to button returned of (display dialog "Replace usage.csv and categories.csv in" & return & repo & return & return & "with the generated files, and add usage-hours.csv and categories-daily.csv? The redacted feed is not copied." buttons {"Cancel", "Replace"} default button "Cancel" with icon caution)
+		set missing to do shell script "cd " & quoted form of outDir & " && for f in " & aggregateFiles & "; do [ -f \"$f\" ] || printf '%s ' \"$f\"; done"
+		if missing is not "" then
+			display alert "Not copied" message "The export folder is missing: " & missing & return & return & "Nothing in the dashboard was changed." as critical
+			return
+		end if
+		set ok to button returned of (display dialog "Replace the dashboard's aggregate files in" & return & repo & return & return & "with the " & (count of words of aggregateFiles) & " generated files? The redacted feed is not copied." buttons {"Cancel", "Replace"} default button "Cancel" with icon caution)
 		if ok = "Replace" then
-			do shell script "cp " & quoted form of (outDir & "/usage.csv") & " " & quoted form of (outDir & "/usage-hours.csv") & " " & quoted form of (outDir & "/categories.csv") & " " & quoted form of (outDir & "/categories-daily.csv") & " " & quoted form of (repo & "/")
+			do shell script "cd " & quoted form of outDir & " && cp " & aggregateFiles & " " & quoted form of (repo & "/")
 			display dialog "Copied. Reload the dashboard to see the new data; commit when you are happy with it." buttons {"OK"} default button "OK"
 		end if
 	end if

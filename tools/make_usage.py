@@ -70,7 +70,7 @@ Feed timestamps are Irish local time (Europe/Dublin, confirmed 8 Oct 2026), so d
 here are Irish. The feed files themselves stay out of git.
 
 Usage:
-    python3 tools/make_usage.py qa-feed-redacted_*.csv --out-dir .          # write the four files
+    python3 tools/make_usage.py qa-feed-redacted_*.csv --out-dir .          # write all the aggregate files
     python3 tools/make_usage.py qa-feed-redacted_*.csv --compare .          # compare with existing files, write nothing
     python3 tools/make_usage.py qa-feed_*.csv -o usage.csv                  # usage.csv only (old behaviour)
 """
@@ -498,7 +498,7 @@ def main():
     ap = argparse.ArgumentParser(description="Daily aggregates for the AskCI cost dashboard from QA feed exports.")
     ap.add_argument("files", nargs="+")
     ap.add_argument("-o", "--out", help="write usage.csv here (usage only)")
-    ap.add_argument("--out-dir", help="write usage.csv, usage-hours.csv, categories.csv and categories-daily.csv here")
+    ap.add_argument("--out-dir", help="write every aggregate file listed above here")
     ap.add_argument("--compare", metavar="DIR", help="compare with the usage.csv and categories.csv in DIR; write nothing")
     ap.add_argument("--keep-partial", action="store_true", help="keep the last day even when it is the export day (partial by default it is dropped)")
     ap.add_argument("--category-rule", choices=["distinct", "tokens"], default="distinct", help="distinct per turn with URL fallback (default), or every Categories entry incl. repeats and no fallback (old file's rule)")
