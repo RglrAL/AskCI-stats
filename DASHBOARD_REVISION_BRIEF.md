@@ -1056,3 +1056,35 @@ Intervals are about ±1 point on the cited rows and ±2 on the others.
 - **Dislikes are too rare to use** (0.0–0.4% of answers in every cell).
 
 **What it settles and what it doesn't.** Step 1 showed the wording changed with the model; step 2 showed the same questions get more partial answers; this step shows the not-found label is behaving as a real failure and the partial label as a near-cited answer. None of it reads an answer, so none of it says whether a given label is right: that remains the hand-labelled sample (step 0). Next in §53 is step 4, the change report calibrated on the March model change.
+
+## 57. Diagnosis step 4: the change report, calibrated on 9 March, then read on 14 September (23 Oct 2026)
+
+**Built:** `tools/change_report.py DATE` writes `reports/change-DATE.md` from the published files alone (no feed, no Chrome), so it runs anywhere the repo does. The deploy workflow runs it for every confirmed model event, beside the fact sheet. Equal windows of 28 days each side; the change day and the event's settling days are left out; whole weeks, so both windows hold the same weekday mix by construction (the counts are printed). It lists every other event on record inside the windows as a rival explanation, then gives:
+1. **Outcomes** on scored turns with 95% Wilson intervals and Newcombe intervals on each difference: cited, not found, clarification, partial (of cited), cited and not partial, uncited, the cited rate for web and pop-up turns separately, dislikes per 1,000 and click-throughs per 100 cited answers, words and pages per cited answer.
+2. **Guardrails**: traffic and the question mix, which a model-only change should leave alone (turns and conversations a day, pop-up and starter shares, typed and chip follow-ups, non-Latin script, greetings, out of scope).
+3. **System** measures a model change may move but an outage or capacity change moves too: response time p50 and p90, the over-30-second share, errors, generation cost a turn on settled billing days.
+4. **Topic mix**: the cited rate among topic-attributed turns, the after rate re-weighted to the before window's topic mix with "unknown" left out, the share of the change the mix accounts for, and a per-topic table with its own intervals.
+5. **Deciding phrases**: total variation distance of the wording-rule mix between the windows, the phrases that moved most, and the share of the after window's not-found and partial answers on phrases the before window used for under 1% of them.
+6. **Wording** per answer by outcome, and **conversations** by start day: reached a cited answer, chip use, what followed a not-found answer or a clarification.
+7. **A reading**, mechanical and non-causal: what moved, which guardrails moved, the mix share, the drift. "Moved" = the interval excludes zero and the change is at least 1 point (rates) or 10% (means).
+
+**Calibration.** Three runs before 14 September was read:
+- **9 March, the known model change (gpt-4o to GPT 5).** Found cleanly: cited 94.6% → 89.5% (−5.1, −6.2 to −4.0), clarification 0.4% → 3.6%, words per cited answer +20%, pages −16%; 6 of 12 topics with 50+ turns moved, every large one; the mix accounts for none of it; 30% of the phrase mix moved, led by a clarification phrase that barely existed before. The guardrails earned their place: pop-up turns went from 0% to 20% of turns, which is the pre-launch Modal rows from 24 March (a candidate event, listed by the report). The web-only cited rate still fell 4.3 points, so the finding survives that rival. System measures moved as a model change should: response time p50 7.9 s → 15.5 s, generation cost a turn −34%, errors 0.13% → 1.65%.
+- **1 July, the second known change (GPT 5 to chat-latest).** Found: cited +6.0, not found −5.1, partial +11.0 points; 63% of the phrase mix moved; cost a turn up sixfold. Traffic fell 21% across the windows (summer), which the guardrails flagged.
+- **10 August, a date with no event.** Quiet: no outcome moved, 1% of the phrase mix moved, one guardrail (conversations a day +10%) and one conversation measure (single-turn share +2.0) crossed the line. That is the false-positive rate of the instrument on 15,000-turn windows: small and in the places that drift anyway.
+
+So in this report a model change looks like: outcomes moving across most topics, no mix share, a phrase-mix shift well above 20% with new phrases, traffic guardrails steady or explained by a listed event, and response time or cost moving.
+
+**14 September, read with the calibrated report** (17 Aug–13 Sep against 15 Sep–12 Oct; rivals inside the windows: the 11 Sep chip removal, the 29 Sep error spike, Budget Day):
+- **Outcomes:** cited 92.3% → 81.3% (−11.0, −11.7 to −10.4); not found 2.9% → 8.5%; clarification 4.7% → 10.0%; partial 14.2% → 26.7% of cited; cited and not partial 79.2% → 59.6%. Web turns −10.3 and pop-up turns −11.2 alike, so the surface mix is not it. Words, pages and click-throughs per cited answer within 10%; dislikes per 1,000 cited fell 2.6 → 1.0.
+- **Topics:** 14 of 16 moved; the mix accounts for none of the change; "unknown" rose from 3.0% to 8.8% of scored turns, which is the failures themselves.
+- **Guardrails:** turns a day +34% and conversations +37% (the autumn rise, with Budget Day inside the window); chip follow-ups −4.4 points (three chips were removed on 11 Sep); pop-up share −2.3; out of scope 0.94% → 2.41%. Out of scope is AskCI's own flag with no phrase, so its doubling on the model change day is a finding in itself, not noise.
+- **System:** response time steady (p50 11.7 s → 10.9 s, errors 1.32% → 1.30%); the over-30-second share 0.1% → 1.6%; generation cost a turn −55%.
+- **Phrases:** 66% of the mix moved, and 99.5% of the after window's not-found answers use phrases the before window hardly used ("couldn't find" in place of "could not find"), as §54 found.
+- **Conversations:** reached a cited answer 93.0% → 83.9%; after a not-found answer, ended there 75.6% → 80.2% and a later cited turn 20.2% → 15.0%; after a clarification, a later cited turn 68.8% → 60.5%.
+
+**Verdict.** 14 September matches the calibrated signature of a model change on every count, at about twice the size of March's, and the two guardrails that moved each have a listed event to account for them. The report cannot separate the model from a prompt change made on the same day, and like everything before step 0 it cannot say whether a label is right. What it adds to steps 1–3 is that the fall is not traffic, not the surface, not the topic mix and not a chip, and that it is of a kind the instrument has seen before.
+
+**Traffic for the record:** the autumn rise means the after window has 5,500 more scored turns than the before window; intervals are correspondingly narrow, and the 1-point floor on "moved" is what keeps tiny effects (uncited +0.09) out of the reading.
+
+Next in §53 is step 5, the era scorecard, which the report's per-window sums can feed directly.

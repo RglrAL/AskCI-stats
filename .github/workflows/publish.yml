@@ -58,6 +58,10 @@ jobs:
       - name: Fact sheet
         run: python3 tools/make_facts.py
 
+      # A change report for every confirmed model change, from the published files, at reports/change-<date>.md.
+      - name: Change reports
+        run: python3 tools/change_report.py --events
+
       - uses: actions/configure-pages@v5
       - uses: actions/upload-pages-artifact@v3
         with:
