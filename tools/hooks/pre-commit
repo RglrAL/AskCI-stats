@@ -1,0 +1,13 @@
+#!/bin/sh
+# Refuse a commit whose staged costs.csv still carries an Azure subscription ID (see tools/redact_costs.py).
+# Enable once per clone: git config core.hooksPath tools/hooks
+git diff --cached --name-only --diff-filter=ACM | grep -qx 'costs.csv' || exit 0
+for c in /usr/local/bin/python3 /opt/homebrew/bin/python3 /usr/bin/python3; do [ -x "$c" ] && PY="$c" && break; done
+[ -n "$PY" ] || { echo "pre-commit: python3 not found, cannot check costs.csv" >&2; exit 1; }
+TMP=$(mktemp) || exit 1
+trap 'rm -f "$TMP"' EXIT
+git show :costs.csv > "$TMP"   # check the staged version, not the working copy
+"$PY" "$(git rev-parse --show-toplevel)/tools/redact_costs.py" "$TMP" --check 2>/dev/null && exit 0
+echo "pre-commit: staged costs.csv still carries an Azure subscription ID." >&2
+echo "  Run: python3 tools/redact_costs.py costs.csv && git add costs.csv" >&2
+exit 1
