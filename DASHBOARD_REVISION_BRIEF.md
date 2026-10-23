@@ -788,3 +788,9 @@ Agreed after two rounds of proposal and critique. The aim of the second half is 
 - **Categories tab:** a note above the outcome-by-topic table explains that failed answers usually have no topic and sit in Unknown, so topic failure rates are lower bounds and period comparisons by topic leave Unknown out.
 - **Phase C order:** the version columns must land before the two experiments, or a week on GPT-5.4 can't be told from any other week. Caching first. Add **per-turn token counts** to the request: they give exact cost per turn by model, which the cost export can only approximate.
 - **Recorded so it isn't re-run:** dislikes on answers that weren't cited went 1 → 6 across 14 Sep; too few to mean anything.
+
+**Parked (23 Oct 2026): anything that needs other people's time.** No team scoring or input is available for now. On hold:
+- the hand-labelling (Phase B step 0) and the second labeller; the tools and the drawn sample stay ready;
+- the request to the AskCI team (Phase C): version columns, token counts per turn, the caching and model experiments.
+
+The strip keeps saying "unvalidated" (`CONFIG.outcome_rules_measured` stays null). Work continues on what one analyst can do from the data on hand: Phase A, and the parts of Phase B that need neither labels nor new columns. Those findings about the 14 Sep change say "the outcome rules are unvalidated" next to them.
