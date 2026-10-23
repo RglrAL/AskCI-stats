@@ -7397,6 +7397,27 @@ init();
     if(rm){const m1=ABBR.indexOf(rm[1].slice(0,3)),m2=ABBR.indexOf(rm[2].slice(0,3)),y1=yrOf(m1),y2=yrOf(m2),k2=`${y2}-${String(m2+1).padStart(2,'0')}`;
       const f=`${y1}-${String(m1+1).padStart(2,'0')}-01`,t=`${k2}-${String(dim(k2)).padStart(2,'0')}`;
       if(f<=t)return{kind:'range',from:f,to:t,label:MONFULL[m1]+' to '+MONFULL[m2]+' '+y2};}
+    // "since 14 September", "from 14 Sep", "after 14 September": that day to the end of the data (the label is
+    // completed once the measure's last day is known)
+    const sd=q.match(new RegExp('\\b(since|from|after)\\s+(?:the\\s+)?(?:'+D_+MRE+'|'+MRE+'\\s+(\\d{1,2})(?:st|nd|rd|th)?)\\b'));
+    if(sd&&!/\b(to|until|till|through)\b/.test(q)){const mo=sd[3]||sd[4],dn=+(sd[2]||sd[5]),mi=ABBR.indexOf(mo.slice(0,3)),mk=`${yrOf(mi)}-${String(mi+1).padStart(2,'0')}`;
+      if(dn>=1&&dn<=dim(mk)){const f=`${mk}-${String(dn).padStart(2,'0')}`;return{kind:'range',from:f,to:latest,label:fmtDate(f)+' to date',since:true,rel:true,sinceDay:true};}}
+    // "week of 5 October", "w/c 5 Oct": the Monday-to-Sunday week holding that day
+    const wo=q.match(new RegExp('\\b(?:(?:the )?week (?:of|commencing|beginning|starting)|w/?c)\\s+(?:'+D_+MRE+'|'+MRE+'\\s+(\\d{1,2}))'));
+    if(wo){const mo=wo[2]||wo[3],dn=+(wo[1]||wo[4]),mi=ABBR.indexOf(mo.slice(0,3)),mk=`${yrOf(mi)}-${String(mi+1).padStart(2,'0')}`;
+      if(dn>=1&&dn<=dim(mk)){const ws=weekStart(`${mk}-${String(dn).padStart(2,'0')}`),we=isoAdd(ws,6);return{kind:'range',from:ws,to:we,label:'the week of '+fmtDate(ws)+' ('+fmtDate(ws)+' to '+fmtDate(we)+')'};}}
+    // ISO week number: "week 40"
+    const wn=q.match(/\b(?:iso )?week (\d{1,2})\b/);
+    if(wn&&+wn[1]>=1&&+wn[1]<=53){const y=yy0?+yy0[1]:+latest.slice(0,4),j4=`${y}-01-04`,ws=isoAdd(weekStart(j4),7*(+wn[1]-1)),we=isoAdd(ws,6);
+      return{kind:'range',from:ws,to:we,label:'week '+wn[1]+' ('+fmtDate(ws)+' to '+fmtDate(we)+')'};}
+    // first or second half of the year: "first half", "H1"
+    const hf=q.match(/\b(first|second|1st|2nd) half( of (the )?(year|20\d{2}))?\b|\bh([12])\b/);
+    if(hf){const second=/second|2nd/.test(hf[1]||'')||hf[5]==='2',y=yy0?+yy0[1]:+latest.slice(0,4),f=`${y}-${second?'07':'01'}-01`,t=`${y}-${second?'12-31':'06-30'}`;
+      return{kind:'range',from:f,to:t>latest?latest:t,label:(second?'July to December ':'January to June ')+y,rel:t>latest};}
+    // day/month dates, Irish order: "6/10", "06/10/2026"
+    const dmy=q.match(/\b(\d{1,2})\/(\d{1,2})(?:\/(20\d{2}|\d{2}))?\b/);
+    if(dmy&&+dmy[2]>=1&&+dmy[2]<=12){const mi=+dmy[2]-1,y=dmy[3]?(dmy[3].length===2?2000+(+dmy[3]):+dmy[3]):yrOf(mi),mk=`${y}-${String(mi+1).padStart(2,'0')}`;
+      if(+dmy[1]>=1&&+dmy[1]<=dim(mk)){const ds=`${mk}-${String(+dmy[1]).padStart(2,'0')}`;return{kind:'day',from:ds,to:ds,label:fmtDate(ds)};}}
     const mm=q.match(new RegExp('\\b'+MRE+'\\b'));
     const yy=q.match(/\b(20\d{2})\b/);
     const since=q.match(new RegExp('\\b(since|from|after)\\s+(the\\s+)?(start of\\s+)?'+MRE+'\\b'));
@@ -7444,12 +7465,13 @@ init();
     ['money-and-tax',['money and tax','money & tax','tax','money']],['travel-and-recreation',['travel and recreation','travel','recreation','passport','driving']],['health',['health','medical']],
     ['birth-family-relationships',['family and relationships','family','relationships','birth']],['returning-to-ireland',['returning to ireland','rti','returning']],['education',['education','school','college']],
     ['justice',['justice','legal','garda','court']],['consumer',['consumer']],['death',['death','bereavement']],['government-in-ireland',['government in ireland','government']],['environment',['environment']]];
-  const CAT_NOUNS='(citations?|turns?|questions?|queries|conversations?|not[- ]?found|cited|errors?|dislikes?|clarifications?|demand|organic|first turns|pages?|journeys?|category)';
+  const CAT_NOUNS='(citations?|turns?|questions?|queries|conversations?|not[- ]?found|cited|errors?|dislikes?|clarifications?|demand|organic|first turns|pages?|journeys?|category|share)';
   function parseCategory(q){
     for(const[slug,phr]of CAT_PHRASES){for(const ph of phr){
       const p=ph.replace(/[&]/g,'\\$&');
       if(new RegExp('\\b(in|for|on|about|within)\\s+(the\\s+)?'+p+'\\b').test(q))return slug;        // "in housing"
       if(new RegExp('\\b'+p+'\\s+'+CAT_NOUNS+'\\b').test(q))return slug;                                   // "housing citations", "health not-found rate"
+      if(new RegExp('\\b(are|is|were|was) (about )?'+p+'\\s*$').test(q.trim()))return slug;                      // "what share of questions are social welfare"
       if(new RegExp('^\\s*(how many |how much |what about |show me |the )?'+p+'\\s+(last|this|in|for|yesterday|today|overall|so far|year|jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec|20\\d\\d)').test(q))return slug; // "health last month" → turns in Health
     }}
     return null;
@@ -8172,7 +8194,8 @@ init();
     AM('organic','Organic first turns','count',{calc:{src:'ux',n:'organic'},syn:[[/organic first turns|organic demand|organic/,300,'organic first turns']],def:'First turns that are not starter prompts: questions people typed themselves.'}),
     AM('citations','Citations','count',{calc:{src:'ux',n:'citations'},syn:[[/citation|\blinks?\b/,570,'citations']],def:'Links to pages in AskCI\'s answers; 99.8% go to citizensinformation.ie.'}),
     AM('modal','Modal share of conversations','pct',{calc:{src:'ux',n:'modalSessions',d:['modalSessions','webSessions'],of:'conversations'},bySource:true,syn:[[/modal share|web share|share (of|on|from) (the )?(modal|web)|\bshare\b.*\b(from|on|via|through) (the )?(modal|web)\b|\bmodal (vs\.?|versus|and|or) web\b|\bweb (vs\.?|versus|and|or) modal\b|by source|source (split|mix|distribution)/,560,'Modal share of conversations']],def:'Conversations started in the pop-up (Modal), as a share of pop-up plus standalone-site conversations.'}),
-    AM('cited','Cited answer rate','pct',{calc:{src:'ux',n:'cited',d:'scored',of:'scored turns'},cat:{n:'Cited',d:'Scored',of:'scored turns'},byf:{n:'Cited',d:'Scored'},polarity:'up',bySource:true,syn:[[/\b(answer )?quality\b/,80,'cited answer rate',/data quality/],[/cited (answer|rate)|citation rate/,490,'cited answer rate']],def:'Answers that cite at least one citizensinformation.ie page, as a share of scored turns (all turns except greetings, errors and out-of-scope).'}),
+    AM('cited','Cited answer rate','pct',{calc:{src:'ux',n:'cited',d:'scored',of:'scored turns'},cat:{n:'Cited',d:'Scored',of:'scored turns'},byf:{n:'Cited',d:'Scored'},polarity:'up',bySource:true,syn:[[/\b(answer )?quality\b/,80,'cited answer rate',/data quality/],[/\bcited (answer|rate)|citation rate/,490,'cited answer rate']],def:'Answers that cite at least one citizensinformation.ie page, as a share of scored turns (all turns except greetings, errors and out-of-scope).'}),
+    AM('uncited','Uncited answer rate','pct',{calc:{src:'ux',n:'uncited',d:'scored',of:'scored turns'},cat:{n:'Uncited',d:'Scored',of:'scored turns'},polarity:'down',syn:[[/\buncited( answers?)?( rate| share)?\b|\banswers? (with ?out|with no|without any) (a )?citations?\b|\bno citations?\b/,8,'uncited answer rate']],def:'Answers that cite no page and are not a not-found reply, clarification, greeting, error or out-of-scope reply, as a share of scored turns: the riskiest class, an answer with no Citizens Information source behind it.'}),
     AM('notfound','Not-found rate','pct',{calc:{src:'ux',n:'notFound',d:'scored',of:'scored turns'},cat:{n:'NotFound',d:'Scored',of:'scored turns'},byf:{n:'NotFound',d:'Scored'},polarity:'down',bySource:true,syn:[[/\bfail(s|ed)? to find\b|\bcan'?t find\b|\bcannot find\b|\bcouldn'?t find\b|\bno answer found\b/,60,'not-found rate'],[/not[- ]?found/,460,'not-found rate']],def:'Answers in which AskCI says it could not find the information, as a share of scored turns. Classified by text rules (version shown in the data-quality strip).'}),
     AM('clarification','Clarification rate','pct',{calc:{src:'ux',n:'clarification',d:'scored',of:'scored turns'},cat:{n:'Clarification',d:'Scored',of:'scored turns'},polarity:'down',syn:[[/clarif/,480,'clarification rate']],def:'Answers in which AskCI asks the person to clarify, as a share of scored turns.'}),
     AM('error','Error rate','pct',{calc:{src:'ux',n:'error',d:'Q',of:'turns'},cat:{n:'Error',d:'Turns',of:'turns'},polarity:'down',syn:[[/\berrors?\b/,470,'error rate']],def:'Turns with an empty answer and 0 ms response time, as a share of all turns.'}),
@@ -8269,7 +8292,8 @@ init();
     if(!p)return p;const L=lastDayFor(kind);
     if(p.roll)return{...p,from:addDays(L,-(p.roll-1)),to:L};
     if(p.today)return{...p,beyond:p.from>L?L:null};
-    if((p.rel||p.kind==='all'||p.kind==='month'||p.kind==='year'||p.kind==='range')&&p.to>L)return{...p,to:L};
+    if((p.rel||p.kind==='all'||p.kind==='month'||p.kind==='year'||p.kind==='range')&&p.to>L)p={...p,to:L};
+    if(p.sinceDay)p={...p,label:fmtDate(p.from)+' to '+fmtDate(p.to)};
     return p;
   }
   function subIntent(intent,p){return{...intent,period:p,raw:'',_sub:true,groupBy:null,trend:false};}
@@ -8835,7 +8859,9 @@ init();
   }
   // Abbreviations, synonyms and near-miss spellings, corrected visibly before parsing.
   const ABBREV=[[/\bnf\b/g,'not found'],[/\bq'?s\b/g,'questions'],[/\bwks?\b/g,m=>m.length>2?'weeks':'week'],[/\bmn?th\b/g,'month'],[/\bconvos?\b/g,'conversations'],
-    [/\bpop[- ]?ups?\b|\bembed(ded)?\b/g,'modal'],[/\bstand[- ]?alone( site)?\b/g,'web'],[/\bctr\b/g,'click-through rate']];
+    [/\bpop[- ]?ups?\b|\bembed(ded)?\b/g,'modal'],[/\bstand[- ]?alone( site)?\b/g,'web'],[/\bctr\b/g,'click-through rate'],
+    [/\b(how many )?(questions|answers|turns) (got|received|had|with|getting) (an? |any )?thumbs?[- ]?downs?\b/g,'how many dislikes'],[/\b(how many )?(questions|answers|turns) (got|received|had|with|getting) (an? |any )?thumbs?[- ]?ups?\b/g,'how many likes'],
+    [/\bthumbs?[- ]?downs?\b/g,'dislikes'],[/\bthumbs?[- ]?ups?\b/g,'likes'],[/\blatest week\b/g,'last week'],[/\b(the )?past month\b/g,'last 30 days']];
   // Words a near-miss spelling is corrected to: the registry's measure names, topic phrases, service names, months and
   // weekdays, plus a few hand-kept ones. PLAIN words are never corrected (they would otherwise drift to a near
   // vocabulary word: "spent" to "spend", "latest" to "latency").
@@ -8877,10 +8903,20 @@ init();
         tp?['questions about '+catLabel(CAT_ALIAS[tp]||tp)+' by month','not-found rate in '+catLabel(CAT_ALIAS[tp]||tp)]:['top topics','questions on Budget Day','top topics on Budget Day']);return true;}
     if(/\b(better|worse|cheaper|faster|slower) than\b.*\b(phone|helpline|staff|centres?|people|humans?)\b|\b(replace|replacing|instead of|compared? (to|with)) (the )?(phone|helpline|centres?)\b/.test(q)){
       showCard('Not something this data can show','The dashboard has no phone-service or centre data, so it cannot compare AskCI with them. It can show when people use AskCI while the phone line is closed.',['out of hours share','questions after 8pm on Budget Day']);return true;}
-    if(/\b(irish|gaeilge|polish|ukrainian|french|spanish|portuguese|romanian|lithuanian|latvian|russian|chinese|arabic speakers?|hindi|urdu|portuguese)\b/.test(q)&&!/\b(arabic|cyrillic) script\b/.test(q)){
+    if(/\b(irish|gaeilge|polish|ukrainian|french|spanish|portuguese|romanian|lithuanian|latvian|russian|chinese|arabic speakers?|hindi|urdu|portuguese)\b|\b(in|written in|asked in) (arabic|chinese|japanese|korean)\b/.test(q)&&!/\b(arabic|cyrillic) script\b/.test(q)){
       showCard('Languages aren’t detected','The feed records only the alphabet a question starts in (Latin, Cyrillic, Arabic and so on), not its language. Irish, Polish and English all use the Latin alphabet, so they can’t be told apart.',['how many questions in other languages','non-latin script share by month']);return true;}
     if(/\b(bank holiday|public holiday|holidays?|christmas|easter|st\.? patrick'?s|halloween|summer|winter|spring|autumn|half[- ]term|mid[- ]term)\b/.test(q)&&!/\bholiday pay|annual leave\b/.test(q)){
       showCard('Ask with dates','The Ask bar has no calendar of holidays or seasons, so it can’t place that phrase. Ask with the dates instead.',['questions on 27 October','questions from June to August','questions 5 to 11 October']);return true;}
+    if(/\b(answered )?correct(ly|ness)?\b|\baccura(te|cy)\b|\b(right|wrong) answers?\b|\bhow (good|reliable) (is|are) (askci|the answers)\b/.test(q)){
+      showCard('Whether an answer is correct isn’t measured','No one checks AskCI’s answers against the right answer, so correctness isn’t measured. The nearest measures are whether an answer cited a Citizens Information page, and the dislikes people gave:',['cited answer rate','not found rate','dislikes per 1,000 cited answers']);return true;}
+    if(/\b(most|top) (common|frequent|popular|asked|usual) (questions?|queries)\b|\btop (\d+ )?questions\b|\bwhat (is|are) the (most )?(common|frequent|popular) questions?\b/.test(q)){
+      const tp=parseCategory(q);
+      showCard('The question text isn’t available here','The dashboard holds counts only. Citizens’ questions are removed before any figure is made, so it can show which topics and pages come up most, but not which questions.',['top topics','most cited pages','top starter prompts']);return true;}
+    if(/\b(about|on|regarding|re) (the )?budget\b(?! (day|week))|\bbudget (questions|queries)\b/.test(q)&&!/\bbudget (day|week)\b/.test(q)){
+      showCard('What a question is about isn’t available beyond its topic','Questions are counted by topic (Money and Tax, Social Welfare …), not by subject, so “about the budget” can’t be counted. These are the closest:',['questions on Budget Day','money and tax questions on Budget Day','budget 2027 page citations']);return true;}
+    if(/\b(has|did|have|does) (the )?(model|gpt)( change)?\b.*\b(affect(ed)?|impact(ed)?|change[ds]?|hurt|improve[ds]?|worsen(ed)?)\b|\b(effect|impact) of the (model|gpt)( change)?\b/.test(q)){
+      const lc=(confirmedEvents().filter(e=>e.kind==='model').slice(-1)[0]||{}).start;const lab=lc?fmtDate(lc).replace(/^0/,''):'14 Sep';
+      showCard('Causes aren’t established here','The dashboard shows what changed before and after a model change, but it does not claim causes. Compare the periods either side:',['cited answer rate since '+lab,'cited answer rate in the 30 days before '+lab,'what changed in '+(lc?MONFULL[+lc.slice(5,7)-1]:mon)]);return true;}
     if(/\bwhy\b/.test(q)&&!/spend|cost|spent|bill|£|charge/.test(q)){
       showCard('Causes aren’t established here','The dashboard describes what changed and when, and marks known events, but it does not claim causes. These show what moved:',['what changed in '+mon,'not found rate by week','events in '+mon]);return true;}
     if(/\b(next (year|month|quarter|week)|in 20(2[7-9]|3\d)|predict|prediction|will (usage|questions|conversations|it) (be|grow|rise|fall|reach|hit)|how many .* will)\b/.test(q)&&!/spend|cost|spent|bill|£/.test(q)){
@@ -8959,6 +8995,57 @@ init();
     const vz=el.querySelector('.ask-viz');if(vz)vz.remove();
     SECOND=null;
   }
+  // ── Did the question say anything the Ask bar didn't understand? (independent review, finding 12) ──
+  // Every word must be accounted for: a measure, period, topic, source, page, filter or function word. A leftover
+  // content word ("pensions", "Fingal", "foo") means the question asked for something the Ask bar doesn't know, so it
+  // says so and offers what it can answer, instead of answering for everything.
+  const RESIDUE_STOP=('a an the of in on at for to from by with about and or vs versus compared compare comparison than per each every is are was were be been being '+
+    'do does did done has have had how many much what whats which who when where why show shows me give tell list get got getting please there this that these those '+
+    'our we us it its overall total totals all any number numbers count counts rate rates share shares percentage percent proportion average avg mean median '+
+    'daily weekly monthly day days week weeks month months year years quarter quarters today yesterday since after before until till through between last past '+
+    'previous current next first second third fourth half far date ytd peak highest lowest most least top bottom busiest quietest more less over under people '+
+    'their them askci ai bot chatbot use used using via value values figure figures data stats statistics level levels amount volume trend trending rising falling '+
+    'going up down change changed changes split broken breakdown like same also just only now then often time times hour hours am pm noon midnight morning afternoon '+
+    'evening night lunchtime weekend weekends weekday weekdays working full whole entire period range so were being can could would should will make made '+
+    'modal web pop popup standalone site embed app chip chips typed follow followup followups suggested new topic topics category categories page pages cited citation '+
+    'citations link links click clicks through throughs device devices mobile desktop tablet source sources script scripts got received came asked ask asking much '+
+    // ordinary words that carry no measure, topic or period of their own
+    'fortnight fortnights sept querys queries quries take takes took taken taking go goes went gone see seen look looked looking find finds found fail fails failed failing '+
+    'make need needs want know think come comes keep kept happen happened happening linked link linking reach reached reaching manage managed handle handled '+
+    'good bad better worse best worst high higher highest low lower big bigger small smaller large larger recent recently latest early late often usually typical typically '+
+    'still again already ever never really very quite around roughly approximately almost nearly across during within throughout overall altogether '+
+    'increase increased increases increasing decrease decreased decreases decreasing grow grew grown growing growth shrink shrinking improve improved improving '+
+    'worsen worsened worsening rise rose risen fall fell fallen drop dropped dropping climb climbing jump jumped spike spiked trending getting become became').split(' ');
+  let RESIDUE_KNOWN=null;
+  function residueKnown(){
+    if(RESIDUE_KNOWN)return RESIDUE_KNOWN;
+    const k=new Set(RESIDUE_STOP),add=t=>String(t||'').replace(/\\[bBdDsSwW]/g,' ').toLowerCase().split(/[^a-z]+/).forEach(w=>{if(w.length>=3)k.add(w);});   // "\\bend" is "end", not "bend"
+    VOCAB.forEach(add);PLAIN.forEach(add);
+    ASK_METRICS.forEach(m=>{add(m.id);add(m.label);(m.syn||[]).forEach(r=>{add(r[0].source);add(r[2]);});});
+    PARSE_HOOKS.forEach(h=>add(String(h[1])));
+    CAT_PHRASES.forEach(([sl,ph])=>{add(sl);ph.forEach(add);});Object.entries(SVC_ALIAS).forEach(([a,b])=>{add(a);b.forEach(add);});(DATA.allSvcs||[]).forEach(add);
+    (CONFIG.model_families||[]).forEach(f=>add(f.family));MONFULL.forEach(add);ABBR.forEach(add);
+    ['monday','tuesday','wednesday','thursday','friday','saturday','sunday','mon','tue','wed','thu','fri','sat','sun'].forEach(add);
+    confirmedEvents().forEach(e=>add(e.title));
+    // page names are not added: a page's words used as a subject ("questions about pensions") get the card that
+    // offers the matching pages, since questions aren't counted by page
+    RESIDUE_KNOWN=k;return k;
+  }
+  function residue(q){
+    const kn=residueKnown();
+    const known=w=>kn.has(w)||kn.has(w.replace(/s$/,''))||kn.has(w.replace(/es$/,''))||kn.has(w.replace(/ies$/,'y'))||kn.has(w.replace(/(ed|ing)$/,''))||kn.has(w.replace(/(ed|ing)$/,'e'));
+    return [...new Set((q.toLowerCase().match(/[a-z]+/g)||[]).filter(w=>w.length>=3&&!known(w)))];
+  }
+  function residueCard(q,intent,words){
+    const w=words.map(x=>'“'+x+'”').join(', ');
+    const stem=x=>x.replace(/(es|s)$/,'');
+    const pages=typeof pageIndex==='function'?pageIndex().filter(p=>words.some(x=>stem(x).length>=4&&p.name.includes(stem(x)))).slice(0,3).map(p=>p.name+' page citations'):[];
+    const per=intent.period.kind==='all'?'':(intent.period.kind==='month'?' in '+intent.period.label:intent.period.kind==='day'?' on '+intent.period.label:' '+(intent.period.label||''));
+    const reading=(intent.metric.label+(intent.category?' in '+catLabel(CAT_ALIAS[intent.category]||intent.category):'')+per).trim();
+    showCard(`${w} ${words.length>1?'aren’t topics or measures':'isn’t a topic or measure'} the Ask bar knows`,
+      `Without ${words.length>1?'those words':'that word'}, the question reads as <b>${esc(reading)}</b>. Topics are the site’s sections (Housing, Social Welfare …); a page can be asked about by name.${pages.length?' Pages that match:':''}`,
+      [...pages,reading,'top topics'].slice(0,5));
+  }
   function route(q){
     const ans=$('ask-answer');
     // 0a. Knowledge / definition ("what is cost per question?", "what does Cognitive Search do?")
@@ -8978,7 +9065,7 @@ init();
       if((tn.entity==='page'||tn.entity==='clickpage')&&/never clicked|not clicked|no clicks|per citation|per 100|click[- ]?through rate|\brate\b/.test(lq)){
         showCard('Ranking pages by click-through rate is on the Click-throughs tab','The Ask bar lists pages by citations or by clicks. The Cited vs clicked pages table on Usage › Click-throughs ranks them by click-through rate and lists pages cited often but never clicked.',['most cited pages','top clicked pages']);
         const el=$('ask-answer');el.querySelector('.ask-know-body').insertAdjacentHTML('beforeend',' <button class="ask-action" data-act="sub" data-arg="clicks">Open Click-throughs</button>');lastIntent=null;return;}
-      if(tn.entity==='category'&&/\b(grow(ing|n|th)?|fastest|rose|rise|rising|increas\w*|fell|fall(ing)?|declin\w*|drop(ped)?|change[ds]?)\b/.test(lq)){
+      if(tn.entity==='category'&&(/\b(grow(ing|n|th)?|fastest|rose|rise|rising|increas\w*|fell|fall(ing)?|declin\w*|drop(ped)?|change[ds]?)\b/.test(lq)||/\b(vs\.?|versus|compared (to|with))\b/.test(lq))){
         const lm=(DATA.merged.filter(d=>d.queries>0).slice(-1)[0]||{}).date||'',m1=lm?MONFULL[+lm.slice(5,7)-1]:'October',m0=lm?MONFULL[(+lm.slice(5,7)+10)%12]:'September';
         showCard('Ranking topics by change isn’t available yet','Topic lists rank by volume or by a rate for one period. To see which topics moved, compare two periods:',['top topics in '+m0,'top topics in '+m1,'housing questions by month']);lastIntent=null;return;}
       if(tn.entity==='category'&&/click/.test(lq)){
@@ -9054,7 +9141,8 @@ init();
       if(um&&(/^(modal|web)$/.test(um[1])||!/^(last|this|each|every|all|per|a|an|the|today|yesterday|askci|azure|everything|running|operating|hosting|it|that|month|week|year|day|days|weeks|months|q[1-4]|budget|launch|\d.*)$/.test(um[1])&&!VOCAB.includes(um[1])&&!PLAIN.includes(um[1])&&!MONFULL.some(m=>m.toLowerCase().startsWith(um[1].slice(0,3)))))
         addNotice(/^(modal|web|pop-?up|embed|standalone)$/.test(um[1])?'Costs aren’t split by pop-up and standalone site, so this is total spend.':'“'+um[1]+'” isn’t a service, model or topic in the cost data, so this is total spend.');}
     if(intent&&intent.category&&intent.metric.kind==='spend'&&/\b(costs?|spend|spent|bill)\b/.test(q))addNotice('Costs aren’t split by topic, so this shows questions in '+catLabel(CAT_ALIAS[intent.category]||intent.category)+'.');
-    if(intent){lastIntent=intent;render(compute(intent));alsoReadAs(q,intent);secondAnswer(intent);return;}
+    if(intent){const left=residue(q);if(left.length){residueCard(q,intent,left);lastIntent=null;return;}
+      lastIntent=intent;render(compute(intent));alsoReadAs(q,intent);secondAnswer(intent);return;}
     // 4. Not understood — say so; there is no model fallback.
     ans.innerHTML=info('I couldn’t parse that. Try e.g. <b>spend in January 2026</b>, <b>not-found rate in housing last month</b>, <b>which category has the most dislikes</b>, <b>cited rate for chips</b>, <b>most cited pages this year</b>, <b>busiest hour in September</b>, <b>p90 last 30 days</b>, <b>events in May</b>, <b>voice cost this month</b>, <b>generation cost per turn last 3 months</b>, <b>fixed share this year</b> or <b>projected spend this month</b>.');
     ans.classList.add('show');if(typeof renderIcons==='function')renderIcons();

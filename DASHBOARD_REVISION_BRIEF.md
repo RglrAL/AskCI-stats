@@ -584,3 +584,30 @@ An independent review of the Ask bar (`ask review/`, 29 findings, 42 proposed ca
 - **Spend notes provisional billing days** ("includes 3 provisional billing days (after 20 Oct)").
 - **Topic shares compare in points** (finding 3). The share is a flag on the request, so its prior window computes a share too; before, the prior fell back to a count.
 - 9 existing expectations moved with the anchoring (listed in their notes). 10 review cases were added in our wording. 220 pass.
+
+## 42. Independent review, step 2: every word accounted for (23 Oct 2026)
+
+- **Residue check** (finding 12). Before a single-measure answer is drawn, every word of the question must be accounted for. The known vocabulary is built from the registry's measures and synonyms, the parse hooks, topics, services, model families, months, weekdays, event titles, and a list of function and ordinary words.
+  - A leftover content word gets a card: "“pensions” isn't a topic or measure the Ask bar knows". It says how the rest of the question reads and offers that reading, matching pages by name, and the topic list.
+  - Before, "questions about pensions", "questions in Fingal" and "not found rate in foo" returned the whole-dataset figure.
+  - Page names are deliberately not in the vocabulary: questions aren't counted by page, so a page's words used as a subject get the card with the matching pages.
+  - Checked against the 128-question audit battery: no false alarms after the vocabulary fixes.
+- **Periods** (findings 7, 8, 12):
+  - "since / from / after 14 September" is that day to the end of the data. "Cited answer rate since 14 September" gives 82.2% (27,104 of 32,964), not the single day's 92.0%.
+  - "week of 5 October" or "w/c 5 Oct" is the Monday-to-Sunday week (8,323).
+  - "week 40" is the ISO week.
+  - "first half of the year" and "H1/H2" are January–June and July–December.
+  - Day/month dates in Irish order ("6/10", "06/10/2026").
+  - "the past month" is the last 30 days; "latest week" is the last week.
+- **Measures:**
+  - "Uncited answer rate" is a new registry measure (0.5% overall, 688 of 131,332), also by topic. "Cited" no longer matches inside "uncited" (finding 14).
+  - "Thumbs down" and "thumbs up" read as dislikes and likes.
+  - "Social welfare share of questions" and "what share of questions are social welfare" are topic shares (finding 13).
+- **Declines** (findings 15–17, 19, 20):
+  - correctness ("answered correctly", "accurate") isn't measured, with the nearest measures offered;
+  - "most common question" gets the question-text card;
+  - "about the budget": subjects beyond topics aren't counted, with Budget Day and the Budget 2027 page offered;
+  - "has the model change affected quality": causes aren't established, with the periods either side offered;
+  - "top topics in October vs September" gets the ranking-by-change card;
+  - "questions in Arabic" gets the languages card.
+- 21 review cases added in our wording; 241 pass.

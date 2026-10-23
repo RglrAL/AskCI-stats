@@ -1863,5 +1863,238 @@
   ],
   "group": "review",
   "note": "finding 11: provisional days stated; compared with the same elapsed days"
+ },
+ {
+  "q": "cited answer rate since 14 September",
+  "expect": [
+   "82.2%",
+   "14 Sep to 22 Oct",
+   "27,104 of 32,964"
+  ],
+  "not": [
+   "in 14 Sep ·"
+  ],
+  "group": "review",
+  "note": "finding 7: since a day is that day to the end of the data"
+ },
+ {
+  "q": "clarification rate after 14 September",
+  "expect": [
+   "14 Sep to 22 Oct"
+  ],
+  "not": [
+   "in 14 Sep ·"
+  ],
+  "group": "review",
+  "note": "finding 7"
+ },
+ {
+  "q": "questions week of 5 October",
+  "expect": [
+   "8,323 turns",
+   "5 Oct to 11 Oct"
+  ],
+  "not": [
+   "859 turns"
+  ],
+  "group": "review",
+  "note": "finding 8"
+ },
+ {
+  "q": "questions in week 40",
+  "expect": [
+   "5,299 turns",
+   "28 Sep to 4 Oct"
+  ],
+  "not": [
+   "136,752 turns overall"
+  ],
+  "group": "review",
+  "note": "finding 12: ISO week"
+ },
+ {
+  "q": "questions in the first half of the year",
+  "expect": [
+   "57,351 turns",
+   "January to June 2026"
+  ],
+  "not": [
+   "136,752 turns overall"
+  ],
+  "group": "review",
+  "note": "finding 12"
+ },
+ {
+  "q": "questions on 6/10",
+  "expect": [
+   "2,213 turns",
+   "6 Oct"
+  ],
+  "not": [
+   "136,752 turns overall"
+  ],
+  "group": "review",
+  "note": "finding 12: day/month dates, Irish order"
+ },
+ {
+  "q": "questions about pensions",
+  "expect": [
+   "“pensions” isn’t a topic or measure the Ask bar knows"
+  ],
+  "not": [
+   "136,752 turns overall"
+  ],
+  "group": "review",
+  "note": "finding 12: residue check; matching pages offered"
+ },
+ {
+  "q": "questions in Fingal",
+  "expect": [
+   "“fingal” isn’t a topic or measure"
+  ],
+  "not": [
+   "136,752 turns overall"
+  ],
+  "group": "review",
+  "note": "finding 12"
+ },
+ {
+  "q": "not found rate in foo",
+  "expect": [
+   "“foo” isn’t a topic or measure"
+  ],
+  "not": [
+   "6.0% not-found rate overall"
+  ],
+  "group": "review",
+  "note": "finding 12"
+ },
+ {
+  "q": "questions in Arabic",
+  "expect": [
+   "Languages aren’t detected"
+  ],
+  "not": [
+   "136,752 turns overall"
+  ],
+  "group": "review",
+  "note": "finding 12"
+ },
+ {
+  "q": "how many questions got a thumbs down",
+  "expect": [
+   "172 dislikes"
+  ],
+  "not": [
+   "136,752 turns overall"
+  ],
+  "group": "review",
+  "note": "finding 12"
+ },
+ {
+  "q": "social welfare share of questions",
+  "expect": [
+   "39.7%"
+  ],
+  "not": [
+   "136,752 turns overall"
+  ],
+  "group": "review",
+  "note": "finding 13: word order"
+ },
+ {
+  "q": "what share of questions are social welfare",
+  "expect": [
+   "39.7%"
+  ],
+  "group": "review",
+  "note": "finding 13"
+ },
+ {
+  "q": "uncited answer rate",
+  "expect": [
+   "0.5% uncited answer rate",
+   "688 of 131,332"
+  ],
+  "not": [
+   "88.2%"
+  ],
+  "group": "review",
+  "note": "finding 14: uncited is its own measure"
+ },
+ {
+  "q": "uncited answers in October",
+  "expect": [
+   "uncited answer rate in October 2026",
+   "33 of 20,524"
+  ],
+  "not": [
+   "82.2%"
+  ],
+  "group": "review",
+  "note": "finding 14"
+ },
+ {
+  "q": "how many questions were answered correctly",
+  "expect": [
+   "isn’t measured"
+  ],
+  "not": [
+   "84.7%"
+  ],
+  "group": "review",
+  "note": "finding 15"
+ },
+ {
+  "q": "most common question",
+  "expect": [
+   "The question text isn’t available here"
+  ],
+  "not": [
+   "2,213 peak"
+  ],
+  "group": "review",
+  "note": "finding 16"
+ },
+ {
+  "q": "how many questions were about the budget",
+  "expect": [
+   "isn’t available beyond its topic"
+  ],
+  "not": [
+   "2,213 turns in Budget Day"
+  ],
+  "group": "review",
+  "note": "finding 17"
+ },
+ {
+  "q": "top topics in October vs September",
+  "expect": [
+   "Ranking topics by change isn’t available yet"
+  ],
+  "group": "review",
+  "note": "finding 19"
+ },
+ {
+  "q": "has the model change affected quality",
+  "expect": [
+   "Causes aren’t established here"
+  ],
+  "not": [
+   "88.2% cited answer rate overall"
+  ],
+  "group": "review",
+  "note": "finding 20"
+ },
+ {
+  "q": "questions over the past month",
+  "expect": [
+   "the last 30 days"
+  ],
+  "not": [
+   "136,752 turns overall"
+  ],
+  "group": "review",
+  "note": "finding 12"
  }
 ]
