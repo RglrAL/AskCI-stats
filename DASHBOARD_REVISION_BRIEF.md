@@ -679,3 +679,30 @@ An independent review of the Ask bar (`ask review/`, 29 findings, 42 proposed ca
   - "different pages cited" and "pages clicked through to" gave a ranking (the card now asks them as "how many …").
 - **"Also read as" is tighter:** no alternative whose words overlap the chosen reading, and none when the question names the measure outright.
 - 13 cases added; 269 pass.
+
+## 47. Ask bar: suggestions while typing, with a preview of the reading (23 Oct 2026)
+
+Built after a proposal and a critique of it; the critique's changes are in.
+
+- **Preview line.** As you type, one line under the box says how the question will be read before it is asked:
+  - "Reads as: not-found rate · Housing · the full period";
+  - "Compares: …", "Ranks: topics · …";
+  - "Answers with: The question text isn't available here" for a decline;
+  - "“pensions” isn't a topic or measure the Ask bar knows" for an unknown word;
+  - corrections in brackets: "(Read “helth” as “health”)".
+
+  A word still being typed is left out, marked "…", rather than warned about. The preview uses the same parser, unknown-word check and declines as the answer. It never changes what a follow-up inherits.
+- **Suggestions come only from tested questions:**
+  - the help card's questions;
+  - eight topic templates ("not found rate in {topic} last month", "{topic} questions by month" …), each naming the test case that backs its shape.
+
+  `tools/test_ask.py` asks every suggestion through the page on every run: none may give a "not understood" card, and a template without its backing case fails the run. A deliberately broken template was caught both ways. The order is hand-ranked: there is no record of real questions yet.
+- **Matching:** every finished word must appear in the suggestion, and the word being typed as the start of one of its words. A misspelling is retried as the Ask bar would correct it. Up to 6 suggestions, 4 on a phone.
+- **Keyboard and screen readers.** It is a combobox: `role="combobox"`, `aria-expanded`, `aria-controls`, `aria-activedescendant` on the box, and a listbox of options.
+  - ↑/↓ move, Enter asks the highlighted suggestion (or what is typed), Esc closes. Tab is left alone so keyboard users can move on.
+  - The preview and the number of suggestions are announced.
+  - The focus ring is on the whole bar, not inside it.
+- **Recent.** An empty, focused box shows the last five questions asked in this browser, with Clear (offices share machines), and "What can I ask?". They are stored in this browser's local storage only, never in the page address or anywhere central.
+- **Placeholder.** One fixed example ("e.g. “not found rate in housing last month”"). No rotating text, per WCAG 2.2.2.
+- **Phone width.** The whole dashboard was measured in a true 390 px frame. A long value in the data-quality strip widened the page to 417 px; strip values now wrap on phones and the page is 390 px. The main tab row already scrolls within itself. The date-range toolbar fits.
+- **Tests:** 11 typing cases (preview, unknown word, decline, correction, ranking, partial word, ↓ highlight, ↓ + Enter asks, Esc closes, Recent and help in an empty box). 280 pass.

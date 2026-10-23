@@ -2384,5 +2384,118 @@
    "17.9% conversations over 5 minutes"
   ],
   "group": "bestfit"
+ },
+ {
+  "q": "",
+  "type": "not found rate in hou",
+  "expect": [
+   "Reads as: not-found rate",
+   "…",
+   "not found rate in housing last month",
+   "expanded=true"
+  ],
+  "group": "suggest",
+  "note": "preview line and suggestions while typing; the word still being typed is left out, not warned about"
+ },
+ {
+  "q": "",
+  "type": "questions about pensions",
+  "expect": [
+   "“pensions” isn’t a topic or measure the Ask bar knows"
+  ],
+  "group": "suggest",
+  "note": "the preview shows the unknown word before asking"
+ },
+ {
+  "q": "",
+  "type": "most common question",
+  "expect": [
+   "Answers with: The question text isn’t available here"
+  ],
+  "group": "suggest",
+  "note": "declines are previewed"
+ },
+ {
+  "q": "",
+  "type": "helth questions in sep",
+  "expect": [
+   "Read “helth” as “health”"
+  ],
+  "group": "suggest",
+  "note": "corrections are previewed"
+ },
+ {
+  "q": "",
+  "type": "top topics in oct",
+  "expect": [
+   "Ranks: topics"
+  ],
+  "group": "suggest"
+ },
+ {
+  "q": "",
+  "type": "questions in sept",
+  "expect": [
+   "questions in September"
+  ],
+  "group": "suggest",
+  "note": "the word being typed matches the start of a word"
+ },
+ {
+  "q": "",
+  "type": "not found rate in hou",
+  "keys": [
+   "ArrowDown"
+  ],
+  "expect": [
+   "active=ask-opt-0"
+  ],
+  "group": "suggest",
+  "note": "ArrowDown highlights the first suggestion (aria-activedescendant)"
+ },
+ {
+  "q": "",
+  "type": "not found rate in hou",
+  "keys": [
+   "ArrowDown",
+   "Enter"
+  ],
+  "expect": [
+   "not-found rate in Housing"
+  ],
+  "group": "suggest",
+  "note": "Enter asks the highlighted suggestion"
+ },
+ {
+  "q": "",
+  "type": "not found rate in hou",
+  "keys": [
+   "Escape"
+  ],
+  "expect": [
+   "(closed)"
+  ],
+  "group": "suggest",
+  "note": "Escape closes the list"
+ },
+ {
+  "q": "busiest hour",
+  "type": "",
+  "expect": [
+   "RECENT",
+   "busiest hour",
+   "What can I ask?"
+  ],
+  "group": "suggest",
+  "note": "an empty box shows recent questions (this browser only) and the help entry"
+ },
+ {
+  "q": "",
+  "type": "not found rate in housing ",
+  "expect": [
+   "Reads as: not-found rate · Housing · the full period"
+  ],
+  "group": "suggest",
+  "note": "a finished word is read"
  }
 ]

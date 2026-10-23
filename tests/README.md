@@ -26,3 +26,10 @@ Chrome and checks each answer. It takes a few seconds.
   `node tools/test_ask_node.js [--cases FILE] [-k text] [--show] [--page FILE]`. It tests text only and
   matches case-insensitively. It has not been run on this repository's maintainer machine (no Node there);
   `tools/test_ask.py` remains the reference.
+- **Typing cases.** A case with `"type"` types that text into the box (after any `q`/`then`) and checks the
+  suggestion dropdown: its preview line, its options, `aria-expanded` and `aria-activedescendant`. With
+  `"keys"` (e.g. `["ArrowDown", "Enter"]`) it presses them; with Enter it checks the answer instead. `"q": ""`
+  makes a typing-only case.
+- **Suggestions.** Every suggestion the dropdown can offer is asked through the page on every run; any that
+  gives a "not understood" card fails the run, as does a suggestion template whose backing case is not in
+  `ask_cases.json`.

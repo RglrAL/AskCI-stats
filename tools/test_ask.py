@@ -8,6 +8,12 @@ the git commit named in tests/ask_fixture_ref, so data refreshes never change th
 Each case: {"q": "question", "then": ["follow-up", ...]?, "expect": ["text the answer must contain", ...],
 "not": ["text it must not contain", ...]?, "note": "why"?}. A follow-up runs after the question without a
 reset, as a person would type it. Before each case the Ask bar's memory of the previous answer is cleared.
+A case with "type" (and optional "keys", e.g. ["ArrowDown", "Enter"]) types that text into the box after any
+"q"/"then" and checks the suggestion dropdown (its preview line and options); with "Enter" among the keys it
+checks the answer instead. "q" may be "" for a typing-only case.
+
+Every suggestion the dropdown can offer is also asked through the page: none may give a "not understood"
+card, and every suggestion template must name a backing case that exists in the case file.
 
 Usage:
     python3 tools/test_ask.py                 # run all cases; exit 1 on any failure
@@ -45,13 +51,24 @@ async function go(){
   const out=[];
   for(const c of __C){
     window.__resetAsk();let ans='';
-    for(const q of [c.q,...(c.then||[])]){window.askQuery(q);await sleep(%d);const a=document.getElementById('ask-answer');
+    for(const q of [c.q,...(c.then||[])]){if(!q)continue;window.askQuery(q);await sleep(%d);const a=document.getElementById('ask-answer');
       // the card repeats the question; leave it out, so "not" checks test the answer and not the question asked
       const echo=a?[...a.querySelectorAll('.ask-card-q')]:[];echo.forEach(e=>e.style.display='none');
       ans=(a?a.innerText:'').replace(/\s+/g,' ').replace(/READ AS.*/,'').trim();echo.forEach(e=>e.style.display='');}
+    if(c.type!==undefined){const inp=document.getElementById('ask-input');inp.focus();inp.value=c.type;inp.dispatchEvent(new Event('input',{bubbles:true}));
+      if(!c.type)inp.dispatchEvent(new Event('focus'));await sleep(400);
+      for(const k of (c.keys||[])){inp.dispatchEvent(new KeyboardEvent('keydown',{key:k,bubbles:true,cancelable:true}));if(k==='Enter'&&!document.getElementById('ask-sg').hidden===false){} await sleep(300);}
+      if((c.keys||[]).includes('Enter')){const a=document.getElementById('ask-answer');const echo=a?[...a.querySelectorAll('.ask-card-q')]:[];echo.forEach(e=>e.style.display='none');ans=(a?a.innerText:'').replace(/\s+/g,' ').replace(/READ AS.*/,'').trim();echo.forEach(e=>e.style.display='');}
+      else{const g=document.getElementById('ask-sg');ans=(g&&!g.hidden?g.innerText:'(closed)').replace(/\s+/g,' ').trim()+' | expanded='+inp.getAttribute('aria-expanded')+' | active='+(inp.getAttribute('aria-activedescendant')||'');}
+      inp.blur();inp.value='';}
     out.push(ans);
   }
-  document.body.setAttribute('data-test',JSON.stringify({out,errs:window.__errs.concat((window.__askRegistryProblems||[]).map(x=>'registry: '+x))}));
+  // every suggestion the dropdown can offer must answer without a "not understood" card
+  const sgBad=[];let tpl=[];
+  if(window.__askSuggest){const S=window.__askSuggest();tpl=S.templates;
+    for(const q of S.all){window.__resetAsk();window.askQuery(q);await sleep(60);const t=(document.getElementById('ask-answer').innerText||'').replace(/\s+/g,' ');
+      if(/isn’t a topic or measure|aren’t topics or measures|couldn’t parse|Which measure|isn’t split by/.test(t))sgBad.push(q+' => '+t.slice(0,120));}}
+  document.body.setAttribute('data-test',JSON.stringify({out,sgBad,tpl,errs:window.__errs.concat((window.__askRegistryProblems||[]).map(x=>'registry: '+x))}));
 }
 </script>"""
 
@@ -113,7 +130,7 @@ def run(cases, ref, browser, page_path):
     tmp = tempfile.mkdtemp(prefix="asktest-")
     try:
         page = build_site(tmp, ref, page_path)
-        payload = [{"q": c["q"], "then": c.get("then", [])} for c in cases]
+        payload = [{k: c[k] for k in ("q", "then", "type", "keys") if k in c} for c in cases]
         with open(os.path.join(tmp, "index.html"), "w", encoding="utf-8") as fh:
             fh.write(page.replace("</body>", HARNESS % (json.dumps(payload), WAIT_MS) + "</body>", 1))
         with socket.socket() as s:
@@ -121,7 +138,7 @@ def run(cases, ref, browser, page_path):
         srv = ThreadingHTTPServer(("127.0.0.1", port), partial(QuietHandler, directory=tmp))
         threading.Thread(target=srv.serve_forever, daemon=True).start()
         prof = os.path.join(tmp, "_profile")
-        budget = 60000 + len(cases) * (WAIT_MS * 2 + 400)
+        budget = 60000 + len(cases) * (WAIT_MS * 2 + 900) + 400 * 200   # plus every suggestion, asked once
         dom = subprocess.run([browser, "--headless=new", "--disable-gpu", "--no-first-run", f"--user-data-dir={prof}",
                               f"--virtual-time-budget={budget}", "--dump-dom", f"http://127.0.0.1:{port}/index.html"],
                              capture_output=True, text=True, timeout=900).stdout
@@ -130,7 +147,7 @@ def run(cases, ref, browser, page_path):
         if not m:
             sys.exit("the page produced no results (it may not have loaded); open index.html to check for errors")
         res = json.loads(html.unescape(m.group(1)))
-        return res["out"], res["errs"]
+        return res["out"], res["errs"], res.get("sgBad", []), res.get("tpl", [])
     finally:
         shutil.rmtree(tmp, ignore_errors=True)
 
@@ -154,7 +171,9 @@ def main():
         allc = json.load(fh)
     cases = [c for c in allc if not a.k or a.k.lower() in c["q"].lower()]
     ref = open(REF).read().strip()
-    out, errs = run(cases, ref, browser, a.page)
+    out, errs, sg_bad, tpl = run(cases, ref, browser, a.page)
+    qs = {c["q"] for c in allc}
+    tpl_missing = [t["t"] + " (backing case: " + t["case"] + ")" for t in tpl if t["case"] not in qs]
     fails = []
     for c, ans in zip(cases, out):
         missing = [e for e in c.get("expect", []) if e not in ans]
@@ -177,8 +196,12 @@ def main():
         print("recorded expectations for cases that had none; review `git diff tests/ask_cases.json`")
     if errs:
         print("page errors:"); [print("   " + e) for e in errs]
+    if sg_bad:
+        print("suggestions that are not understood:"); [print("   " + b) for b in sg_bad]
+    if tpl_missing:
+        print("suggestion templates without a backing case:"); [print("   " + b) for b in tpl_missing]
     print(f"{len(cases) - len(fails)} of {len(cases)} passed" + (f", {len(fails)} failed" if fails else ""))
-    return 1 if fails or errs else 0
+    return 1 if fails or errs or sg_bad or tpl_missing else 0
 
 
 if __name__ == "__main__":
