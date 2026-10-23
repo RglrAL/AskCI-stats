@@ -1567,6 +1567,36 @@ details.ask-read[open]>summary::after{content:'▴'}
 .copy-btn{display:inline-flex;align-items:center;gap:6px;background:transparent;border:1px solid var(--border);color:var(--muted);border-radius:6px;padding:4px 10px;font:inherit;font-size:12px;cursor:pointer}
 .copy-btn:hover{color:var(--text);border-color:var(--muted)}
 .copy-btn .i-sm{width:13px;height:13px}
+#ql-overlay{position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:400;display:none;align-items:flex-start;justify-content:center;padding:6vh 16px;overflow-y:auto}
+#ql-overlay.open{display:flex}
+#ql-panel{min-width:0;box-sizing:border-box;width:min(760px,100%);background:var(--s1);border:1px solid var(--border);border-radius:var(--r-xl);box-shadow:0 24px 64px rgba(0,0,0,.4);padding:var(--sp-5)}
+.ql-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:var(--sp-2)}
+.ql-intro,.ql-note,.ql-empty{color:var(--muted);font-size:var(--t-sm);margin:0 0 var(--sp-3)}
+.ql-note{font-size:var(--t-xs);margin:var(--sp-2) 0 0}
+.ql-row{display:flex;flex-wrap:wrap;align-items:center;gap:6px;margin-bottom:var(--sp-3)}
+.ql-lbl{font-size:var(--t-2xs);color:var(--dim);text-transform:uppercase;letter-spacing:.08em;margin-right:2px}
+#ql-panel select{background:var(--s2);border:1px solid var(--border);color:var(--text);border-radius:6px;padding:4px 8px;font:inherit;font-size:var(--t-sm);max-width:100%}
+#ql-list{flex:1 1 160px;min-width:0}
+.ql-ctl{flex-wrap:wrap;min-width:0;max-width:100%}
+.ql-ctl select{min-width:0;max-width:220px}
+#ql-runfor{min-width:0;flex:0 1 auto}
+/* the report preview has its own toolbar; the floating theme and palette controls would sit on top of it */
+body:has(#report-mode-container[style*="block"]) .top-controls{display:none}
+.ql-items{list-style:none;margin:0 0 var(--sp-3);padding:0;border-top:1px solid var(--b2)}
+.ql-item{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:8px;padding:8px 0;border-bottom:1px solid var(--b2)}
+.ql-q{display:flex;flex-direction:column;min-width:0;flex:1 1 260px}
+.ql-qbtn{background:none;border:0;padding:0;color:var(--text);font:inherit;font-size:var(--t-sm);text-align:left;cursor:pointer}
+.ql-qbtn:hover{color:var(--acc);text-decoration:underline}
+.ql-read{font-size:var(--t-2xs);color:var(--dim);font-family:'DM Mono',monospace}
+.ql-ctl{display:flex;align-items:center;gap:4px}
+.ql-ctl .copy-btn{padding:4px 6px}
+.ql-fixed{font-size:var(--t-xs);color:var(--dim)}
+.ql-run{border-top:1px solid var(--b2);padding-top:var(--sp-3);margin:0}
+.ql-report img{display:block}
+/* the report is a document: shown as paper in either theme, exactly as it copies and prints */
+.report-pane.ql-report{background:#fff;color:#1f2328;border-color:#d0d7de}
+.ql-report a{color:#0969da}
+@media print{.ql-report img{width:100%!important;max-width:16cm!important}.ql-report h2{break-after:avoid}.ql-report table{break-inside:avoid}}
 .ask-action{background:color-mix(in srgb,var(--acc) 8%,transparent);border:1px solid color-mix(in srgb,var(--acc) 28%,transparent);color:var(--acc);
   border-radius:999px;padding:6px 14px;font-size:var(--t-xs);font-weight:500;cursor:pointer;
   white-space:nowrap;transition:background .15s,border-color .15s}
@@ -1799,6 +1829,7 @@ Date,Questions,Sessions
         </div>
       </div>
       <button class="icon-btn" onclick="openReportMode()" aria-label="Generate report" title="Generate one-page report"><i data-lucide="file-text" class="i-sm"></i><span>Report</span></button>
+      <button class="icon-btn" onclick="openQl()" aria-label="Question lists" title="Question lists: saved questions run again as a report"><i data-lucide="list-checks" class="i-sm"></i><span>Lists</span></button>
       <div class="popover-wrap">
         <button class="icon-btn" onclick="toggleMoreMenu(event)" aria-label="More actions" id="more-btn" title="More actions"><i data-lucide="more-horizontal" class="i-sm"></i></button>
         <div class="popover popover-menu" id="more-popover" role="menu">
@@ -3773,7 +3804,7 @@ async function copyShareLink(btn){
 function showToast(msg){
   const toast=document.getElementById('share-toast'),m=document.getElementById('share-toast-msg');if(!toast)return;
   if(m)m.textContent=msg;toast.classList.add('show');renderIcons();
-  clearTimeout(showToast.t);showToast.t=setTimeout(()=>{toast.classList.remove('show');if(m)m.textContent='Link copied to clipboard';},2200);
+  clearTimeout(showToast.t);clearTimeout(showToast.r);showToast.t=setTimeout(()=>{toast.classList.remove('show');showToast.r=setTimeout(()=>{if(m)m.textContent='Link copied to clipboard';},600);},2200);
 }
 function buildStamp(){
   const c=(document.querySelector('meta[name="askci-build"]')||{}).content||'';
@@ -3826,9 +3857,9 @@ async function writeClipboard(text,html){
 // The chart redrawn in the light theme (whatever the page's theme), with the title and period above it and the
 // footer below, as a PNG: what a report or a slide needs. Colours in the chart's config are mapped from the live
 // palette to the light one; scriptable colours read C, which is the light palette while the copy is drawn.
-function lightChartPng(chart,head,sub,footer){
-  return new Promise(resolve=>{
-    if(!chart||!chart.config||!chart.config._config){resolve(null);return;}
+function lightChartCanvas(chart,head,sub,footer){
+  {
+    if(!chart||!chart.config||!chart.config._config)return null;
     const live=C,map=new Map();Object.keys(LIGHT).forEach(k=>{[live[k],DARK[k]].forEach(v=>{if(v)map.set(String(v).toLowerCase(),LIGHT[k]);});});
     const recol=v=>{if(typeof v!=='string')return v;const lo=v.toLowerCase();for(const [d,l] of map){if(lo.startsWith(d))return l+v.slice(d.length);}return v;};
     const clone=(o,depth=0)=>{if(depth>12||o==null)return o;if(typeof o==='string')return recol(o);if(typeof o!=='object'||typeof o==='function')return o;
@@ -3839,11 +3870,12 @@ function lightChartPng(chart,head,sub,footer){
     cfg.options.responsive=false;cfg.options.maintainAspectRatio=false;cfg.options.animation=false;cfg.options.devicePixelRatio=dpr;
     cfg.options.plugins=cfg.options.plugins||{};cfg.options.plugins.tooltip={enabled:false};
     const host=document.createElement('div');host.style.cssText='position:fixed;left:-20000px;top:0;width:'+W+'px;height:'+CH+'px';
+    Object.keys(LIGHT).forEach(k=>host.style.setProperty('--'+k,LIGHT[k]));   // plugins that read CSS tokens off the canvas get the light ones
     const cv=document.createElement('canvas');cv.width=W;cv.height=CH;cv.style.width=W+'px';cv.style.height=CH+'px';host.appendChild(cv);document.body.appendChild(host);
     const saved=C,savedDef=Chart.defaults.color,savedB=Chart.defaults.borderColor;let tmp=null;
     try{C=LIGHT;Chart.defaults.color=LIGHT.muted;Chart.defaults.borderColor=LIGHT.border;tmp=new Chart(cv,cfg);}
     catch(e){}finally{C=saved;Chart.defaults.color=savedDef;Chart.defaults.borderColor=savedB;}
-    if(!tmp){host.remove();resolve(null);return;}
+    if(!tmp){host.remove();return null;}
     // compose: title, period, chart, footer on white
     const out=document.createElement('canvas'),x=out.getContext('2d'),pad=24;
     const wrap=(t,font,maxW)=>{x.font=font;const words=String(t||'').split(/\s+/),lines=[];let cur='';words.forEach(w=>{const n=cur?cur+' '+w:w;if(x.measureText(n).width>maxW&&cur){lines.push(cur);cur=w;}else cur=n;});if(cur)lines.push(cur);return lines;};
@@ -3856,8 +3888,11 @@ function lightChartPng(chart,head,sub,footer){
     x.drawImage(cv,0,y,W,CH);y+=CH+12;
     x.fillStyle=LIGHT.muted;x.font=F3;fl.forEach(l=>{x.fillText(l,pad,y);y+=15;});
     tmp.destroy();host.remove();
-    out.toBlob(b=>resolve(b),'image/png');
-  });
+    return out;
+  }
+}
+function lightChartPng(chart,head,sub,footer){
+  return new Promise(resolve=>{const cv=lightChartCanvas(chart,head,sub,footer);if(!cv){resolve(null);return;}cv.toBlob(b=>resolve(b),'image/png');});
 }
 async function copyPng(blobP,name){
   // the image goes on the clipboard where the browser allows it; otherwise it is downloaded
@@ -8729,7 +8764,7 @@ init();
     if(p.kind==='day')return['day',p.from,'Open '+p.label];
     return['range',p.from+'|'+p.to,'Show '+p.label];
   }
-  function renderCompare(res){
+  function renderCompare(res){RENDERED='compare';
     const el=$('ask-answer'); if(!el)return;
     // Always the later period against the earlier one, whichever order the question names them in, and said in words:
     // "September 2026 is 20% above August 2026". Sides are shown earlier → later.
@@ -9169,17 +9204,19 @@ init();
   async function run(){
     const inp=$('ask-input'); if(!inp)return;
     const q0=(inp.value||'').trim(); if(!q0||!have())return;
-    if(!/^what can i ask\??$/i.test(q0))recentAdd(q0);
-    NOTICES=[];ALSO=null;SECOND=null;
+    if(!QUIET&&!/^what can i ask\??$/i.test(q0))recentAdd(q0);
+    NOTICES=[];ALSO=null;SECOND=null;RENDERED='';
     const q=normaliseQ(q0);const before=lastIntent;
     const handled=guard(' '+q+' ')||pageAnswer(' '+q+' ');
     if(!handled)route(q);
-    ANS={q:q0,intent:!handled&&lastIntent!==before?lastIntent:null,second:SECOND};
+    const it0=!handled&&lastIntent!==before?lastIntent:null;
+    // a list item replays a reading; a comparison or a two-measure answer is kept as written instead
+    ANS={q:q0,intent:it0,second:SECOND,read:it0&&!SECOND&&RENDERED!=='compare'?it0:null};
     const el=$('ask-answer');
     if(el)el.querySelectorAll('.ask-card-q').forEach(x=>{x.textContent=q0;});   // the question as typed, not as normalised
     if(el&&ALSO&&el.innerHTML)el.insertAdjacentHTML('afterbegin','<div class="ask-also"><span>Also read as</span>'+exChip(ALSO)+'</div>');
     if(el&&NOTICES.length&&el.innerHTML)el.insertAdjacentHTML('afterbegin','<div class="ask-notice"><i data-lucide="alert-circle" class="i-sm"></i><span>'+NOTICES.map(esc).join(' ')+'</span></div>');
-    if(el&&el.innerHTML&&!/^what can i ask\??$/i.test(q0))addCopyBar(el);
+    if(!QUIET&&el&&el.innerHTML&&!/^what can i ask\??$/i.test(q0))addCopyBar(el);
     if(typeof renderIcons==='function')renderIcons();
     // Announce a short summary (notices, the headline figure and its sentence), not the whole card; focus stays in
     // the box so a follow-up can be typed straight away.
@@ -9190,7 +9227,7 @@ init();
   // Built from the answer as drawn, so every kind of card copies the same way: the question, the figure and its
   // sentence, the table, the measure's definition, the notices as caveats, a link that asks the question again, and
   // the footer.
-  let ANS=null;
+  let ANS=null,RENDERED='';
   const CLICK_KINDS=new Set(['clicks','ctr','clickpages']);
   function reaskLink(q){return location.origin+location.pathname+'#ask='+encodeURIComponent(String(q||'').slice(0,200));}
   function askTable(card){
@@ -9219,7 +9256,7 @@ init();
     if(clicks&&!/minimum/i.test(subT)&&!caveats.some(c=>/minimum/i.test(c)))caveats.push('Click-throughs are minimums: GA4 counts only visitors who accept analytics cookies.');
     const pack={title:know?T(card.querySelector('.ask-know-title')):'Q: '+q,
       figure:know?'':T(card.querySelector('.ask-card-val')),
-      sentence:know?T(card.querySelector('.ask-know-body')).replace(/:\s*$/,'')+(chips.length?': '+chips.join('; ')+'.':''):[T(card.querySelector('.ask-card-sub')),delta?'('+delta+')':''].filter(Boolean).join(' ')+(duo.length?' · '+duo.join(' · '):''),
+      sentence:know?(b=>!chips.length?b:/:\s*$/.test(b)?b.replace(/:\s*$/,': ')+chips.join('; ')+'.':b+' Related: '+chips.join('; ')+'.')(T(card.querySelector('.ask-know-body'))):[T(card.querySelector('.ask-card-sub')),delta?'('+delta+')':''].filter(Boolean).join(' ')+(duo.length?' · '+duo.join(' · '):''),
       table:askTable(card),definition:met&&met.def||'',caveats,
       link:reaskLink(q),linkText:'Ask this again on the dashboard',footer:reportFooter({outcome,clicks})};
     return {pack,q,outcome,clicks,...copyPack(pack)};
@@ -9233,9 +9270,11 @@ init();
       b('answer','clipboard-copy','Copy answer','The answer with its definition, caveats, a link that asks it again and the data versions; pastes formatted into Word or Outlook, as Markdown elsewhere')+
       (chart?b('chart','image','Copy chart image','The chart in the light theme with the question and the data versions, as an image'):'')+
       (tbl?b('table','table','Copy table','The table as tab-separated text, for a spreadsheet'):'')+
-      b('link','link','Copy link','A link that asks this question again on the dashboard')+'</div>');
+      b('link','link','Copy link','A link that asks this question again on the dashboard')+
+      b('list','list-plus','Add to list','Add this question to a question list, to run again as a report')+'</div>');
     el.querySelector('.copy-bar').addEventListener('click',async e=>{
       const btn=e.target.closest('[data-copy]');if(!btn)return;const P2=askCopyPayload();if(!P2)return;const a=btn.dataset.copy;
+      if(a==='list'){addToList();return;}
       if(a==='answer'){showToast(await writeClipboard(P2.text,P2.html)?'Copied with its definition and caveats':'Copy failed');}
       else if(a==='table'){showToast(await writeClipboard(tsvOf(P2.pack.table))?'Table copied: paste it into a spreadsheet':'Copy failed');}
       else if(a==='link'){showToast(await writeClipboard(P2.pack.link)?'Link copied: it asks this question again':'Copy failed');}
@@ -9250,6 +9289,235 @@ init();
     q=q.replace(/[\u0000-\u001f\u007f]+/g,' ').trim().slice(0,200);if(!q)return false;
     const go=(n)=>{if(have()&&$('ask-input')){window.askQuery(q);}else if(n<150)setTimeout(()=>go(n+1),200);};go(0);return true;
   }
+  // ── Reports as question lists (brief §48, Phase A step 2) ──
+  // A list holds questions. Each item keeps the question as asked, the reading it was saved with (measure, topic,
+  // filter, shape, aggregate) and a period token. Running the list replays each reading for its token, or for one
+  // month ("Run for"), out of sight, and lays the answers out as a document: figure, chart, table, definition, caveats.
+  // An item pinned to its asked period is never moved. If the Ask bar now reads a saved question differently, the
+  // report says so on that item and keeps the saved reading.
+  let QUIET=false;
+  const QL_KEY='askci-qlists',QL_MAX=30;
+  const TOKENS=[['lastmonth','Last full month'],['mtd','Month to date'],['last7','Last 7 days of data'],['ytd','Since January'],['popup','Since the pop-up launch'],['budget','Budget Day'],['all','Full period'],['asked','As asked (pinned)']];
+  const tokLabel=t=>t.startsWith('m:')?fullMonth(t.slice(2)):(TOKENS.find(x=>x[0]===t)||[,''])[1];
+  const fullMonth=mk=>MONFULL[+mk.slice(5,7)-1]+' '+mk.slice(0,4);
+  function readOf(it){if(!it||!it.metric)return null;return {m:metricKey(it.metric),c:it.category||'',f:it.filter?it.filter.key||'':'',s:it.trend?'trend':it.groupBy||'',a:it.agg||'sum'};}
+  const readKey=r=>r?[r.m,r.c,r.f,r.s,r.s?'':r.a].join('|'):'';
+  function readText(r){if(!r)return 'asked as written';const m=metricFromKey(r.m);
+    return [m.label,r.c?catLabel(CAT_ALIAS[r.c]||r.c):'',r.f?({modal:'Modal',web:'Web',nt:'new topics',uf:'typed follow-ups',sf:'suggested follow-ups'}[r.f]||r.f):'',r.s==='trend'?'trend':r.s?'by '+r.s:({avg:'average per day',max:'peak day',min:'lowest day'}[r.a]||'')].filter(Boolean).join(' · ');}
+  function tokenFor(p){
+    if(!p)return 'asked';if(p.kind==='all')return 'all';const k=periodKey(p),L=lastDate();
+    if(k==='last7')return 'last7';if(k==='ytd')return 'ytd';
+    if(k==='m:'+prevMonth(L.slice(0,7)))return 'lastmonth';if(k==='m:'+L.slice(0,7))return 'mtd';
+    if(/since the pop-up launch/.test(p.label||''))return 'popup';if(/^Budget Day/.test(p.label||''))return 'budget';
+    return 'asked';
+  }
+  function periodFor(tok,asked){
+    if(tok==='asked')return asked||null;
+    const full=p=>p&&p.kind==='month'?{...p,label:fullMonth(p.monthKey||p.from.slice(0,7))}:p;
+    if(tok.startsWith('m:'))return full(periodFromKey(tok));
+    if(tok==='lastmonth')return full(periodFromKey('lastMonth'));if(tok==='mtd')return periodFromKey('thisMonth');
+    if(tok==='last7'||tok==='ytd'||tok==='all')return periodFromKey(tok);
+    if(tok==='popup')return parsePeriod(' since the pop-up launch ');if(tok==='budget')return parsePeriod(' budget day ');
+    return asked||null;
+  }
+  // Untrusted input (the page address, the browser's storage): rebuilt field by field, anything unexpected dropped.
+  const clean=(v,n)=>String(v==null?'':v).replace(/[\u0000-\u001f\u007f<>]+/g,' ').trim().slice(0,n);
+  const ISO=/^\d{4}-\d{2}-\d{2}$/;
+  function cleanItem(x){
+    if(!x||typeof x!=='object')return null;const q=clean(x.q,200);if(!q)return null;
+    let r=null;if(x.r&&typeof x.r==='object'){const m=clean(x.r.m,60);
+      if(READ_METRICS.some(o=>o[0]===m)||/^(svc|fam):[\w .()-]+$/.test(m))r={m,c:/^[a-z-]{0,40}$/.test(x.r.c||'')?x.r.c||'':'',f:['','modal','web','nt','uf','sf'].includes(x.r.f||'')?x.r.f||'':'',s:['','month','week','trend'].includes(x.r.s||'')?x.r.s||'':'',a:['sum','avg','max','min'].includes(x.r.a)?x.r.a:'sum'};}
+    let pp=null;if(x.p&&typeof x.p==='object'&&ISO.test(x.p.from)&&ISO.test(x.p.to)&&x.p.from<=x.p.to)pp={kind:['month','range','day','all'].includes(x.p.kind)?x.p.kind:'range',from:x.p.from,to:x.p.to,label:clean(x.p.label,80)||fmtDate(x.p.from)+' to '+fmtDate(x.p.to),...(x.p.kind==='month'?{monthKey:x.p.from.slice(0,7)}:{})};
+    let t=String(x.t||'asked');if(!(TOKENS.some(o=>o[0]===t)||/^m:\d{4}-\d{2}$/.test(t)))t='asked';
+    if(!r)t='asked';if(t==='asked'&&r&&!pp)t='lastmonth';
+    return {q,r,p:pp,t};
+  }
+  function qlLoad(){let st=null;try{st=JSON.parse(localStorage.getItem(QL_KEY)||'null');}catch(e){}
+    const lists={};if(st&&st.lists&&typeof st.lists==='object')Object.keys(st.lists).slice(0,20).forEach(n=>{const nm=clean(n,60);if(nm&&Array.isArray(st.lists[n]))lists[nm]=st.lists[n].map(cleanItem).filter(Boolean).slice(0,QL_MAX);});
+    if(!Object.keys(lists).length)lists['My list']=[];
+    return {cur:st&&lists[st.cur]?st.cur:Object.keys(lists)[0],lists};}
+  let QL=null;const ql=()=>QL||(QL=qlLoad());
+  function qlSave(){try{localStorage.setItem(QL_KEY,JSON.stringify(ql()));}catch(e){}}
+  let BUILTIN=null;   // lists built from the test cases' "lists" tags: read-only
+  const BUILTIN_NAMES={monthly:'Monthly management questions'};
+  async function builtinLists(){
+    if(BUILTIN)return BUILTIN;BUILTIN={};
+    try{const r=await fetch('tests/ask_cases.json',{cache:'no-cache'});const cases=await r.json();
+      cases.forEach(c=>(c.lists||[]).forEach(tag=>{const n=BUILTIN_NAMES[tag]||('Tagged: '+clean(tag,30));(BUILTIN[n]=BUILTIN[n]||[]).push(c.q);}));
+      Object.keys(BUILTIN).forEach(n=>{BUILTIN[n]=BUILTIN[n].map(q=>{const cap=quietAsk(q);const it=cap&&cap.read;return cleanItem({q,r:readOf(it),p:it&&it.period,t:it?tokenFor(it.period):'asked'});}).filter(Boolean);});
+    }catch(e){}
+    return BUILTIN;
+  }
+  const listItems=n=>(BUILTIN&&BUILTIN[n])||ql().lists[n]||[];
+  const isBuiltin=n=>!!(BUILTIN&&BUILTIN[n]);
+  // Runs fn with the Ask bar's answer area swapped for a hidden one, then puts everything back as it was.
+  function quiet(fn){
+    const live=['ask-answer','ask-chips','ask-live'].map(id=>document.getElementById(id)).filter(Boolean),renamed=[];
+    live.forEach(el=>[el,...el.querySelectorAll('[id]')].forEach(n=>{renamed.push([n,n.id]);n.id=n.id+'__live';}));
+    const host=document.createElement('div');host.setAttribute('aria-hidden','true');host.style.cssText='position:fixed;left:-20000px;top:0;width:960px';
+    host.innerHTML='<div id="ask-chips"></div><div id="ask-answer"></div><div id="ask-live"></div>';document.body.appendChild(host);
+    const inp=$('ask-input'),sv={chart:charts['ask-chart'],viz:askViz,li:lastIntent,ans:ANS,N:NOTICES,A:ALSO,S:SECOND,v:inp?inp.value:''};delete charts['ask-chart'];
+    QUIET=true;let out=null;
+    try{out=fn();}catch(e){out=null;}
+    finally{
+      if(charts['ask-chart']){try{charts['ask-chart'].destroy();}catch(e){}}
+      if(sv.chart)charts['ask-chart']=sv.chart;else delete charts['ask-chart'];
+      host.remove();renamed.forEach(([n,id])=>{n.id=id;});
+      askViz=sv.viz;lastIntent=sv.li;ANS=sv.ans;NOTICES=sv.N;ALSO=sv.A;SECOND=sv.S;if(inp)inp.value=sv.v;QUIET=false;
+    }
+    return out;
+  }
+  function capture(){
+    const P=askCopyPayload();if(!P)return null;
+    const ch=charts['ask-chart'];let png=null;
+    if(ch&&document.querySelector('#ask-answer #ask-chart')){const cv=lightChartCanvas(ch,P.q,[P.pack.figure,P.pack.sentence].filter(Boolean).join(' '),'');if(cv)png=cv.toDataURL('image/png');}
+    return {pack:P.pack,outcome:P.outcome,clicks:P.clicks,png,intent:ANS&&ANS.intent,read:ANS&&ANS.read};
+  }
+  function quietAsk(q){return quiet(()=>{const inp=$('ask-input');if(!inp)return null;inp.value=q;lastIntent=null;run();return capture();});}
+  function quietRead(r,period,q){
+    return quiet(()=>{
+      NOTICES=[];ALSO=null;SECOND=null;
+      const it={metric:metricFromKey(r.m),category:r.c||null,filter:r.f?{key:r.f,label:{modal:'Modal',web:'Web',nt:'new topics',uf:'typed follow-ups',sf:'suggested follow-ups'}[r.f]}:null,
+        groupBy:r.s==='month'||r.s==='week'?r.s:null,trend:r.s==='trend',agg:r.a||'sum',period};
+      it.raw=(it.metric.label||'')+(it.category?' in '+catLabel(CAT_ALIAS[it.category]||it.category):'')+(it.filter?' for '+it.filter.label:'')+(r.s==='month'||r.s==='week'?' by '+r.s:'')+(r.s==='trend'?' trend':'')+(period&&period.kind!=='all'?', '+period.label:'');
+      lastIntent=it;render(compute(it));ANS={q:it.raw,intent:it,second:null,read:it};
+      const el=$('ask-answer');
+      // A report compares like with like: a single figure gets the period before it (the dashboard's rule), when
+      // the answer doesn't already carry a change.
+      if(el&&!it.groupBy&&!it.trend&&period&&period.kind!=='all'&&!period.since&&!el.querySelector('.ask-delta')){
+        const lastD=isCostK(it.metric.kind)?(DATA.latest||lastDate()):(DATA.merged.filter(d=>d.queries>0).slice(-1)[0]?.date||lastDate());
+        const to=period.to>lastD?lastD:period.to;
+        if(to>=period.from){const W=comparisonWindow(period.from,to),r1=compute({...it,_sub:true}),r0=compute(subIntent(it,{kind:'range',from:W.from,to:W.to,label:''}));
+          if(r1&&r0&&!r1.empty&&!r0.empty&&r1.value!=null&&r0.value!=null&&r1.fmt){
+            const lbl=W.rule==='the previous calendar month'?MONFULL[+W.from.slice(5,7)-1]+' '+W.from.slice(0,4):spanLabel(W.from,W.to);
+            const sub=el.querySelector('.ask-card-sub');
+            if(sub){sub.insertAdjacentHTML('beforeend',' · '+esc(lbl)+': '+esc(r1.fmt(r0.value)));sub.insertAdjacentHTML('afterend',changeChip(it.metric.kind,r1.value,r0.value,'against '+lbl));}}}
+      }if(el)el.querySelectorAll('.ask-card-q').forEach(x=>{x.textContent=it.raw;});
+      if(el&&NOTICES.length&&el.innerHTML)el.insertAdjacentHTML('afterbegin','<div class="ask-notice"><span>'+NOTICES.map(esc).join(' ')+'</span></div>');
+      return capture();
+    });
+  }
+  // One item → its answer for a run. runFor: '' (each item's own token) or 'm:YYYY-MM'.
+  function runItem(item,runFor){
+    const notes=[];let cap=null;
+    if(item.r){
+      const now=quietAsk(item.q),nowR=now&&readOf(now.read);
+      if(readKey(nowR)!==readKey(item.r))notes.push('The Ask bar now reads “'+item.q+'” as '+(nowR?readText(nowR):'something other than a measure')+'; this report keeps the reading it was saved with ('+readText(item.r)+').');
+      const tok=item.t==='asked'?'asked':(runFor||item.t);
+      const per=periodFor(tok,item.p);
+      if(!per){notes.push('That period isn’t available in this data.');return {item,cap:null,notes,per:null};}
+      cap=quietRead(item.r,per,item.q);
+      return {item,cap,notes,per,tok};
+    }
+    cap=quietAsk(item.q);
+    if(cap&&cap.read)notes.push('Run as written, for the period the question names.');
+    return {item,cap,notes,per:null,tok:'asked'};
+  }
+  function itemTitle(res){return res.item.r&&res.cap&&res.cap.intent?res.cap.intent.raw||res.item.q:res.item.q;}
+  function reportPack(name,runFor,results){
+    const any=k=>results.some(r=>r.cap&&r.cap[k]);
+    const foot=reportFooter({outcome:any('outcome'),clicks:any('clicks')});
+    const head=name+(runFor?', '+tokLabel(runFor):'');
+    const md=['# '+head,'','_Produced '+fdY(new Date().toISOString().slice(0,10))+' from the AskCI dashboard. '+results.length+' questions._'],h=['<h1 style="font-size:20px;margin:0 0 4px">'+escH(head)+'</h1><p style="margin:0 0 14px;color:#57606a;font-size:12px">Produced '+escH(fdY(new Date().toISOString().slice(0,10)))+' from the AskCI dashboard · '+results.length+' questions</p>'];
+    results.forEach((r,i)=>{
+      const t=(i+1)+'. '+itemTitle(r);
+      if(!r.cap){md.push('','## '+t,'',...r.notes.map(n=>'> '+n),'','No answer.');h.push('<h2 style="font-size:16px;margin:18px 0 4px">'+escH(t)+'</h2>'+r.notes.map(n=>'<p style="color:#9a6700">'+escH(n)+'</p>').join('')+'<p>No answer.</p>');return;}
+      const pk={...r.cap.pack,title:'',footer:'',linkText:'Ask this again'};
+      if(r.cap.png&&pk.table&&pk.table.rows.length>14)pk.table=null;   // a long table is in the chart; the copy-table button has it all
+      const one=copyPack(pk);
+      md.push('','## '+t,...r.notes.map(n=>'> '+n),'',one.text);
+      h.push('<h2 style="font-size:16px;margin:18px 0 4px">'+escH(t)+'</h2>'+r.notes.map(n=>'<p style="margin:0 0 6px;color:#9a6700">'+escH(n)+'</p>').join('')+
+        (r.cap.png?'<p style="margin:0 0 8px"><img src="'+r.cap.png+'" alt="'+escH('Chart: '+itemTitle(r))+'" style="max-width:100%;width:640px;border:1px solid #d0d7de"></p>':'')+one.html);
+    });
+    md.push('','---','_'+foot+'_');h.push('<p style="margin:18px 0 0;border-top:1px solid #d0d7de;padding-top:6px;font-size:11px;color:#57606a">'+escH(foot)+'</p>');
+    return {text:md.join('\n'),html:'<div style="font-family:Arial,Helvetica,sans-serif;font-size:14px;color:#1f2328;line-height:1.45">'+h.join('')+'</div>',head};
+  }
+  let LAST_REPORT=null;
+  async function qlRun(name,runFor){
+    await builtinLists();
+    const items=listItems(name);if(!items.length){showToast('The list is empty');return;}
+    const results=items.map(it=>runItem(it,runFor));
+    const R=reportPack(name,runFor,results);LAST_REPORT=R;
+    closeQl();
+    reportModeActive=true;const c=document.getElementById('report-mode-container');
+    c.innerHTML='<div id="report-mode-toolbar" class="report-toolbar"><button class="icon-btn" onclick="closeReportMode()"><i data-lucide="arrow-left" class="i-sm"></i><span>Back to dashboard</span></button>'+
+      '<span style="font-size:var(--t-xs);color:var(--muted);font-family:\'DM Mono\',monospace">Question list report</span><div class="report-toolbar-spacer"></div>'+
+      '<button class="icon-btn" onclick="qlCopyReport()"><i data-lucide="clipboard-copy" class="i-sm"></i><span>Copy report</span></button>'+
+      '<button class="icon-btn" onclick="qlDownloadMd()"><i data-lucide="file-down" class="i-sm"></i><span>Markdown</span></button>'+
+      '<button class="icon-btn" onclick="window.print()"><i data-lucide="printer" class="i-sm"></i><span>Print or save as PDF</span></button></div>'+
+      '<div class="report-pane ql-report">'+R.html+'</div>';
+    c.style.display='block';document.getElementById('dashboard').style.display='none';document.getElementById('sticky-bar').style.display='none';document.querySelector('.hdr').style.display='none';
+    renderIcons();window.scrollTo({top:0});
+    return R;
+  }
+  window.qlCopyReport=async()=>{if(LAST_REPORT)showToast(await writeClipboard(LAST_REPORT.text,LAST_REPORT.html)?'Report copied':'Copy failed');};
+  window.qlDownloadMd=()=>{if(!LAST_REPORT)return;const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([LAST_REPORT.text],{type:'text/markdown'}));a.download=LAST_REPORT.head.replace(/[^\w -]+/g,'').replace(/\s+/g,'-').toLowerCase()+'.md';a.click();};
+  // ── The list panel ──
+  function qlLink(name){const items=listItems(name);
+    const b64=btoa(unescape(encodeURIComponent(JSON.stringify({n:name,i:items})))).replace(/\+/g,'-').replace(/\//g,'_').replace(/=+$/,'');
+    return location.origin+location.pathname+'#qlist='+b64;}
+  function qlFromHash(h){
+    let raw='';try{raw=(new URLSearchParams(String(h||'').replace(/^#/,'')).get('qlist')||'').replace(/ /g,'+');}catch(e){return false;}
+    if(!raw||raw.length>20000)return false;
+    let o=null;try{o=JSON.parse(decodeURIComponent(escape(atob(raw.replace(/-/g,'+').replace(/_/g,'/')))));}catch(e){return false;}
+    if(!o||!Array.isArray(o.i))return false;
+    const items=o.i.map(cleanItem).filter(Boolean).slice(0,QL_MAX);if(!items.length)return false;
+    let n=(clean(o.n,50)||'Shared list').replace(/ \(shared\)$/,'')+' (shared)';
+    const st=ql();st.lists[n]=items;st.cur=n;qlSave();return n;
+  }
+  function addToList(){
+    if(!ANS)return;const st=ql();let n=st.cur;if(!st.lists[n]){n=Object.keys(st.lists)[0];st.cur=n;}
+    const L=st.lists[n];if(L.length>=QL_MAX){showToast('The list is full ('+QL_MAX+' questions)');return;}
+    const it=ANS.read;const item=cleanItem({q:ANS.q,r:readOf(it),p:it&&it.period,t:it?tokenFor(it.period):'asked'});if(!item)return;
+    if(L.some(x=>x.q.toLowerCase()===item.q.toLowerCase())){showToast('Already in “'+n+'”');return;}
+    L.push(item);qlSave();showToast('Added to “'+n+'” ('+L.length+')');
+  }
+  let QL_VIEW=null;
+  async function openQl(){
+    await builtinLists();
+    let ov=document.getElementById('ql-overlay');
+    if(!ov){document.body.insertAdjacentHTML('beforeend','<div id="ql-overlay" role="dialog" aria-modal="true" aria-labelledby="ql-title"><div id="ql-panel"></div></div>');ov=document.getElementById('ql-overlay');
+      ov.addEventListener('click',e=>{if(e.target===ov)closeQl();});
+      ov.addEventListener('keydown',e=>{if(e.key==='Escape')closeQl();});
+      ov.addEventListener('change',e=>{const t=e.target;const st=ql();
+        if(t.id==='ql-list'){QL_VIEW=t.value;if(!isBuiltin(t.value)){st.cur=t.value;qlSave();}drawQl();}
+        else if(t.dataset.tok!=null){const L=st.lists[QL_VIEW];if(L&&L[+t.dataset.tok]){L[+t.dataset.tok].t=t.value;qlSave();}}});
+      ov.addEventListener('click',async e=>{const b=e.target.closest('[data-ql]');if(!b)return;const a=b.dataset.ql,i=+b.dataset.i,st=ql(),L=st.lists[QL_VIEW];
+        if(a==='close')closeQl();
+        else if(a==='run')qlRun(QL_VIEW,document.getElementById('ql-runfor').value);
+        else if(a==='link')showToast(await writeClipboard(qlLink(QL_VIEW))?'Link copied: it opens this list':'Copy failed');
+        else if(a==='new'){let k=1;while(st.lists['List '+k])k++;st.lists['List '+k]=[];st.cur=QL_VIEW='List '+k;qlSave();drawQl();}
+        else if(a==='copy'){const n=QL_VIEW.replace(/ \(shared\)$/,'')+' (my copy)';st.lists[n]=listItems(QL_VIEW).map(x=>({...x}));st.cur=QL_VIEW=n;qlSave();drawQl();}
+        else if(a==='rename'&&L){const nn=clean(prompt('Name for this list',QL_VIEW),50);if(nn&&!st.lists[nn]&&!(BUILTIN&&BUILTIN[nn])){st.lists[nn]=L;delete st.lists[QL_VIEW];st.cur=QL_VIEW=nn;qlSave();drawQl();}}
+        else if(a==='delete'&&L){if(confirm('Delete the list “'+QL_VIEW+'”?')){delete st.lists[QL_VIEW];if(!Object.keys(st.lists).length)st.lists['My list']=[];st.cur=QL_VIEW=Object.keys(st.lists)[0];qlSave();drawQl();}}
+        else if(a==='rm'&&L){L.splice(i,1);qlSave();drawQl();}
+        else if(a==='up'&&L&&i>0){[L[i-1],L[i]]=[L[i],L[i-1]];qlSave();drawQl();}
+        else if(a==='down'&&L&&i<L.length-1){[L[i+1],L[i]]=[L[i],L[i+1]];qlSave();drawQl();}
+        else if(a==='ask'){closeQl();window.askQuery(listItems(QL_VIEW)[i].q);}
+      });}
+    QL_VIEW=QL_VIEW&&(isBuiltin(QL_VIEW)||ql().lists[QL_VIEW])?QL_VIEW:ql().cur;
+    drawQl();ov.classList.add('open');const f=ov.querySelector('select,button');if(f)f.focus();
+  }
+  function closeQl(){const ov=document.getElementById('ql-overlay');if(ov)ov.classList.remove('open');}
+  function drawQl(){
+    const P=document.getElementById('ql-panel');if(!P)return;const st=ql(),name=QL_VIEW,items=listItems(name),ro=isBuiltin(name);
+    const names=[...Object.keys(BUILTIN||{}),...Object.keys(st.lists)];
+    const months=(DATA.monthly||[]).map(m=>m.month).reverse();
+    const bt=(a,ic,l,i,extra)=>'<button type="button" class="copy-btn" data-ql="'+a+'"'+(i!=null?' data-i="'+i+'"':'')+(extra||'')+'><i data-lucide="'+ic+'" class="i-sm"></i>'+(l?'<span>'+l+'</span>':'')+'</button>';
+    P.innerHTML='<div class="ql-head"><div id="ql-title" class="kpi-modal-title">Question lists</div><button class="kpi-modal-close" data-ql="close" aria-label="Close"><i data-lucide="x" class="i-sm"></i></button></div>'+
+      '<p class="ql-intro">A list is a report you can run again: each question keeps the reading it was saved with and a period. Add questions with <b>Add to list</b> under any answer. Lists stay in this browser; a link shares one.</p>'+
+      '<div class="ql-row"><label class="ql-lbl" for="ql-list">List</label><select id="ql-list">'+names.map(n=>'<option value="'+escA(n)+'"'+(n===name?' selected':'')+'>'+esc(n)+(isBuiltin(n)?' (built in)':'')+'</option>').join('')+'</select>'+
+        bt('new','plus','New list')+(ro?bt('copy','copy','Make an editable copy'):bt('rename','pencil','Rename')+bt('delete','trash-2','Delete'))+bt('link','link','Copy link')+'</div>'+
+      (items.length?'<ol class="ql-items">'+items.map((x,i)=>'<li class="ql-item"><div class="ql-q"><button type="button" class="ql-qbtn" data-ql="ask" data-i="'+i+'" title="Ask it now">'+esc(x.q)+'</button>'+(x.r?'<span class="ql-read">'+esc(readText(x.r))+'</span>':'')+'</div>'+
+        '<div class="ql-ctl">'+(x.r?'<select data-tok="'+i+'" aria-label="Period for this question"'+(ro?' disabled':'')+'>'+TOKENS.filter(o=>o[0]!=='asked'||x.p).map(o=>'<option value="'+o[0]+'"'+(o[0]===x.t?' selected':'')+'>'+esc(o[0]==='asked'&&x.p?'As asked: '+x.p.label:o[1])+'</option>').join('')+'</select>':'<span class="ql-fixed">as written</span>')+
+        (ro?'':bt('up','arrow-up','',i,' aria-label="Move up"')+bt('down','arrow-down','',i,' aria-label="Move down"')+bt('rm','x','',i,' aria-label="Remove"'))+'</div></li>').join('')+'</ol>'
+        :'<p class="ql-empty">No questions yet. Ask one, then press <b>Add to list</b> under the answer.</p>')+
+      '<div class="ql-row ql-run"><label class="ql-lbl" for="ql-runfor">Run for</label><select id="ql-runfor"><option value="">each question’s own period</option>'+months.map(m=>'<option value="m:'+m+'">'+esc(fullMonth(m))+'</option>').join('')+'</select>'+
+        '<button type="button" class="ask-action" data-ql="run"'+(items.length?'':' disabled')+'>Run report</button></div>'+
+      '<p class="ql-note">“Run for” a month moves every question except those pinned to the period they were asked for. Each answer’s change is against the period before, as on the dashboard.</p>';
+    renderIcons();
+  }
+  window.openQl=openQl;
   // A different measure that explains nearly as much of the question as the chosen one is offered with one click.
   function alsoReadAs(q,intent){
     const fp=parseFilter(' '+q+' '),qq=fp&&fp.phrase?(' '+q+' ').replace(fp.phrase,' '):' '+q+' ';
@@ -9620,6 +9888,8 @@ init();
   window.askCopyPayload=()=>{const P=askCopyPayload();return P&&{text:P.text,html:P.html};};
   window.askFromHash=askFromHash;
   if(/[#&]ask=/.test(location.hash))askFromHash(location.hash);
+  if(/[#&]qlist=/.test(location.hash)){const n=qlFromHash(location.hash);if(n){QL_VIEW=n;const go=k=>{if(have()&&$('ask-input'))openQl();else if(k<150)setTimeout(()=>go(k+1),200);};go(0);}}
+  window.__ql={run:qlRun,runItem,quietAsk,fromHash:qlFromHash,link:qlLink,lists:()=>ql(),builtin:builtinLists,add:addToList};
   window.askParseable=function(t){try{return !!(parseCompare(t)||parseAsk(t));}catch(e){return false;}};
   if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',install);
   else install();

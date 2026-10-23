@@ -76,6 +76,15 @@ async function go(){
   {const inp=document.getElementById('ask-input'),inj=document.querySelector('#ask-answer img,#ask-answer [onerror]');
     if(window.__pwn||inj||!document.getElementById('ask-answer').innerHTML||inp.value!=='<img src=x onerror="window.__pwn=1">money and tax questions')window.__errs.push('re-ask link: the hash was not treated as plain text ('+inp.value+')');
     inp.value='';}
+  // question lists: a shared link is untrusted (names and questions lose markup, unknown readings are dropped), and a
+  // list runs as a report with the period before each single figure
+  if(window.__ql){const b64=s=>btoa(unescape(encodeURIComponent(s))).replace(/\+/g,'-').replace(/\//g,'_').replace(/=+$/,'');
+    const n=window.__ql.fromHash('#qlist='+b64(JSON.stringify({n:'<b>x</b>',i:[{q:'<img src=x onerror="window.__pwn=1">questions',r:{m:'evil'},t:'zzz'},{q:'cited answer rate in September',r:{m:'cited',c:'',f:'',s:'',a:'sum'},p:{kind:'month',from:'2026-09-01',to:'2026-09-30',label:'September'},t:'lastmonth'}]})));
+    const L=n&&window.__ql.lists().lists[n];
+    if(!L||/[<>]/.test(n)||L.length!==2||/[<>]/.test(L[0].q)||L[0].r!==null)window.__errs.push('question list link: not cleaned ('+JSON.stringify(L)+')');
+    else{const R=await window.__ql.run(n,'m:2026-09');closeReportMode();
+      if(!R||!R.text.includes('86.5%%')||!R.text.includes('August 2026: 91.9%% (−5.4 pts)')||!R.text.includes('## 2. cited answer rate, September 2026'))window.__errs.push('question list report: '+(R?R.text.slice(0,300):'none'));}
+    if(window.__pwn)window.__errs.push('question list link ran markup');}
   document.body.setAttribute('data-test',JSON.stringify({out,sgBad,tpl,errs:window.__errs.concat((window.__askRegistryProblems||[]).map(x=>'registry: '+x))}));
 }
 </script>"""

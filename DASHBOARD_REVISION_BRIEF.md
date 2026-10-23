@@ -835,3 +835,30 @@ A figure pasted into an email or a report now takes its definition, caveats and 
   - "What if volume doubled?" is a new card that points to the Scenario planner, which is a model rather than data.
 
   Three copy cases pin the definition, the caveats and the footer.
+
+## 50. Reports, Phase A step 2: question lists (23 Oct 2026)
+
+A question list is a report you can run again. It sits under **Lists** in the toolbar; questions are added with **Add to list** under any answer.
+
+- **What an item stores:**
+  - the question as asked;
+  - the reading it was saved with: measure, topic, filter, shape (single, by month, by week, trend) and aggregate;
+  - the period it was asked for;
+  - a period token.
+
+  Comparisons, two-measure answers, declines and lists of top items keep no reading. They run as written.
+- **Period tokens:** last full month, month to date, last 7 days of data, since January, since the pop-up launch, Budget Day, full period, or "as asked (pinned)". A saved item gets the token that matches how it was asked: "last month" becomes last full month; an explicit range stays pinned.
+- **Run for <month>** moves every item to that month except the pinned ones.
+- **Comparisons:** a single figure in a report gets the period before it, by the dashboard's rule (a whole month against the previous month, anything else against the window just before), with the change in points or per cent. The Ask bar leaves ratios without a change; a report doesn't.
+- **Re-reading:** each run asks the saved question again out of sight. If the Ask bar now reads it differently, the item says so ("now reads … as …; this report keeps the reading it was saved with").
+- **The report** is drawn as paper in either theme:
+  - each item has its light-theme chart image, figure and sentence, a table (left out when the chart has more than 14 points), definition, caveats and re-ask link;
+  - one footer covers the whole report, with the caveats that apply to any item;
+  - **Copy report** gives HTML (images included) and Markdown; **Markdown** downloads a `.md` file; **Print or save as PDF** prints it.
+- **Where lists live:**
+  - in the browser (`askci-qlists`);
+  - in a link, `#qlist=` followed by the base64url JSON of the list. A link is untrusted: names and questions lose control characters and angle brackets, readings must name a known measure, and tokens, periods and shapes must come from fixed sets. At most 30 items.
+  - a link opens as "<name> (shared)" and never overwrites the viewer's own lists.
+- **Built-in lists** come from the case tags in `tests/ask_cases.json`: `"lists": ["monthly"]` is "Monthly management questions". They are read-only; "Make an editable copy" copies one.
+- **How it runs:** the answers are produced by the Ask bar itself. The answer area is swapped for a hidden one, the reading is rendered, its copy payload and light chart are captured, and the visible answer, its chart and the follow-up memory are restored. A report can't drift from the Ask bar's own answer.
+- **Tests:** every run opens a list link carrying markup and an unknown measure (it must be cleaned) and runs it for September 2026 (it must show "86.5%" and "August 2026: 91.9% (−5.4 pts)").
