@@ -647,3 +647,13 @@ An independent review of the Ask bar (`ask review/`, 29 findings, 42 proposed ca
 - Fixed: findings 1–17, 19–29. Finding 3 (topic shares) is fixed at the cause, though it did not reproduce in Chrome.
 - Finding 18, "not found rate for the pop-up vs the standalone site" answering the pop-up only, is still open: the two-tile answer exists for topics but not yet for sources.
 - The reviewer's recommendations on the language-model step and on recording misses are adopted as the plan of record: no model step yet; misses to be counted as structured events, with question text only by opt-in.
+
+## 45. Independent review: the last finding, and the review on record (23 Oct 2026)
+
+- **Finding 18.** "not found rate for the pop-up vs the standalone site" answered for the pop-up only. Naming both sources now gives two tiles, as two topics already did: not-found Modal 6.3%, Web 5.3%; cited Web 91.3%, Modal 87.0%. "Modal vs web …" phrasing without a measure-for-source reading still gives the Modal share, as before.
+- All 29 findings of the review are now addressed.
+- **On record:**
+  - The reviewer's 42 cases are in `tests/review-2026-10-23/` as delivered. Adapted versions are in `tests/ask_cases.json` (group `review`).
+  - Their browser-free runner is `tools/test_ask_node.js` (see `tests/README.md`).
+  - The review report itself (PDF) is held outside the repository pending a decision, because the repository is public.
+- 256 cases pass.

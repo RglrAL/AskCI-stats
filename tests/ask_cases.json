@@ -2254,5 +2254,15 @@
   ],
   "group": "review",
   "note": "finding 28"
+ },
+ {
+  "q": "not found rate for the pop-up vs the standalone site",
+  "expect": [
+   "6.3% not-found rate for Modal",
+   "not-found rate for Web",
+   "5.3%"
+  ],
+  "group": "review",
+  "note": "finding 18: both sources as two tiles"
  }
 ]

@@ -10,3 +10,7 @@ qa-feed*.csv
 # Review folders written by the feed droplet
 askci-export-*/
 __pycache__/
+
+# npm packages for tools/test_ask_node.js (npm install jsdom@24 papaparse@5.4.1)
+node_modules/
+package-lock.json

@@ -9023,7 +9023,7 @@ init();
   function secondAnswer(intent){
     if(!SECOND)return;
     if(intent.groupBy||intent.trend){addNotice(SECOND.fallback);return;}
-    const it2={...intent,_sub:true,...(SECOND.metric?{metric:SECOND.metric}:{}),...(SECOND.category?{category:SECOND.category}:{})};
+    const it2={...intent,_sub:true,...(SECOND.metric?{metric:SECOND.metric}:{}),...(SECOND.category?{category:SECOND.category}:{}),...(SECOND.filter?{filter:SECOND.filter}:{})};
     const r=compute(it2);const el=$('ask-answer');if(!el||!r||r.empty||!r.fmt)return;
     const subj=r.subj||(SECOND.category?catLabel(CAT_ALIAS[SECOND.category]||SECOND.category)+' · '+it2.metric.label:it2.metric.label);
     const hero=el.querySelector('.ask-hero');if(!hero)return;
@@ -9168,6 +9168,10 @@ init();
     {const cats=Object.keys(CATOUT[Object.keys(CATOUT)[0]]||{}).length?[...new Set(Object.values(CATOUT).flatMap(o=>Object.keys(o)))].filter(c=>c!=='unknown'&&!CAT_EXCLUDE.has(c)):[];
       const named=cats.filter(c=>new RegExp('\\b'+catLabel(CAT_ALIAS[c]||c).toLowerCase().replace(/ and /,' (and|&) ')+'\\b').test(q));
       if(named.length>=2&&d.category){const other=named.find(c=>c!==d.category);if(other)SECOND={category:other,fallback:'This answers '+catLabel(CAT_ALIAS[d.category]||d.category)+'; ask the same for '+catLabel(CAT_ALIAS[other]||other)+' to compare.'};}}
+    // Both sources named ("not found rate for the pop-up vs the standalone site"): the other source as a second tile.
+    if(d.filter&&(d.filter.key==='modal'||d.filter.key==='web')&&/\bmodal\b/.test(q)&&/\bweb\b/.test(q)){
+      const other=d.filter.key==='modal'?{key:'web',label:'Web'}:{key:'modal',label:'Modal'};
+      SECOND={filter:other,fallback:'This answers '+d.filter.label+'; ask the same for '+other.label+' to compare.'};}
     {const parts=q.split(/\s+(?:and|vs\.?|versus)\s+/);if(parts.length===2){const m1=parseMetric(' '+parts[0]+' '),m2=parseMetric(' '+parts[1]+' ');
       const ex=m=>m.kind!=='spend'||/spend|cost|spent|£/.test(m.label);
       if(m1.kind!==m2.kind&&(m1.kind!=='spend'||/spend|cost/.test(parts[0]))&&(m2.kind!=='spend'||/spend|cost/.test(parts[1]))){
