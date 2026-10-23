@@ -392,3 +392,8 @@ A full audit (data checks, two independent code reviews, a render sweep of every
 - **Smaller.** Chart tables keep the plotted order and sort blanks safely; the hour heatmap's busiest hour is by turns in every mode and its not-found mode is labelled a share of turns; Uncited answer no longer shares Cited answer's green; month-panel labels say what they include; the Reach footnote's hard-coded figures are gone.
 
 Known and left as they are: fixed share is computed three ways (report: settled join days; KPI row: settled days in range; Cost insight: all settled days); the non-Latin share tile is over all turns while its history is over turns with letters; the cited-vs-clicked page table divides clicks from part of a month by citations from whole months (labelled); the toolbar overflows at phone width.
+
+## 27. Ask bar: hours of the day (23 Oct 2026)
+
+- **Hour ranges.** "Questions between 8pm and 9am", "between 20:00 and 09:00 in October", "after 8pm on 6 October", "conversations before 7am", "not-found rate between midnight and 6am", "response time after 10pm", and any of these by month or week. Answers come from `usage-hours.csv` (Irish time, hour precision; ranges may wrap midnight) and give the share of the period's questions. Metrics with no hourly form (cost, citations, outcomes other than not-found and error) say so instead of answering for the whole day; previously the hour clause was silently ignored and the full-day total returned.
+- **Comparisons.** "vs the prior Nd" now clips a period that runs past the data (e.g. "October" on 22 Oct) to the last day with data before taking the prior window, so a part month is no longer compared with a whole one; an hour-range answer compares the same hours of the prior window.

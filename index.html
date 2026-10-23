@@ -7103,6 +7103,25 @@ init();
   const prevMonth=mk=>{let y=+mk.slice(0,4),m=+mk.slice(5,7)-1;if(m<1){m=12;y--;}return y+'-'+String(m).padStart(2,'0');}; // numeric → no timezone drift
 
   // ── Intent parsing (rule-based) ──
+  // Hour-of-day range: "between 8pm and 9am", "from 20:00 to 09:00", "after 8pm", "before 9am", "8pm to 9am".
+  // Returns {from,to,label} with from inclusive and to exclusive; a range that wraps midnight is allowed.
+  // Hours are Irish time at hour precision (the feed's minutes are rolled up into hours).
+  function parseHours(q){
+    const T='(\\d{1,2})(?::(\\d{2}))?\\s*(am|pm)?|(noon|midday|midnight)';
+    const hr=(h,m,ap,word)=>{if(word)return word==='midnight'?0:12;let x=+h;if(x>24||(m!=null&&+m>59))return null;
+      if(ap==='pm'&&x<12)x+=12;if(ap==='am'&&x===12)x=0;return x===24?0:x;};
+    const fmtH=h=>`${String(h).padStart(2,'0')}:00`;
+    const two=q.match(new RegExp('\\b(?:between|from)\\s+(?:'+T+')\\s+(?:and|to|until|till|-)\\s+(?:'+T+')'))||q.match(new RegExp('(?:^|\\s)(?:'+T+')\\s*(?:to|until|till|–|-)\\s*(?:'+T+')(?=\\s|$)'));
+    if(two){const a=hr(two[1],two[2],two[3],two[4]),b=hr(two[5],two[6],two[7],two[8]);
+      // a bare number needs an am/pm, a colon or a word to be read as a time, so "2 to 3 months" is not an hour range
+      const okA=two[3]||two[2]||two[4],okB=two[7]||two[6]||two[8];
+      if(a!=null&&b!=null&&a!==b&&okA&&okB)return{from:a,to:b,label:`${fmtH(a)}–${fmtH(b)}`};}
+    const one=q.match(new RegExp('\\b(after|before|since)\\s+(?:'+T+')'));
+    if(one&&(one[4]||one[3]||one[5])){const h=hr(one[2],one[3],one[4],one[5]);if(h!=null){
+      if(one[1]==='before')return h>0?{from:0,to:h,label:`before ${fmtH(h)}`}:null;
+      return{from:h,to:0,label:`from ${fmtH(h)} to midnight`};}}
+    return null;
+  }
   function parsePeriod(q){
     const latest=lastDate(),first=firstDate(); if(!latest)return null;
     // An ISO date first: its "2026" would otherwise read as the whole year.
@@ -7297,15 +7316,16 @@ init();
     const metricExplicit=metric.kind!=='spend'||/spend|cost|spent|bill|charge|how much|£/.test(q);
     const periodExplicit=!!period&&(period.kind!=='all'||/overall|all ?time|to date|so far|in total|entire|altogether/.test(q));
     const aggExplicit=agg!=='sum'||/\btotal\b|\bsum\b/.test(q);
-    return{q,period,metric,agg,bucket,category,filter,groupBy,trend,metricExplicit,periodExplicit,aggExplicit};
+    const hours=parseHours(q);
+    return{q,period,metric,agg,bucket,category,filter,groupBy,trend,metricExplicit,periodExplicit,aggExplicit,hours};
   }
   function parseAsk(orig){
     const d=parseDims(orig);
     if(!d.period)return null;
-    if(!d.metricExplicit&&!d.periodExplicit&&!d.category&&!d.filter&&!d.groupBy&&!d.trend)return null; // too vague standalone → defer
+    if(!d.metricExplicit&&!d.periodExplicit&&!d.category&&!d.filter&&!d.groupBy&&!d.trend&&!d.hours)return null; // too vague standalone → defer
     let period=d.period;
     if(d.trend&&period.kind==='all'&&!d.periodExplicit){const latest=lastDate();period={kind:'range',from:addDays(latest,-89),to:latest,label:'the last 90 days'};} // a trend needs a window; default to 90 days
-    return{raw:orig,period,metric:d.metric,agg:d.agg,bucket:d.bucket,category:d.category,filter:d.filter,groupBy:d.groupBy,trend:d.trend};
+    return{raw:orig,period,metric:d.metric,agg:d.agg,bucket:d.bucket,category:d.category,filter:d.filter,groupBy:d.groupBy,trend:d.trend,hours:d.hours};
   }
 
   // "Jan vs Feb", "this month vs last month", "compare X and Y" → two-period compare
@@ -7574,6 +7594,7 @@ init();
       if(intent.bucket==='month')intent._month=pick.key;
       return{value:pick.v,fmt:rfmt||(v=>v==null?'—':v.toFixed(1)),series:null,note:(agg==='max'?'highest ':'lowest ')+pick.label+' · each '+intent.bucket+' summed then divided',intent};
     }
+    if(intent.hours)return computeHours(intent,rows);
     const special=computeSpecial(intent,rows);if(special)return special;
 
     // ── Run rate: the single forecast function on a 30-day calendar (or to year end) ──
@@ -7808,6 +7829,27 @@ init();
   const UNGROUPABLE=['events','hour','topService','topModel','runrate'];
   // Metrics that are ratios: never summed across days or buckets.
   const RATIO_KINDS=['cpq_llm','cpq_tot','qps','cache','fixedshare','answered','unanswered','flagged','chips','modal','latency','notfound','error','clarification','cited','partial','dislikes','feedback','starter','single','chipuse','span','p90','p99','over30','outofhours','script','ctr','reached','latercited'];
+  // Figures for an hour-of-day range, from usage-hours.csv. Never silently ignores the hours: a metric with no
+  // hourly form says so rather than answering for the whole day.
+  function computeHours(intent,rows){
+    const {metric,hours:H}=intent,k=metric.kind;
+    if(!hasHours)return{value:null,fmt:v=>'—',series:null,note:'no hour-of-day file loaded (usage-hours.csv); regenerate from the QA feed',intent};
+    const inH=h=>H.from<H.to?(h>=H.from&&h<H.to):(h>=H.from||h<H.to);
+    const NUM={questions:['t',null],sessions:['s',null],notfound:['nf','t'],error:['err','t'],latency:['lat','timed']}[k];
+    if(!NUM)return{value:null,fmt:v=>'—',series:null,note:`an hour range works with questions, conversations started, the not-found and error shares, and response time; ${metric.label} is not recorded by hour`,intent};
+    const [nk,dk]=NUM;let n=0,den=0,all=0;
+    const series=rows.map(d=>{const a=HOURS[d.date];if(!a)return null;let x=0;
+      for(let h=0;h<24;h++){const c=a[h];if(!c)continue;all+=c[k==='sessions'?'s':'t']||0;if(inH(h)){x+=c[nk]||0;n+=c[nk]||0;den+=dk?(c[dk]||0):0;}}return x;});
+    const tz='Irish time, hour precision';
+    if(k==='questions'||k==='sessions'){
+      const what=k==='questions'?'questions':'conversations started';
+      return{value:n,fmt:v=>num(Math.round(v)),series,note:`${what} ${H.label} · ${rateText(n,all)} of all ${what} in the period · ${tz}`,intent,subj:`${what} ${H.label}`};
+    }
+    if(k==='latency'){const ok=den>=CONFIG.min_rate_denominator;
+      return{value:ok?n/den:null,fmt:v=>v==null?'—':(v/1000).toFixed(1)+'s',series:null,note:ok?`mean response time ${H.label} · ${num(den)} timed turns · ${tz}`:`not shown: ${num(den)} timed turns, minimum ${CONFIG.min_rate_denominator}`,intent,subj:`mean response time ${H.label}`,isMs:true};}
+    const r=rateOK(n,den),lbl=k==='notfound'?'not-found share of turns':'error share of turns';
+    return{value:r.ok&&den>0?n/den*100:null,fmt:v=>v==null?'—':v.toFixed(1)+'%',series:null,note:r.ok?`${num(n)} of ${num(den)} turns ${H.label} · over all turns, not scored turns · ${tz}`:`not shown: ${r.why} (small-sample rule)`,intent,subj:`${lbl} ${H.label}`};
+  }
   function subIntent(intent,p){return{...intent,period:p,raw:'',_sub:true,groupBy:null,trend:false};}
   function bucketsFor(period,groupBy){
     const out=[];
@@ -7915,13 +7957,20 @@ init();
   function context(intent,value){
     if(value==null||intent.agg!=='sum')return '';
     if(['cpq_llm','cpq_tot','qps','cache','fixedshare','runrate','topService','topModel','answered','unanswered','flagged','chips','modal','latency','notfound','error','clarification','cited','partial','dislikes','feedback','starter','single','chipuse','span','ctr','reached','latercited','p90','p99','over30','hour','outofhours','script','events'].includes(intent.metric.kind)||intent.category||intent.filter)return ''; // ratios: never summed
-    const p=intent.period; if(p.kind==='all'||p.kind==='year'||p.since)return '';
+    const p0=intent.period; if(p0.kind==='all'||p0.kind==='year'||p0.since)return '';
+    // Compare like with like: a period running past the data (e.g. "October" on 22 Oct) is clipped to the
+    // data's last day before the prior window of equal length is taken.
+    const money=['spend','llm','service','model','fixed','variable','voice','fixedshare','cache'].includes(intent.metric.kind);
+    const lastD=money?(DATA.latest||lastDate()):(DATA.merged.filter(d=>d.queries>0).slice(-1)[0]?.date||lastDate());
+    const p={...p0,to:p0.to>lastD?lastD:p0.to};if(p.to<p.from)return '';
     const days=Math.round((new Date(p.to)-new Date(p.from))/86400000)+1;
     const prevTo=addDays(p.from,-1),prevFrom=addDays(prevTo,-(days-1));
     const prev=DATA.merged.filter(d=>d.date>=prevFrom&&d.date<=prevTo);
     if(!prev.length)return '';
-    const pv=prev.reduce((s,d)=>s+rowVal(d,intent.metric),0);
-    if(pv<=0)return '';
+    // An hour-range answer compares the same hours of the prior window, never the whole of it.
+    const pv=intent.hours?(()=>{const r=compute(subIntent(intent,{kind:'range',from:prevFrom,to:prevTo,label:''}));return r&&!r.empty?r.value:0;})()
+                         :prev.reduce((s,d)=>s+rowVal(d,intent.metric),0);
+    if(!(pv>0))return '';
     const pct=(value-pv)/pv*100;
     const tail=(DATA.latest&&p.to>DATA.latest&&['spend','llm','service','model','fixed','variable'].includes(intent.metric.kind))?' · billing data ends '+fmtDate(DATA.latest):'';
     if(Math.abs(pct)<1)return 'flat vs the prior '+days+'d'+tail;
