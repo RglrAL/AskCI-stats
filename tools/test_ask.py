@@ -29,7 +29,8 @@ REF = os.path.join(REPO, "tests", "ask_fixture_ref")
 DATA_FILES = ["usage.csv", "usage-hours.csv", "conversations-daily.csv", "category-outcomes-daily.csv", "categories-daily.csv",
               "categories.csv", "citations-monthly.csv", "journeys-monthly.csv", "starter-prompts-monthly.csv",
               "latency-buckets-daily.csv", "costs.csv", "events.json", "site-pages.csv", "ga4/session-and-users.csv",
-              "ga4/searches-and-sessions.csv", "ga4/categories-and-views.csv", "ga4/clicks-daily.csv", "ga4/clicks-pages-daily.csv"]
+              "ga4/searches-and-sessions.csv", "ga4/categories-and-views.csv", "ga4/clicks-daily.csv", "ga4/clicks-pages-daily.csv",
+              "script-outcomes-daily.csv"]
 CHROMES = ["/Applications/Google Chrome.app/Contents/MacOS/Google Chrome", "/Applications/Chromium.app/Contents/MacOS/Chromium",
            "google-chrome", "chromium", "chromium-browser"]
 WAIT_MS = 250   # per question; the Ask bar renders synchronously, so this is ample
@@ -100,6 +101,8 @@ def build_site(tmp, ref, page_path):
         os.makedirs(os.path.dirname(dest), exist_ok=True)
         r = subprocess.run(["git", "-C", REPO, "show", f"{ref}:{f}"], capture_output=True)
         if r.returncode:
+            if "exists on disk, but not in" in r.stderr.decode() or "does not exist in" in r.stderr.decode():
+                continue   # a file added after the fixture commit: the page runs without it, as it would then
             sys.exit(f"git show {ref}:{f} failed: {r.stderr.decode().strip()}")
         with open(dest, "wb") as fh:
             fh.write(r.stdout)

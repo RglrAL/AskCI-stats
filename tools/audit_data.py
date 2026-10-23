@@ -39,7 +39,8 @@ I = lambda x: int(x or 0)
 # A file uploaded in the wrong shape (a three-column usage.csv once replaced the full one) stops here, with
 # the missing columns named, before any check can crash on it.
 SCHEMA = {
-    'usage.csv': 'Date Questions Sessions Answered Unanswered Flagged NewTopic UserFollowup SuggestedFollowup ModalTurns WebTurns OtherTurns ModalSessions WebSessions Citations LatencyP50ms LatencyP90ms LatencyP99ms Likes Dislikes DislikesOnCited StarterPromptFirstTurns OrganicFirstTurns ScriptLatin ScriptCyrillic ScriptArabic ScriptCJK ScriptDevanagari ScriptOther ScriptNone LatUnder10s Lat10to20s Lat20to30s LatOver30s Cited NotFound Clarification Error OutOfScope Greeting Uncited Partial Scored OutcomeRules ModalCited ModalNotFound ModalScored WebCited WebNotFound WebScored',
+    'usage.csv': 'Date Questions Sessions Answered Unanswered Flagged NewTopic UserFollowup SuggestedFollowup ModalTurns WebTurns OtherTurns ModalSessions WebSessions Citations LatencyP50ms LatencyP90ms LatencyP99ms Likes Dislikes DislikesOnCited StarterPromptFirstTurns OrganicFirstTurns ScriptLatin ScriptCyrillic ScriptArabic ScriptCJK ScriptDevanagari ScriptOther ScriptNone LatUnder10s Lat10to20s Lat20to30s LatOver30s Cited NotFound Clarification Error OutOfScope Greeting Uncited Partial Scored OutcomeRules ModalCited ModalNotFound ModalScored WebCited WebNotFound WebScored AnswerWords AnswerWordsTurns CitedWords CitedWordsTurns',
+    'script-outcomes-daily.csv': 'Date Script Turns Scored Cited NotFound Clarification',
     'usage-hours.csv': 'Date Hour Turns Sessions NotFound Errors Timed LatencySumMs',
     'conversations-daily.csv': 'Date Started Mature Turns1 Turns10plus MatureTurns Span0to1 Span2to5 Span6to15 Span16to60 SpanOver60 ChipUse ReachedCited NFTurns NFLaterCited',
     'category-outcomes-daily.csv': 'Date Category Turns Cited NotFound Clarification Error OutOfScope Greeting Uncited Scored OrganicFirstTurns',
@@ -120,6 +121,7 @@ for d in days:
         'Partial <= Cited': I(u['Partial']) <= I(u['Cited']),
         'DislikesOnCited <= Dislikes': I(u['DislikesOnCited']) <= I(u['Dislikes']),
         'latency p50 <= p90 <= p99': I(u['LatencyP50ms']) <= I(u['LatencyP90ms']) <= I(u['LatencyP99ms']),
+        'answer-length counts within answers': I(u['AnswerWordsTurns']) <= q and I(u['CitedWordsTurns']) <= I(u['Cited']),
         'latency bands <= Q': sum(I(u[k]) for k in ['LatUnder10s', 'Lat10to20s', 'Lat20to30s', 'LatOver30s']) <= q,
     }
     for k, ok in ident.items():
@@ -145,6 +147,18 @@ check('hours: NotFound/Errors per day = usage', all(hn[d] == I(U[d]['NotFound'])
 timed = C.Counter()
 for r in H: timed[r['Date']] += I(r['Timed'])
 check('hours: Timed per day = latency bands total', all(timed[d] == sum(I(U[d][k]) for k in ['LatUnder10s', 'Lat10to20s', 'Lat20to30s', 'LatOver30s']) for d in days))
+
+# ── 3b. script-outcomes-daily.csv ─────────────────────────────────────────────
+SO = rd('script-outcomes-daily.csv'); sot = C.Counter(); soc = C.Counter(); bad_so = 0
+for r in SO:
+    sot[r['Date']] += I(r['Turns']); soc[r['Date']] += I(r['Cited'])
+    if I(r['Cited']) + I(r['NotFound']) + I(r['Clarification']) > I(r['Scored']) or I(r['Scored']) > I(r['Turns']): bad_so += 1
+check('script outcomes: turns per day = usage.Questions', all(sot[d] == I(U[d]['Questions']) for d in days), str([d for d in days if sot[d] != I(U[d]['Questions'])][:5]))
+check('script outcomes: cited per day = usage.Cited', all(soc[d] == I(U[d]['Cited']) for d in days))
+check('script outcomes: rows within bounds (cited + not found + clarification <= scored <= turns)', bad_so == 0, f'{bad_so} rows')
+for sc in ['Latin', 'Cyrillic', 'Arabic', 'CJK', 'Devanagari', 'Other', 'None']:
+    if not all(sum(I(r['Turns']) for r in SO if r['Date'] == d and r['Script'] == sc) == I(U[d]['Script' + sc]) for d in days[-7:]):
+        check(f'script outcomes: {sc} turns = usage.Script{sc} (last 7 days)', False)
 
 # ── 4. conversations-daily.csv ───────────────────────────────────────────────
 CV = {r['Date']: r for r in rd('conversations-daily.csv')}

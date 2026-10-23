@@ -5,7 +5,7 @@
 
 property defaultRepo : "/Users/alan/AskCI-stats"
 -- Every aggregate make_usage.py writes; all are copied together so no file is left on an older period.
-property aggregateFiles : "usage.csv usage-hours.csv categories.csv categories-daily.csv category-outcomes-daily.csv conversations-daily.csv citations-monthly.csv journeys-monthly.csv starter-prompts-monthly.csv latency-buckets-daily.csv"
+property aggregateFiles : "usage.csv usage-hours.csv categories.csv categories-daily.csv category-outcomes-daily.csv conversations-daily.csv citations-monthly.csv journeys-monthly.csv starter-prompts-monthly.csv latency-buckets-daily.csv script-outcomes-daily.csv"
 
 on run
 	set picked to choose file with prompt "Choose one or more AskCI QA feed exports (qa-feed_*.csv)" with multiple selections allowed

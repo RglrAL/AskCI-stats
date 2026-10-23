@@ -22,8 +22,13 @@ Outputs (all daily counts; nothing per-turn and no text crosses into the dashboa
                          ModalTurns, WebTurns, OtherTurns, ModalSessions, WebSessions  by source
                          Citations                                 cited URLs
                          LatencyP50ms, LatencyP90ms                response time, positive values only
+                         AnswerWords, AnswerWordsTurns, CitedWords, CitedWordsTurns
+                                                                   answer length: words summed over turns with a word count,
+                                                                   all answers and cited answers (needs Response Words)
                          VoiceTurns, VoiceSessions                 only when the export has an input-mode column
   usage-hours.csv      Date, Hour, Turns, Sessions   (hour of day, Irish time)
+  script-outcomes-daily.csv  Date, Script, Turns, Scored, Cited, NotFound, Clarification — outcome by the alphabet
+                       the question starts in (needs Query Script and Outcome); a script, not a language
   categories.csv       Category, Citations, Month    (current dashboard contract; display names)
   categories-daily.csv Date, Category, Citations     (slugs, by day)
   conversations-daily.csv   by conversation start day: Started, Mature, Turns1..Turns9, Turns10plus, MatureTurns,
@@ -197,7 +202,22 @@ def aggregate(files, skip_days=frozenset()):
                     if (row.get("Outcome") or "").strip() == "Cited answer": c["dislikes_cited"] += 1
                 if first and "Starter Prompt" in row:
                     c["starter" if (row.get("Starter Prompt") or "").strip() else "organic"] += 1   # holds the chip text, blank when organic
-                if "Query Script" in row: c["script:" + ((row.get("Query Script") or "").strip() or "None")] += 1
+                if "Query Script" in row:
+                    sc = (row.get("Query Script") or "").strip() or "None"
+                    c["script:" + sc] += 1
+                    if outcome_col:   # outcome by script: do questions in other alphabets get cited answers as often?
+                        o2 = (row.get("Outcome") or "").strip()
+                        c[f"so:{sc}:turns"] += 1
+                        if o2 not in ("Greeting", "Error", "Out of scope"): c[f"so:{sc}:scored"] += 1
+                        if o2 == "Cited answer": c[f"so:{sc}:cited"] += 1
+                        elif o2 == "Not found": c[f"so:{sc}:notfound"] += 1
+                        elif o2 == "Clarification": c[f"so:{sc}:clar"] += 1
+                # answer length (words), all answers and cited answers
+                try: wd = int(row.get("Response Words") or 0)
+                except ValueError: wd = 0
+                if wd > 0:
+                    c["words"] += wd; c["words_n"] += 1
+                    if (row.get("Outcome") or "").strip() == "Cited answer": c["cwords"] += wd; c["cwords_n"] += 1
                 if outcome_col:
                     o = (row.get("Outcome") or "").strip()
                     c["o:" + o] += 1
@@ -442,6 +462,8 @@ def usage_rows(D, sess, lat, has_voice, has_outcome=False, rules="", has_starter
     if has_script: cols += ["Script" + k for k in SCRIPT_COLS]
     cols += ["LatencyP99ms"] + [c for c, _ in LAT_COLS]
     if has_outcome: cols += [c for c, _ in OUTCOME_COLS] + ["OutcomeRules"] + [c for c, _ in CROSS_COLS]
+    has_words = any(D[d]["words_n"] for d in D)
+    if has_words: cols += ["AnswerWords", "AnswerWordsTurns", "CitedWords", "CitedWordsTurns"]
     out = []
     for d in sorted(D):
         c = D[d]; s = sess[d]; L = sorted(lat[d])
@@ -454,8 +476,15 @@ def usage_rows(D, sess, lat, has_voice, has_outcome=False, rules="", has_starter
         if has_script: row += [c["script:" + k] for k in SCRIPT_COLS]
         row += [pct(L, 99)] + [c[k] for _, k in LAT_COLS]
         if has_outcome: row += [c[k] for _, k in OUTCOME_COLS] + [rules] + [c[k] for _, k in CROSS_COLS]
+        if has_words: row += [c["words"], c["words_n"], c["cwords"], c["cwords_n"]]
         out.append(row)
     return cols, out
+
+
+def script_outcome_rows(D):
+    rows = [[d.isoformat(), sc, D[d][f"so:{sc}:turns"], D[d][f"so:{sc}:scored"], D[d][f"so:{sc}:cited"], D[d][f"so:{sc}:notfound"], D[d][f"so:{sc}:clar"]]
+            for d in sorted(D) for sc in SCRIPT_COLS if D[d][f"so:{sc}:turns"]]
+    return ["Date", "Script", "Turns", "Scored", "Cited", "NotFound", "Clarification"], rows
 
 
 def hours_rows(hours, hour_sess):
@@ -567,6 +596,7 @@ def main():
         os.makedirs(a.out_dir, exist_ok=True)
         write(os.path.join(a.out_dir, "usage.csv"), ucols, urows)
         write(os.path.join(a.out_dir, "usage-hours.csv"), hcols, hrows)
+        if has_script and has_outcome: write(os.path.join(a.out_dir, "script-outcomes-daily.csv"), *script_outcome_rows(D))
         write(os.path.join(a.out_dir, "categories.csv"), ccols, crows)
         write(os.path.join(a.out_dir, "categories-daily.csv"), dcols, drows)
         write(os.path.join(a.out_dir, "conversations-daily.csv"), *conversation_rows(cd))
