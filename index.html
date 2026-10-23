@@ -1567,6 +1567,7 @@ details.ask-read[open]>summary::after{content:'▴'}
 .copy-btn{display:inline-flex;align-items:center;gap:6px;background:transparent;border:1px solid var(--border);color:var(--muted);border-radius:6px;padding:4px 10px;font:inherit;font-size:12px;cursor:pointer}
 .copy-btn:hover{color:var(--text);border-color:var(--muted)}
 .copy-btn .i-sm{width:13px;height:13px}
+.wd-flags{margin:0;padding-left:18px;font-size:var(--t-sm);line-height:1.6;color:var(--text)}.wd-flags li{margin-bottom:6px}
 #ql-overlay{position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:400;display:none;align-items:flex-start;justify-content:center;padding:6vh 16px;overflow-y:auto}
 #ql-overlay.open{display:flex}
 #ql-panel{min-width:0;box-sizing:border-box;width:min(760px,100%);background:var(--s1);border:1px solid var(--border);border-radius:var(--r-xl);box-shadow:0 24px 64px rgba(0,0,0,.4);padding:var(--sp-5)}
@@ -1860,6 +1861,7 @@ Date,Questions,Sessions
     <div id="pane-convs"       class="pane"></div>
     <div id="pane-clicks"      class="pane"></div>
     <div id="pane-pages"       class="pane"></div>
+    <div id="pane-wording"     class="pane"></div>
     <div id="pane-llm"         class="pane"></div>
     <div id="pane-impact"      class="pane"></div>
     <div id="pane-projections" class="pane"></div>
@@ -2743,6 +2745,7 @@ async function loadHoursFile(){
 // citations-monthly.csv (normalised URL), journeys-monthly.csv (category steps), starter-prompts-monthly.csv.
 // script-outcomes-daily.csv: SCRIPTOUT[date][script] = {t, s, c, nf, cl} (turns, scored, cited, not found, clarification)
 let SCRIPTOUT={},hasScriptOut=false;
+let ORULES={},OSTYLE={},hasRules=false;   // outcome rule ids and the wording fingerprint (brief §53)
 let CONV={},CATOUT={},CITES={},JOURNEYS={},STARTERS={},LATB={},CATDAY={},hasCatDay=false,hasConv=false,hasCatOut=false,hasCites=false,hasJourneys=false,hasStarters=false,hasLatB=false;
 async function loadConversationFiles(){
   try{(await loadCSV('script-outcomes-daily.csv')).forEach(r=>{const d=parseDate(r['Date']);if(!d)return;(SCRIPTOUT[d]||(SCRIPTOUT[d]={}))[r['Script']]={t:nInt(r['Turns']),s:nInt(r['Scored']),c:nInt(r['Cited']),nf:nInt(r['NotFound']),cl:nInt(r['Clarification'])};});}catch(e){}
@@ -2756,6 +2759,9 @@ async function loadConversationFiles(){
   hasCatDay=Object.keys(CATDAY).length>0;
   try{(await loadCSV('latency-buckets-daily.csv')).forEach(r=>{const d=parseDate(r['Date']);if(!d)return;const k=r['Kind'],b=r['Bucket'];const o=LATB[d]||(LATB[d]={});(o[k]||(o[k]={}))[b]={t:nInt(r['Turns']),sum:nInt(r['LatencySumMs'])};});}catch(e){}
   hasLatB=Object.keys(LATB).length>0;
+  try{(await loadCSV('outcome-rules-daily.csv')).forEach(r=>{const d=parseDate(r['Date']);if(!d)return;(ORULES[d]||(ORULES[d]={}))[String(r['Rule']||'').trim()]=nInt(r['Turns']);});}catch(e){}
+  try{(await loadCSV('answer-style-daily.csv')).forEach(r=>{const d=parseDate(r['Date']);if(!d)return;const o={};Object.entries(r).forEach(([k,v])=>{if(k!=='Date'&&k!=='Outcome')o[k]=nInt(v);});(OSTYLE[d]||(OSTYLE[d]={}))[String(r['Outcome']||'').trim()]=o;});}catch(e){}
+  hasRules=Object.keys(ORULES).length>0;
   hasConv=Object.keys(CONV).length>0;hasCatOut=Object.keys(CATOUT).length>0;hasCites=Object.keys(CITES).length>0;hasJourneys=Object.keys(JOURNEYS).length>0;hasStarters=Object.keys(STARTERS).length>0;
 }
 const monthsIn=fr=>[...new Set(fr.map(d=>d.month))].sort();
@@ -3301,7 +3307,8 @@ const TAB_GROUPS=[
     {id:'convs',    label:'Conversations', icon:'messages-square', when:()=>hasConv},
     {id:'categories',label:'Categories',   icon:'shapes', when:()=>hasCats||hasCatOut},
     {id:'clicks',   label:'Click-throughs',icon:'mouse-pointer-click', when:()=>hasClicks},
-    {id:'pages',    label:'Pages',         icon:'file-text', when:()=>hasPageViews&&hasCites}]},
+    {id:'pages',    label:'Pages',         icon:'file-text', when:()=>hasPageViews&&hasCites},
+    {id:'wording',  label:'Answer wording',icon:'text-search', when:()=>hasRules}]},
   {id:'projections',label:'Scenario planner', icon:'sparkles',    subs:[{id:'projections',label:'Scenario planner',icon:'sparkles'}]},
 ];
 const subAvailable=sb=>!sb.when||sb.when();
@@ -4687,12 +4694,106 @@ function renderPane(id){
   if(id==='reach')      renderReach(D,S);
   if(id==='clicks')     renderClicks(D,S);
   if(id==='pages')      renderPages(D,S);
+  if(id==='wording')    renderWording(D,S);
   if(id==='categories') renderCategories(D,S);
   if(id==='convs')      renderConvs(D,S);
   if(id==='llm')        renderLLM(D,S);
   if(id==='impact')     renderImpact(D,S);
   if(id==='projections')renderProjections(D,S);
   renderIcons();
+}
+
+// ═══ ANSWER WORDING (brief §53, step 1) ══════════════════════════════
+// Which phrase decided each outcome (the outcome rule id, recorded by redact_feed.py) and a wording fingerprint of the
+// answers (list lines, hedges, signposting, question marks, links). A shift in the phrase mix on a date with a model
+// change is the model's new wording; a shift with no model change in the billing is the trace of a prompt change.
+// It shows THAT the wording changed, not whether the outcome labels are right: that needs the hand-labelled sample.
+const RULE_TXT={'nf.couldnt_find':'“couldn’t find”','nf.could_not_find':'“could not find”','nf.wasnt_able':'“wasn’t able to find”','nf.unable_to_find':'“unable to find”',
+  'nf.no_specific_info':'“no specific information”','nf.not_find_specific':'“not find specific”','nf.dont_have_info':'“don’t have (specific) information”','nf.does_not_provide':'“does not (currently) provide / have”',
+  'cl.could_you':'“could you clarify / tell me / let me know”','cl.what_you_mean':'“what you mean”','cl.more_detail':'“more detail”','cl.which_scheme':'“which scheme / payment”',
+  'oos.specialise':'“specialise in providing information”','oos.specialize':'“specialize in providing information”','oos.cant_help_topic':'“can’t help with that topic”','oos.not_able_topic':'“not able to help with that topic”','oos.outside_scope':'“outside (the) scope”','oos.flagged':'flagged by AskCI, no phrase',
+  'gr.hello':'opens “hello” / “hi”','gr.how_can_i_help':'“how can I help”','gr.welcome':'“you’re welcome”','gr.glad_to_help':'“glad to help”','gr.glad_to_hear':'“glad to hear”','gr.glad_you':'“glad you”','gr.glad_i_could':'“glad I could”',
+  'err.empty':'empty response','uncited':'no citation and no rule phrase','cited':'cited, no not-found phrase'};
+function ruleLabel(id){
+  if(id.startsWith('cited.partial.'))return 'Partial: '+(RULE_TXT[id.slice(14)]||id.slice(14));
+  const fam={nf:'Not found',cl:'Clarification',oos:'Out of scope',gr:'Greeting',err:'Error'}[id.split('.')[0]];
+  return fam?fam+': '+(RULE_TXT[id]||id):(RULE_TXT[id]?RULE_TXT[id].charAt(0).toUpperCase()+RULE_TXT[id].slice(1):id);
+}
+const WORDING_DRIFT=0.2;   // total variation distance between a week's phrase mix and the 4 weeks before
+const WORDING_MIN=100;     // a week needs this many deciding phrases (not found, clarification, partial) to be judged
+// Only the phrases the wording can move: not found, clarification and partial. Errors, AskCI's own flag and greetings
+// change for other reasons (outages, traffic) and would flag weeks where the answers' wording did not change.
+const isWordingRule=k=>/^(nf|cl)\./.test(k)||k.startsWith('cited.partial.');
+function ruleWeeks(){
+  const W={};Object.entries(ORULES).forEach(([d,o])=>{const w=weekStart(d);const x=W[w]||(W[w]={});Object.entries(o).forEach(([k,n])=>{x[k]=(x[k]||0)+n;});});
+  const ws=Object.keys(W).sort();
+  const nW=c=>Object.entries(c).filter(([k])=>isWordingRule(k)).reduce((a,[,v])=>a+v,0);
+  const share=c=>{const t=nW(c);const o={};if(t)Object.entries(c).forEach(([k,v])=>{if(isWordingRule(k))o[k]=v/t;});return o;};
+  return ws.map((w,i)=>{
+    let drift=null,movers=[];
+    if(i>=4&&nW(W[w])>=WORDING_MIN){const prev={};ws.slice(i-4,i).forEach(x=>Object.entries(W[x]).forEach(([k,v])=>{prev[k]=(prev[k]||0)+v;}));
+      const a=share(W[w]),b=share(prev),keys=[...new Set([...Object.keys(a),...Object.keys(b)])];
+      drift=keys.reduce((s,k)=>s+Math.abs((a[k]||0)-(b[k]||0)),0)/2;
+      movers=keys.map(k=>({k,d:(a[k]||0)-(b[k]||0)})).sort((x,y)=>Math.abs(y.d)-Math.abs(x.d)).slice(0,2);}
+    const models=confirmedEvents().filter(e=>e.kind==='model');
+    const ev=models.filter(e=>String(e.start)>=isoAdd(w,-7)&&String(e.start)<=isoAdd(w,13));
+    // a change in the 4 comparison weeks: this week is still being compared with the old model's wording
+    const after=ev.length?[]:models.filter(e=>String(e.start)>=isoAdd(w,-28)&&String(e.start)<isoAdd(w,-7));
+    return {w,c:W[w],turns:Object.values(W[w]).reduce((a,b)=>a+b,0),drift,movers,ev,after};
+  });
+}
+function renderWording(D,S){
+  const el=document.getElementById('pane-wording');
+  const fr=filterRange(D.merged);if(!fr.length||!hasRules){el.innerHTML=emptyState('text-search','No outcome-rule data in range','Needs <code>outcome-rules-daily.csv</code> and <code>answer-style-daily.csv</code> from <code>make_usage.py</code> on feeds redacted from 23 Oct 2026.');renderIcons();return;}
+  const from=fr[0].date,to=fr[fr.length-1].date;
+  const RW=ruleWeeks(),inR=RW.filter(x=>x.w>=weekStart(from)&&x.w<=to);
+  // phrase mix, weekly: the seven most common deciding phrases other than a plain cited answer, the rest as Other
+  // the seven most common phrases over ALL the data, so a phrase keeps its colour whatever the range
+  const tot={};RW.forEach(x=>Object.entries(x.c).forEach(([k,v])=>{if(k!=='cited')tot[k]=(tot[k]||0)+v;}));
+  const top=Object.keys(tot).sort((a,b)=>tot[b]-tot[a]).slice(0,7);
+  const PAL=[C.red,C.amber,C.purple,C.acc,C.pink,C.teal,C.green];
+  const labels=inR.map(x=>fmtWeek(x.w));
+  const part=x=>{const d=Math.max(0,(isoAdd(x.w,6)>to?(new Date(to)-new Date(x.w))/864e5+1:7)-(x.w<from?(new Date(from)-new Date(x.w))/864e5:0));return d<7?d:null;};
+  const ds=top.map((k,i)=>({label:ruleLabel(k),data:inR.map(x=>x.turns?+((x.c[k]||0)/x.turns*1000).toFixed(1):null),backgroundColor:PAL[i]+'cc',borderColor:C.s1,borderWidth:1,stack:'r',maxBarThickness:26}));
+  ds.push({label:'Other phrases',data:inR.map(x=>x.turns?+(Object.entries(x.c).filter(([k])=>k!=='cited'&&!top.includes(k)).reduce((a,[,v])=>a+v,0)/x.turns*1000).toFixed(1):null),backgroundColor:C.dim+'88',borderColor:C.s1,borderWidth:1,stack:'r',maxBarThickness:26});
+  // the fingerprint, range against the comparison window
+  const W=comparisonWindow(from,to);
+  const sty=(a,b)=>{const o={};Object.entries(OSTYLE).forEach(([d,x])=>{if(d<a||d>b)return;Object.entries(x).forEach(([oc,v])=>{const t=o[oc]||(o[oc]={});Object.entries(v).forEach(([k,n])=>{t[k]=(t[k]||0)+n;});});});return o;};
+  const A=sty(from,to),B=sty(W.from,W.to);
+  const F=[['Words','words'],['Lines','list lines'],['Hedges','hedges'],['Signposts','signposts'],['Questions','question marks'],['Links','links in the text']];
+  const per=(o,k)=>o&&o.Turns>=50?o[k]/o.Turns:null;
+  const fmtv=v=>v==null?'—':v>=20?Math.round(v).toString():v.toFixed(2);
+  const td=(v,o={})=>`<td style="text-align:${o.left?'left':'right'};padding:7px 10px;font-family:${o.left?'inherit':"'DM Mono',monospace"};font-size:.78rem;${o.style||''}">${v}</td>`;
+  const th=(t,left)=>`<th style="text-align:${left?'left':'right'};padding:7px 10px;font-size:.6rem;color:var(--muted);text-transform:uppercase;letter-spacing:.08em;white-space:nowrap">${t}</th>`;
+  const chg=(a,b)=>a==null||b==null||!b?'':` <span style="color:var(--muted)">(${a>=b?'+':'−'}${Math.abs((a-b)/b*100).toFixed(0)}%)</span>`;
+  const fpRows=['Cited answer','Not found','Clarification'].map(oc=>`<tr style="border-bottom:1px solid var(--b2)">${td(oc,{left:true})}${td(num(A[oc]?.Turns||0))}${F.map(([k])=>td(fmtv(per(A[oc],k))+chg(per(A[oc],k),per(B[oc],k)))).join('')}</tr>`).join('');
+  // the phrase table: every phrase in range, per 1,000 turns, against the comparison window
+  const sumR=(a,b)=>{const o={};let t=0;Object.entries(ORULES).forEach(([d,x])=>{if(d<a||d>b)return;Object.entries(x).forEach(([k,n])=>{o[k]=(o[k]||0)+n;t+=n;});});return {o,t};};
+  const RA=sumR(from,to),RB=sumR(W.from,W.to);
+  const keys=Object.keys({...RA.o,...RB.o}).sort((a,b)=>(RA.o[b]||0)-(RA.o[a]||0));
+  const pk=(R,k)=>R.t?(R.o[k]||0)/R.t*1000:null;
+  const ruleRows=keys.map(k=>{const a=pk(RA,k),b=pk(RB,k);const big=a!=null&&b!=null&&Math.abs(a-b)>=5&&(b===0||a/b>=2||a/b<=0.5);
+    return `<tr style="border-bottom:1px solid var(--b2)">${td(escH(ruleLabel(k)),{left:true})}${td(num(RA.o[k]||0))}${td(a==null?'—':a.toFixed(1))}${td(b==null?'—':b.toFixed(1))}${td(a!=null&&b!=null?(a>=b?'+':'−')+Math.abs(a-b).toFixed(1):'—',{style:big?'color:var(--amber);font-weight:600':''})}</tr>`;}).join('');
+  const flagged=RW.filter(x=>x.drift!=null&&x.drift>=WORDING_DRIFT&&x.w>=weekStart(from)&&x.w<=to);
+  const flagList=flagged.length?flagged.map(x=>`<li><b>w/c ${fmtDate(x.w)}</b>: phrase mix ${(x.drift*100).toFixed(0)}% different from the 4 weeks before; most moved ${x.movers.map(m=>escH(ruleLabel(m.k))+' '+(m.d>=0?'▲':'▼')).join(', ')}. `+
+    (x.ev.length?`Model change in the billing: ${x.ev.map(e=>escH(e.title)+' ('+fmtDate(e.start)+')').join('; ')}.`:x.after.length?`Settling after the model change on ${x.after.map(e=>fmtDate(e.start)).join(', ')}: the 4 weeks it is compared with still include the earlier wording.`:`<span style="color:var(--amber)"><b>No model change in the billing within a week</b>: a candidate prompt or configuration change.</span>`)+'</li>').join(''):'<li>No week in the range moved past the threshold.</li>';
+  el.innerHTML=`
+    <div class="reach-note"><i data-lucide="info" class="i-sm"></i><span><b>Which phrase decided each outcome.</b> The outcome rules read each answer for set phrases; this shows which phrase fired, and how the answers are written. A shift on a date with a model change is that model’s wording. A shift with no model change in the billing points to a prompt or configuration change: the data can show <i>that</i> the wording changed, not <i>what</i> changed. It cannot say whether a label is right; that needs the hand-labelled sample.${CONFIG.outcome_rules_unvalidated_from&&!CONFIG.outcome_rules_measured?` Outcome figures from ${fmtDate(CONFIG.outcome_rules_unvalidated_from)} are unvalidated.`:''}</span></div>
+    ${chartBox('wd-mix',300,'Deciding phrases, per 1,000 turns','weekly · the seven most common over all the data, besides a plain cited answer · hollow bar = part week')}
+    ${chartBox('wd-drift',220,'Wording drift: phrase mix against the 4 weeks before','weekly · not-found, clarification and partial phrases · share of the mix that moved · dashed line = flag at '+(WORDING_DRIFT*100)+'% · blank = under '+WORDING_MIN+' phrases')}
+    <div class="card"><div class="card-title">Flagged weeks<span class="card-title-note">drift ${WORDING_DRIFT*100}%+ · blue = a confirmed model change within a week, or the weeks settling after one · amber = none: a candidate prompt or configuration change</span></div><ul class="wd-flags">${flagList}</ul></div>
+    <div class="card"><div class="card-title">How the answers are written<span class="card-title-note">per answer, ${spanLabel(from,to)} · in brackets the change against ${escH(W.rule)} (${spanLabel(W.from,W.to)}) · — under 50 answers</span></div>
+      <div class="tbl-wrap"><table style="width:100%;border-collapse:collapse"><thead><tr style="border-bottom:1px solid var(--b2)">${th('Outcome',true)}${th('Answers')}${F.map(([,l])=>th(l)).join('')}</tr></thead><tbody>${fpRows}</tbody></table></div>
+      <div class="share-foot">Counts read from the answer text before it is dropped: list lines (bulleted or numbered), hedging words (may, might, generally, usually, depends on …), signposting verbs (contact, phone, visit …), question marks and links. No text is kept.</div></div>
+    <div class="card"><div class="card-title">Every deciding phrase<span class="card-title-note">per 1,000 turns · ${spanLabel(from,to)} against ${spanLabel(W.from,W.to)} · amber = doubled or halved by 5+ per 1,000</span></div>
+      <div class="tbl-wrap"><table style="width:100%;border-collapse:collapse"><thead><tr style="border-bottom:1px solid var(--b2)">${th('Phrase',true)}${th('Turns')}${th('Per 1,000')}${th('Before')}${th('Change')}</tr></thead><tbody>${ruleRows}</tbody></table></div></div>`;
+  const hollow=inR.map(x=>part(x)!=null);
+  ds.forEach((d,i)=>{const col=i<top.length?PAL[i]+'cc':C.dim+'88';d.backgroundColor=inR.map((x,j)=>hollow[j]?'transparent':col);d.borderColor=inR.map((x,j)=>hollow[j]?col:C.s1);});
+  mkChart('wd-mix',{type:'bar',data:{labels,datasets:ds},options:mergeOpts(baseOpts(),{scales:{x:{stacked:true},y:{stacked:true,ticks:{callback:v=>num(v)}}},
+    plugins:{legend:{display:true},tooltip:{callbacks:{title:c=>'w/c '+fmtDate(inR[c[0].dataIndex].w)+(hollow[c[0].dataIndex]?' (part week)':''),label:c=>`${c.dataset.label}: ${(+c.parsed.y).toFixed(1)} per 1,000`}}},eventLines:evLines(S,labels)})});
+  mkChart('wd-drift',{type:'bar',data:{labels,datasets:[{label:'Drift',data:inR.map(x=>x.drift==null?null:+(x.drift*100).toFixed(1)),backgroundColor:inR.map(x=>x.drift!=null&&x.drift>=WORDING_DRIFT?(x.ev.length||x.after.length?C.acc:C.amber)+'cc':C.dim+'66'),borderColor:C.s1,borderWidth:1,maxBarThickness:26}]},
+    options:mergeOpts(baseOpts(),{scales:{y:{min:0,ticks:{callback:v=>v+'%'}}},refLine:{y:WORDING_DRIFT*100,color:C.amber,text:'flag '+(WORDING_DRIFT*100)+'%'},
+      plugins:{tooltip:{callbacks:{title:c=>'w/c '+fmtDate(inR[c[0].dataIndex].w),label:c=>{const x=inR[c.dataIndex];return x.drift==null?'needs 4 earlier weeks and '+WORDING_MIN+'+ phrases':[`${(x.drift*100).toFixed(0)}% of the phrase mix moved`,...x.movers.map(m=>`${ruleLabel(m.k)} ${m.d>=0?'+':'−'}${Math.abs(m.d*100).toFixed(0)} pts`),x.ev.length?'model change: '+x.ev.map(e=>fmtDate(e.start)).join(', '):x.after.length?'settling after the model change on '+x.after.map(e=>fmtDate(e.start)).join(', '):'no model change in the billing'];}}}},eventLines:evLines(S,labels)})});
 }
 
 // ═══ HOME (Overview): how well, how much, what changed — one screen ═══════════

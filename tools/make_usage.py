@@ -46,6 +46,10 @@ Outputs (all daily counts; nothing per-turn and no text crosses into the dashboa
   citations-monthly.csv     Month, URL (normalised), Citations, Category (known slug or blank)
   journeys-monthly.csv      Month, From, To, Conversations (consecutive category steps, mature conversations)
   starter-prompts-monthly.csv  Month, Prompt, Count, Cited, FollowedByTyped, FollowedBySuggested
+  outcome-rules-daily.csv   Date, Rule, Turns: the id of the phrase that decided each outcome (needs feeds redacted
+                            with Outcome Rule, brief §53)
+  answer-style-daily.csv    Date, Outcome, Turns, Words, Lines, Hedges, Apologies, Signposts, Questions, Links,
+                            WithLines..WithLinks: the wording fingerprint summed per day and outcome
   latency-buckets-daily.csv  Date, Kind (words | citations), Bucket, Turns, LatencySumMs — response time by
                             response length and by citation count (needs Response Words from the redaction)
   category-outcomes-daily.csv also carries Organic<Outcome> columns: organic first turns by their outcome.
@@ -157,6 +161,8 @@ def aggregate(files, skip_days=frozenset()):
     cites_m = defaultdict(int)                       # (month, url) -> citations
     latb = defaultdict(lambda: defaultdict(int))     # (date, kind, bucket) -> turns, latsum
     has_words = False
+    rulesd = defaultdict(int)                        # (date, outcome rule id) -> turns (brief §53)
+    style = defaultdict(lambda: defaultdict(int))    # (date, outcome) -> wording fingerprint sums
     seen = set(); dupes = 0   # exports taken on different days overlap on their boundary day
     for f in files:
         with open(f, encoding="utf-8-sig", newline="") as fh:
@@ -218,6 +224,16 @@ def aggregate(files, skip_days=frozenset()):
                 if wd > 0:
                     c["words"] += wd; c["words_n"] += 1
                     if (row.get("Outcome") or "").strip() == "Cited answer": c["cwords"] += wd; c["cwords_n"] += 1
+                if outcome_col and (row.get("Outcome Rule") or "").strip():
+                    o3 = (row.get("Outcome") or "").strip()
+                    rulesd[(d, row["Outcome Rule"].strip())] += 1
+                    e = style[(d, o3)]; e["Turns"] += 1
+                    try: e["Words"] += int(row.get("Response Words") or 0)
+                    except ValueError: pass
+                    for k in STYLE_COLS:
+                        try: v = int(row.get("Answer " + k) or 0)
+                        except ValueError: v = 0
+                        e[k] += v; e["With" + k] += v > 0
                 if outcome_col:
                     o = (row.get("Outcome") or "").strip()
                     c["o:" + o] += 1
@@ -294,7 +310,22 @@ def aggregate(files, skip_days=frozenset()):
                         cat_dropped += sum(1 for x in slugs if x is None)
                         toks = [x for x in slugs if x]
                     for s in set(toks): cats[d][s] += 1
-    return D, sess, lat, hours, hour_sess, cats, bad, has_voice, dupes, cat_dropped, has_outcome, rules, has_starter, has_script, recs, cites_m, latb
+    return D, sess, lat, hours, hour_sess, cats, bad, has_voice, dupes, cat_dropped, has_outcome, rules, has_starter, has_script, recs, cites_m, latb, rulesd, style
+
+
+STYLE_COLS = ["Lines", "Hedges", "Apologies", "Signposts", "Questions", "Links"]
+
+
+def rule_rows(rulesd):
+    """outcome-rules-daily.csv: which phrase decided each outcome, per day (no text)."""
+    return ["Date", "Rule", "Turns"], [[d.isoformat(), r, n] for (d, r), n in sorted(rulesd.items())]
+
+
+def style_rows(style):
+    """answer-style-daily.csv: the wording fingerprint summed per day and outcome; divide by Turns for a mean,
+    With<x> by Turns for the share of answers with at least one."""
+    cols = ["Date", "Outcome", "Turns", "Words"] + STYLE_COLS + ["With" + k for k in STYLE_COLS]
+    return cols, [[d.isoformat(), o] + [e[k] for k in cols[2:]] for (d, o), e in sorted(style.items())]
 
 
 def conversation_pass(recs):
@@ -573,7 +604,7 @@ def main():
     # An export taken on day X contains only part of day X; skip those rows unless asked to keep them.
     export_days = {datetime.strptime(m.group(1), "%Y%m%d").date() for m in (re.search(r"(\d{8})_\d{6}", os.path.basename(f)) for f in a.files) if m}
     skip = frozenset() if (a.keep_partial or not export_days) else frozenset({max(export_days)})  # only the newest export's own day is partial
-    D, sess, lat, hours, hour_sess, cats, bad, has_voice, dupes, cat_dropped, has_outcome, rules, has_starter, has_script, recs, cites_m, latb = aggregate(a.files, skip)
+    D, sess, lat, hours, hour_sess, cats, bad, has_voice, dupes, cat_dropped, has_outcome, rules, has_starter, has_script, recs, cites_m, latb, rulesd, style = aggregate(a.files, skip)
     rules = ", ".join(sorted(r for r in rules if r))
     if skip and any(True for _ in skip): print(f"note: export day(s) {', '.join(str(x) for x in sorted(skip))} skipped as partial (--keep-partial to keep)")
     cd, co, jm, sp, cstats = conversation_pass(recs)
@@ -605,6 +636,9 @@ def main():
         write(os.path.join(a.out_dir, "journeys-monthly.csv"), *journey_rows(jm))
         write(os.path.join(a.out_dir, "starter-prompts-monthly.csv"), *starter_rows(sp))
         if latb: write(os.path.join(a.out_dir, "latency-buckets-daily.csv"), *latency_bucket_rows(latb))
+        if rulesd:   # needs feeds redacted with Outcome Rule (redact_feed.py from 23 Oct 2026)
+            write(os.path.join(a.out_dir, "outcome-rules-daily.csv"), *rule_rows(rulesd))
+            write(os.path.join(a.out_dir, "answer-style-daily.csv"), *style_rows(style))
     elif a.out:
         write(a.out, ucols, urows)
     else:

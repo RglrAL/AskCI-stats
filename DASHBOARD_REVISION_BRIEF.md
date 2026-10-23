@@ -948,3 +948,44 @@ The order:
 11. **Log parser** for any future one-off backend extract, counts only. It matters only if an extract appears.
 
 Correctness against the page and groundedness stay parked: they need people beyond the analyst.
+
+## 54. Diagnosis step 1: rule IDs, the wording fingerprint, and what they show (23 Oct 2026)
+
+**Built:**
+- **`redact_feed.py`** records, per turn, the ID of the phrase that decided the outcome:
+  - not-found and clarification IDs, such as `nf.couldnt_find` and `cl.more_detail`;
+  - `cited.partial.<phrase>` for a cited answer that also contains a not-found phrase;
+  - `oos.flagged`, `err.empty` and `uncited`.
+
+  It also records six wording counts read from the answer before it is dropped: list lines, hedges, apologies, signposting verbs, question marks and links (`STYLE_VERSION`).
+  - The patterns are the same alternatives, joined in the same order, so the outcomes are unchanged: all 145,098 raw rows classify identically, and the rules version stays 2026.10.08-1.
+- **`make_usage.py`** writes `outcome-rules-daily.csv` (Date, Rule, Turns) and `answer-style-daily.csv` (sums per day and outcome). The eleven existing files rebuilt byte-identical.
+- **The audit** checks that every turn carries one rule, that each rule family matches its `usage.csv` outcome every day, and that the style counts add up.
+- **Usage › Answer wording**, a new sub-tab:
+  - deciding phrases per 1,000 turns, by week;
+  - a drift chart: total variation distance of the not-found, clarification and partial phrase mix against the 4 weeks before. It flags at 20% and judges only weeks with 100+ phrases;
+  - flagged weeks, each checked against confirmed model changes. Blue means a model change within a week, or the weeks settling after one; amber means none, so a candidate prompt or configuration change;
+  - the fingerprint per outcome against the comparison window;
+  - every phrase per 1,000 turns against the comparison window.
+
+**What it shows:**
+- **No amber week since the volume became readable in March.** Every wording shift lines up with a confirmed model change: 9 Mar, 1 Jul and 14 Sep. Within this data there is no sign of a prompt change without a model change.
+- **Each model change brought its own way of saying "not found":**
+  - GPT 5 (to 29 Jun) said "couldn't find";
+  - chat-latest (1 Jul to 13 Sep) said "could not find", mostly *inside cited answers*;
+  - 5.4 (from 14 Sep) says "couldn't find" again, both alone and inside cited answers.
+- **The 14 Sep baseline was itself unusual.** By model era:
+
+  | Era | Cited | Not found | Clarification | Partial (of cited) | Cited, not partial |
+  |---|---|---|---|---|---|
+  | GPT 5 (10 Mar–29 Jun) | 87.2% | 7.7% | 3.9% | 2.7% | 84.8% |
+  | chat-latest (1 Jul–13 Sep) | 92.0% | 3.2% | 4.7% | 14.1% | 79.0% |
+  | 5.4 (14 Sep–22 Oct) | 82.2% | 8.2% | 9.4% | 26.2% | 60.6% |
+
+  chat-latest turned many would-be not-found replies into cited answers that say they "could not find" something. 5.4's not-found rate is back near GPT 5's. What is new with 5.4 is twice the clarification (with two phrases barely seen before, "what you mean" and "more detail") and nearly twice the partial share. "Cited, not partial" has fallen era by era.
+- **Wording, 14 Aug–13 Sep against 14 Sep–13 Oct:**
+  - clarification answers went from 76 to 43 words, with fewer lists;
+  - cited answers carry fewer hedges (2.2 to 1.5 per answer) and more inline links (5.0 to 7.3);
+  - not-found answers signpost more (2.0 to 2.8 contact or visit verbs).
+
+**What it cannot say.** Whether a "partial" or "not found" label is right. A cited answer that says "I couldn't find the exact figure, but…" may be a good answer or a real gap. The hand-labelled sample (step 0) settles that. The headline comparison for 14 Sep should no longer be the 92.3% of the chat-latest era alone: GPT 5's 87.2% belongs beside it.

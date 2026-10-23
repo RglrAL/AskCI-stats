@@ -53,6 +53,8 @@ SCHEMA = {
     'costs.csv': 'UsageDate Cost Currency ResourceId',
     'ga4/clicks-daily.csv': 'Date Source Views Sessions Mobile Desktop Tablet OtherDevice',
     'ga4/clicks-pages-daily.csv': 'Date URL Source Views',
+    'outcome-rules-daily.csv': 'Date Rule Turns',
+    'answer-style-daily.csv': 'Date Outcome Turns Words Lines Hedges Apologies Signposts Questions Links',
 }
 for f, cols in SCHEMA.items():
     if not os.path.exists(f'{REPO}/{f}'): FAIL.append(f'schema: {f} is missing'); continue
@@ -159,6 +161,22 @@ check('script outcomes: rows within bounds (cited + not found + clarification <=
 for sc in ['Latin', 'Cyrillic', 'Arabic', 'CJK', 'Devanagari', 'Other', 'None']:
     if not all(sum(I(r['Turns']) for r in SO if r['Date'] == d and r['Script'] == sc) == I(U[d]['Script' + sc]) for d in days[-7:]):
         check(f'script outcomes: {sc} turns = usage.Script{sc} (last 7 days)', False)
+
+# ── 3c. outcome rule ids and the wording fingerprint (brief §53) ──────────────
+# Every turn carries exactly one rule id, and the rule's family must agree with the outcome counted in usage.csv.
+RU = rd('outcome-rules-daily.csv'); rt = C.Counter(); fam = C.defaultdict(C.Counter)
+for r in RU:
+    n = I(r['Turns']); rt[r['Date']] += n; k = r['Rule']
+    f = 'Cited' if k == 'cited' or k.startswith('cited.partial.') else 'NotFound' if k.startswith('nf.') else 'Clarification' if k.startswith('cl.') else 'OutOfScope' if k.startswith('oos.') else 'Greeting' if k.startswith('gr.') else 'Error' if k.startswith('err.') else 'Uncited'
+    fam[r['Date']][f] += n
+    if k.startswith('cited.partial.'): fam[r['Date']]['Partial'] += n
+check('outcome rules: turns per day = usage.Questions', all(rt[d] == I(U[d]['Questions']) for d in days), str([d for d in days if rt[d] != I(U[d]['Questions'])][:5]))
+check('outcome rules: each family per day = its usage.csv outcome count', all(fam[d][f] == I(U[d][f]) for d in days for f in ('Cited', 'NotFound', 'Clarification', 'OutOfScope', 'Greeting', 'Error', 'Uncited', 'Partial')),
+      str([(d, f) for d in days for f in ('Cited', 'NotFound', 'Clarification', 'Partial') if fam[d][f] != I(U[d][f])][:5]))
+ST = rd('answer-style-daily.csv'); stt = C.Counter()
+for r in ST: stt[r['Date']] += I(r['Turns'])
+check('answer style: turns per day = usage.Questions', all(stt[d] == I(U[d]['Questions']) for d in days))
+check('answer style: no "with" count above its outcome\'s turns', all(I(r['With' + k]) <= I(r['Turns']) for r in ST for k in ('Lines', 'Hedges', 'Apologies', 'Signposts', 'Questions', 'Links')))
 
 # ── 4. conversations-daily.csv ───────────────────────────────────────────────
 CV = {r['Date']: r for r in rd('conversations-daily.csv')}

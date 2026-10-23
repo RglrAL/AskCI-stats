@@ -24,7 +24,12 @@ Two more derived columns, both read from the query text before it is dropped:
                   configured chips; blank otherwise. The chip text is configuration, not citizen text
   Query Script    Unicode script of the first letter: Latin, Cyrillic, Arabic, CJK, Devanagari,
                   Other, or None when the query has no letter. A script, not a language.
-  Response Words  word count of the response (a number; the text itself is dropped) The output still contains per-turn
+  Response Words  word count of the response (a number; the text itself is dropped)
+  Outcome Rule    the id of the phrase that decided the outcome (nf.couldnt_find, cl.more_detail, cited,
+                  cited.partial.nf.no_specific_info, oos.flagged, uncited, err.empty ...): no text
+  Style Version and Answer Lines / Hedges / Apologies / Signposts / Questions / Links: counts of list lines,
+                  hedging words, apologies, signposting verbs, question marks and links in the answer (the
+                  wording fingerprint, brief §53). The output still contains per-turn
 rows, so it stays out of git (.gitignore covers qa-feed*.csv); only the daily aggregates
 produced by make_usage.py go into the dashboard.
 
@@ -40,11 +45,39 @@ DROP = ["User Query", "Assistant Response", "Report Subject", "Report Descriptio
 csv.field_size_limit(min(sys.maxsize, 2**31 - 1))
 
 OUTCOME_RULES_VERSION = "2026.10.08-1"
-RX = {
-    "not_found": re.compile(r"couldn't find|could not find|wasn't able to find|unable to find|no specific information|not find specific|don't have (specific )?information|does not (currently )?(provide|have)", re.I),
-    "clarification": re.compile(r"could you (please )?(clarify|tell me|let me know)|what you mean|more detail|which (scheme|payment)", re.I),
-    "out_of_scope": re.compile(r"specialise in providing information|specialize in providing information|can't help with that (particular )?topic|not able to help with that topic|outside (the )?scope", re.I),
-    "greeting": re.compile(r"^(hello|hi)\b|how can i help|you're welcome|glad to help|glad to hear|glad you|glad i could", re.I),
+# Each pattern is a list of (rule id, alternative). Joined in order they are exactly the patterns the rules version
+# above names, so the outcome is unchanged; the named group that matched says which phrase decided it (brief §53).
+RULES = {
+    "not_found": [("nf.couldnt_find", r"couldn't find"), ("nf.could_not_find", r"could not find"), ("nf.wasnt_able", r"wasn't able to find"),
+                  ("nf.unable_to_find", r"unable to find"), ("nf.no_specific_info", r"no specific information"), ("nf.not_find_specific", r"not find specific"),
+                  ("nf.dont_have_info", r"don't have (specific )?information"), ("nf.does_not_provide", r"does not (currently )?(provide|have)")],
+    "clarification": [("cl.could_you", r"could you (please )?(clarify|tell me|let me know)"), ("cl.what_you_mean", r"what you mean"),
+                      ("cl.more_detail", r"more detail"), ("cl.which_scheme", r"which (scheme|payment)")],
+    "out_of_scope": [("oos.specialise", r"specialise in providing information"), ("oos.specialize", r"specialize in providing information"),
+                     ("oos.cant_help_topic", r"can't help with that (particular )?topic"), ("oos.not_able_topic", r"not able to help with that topic"),
+                     ("oos.outside_scope", r"outside (the )?scope")],
+    "greeting": [("gr.hello", r"^(hello|hi)\b"), ("gr.how_can_i_help", r"how can i help"), ("gr.welcome", r"you're welcome"), ("gr.glad_to_help", r"glad to help"),
+                 ("gr.glad_to_hear", r"glad to hear"), ("gr.glad_you", r"glad you"), ("gr.glad_i_could", r"glad i could")],
+}
+GID = lambda rid: rid.replace(".", "__")
+RX = {k: re.compile("|".join(f"(?P<{GID(rid)}>{alt})" for rid, alt in v), re.I) for k, v in RULES.items()}
+
+
+def rule_of(m):
+    """The rule id of the alternative that matched (the leftmost match, first alternative at that place)."""
+    return next(k.replace("__", ".") for k, v in m.groupdict().items() if v is not None)
+
+
+# Wording fingerprint (brief §53): counts read from the answer text, which is then dropped. Not outcome rules: a shift
+# in these on a date with no model change is the trace of a prompt change.
+STYLE_VERSION = "2026.10.23-1"
+STYLE = {
+    "Answer Lines": re.compile(r"^\s*(?:[-*\u2022]|\d+[.)])\s+", re.M),
+    "Answer Hedges": re.compile(r"\b(?:may|might|generally|usually|typically|depends? on|depending on|in some cases|not always)\b", re.I),
+    "Answer Apologies": re.compile(r"\b(?:sorry|apologi[sz]e|unfortunately)\b", re.I),
+    "Answer Signposts": re.compile(r"\b(?:contact|get in touch|phone|call|ring|visit|speak to|talk to)\b", re.I),
+    "Answer Questions": re.compile(r"\?"),
+    "Answer Links": re.compile(r"https?://"),
 }
 URL_RE = re.compile(r'https?://[^\s,;|"]+')
 
@@ -79,26 +112,33 @@ def query_script(q):
 APOS = str.maketrans({"\u2019": "'", "\u2018": "'", "\u02bc": "'"})
 
 
-def classify(row):
-    """Return (outcome, partial) for one feed row. Text is read here and nowhere else."""
+def classify_rule(row):
+    """Return (outcome, partial, rule id) for one feed row. Text is read here and nowhere else."""
     resp = (row.get("Assistant Response") or "").translate(APOS).strip()
     rt = (row.get("Response Time (ms)") or "").strip()
     if resp == "" and rt in ("0", ""):
-        return "Error", ""
+        return "Error", "", "err.empty"
     cites = len(URL_RE.findall(row.get("Citations") or ""))
     if cites >= 1:
-        return "Cited answer", ("Yes" if RX["not_found"].search(resp) else "")
-    if RX["not_found"].search(resp):
-        return "Not found", ""
-    if RX["clarification"].search(resp):
-        return "Clarification", ""
-    if RX["out_of_scope"].search(resp):
-        return "Out of scope", ""
-    if RX["greeting"].search(resp):
-        return "Greeting", ""
+        m = RX["not_found"].search(resp)
+        return "Cited answer", ("Yes" if m else ""), ("cited.partial." + rule_of(m) if m else "cited")
+    for k, outcome in (("not_found", "Not found"), ("clarification", "Clarification"), ("out_of_scope", "Out of scope"), ("greeting", "Greeting")):
+        m = RX[k].search(resp)
+        if m:
+            return outcome, "", rule_of(m)
     if (row.get("Flagged") or "").strip().lower() == "yes":
-        return "Out of scope", ""
-    return "Uncited answer", ""
+        return "Out of scope", "", "oos.flagged"
+    return "Uncited answer", "", "uncited"
+
+
+def classify(row):
+    """Return (outcome, partial) for one feed row."""
+    return classify_rule(row)[:2]
+
+
+def style_counts(row):
+    resp = (row.get("Assistant Response") or "").translate(APOS)
+    return {k: len(rx.findall(resp)) for k, rx in STYLE.items()}
 
 
 def out_name(path, out_dir):
@@ -110,13 +150,14 @@ def out_name(path, out_dir):
 def redact(src, dst):
     with open(src, encoding="utf-8-sig", newline="") as fi, open(dst, "w", encoding="utf-8", newline="") as fo:
         r = csv.DictReader(fi)
-        keep = [c for c in r.fieldnames if c not in DROP] + ["Outcome", "Partial", "Outcome Rules", "Starter Prompt", "Query Script", "Response Words"]
+        keep = [c for c in r.fieldnames if c not in DROP] + ["Outcome", "Partial", "Outcome Rules", "Starter Prompt", "Query Script", "Response Words",
+                                                          "Outcome Rule", "Style Version"] + list(STYLE)
         dropped = [c for c in r.fieldnames if c in DROP]
         w = csv.DictWriter(fo, fieldnames=keep, extrasaction="ignore")
         w.writeheader()
         n = 0; counts = {}
         for row in r:
-            o, partial = classify(row)
+            o, partial, rule = classify_rule(row)
             counts[o] = counts.get(o, 0) + 1
             if partial: counts["(partial)"] = counts.get("(partial)", 0) + 1
             row["Outcome"], row["Partial"], row["Outcome Rules"] = o, partial, OUTCOME_RULES_VERSION
@@ -125,6 +166,8 @@ def redact(src, dst):
             row["Starter Prompt"] = nq if (row.get("Turn #") or "").strip() == "1" and nq in STARTER_PROMPTS else ""
             row["Query Script"] = query_script(q)
             row["Response Words"] = len((row.get("Assistant Response") or "").split())
+            row["Outcome Rule"], row["Style Version"] = rule, STYLE_VERSION
+            row.update(style_counts(row))
             if row["Starter Prompt"]: counts["(starter prompt)"] = counts.get("(starter prompt)", 0) + 1
             w.writerow(row)
             n += 1
