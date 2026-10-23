@@ -32,8 +32,10 @@ Chrome and checks each answer. It takes a few seconds.
   makes a typing-only case.
 - **Copy cases.** A case with `"copy": true` appends what *Copy answer* would put on the clipboard (the plain
   Markdown form) after ` || COPY `, so the definition, caveats, re-ask link and footer can be pinned.
-- **Tags.** `"lists": ["monthly"]` marks the questions management asks each month (brief §48): their answers,
-  and their declines, are pinned so the wording doesn't drift. Report lists (Phase A step 2) will be built from these tags.
+- **Tags.** `"lists": [...]` puts a case in a built-in question list (brief §50): `monthly` is "Monthly management
+  questions", `facts` is the fact sheet that `tools/make_facts.py` writes at each deploy (brief §51). Their answers
+  and declines are pinned here, so a list can't drift without a failing case. A fact case asks for "last month", and
+  the sheet runs it for the month in hand.
 - **Re-ask links.** Every run also opens a `#ask=` link whose question is markup; it must arrive as plain text.
 - **Suggestions.** Every suggestion the dropdown can offer is asked through the page on every run; any that
   gives a "not understood" card fails the run, as does a suggestion template whose backing case is not in

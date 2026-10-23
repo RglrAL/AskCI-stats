@@ -862,3 +862,23 @@ A question list is a report you can run again. It sits under **Lists** in the to
 - **Built-in lists** come from the case tags in `tests/ask_cases.json`: `"lists": ["monthly"]` is "Monthly management questions". They are read-only; "Make an editable copy" copies one.
 - **How it runs:** the answers are produced by the Ask bar itself. The answer area is swapped for a hidden one, the reading is rendered, its copy payload and light chart are captured, and the visible answer, its chart and the follow-up memory are restored. A report can't drift from the Ask bar's own answer.
 - **Tests:** every run opens a list link carrying markup and an unknown measure (it must be cleaned) and runs it for September 2026 (it must show "86.5%" and "August 2026: 91.9% (−5.4 pts)").
+
+## 51. Reports, Phase A step 3: the fact sheet (23 Oct 2026)
+
+- **What it is:** fifteen figures for the last full month, one line each:
+  - turns, conversations and turns per day;
+  - the cited, not-found and clarification rates;
+  - conversations that reached a cited answer;
+  - click-throughs per 100 cited answers;
+  - response time p50;
+  - the pop-up share and the out-of-hours share;
+  - dislikes per 1,000 cited answers;
+  - spend and generation cost per turn;
+  - the top topics.
+
+  Each figure is followed by the month before and the change, with its caveats under it. The definitions are gathered at the end, and the footer gives the data, config and outcome-rule versions and the page and data commits.
+- **Where it comes from:** the questions tagged `"lists": ["facts"]` in `tests/ask_cases.json`, answered by the page itself through the question-list engine (§50). The sheet and the Ask bar can't disagree, and every figure's wording is pinned by a case.
+- **`tools/make_facts.py`** serves the repo, opens the page in headless Chrome and writes `reports/facts-YYYY-MM.md`. For the default month it also writes `reports/facts-latest.md`; `--month YYYY-MM` writes any month, and `--stdout` prints. It stamps the page and data commits the way the deploy does, and fails on any page error.
+- **The deploy runs it** after the commit stamp, so the published site carries the sheet for the data it serves. The Lists panel links `reports/facts-latest.md`. `reports/` is git-ignored: any month can be rebuilt from the repo's data.
+- **"Fact sheet" is also a built-in list** in the Lists panel, so it can be run as a full report with charts for any month. "Run for" a month now also moves a question that says "last month" and is kept as written (top topics).
+- **Fixed on the way:** "dislikes per 1,000 cited answers" read as the cited answer rate. The comma in 1,000 had become a space, so the longer "cited answer" match won. The measure now matches the whole phrase, and a case pins it.

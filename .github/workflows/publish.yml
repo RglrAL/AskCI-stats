@@ -54,6 +54,10 @@ jobs:
           sed -i "s/content=\"page=local data=local\"/content=\"page=$PAGE data=$DATA\"/" index.html
           grep -o 'askci-build" content="[^"]*"' index.html
 
+      # The fact sheet for the last full month, answered by the page itself, published at reports/facts-latest.md.
+      - name: Fact sheet
+        run: python3 tools/make_facts.py
+
       - uses: actions/configure-pages@v5
       - uses: actions/upload-pages-artifact@v3
         with:

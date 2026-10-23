@@ -8417,7 +8417,7 @@ init();
     AM('clarification','Clarification rate','pct',{calc:{src:'ux',n:'clarification',d:'scored',of:'scored turns'},cat:{n:'Clarification',d:'Scored',of:'scored turns'},polarity:'down',syn:[[/clarif/,480,'clarification rate']],def:'Answers in which AskCI asks the person to clarify, as a share of scored turns.'}),
     AM('error','Error rate','pct',{calc:{src:'ux',n:'error',d:'Q',of:'turns'},cat:{n:'Error',d:'Turns',of:'turns'},polarity:'down',syn:[[/\berrors?\b/,470,'error rate']],def:'Turns with an empty answer and 0 ms response time, as a share of all turns.'}),
     AM('partial','Cited but partial','pct',{calc:{src:'ux',n:'partial',d:'cited',of:'cited answers'},polarity:'down',syn:[[/partial/,500,'cited but partial']],def:'Cited answers whose text also says something could not be found, as a share of cited answers.'}),
-    AM('dislikes','Dislikes per 1,000 cited','perk',{calc:{src:'ux',n:'dislikesCited',d:'cited',x:1000,say:'dislikes on',of:'cited answers',miss:'usage.csv has no feedback columns; regenerate it from the QA feed'},cat:{n:'DislikesOnCited',d:'Cited',x:1000,say:'dislikes on',of:'cited answers',subj:'dislikes per 1,000 cited answers'},polarity:'down',syn:[[/dislike/,430,'dislikes per 1,000 cited answers']],def:'Dislikes on cited answers per 1,000 cited answers.'}),
+    AM('dislikes','Dislikes per 1,000 cited','perk',{calc:{src:'ux',n:'dislikesCited',d:'cited',x:1000,say:'dislikes on',of:'cited answers',miss:'usage.csv has no feedback columns; regenerate it from the QA feed'},cat:{n:'DislikesOnCited',d:'Cited',x:1000,say:'dislikes on',of:'cited answers',subj:'dislikes per 1,000 cited answers'},polarity:'down',syn:[[/\bdislikes? per (1[, ]?000|thousand)( cited( answers)?)?/,429,'dislikes per 1,000 cited answers'],[/dislike/,430,'dislikes per 1,000 cited answers']],def:'Dislikes on cited answers per 1,000 cited answers.'}),
     AM('feedback','Feedback rate','pct',{calc:{src:'ux',n:['likes','dislikes'],d:'Q',of:'turns',dp:2},syn:[[/\blikes?\b|feedback/,440,'feedback rate']],def:'Turns with a like or a dislike, as a share of all turns.'}),
     AM('chips','Suggested follow-up share','pct',{calc:{src:'ux',n:'suggestedFollowup',d:'Q',of:'turns'},syn:[[/\bchips?\b|suggested follow|follow[- ]?ups?/,550,'suggested follow-up share']],def:'Turns that came from a suggested follow-up chip, as a share of all turns.'}),
     AM('starter','Starter-prompt share','pct',{calc:{src:'ux',n:'starter',d:['starter','organic'],of:'first turns'},syn:[[/starter|chip prompt/,450,'starter-prompt share of first turns']],def:'First turns that used one of the suggested starter prompts, as a share of first turns.'}),
@@ -9339,7 +9339,7 @@ init();
   let QL=null;const ql=()=>QL||(QL=qlLoad());
   function qlSave(){try{localStorage.setItem(QL_KEY,JSON.stringify(ql()));}catch(e){}}
   let BUILTIN=null;   // lists built from the test cases' "lists" tags: read-only
-  const BUILTIN_NAMES={monthly:'Monthly management questions'};
+  const BUILTIN_NAMES={monthly:'Monthly management questions',facts:'Fact sheet'};
   async function builtinLists(){
     if(BUILTIN)return BUILTIN;BUILTIN={};
     try{const r=await fetch('tests/ask_cases.json',{cache:'no-cache'});const cases=await r.json();
@@ -9409,7 +9409,9 @@ init();
       cap=quietRead(item.r,per,item.q);
       return {item,cap,notes,per,tok};
     }
-    cap=quietAsk(item.q);
+    // "Run for" a month moves a question asked about "last month" too; anything else runs exactly as written
+    const q2=runFor&&runFor.startsWith('m:')&&/\blast month\b/i.test(item.q)?item.q.replace(/\blast month\b/i,'in '+fullMonth(runFor.slice(2))):item.q;
+    cap=quietAsk(q2);
     if(cap&&cap.read)notes.push('Run as written, for the period the question names.');
     return {item,cap,notes,per:null,tok:'asked'};
   }
@@ -9431,6 +9433,37 @@ init();
     });
     md.push('','---','_'+foot+'_');h.push('<p style="margin:18px 0 0;border-top:1px solid #d0d7de;padding-top:6px;font-size:11px;color:#57606a">'+escH(foot)+'</p>');
     return {text:md.join('\n'),html:'<div style="font-family:Arial,Helvetica,sans-serif;font-size:14px;color:#1f2328;line-height:1.45">'+h.join('')+'</div>',head};
+  }
+  // The fact sheet (brief §48, Phase A step 3): the same answers, one line each, every figure with its caveats beside
+  // it and the definitions gathered at the end. tools/make_facts.py writes it to reports/ at each data refresh.
+  function factsPack(name,runFor,results){
+    const any=k=>results.some(r=>r.cap&&r.cap[k]);
+    const foot=reportFooter({outcome:any('outcome'),clicks:any('clicks')});
+    const per=runFor?tokLabel(runFor):'';
+    const md=['# AskCI fact sheet'+(per?': '+per:''),'','_Produced '+fdY(new Date().toISOString().slice(0,10))+' from the AskCI dashboard. Each figure is followed by the period before it and the change, where one applies; caveats sit under the figure they qualify._',''];
+    const defs=new Map();
+    results.forEach(r=>{
+      if(!r.cap){md.push('- **'+itemTitle(r)+':** not available'+(r.notes.length?' ('+r.notes.join(' ')+')':''));return;}
+      const P=r.cap.pack,cap1=t=>t.charAt(0).toUpperCase()+t.slice(1);
+      // the sheet's heading names the month, so each line drops it; the title is the reading ("Turns · average per day")
+      const pl=r.per&&r.per.label?r.per.label:'';
+      const strip=t=>(pl?t.split(' in '+pl).join('').split(', '+pl).join(''):t).replace(/ · sum then divide| · each bucket summed then divided/g,'');
+      const title=r.item.r?cap1(readText(r.item.r)):cap1(r.item.q.replace(/\s+(last|this) (full )?month$|\s+in [a-z]+( \d{4})?$/i,''));
+      let line=strip([P.figure,P.sentence].filter(Boolean).join(' '));
+      if(!P.figure&&P.table&&P.table.rows.length)line=(P.table.cols[0]==='#'?P.table.rows.slice(0,5).map(x=>x[0]+'. '+x[1]):P.table.rows.slice(0,5).map(x=>x.join(' '))).join('; ')+' ('+strip(P.sentence)+')';
+      md.push('- **'+title+':** '+line);
+      r.notes.concat(P.caveats||[]).forEach(c=>md.push('  - _Caveat:_ '+c));
+      const lab=r.cap.intent&&r.cap.intent.metric&&(MET[r.cap.intent.metric.kind]||r.cap.intent.metric).label;
+      if(P.definition&&lab&&!defs.has(lab))defs.set(lab,P.definition);
+    });
+    if(defs.size){md.push('','## Definitions','');defs.forEach((d,l)=>md.push('- **'+l+':** '+d));}
+    md.push('','---','_'+foot+'_');
+    return {text:md.join('\n')+'\n',head:'AskCI fact sheet'+(per?': '+per:'')};
+  }
+  async function factSheet(runFor){
+    await builtinLists();const items=listItems('Fact sheet');if(!items.length)return null;
+    const rf=runFor||'m:'+prevMonth(lastDate().slice(0,7));
+    return factsPack('Fact sheet',rf,items.map(it=>runItem(it,rf)));
   }
   let LAST_REPORT=null;
   async function qlRun(name,runFor){
@@ -9514,6 +9547,7 @@ init();
         :'<p class="ql-empty">No questions yet. Ask one, then press <b>Add to list</b> under the answer.</p>')+
       '<div class="ql-row ql-run"><label class="ql-lbl" for="ql-runfor">Run for</label><select id="ql-runfor"><option value="">each question’s own period</option>'+months.map(m=>'<option value="m:'+m+'">'+esc(fullMonth(m))+'</option>').join('')+'</select>'+
         '<button type="button" class="ask-action" data-ql="run"'+(items.length?'':' disabled')+'>Run report</button></div>'+
+      '<p class="ql-note">The fact sheet for the last full month is published with the dashboard as <a href="reports/facts-latest.md" target="_blank" rel="noopener">reports/facts-latest.md</a>.</p>'+
       '<p class="ql-note">“Run for” a month moves every question except those pinned to the period they were asked for. Each answer’s change is against the period before, as on the dashboard.</p>';
     renderIcons();
   }
@@ -9889,7 +9923,7 @@ init();
   window.askFromHash=askFromHash;
   if(/[#&]ask=/.test(location.hash))askFromHash(location.hash);
   if(/[#&]qlist=/.test(location.hash)){const n=qlFromHash(location.hash);if(n){QL_VIEW=n;const go=k=>{if(have()&&$('ask-input'))openQl();else if(k<150)setTimeout(()=>go(k+1),200);};go(0);}}
-  window.__ql={run:qlRun,runItem,quietAsk,fromHash:qlFromHash,link:qlLink,lists:()=>ql(),builtin:builtinLists,add:addToList};
+  window.__ql={facts:factSheet,run:qlRun,runItem,quietAsk,fromHash:qlFromHash,link:qlLink,lists:()=>ql(),builtin:builtinLists,add:addToList};
   window.askParseable=function(t){try{return !!(parseCompare(t)||parseAsk(t));}catch(e){return false;}};
   if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',install);
   else install();

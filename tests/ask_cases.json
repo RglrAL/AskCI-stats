@@ -1070,17 +1070,6 @@
   ]
  },
  {
-  "q": "not found rate last month",
-  "then": [
-   "what about housing?"
-  ],
-  "group": "follow",
-  "expect": [
-   "Following on from “not found rate last month”.",
-   "3.0% not-found"
-  ]
- },
- {
   "q": "spend in July",
   "then": [
    "by week"
@@ -2607,6 +2596,185 @@
   "not": [
    "(unvalidated",
    "Caveats:"
+  ]
+ },
+ {
+  "q": "questions last month",
+  "group": "mgmt",
+  "lists": [
+   "facts"
+  ],
+  "note": "fact sheet (brief §48 Phase A step 3)",
+  "expect": [
+   "21,718 turns in Sep'26",
+   "up 20% vs August"
+  ]
+ },
+ {
+  "q": "conversations last month",
+  "group": "mgmt",
+  "lists": [
+   "facts"
+  ],
+  "note": "fact sheet (brief §48 Phase A step 3)",
+  "expect": [
+   "11,590 conversations in Sep'26"
+  ]
+ },
+ {
+  "q": "questions per day last month",
+  "group": "mgmt",
+  "lists": [
+   "facts"
+  ],
+  "note": "fact sheet (brief §48 Phase A step 3)",
+  "expect": [
+   "724 average turns in Sep'26"
+  ]
+ },
+ {
+  "q": "cited answer rate last month",
+  "group": "mgmt",
+  "lists": [
+   "facts"
+  ],
+  "note": "fact sheet (brief §48 Phase A step 3)",
+  "expect": [
+   "Outcome figures from 14 Sep are unvalidated",
+   "86.5% cited answer rate in Sep'26"
+  ]
+ },
+ {
+  "q": "not found rate last month",
+  "then": [
+   "what about housing?"
+  ],
+  "group": "follow",
+  "expect": [
+   "Following on from “not found rate last month”.",
+   "3.0% not-found"
+  ],
+  "lists": [
+   "facts"
+  ]
+ },
+ {
+  "q": "clarification rate last month",
+  "group": "mgmt",
+  "lists": [
+   "facts"
+  ],
+  "note": "fact sheet (brief §48 Phase A step 3)",
+  "expect": [
+   "Outcome figures from 14 Sep are unvalidated",
+   "7.4% clarification rate in Sep'26"
+  ]
+ },
+ {
+  "q": "reached a cited answer last month",
+  "group": "mgmt",
+  "lists": [
+   "facts"
+  ],
+  "note": "fact sheet (brief §48 Phase A step 3)",
+  "expect": [
+   "Outcome figures from 14 Sep are unvalidated",
+   "88.0% conversations that reached a cited answer in Sep'26"
+  ]
+ },
+ {
+  "q": "click-through rate last month",
+  "group": "mgmt",
+  "lists": [
+   "facts"
+  ],
+  "note": "fact sheet (brief §48 Phase A step 3)",
+  "expect": [
+   "5.5 click-throughs per 100 cited answers in Sep'26",
+   "a minimum"
+  ]
+ },
+ {
+  "q": "median response time last month",
+  "group": "mgmt",
+  "lists": [
+   "facts"
+  ],
+  "note": "fact sheet (brief §48 Phase A step 3)",
+  "expect": [
+   "11.8s response time p50 in Sep'26"
+  ]
+ },
+ {
+  "q": "pop-up share last month",
+  "group": "mgmt",
+  "lists": [
+   "facts"
+  ],
+  "note": "fact sheet (brief §48 Phase A step 3)",
+  "expect": [
+   "86.7% Modal share of conversations in Sep'26"
+  ]
+ },
+ {
+  "q": "out of hours share last month",
+  "group": "mgmt",
+  "lists": [
+   "facts"
+  ],
+  "note": "fact sheet (brief §48 Phase A step 3)",
+  "expect": [
+   "37.5% turns outside phone-service hours in Sep'26"
+  ]
+ },
+ {
+  "q": "dislikes per 1,000 cited answers last month",
+  "group": "mgmt",
+  "lists": [
+   "facts"
+  ],
+  "note": "fact sheet (brief §48 Phase A step 3) · read as the cited answer rate before 23 Oct 2026 (a comma in 1,000 became a space)",
+  "expect": [
+   "Outcome figures from 14 Sep are unvalidated",
+   "1.8 dislikes per 1,000 cited answers in Sep'26"
+  ],
+  "not": [
+   "cited answer rate in"
+  ]
+ },
+ {
+  "q": "spend last month",
+  "group": "mgmt",
+  "lists": [
+   "facts"
+  ],
+  "note": "fact sheet (brief §48 Phase A step 3)",
+  "expect": [
+   "£1,010 total spend in Sep'26",
+   "down 10% vs August"
+  ]
+ },
+ {
+  "q": "generation cost per turn last month",
+  "group": "mgmt",
+  "lists": [
+   "facts"
+  ],
+  "note": "fact sheet (brief §48 Phase A step 3)",
+  "expect": [
+   "2.08p generation cost per turn in Sep'26"
+  ]
+ },
+ {
+  "q": "top topics last month",
+  "group": "mgmt",
+  "lists": [
+   "facts"
+  ],
+  "note": "fact sheet (brief §48 Phase A step 3)",
+  "expect": [
+   "Top 10 categories by turns in Sep'26",
+   "1 Social Welfare · 7,868 turns"
   ]
  }
 ]
