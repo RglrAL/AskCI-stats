@@ -378,6 +378,12 @@ ci_tot = sum(I(r['Citations']) for r in CI if 'citizensinformation.ie' in r['URL
 ci_in = sum(I(r['Citations']) for r in CI if 'citizensinformation.ie' in r['URL'] and nu(r['URL']) in PV)
 check('citations to CI pages that join a page with site views (Usage › Pages) at least 98%', ci_tot and ci_in / ci_tot >= 0.98, f'{ci_in / max(1, ci_tot):.2%}')
 
+# ── 8b. first-turn errors, chip and typed (brief §64) ─────────────────────────
+if 'StarterPromptErrors' in U[days[0]]:
+    check('first-turn errors: StarterPromptErrors <= StarterPromptFirstTurns, OrganicFirstErrors <= OrganicFirstTurns, both <= Error', all(
+        I(U[d]['StarterPromptErrors']) <= I(U[d]['StarterPromptFirstTurns']) and I(U[d]['OrganicFirstErrors']) <= I(U[d]['OrganicFirstTurns'])
+        and I(U[d]['StarterPromptErrors']) + I(U[d]['OrganicFirstErrors']) <= I(U[d]['Error']) for d in days))
+
 # ── 9a. pages-cited.csv against citations-monthly.csv (brief §62) ─────────────
 CM = rd('citations-monthly.csv'); PC = rd('pages-cited.csv')
 check('citations-monthly: Partial <= Answers <= Citations on every row', all(I(r['Partial']) <= I(r['Answers']) <= I(r['Citations']) for r in CM))

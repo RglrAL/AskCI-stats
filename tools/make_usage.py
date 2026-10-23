@@ -219,6 +219,8 @@ def aggregate(files, skip_days=frozenset()):
                     if (row.get("Outcome") or "").strip() == "Cited answer": c["dislikes_cited"] += 1
                 if first and "Starter Prompt" in row:
                     c["starter" if (row.get("Starter Prompt") or "").strip() else "organic"] += 1   # holds the chip text, blank when organic
+                    if outcome_col and (row.get("Outcome") or "").strip() == "Error":                 # empty answers on first turns, chip and typed (brief §64)
+                        c["starter_err" if (row.get("Starter Prompt") or "").strip() else "organic_err"] += 1
                 if "Query Script" in row:
                     sc = (row.get("Query Script") or "").strip() or "None"
                     c["script:" + sc] += 1
@@ -569,7 +571,7 @@ def usage_rows(D, sess, lat, has_voice, has_outcome=False, rules="", has_starter
             "ModalTurns", "WebTurns", "OtherTurns", "ModalSessions", "WebSessions", "Citations", "LatencyP50ms", "LatencyP90ms"]
     if has_voice: cols += ["VoiceTurns", "VoiceSessions"]
     cols += ["Likes", "Dislikes", "DislikesOnCited"]
-    if has_starter: cols += ["StarterPromptFirstTurns", "OrganicFirstTurns"]
+    if has_starter: cols += ["StarterPromptFirstTurns", "OrganicFirstTurns"] + (["StarterPromptErrors", "OrganicFirstErrors"] if has_outcome else [])
     if has_script: cols += ["Script" + k for k in SCRIPT_COLS]
     cols += ["LatencyP99ms"] + [c for c, _ in LAT_COLS]
     if has_outcome: cols += [c for c, _ in OUTCOME_COLS] + ["OutcomeRules"] + [c for c, _ in CROSS_COLS]
@@ -583,7 +585,7 @@ def usage_rows(D, sess, lat, has_voice, has_outcome=False, rules="", has_starter
                pct(L, 50), pct(L, 90)]
         if has_voice: row += [c["voice_turns"], len(s["voice"])]
         row += [c["likes"], c["dislikes"], c["dislikes_cited"]]
-        if has_starter: row += [c["starter"], c["organic"]]
+        if has_starter: row += [c["starter"], c["organic"]] + ([c["starter_err"], c["organic_err"]] if has_outcome else [])
         if has_script: row += [c["script:" + k] for k in SCRIPT_COLS]
         row += [pct(L, 99)] + [c[k] for _, k in LAT_COLS]
         if has_outcome: row += [c[k] for _, k in OUTCOME_COLS] + [rules] + [c[k] for _, k in CROSS_COLS]

@@ -62,6 +62,10 @@ jobs:
       - name: Change reports
         run: python3 tools/change_report.py --events
 
+      # Incident candidates: error days against hours, response times and cost meters, at reports/incidents.md.
+      - name: Incident candidates
+        run: python3 tools/incidents.py
+
       - uses: actions/configure-pages@v5
       - uses: actions/upload-pages-artifact@v3
         with:

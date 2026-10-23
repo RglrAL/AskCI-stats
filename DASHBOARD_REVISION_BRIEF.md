@@ -1214,3 +1214,27 @@ Next: §53 step 8, chip scorecards and the share of traffic a starter-prompt cac
 **What a cache would cover, September–October:** chips are 7.2% of first turns (3.9% of all turns). The top 250 first-turn texts, chips included, cover 11.9% of first turns and 6.4% of turns; 21,058 distinct texts among 23,336 first turns is the long tail. A cache keyed on exact text would not change the cost or response-time picture. The model's own suggested follow-ups concentrate more (the top 25 texts take 5.9% of 7,509 clicks), and two of the most clicked are "yes" and "yes please", which the answer format forbids as follow-up questions: the model is offering yes/no follow-ups and people are clicking them.
 
 Next: §53 step 9, incident candidates from error spikes against the cost meters, with the chip empty-answer rate as the first case.
+
+## 64. Step 9: incident candidates, and the chip path as a standing defect (24 Oct 2026)
+
+**Built:**
+- **`tools/incidents.py`** (published files only; the deploy runs it, output at `reports/incidents.md`). A candidate day has an empty-answer share of at least 3%, at least three times its trailing 28-day median, and 20+ errors. For each it reports the hours the errors fell in and how concentrated they were, turns and response time p50 and p90 against their trailing medians, each cost-meter group's spend that day against its own trailing median (Search units and ranker queries; container vCPU and memory, active and idle; model input and output tokens; bandwidth), and whether the day is already in `events.json`. New candidates are printed as event lines.
+- `usage.csv` gains `StarterPromptErrors` and `OrganicFirstErrors`: empty answers on chip and typed first turns, per day. The audit checks them.
+- **Usage › Volume** gains an **Incident candidates** card with the same detection on the selected range (Search and Container read as service totals; the per-meter reading is in the report). **Usage › Conversations** shows, under the chip scorecard, chip clicks that got an empty answer against typed first questions.
+
+**What the candidates say.** The detector finds the four spike days already on record as candidates and nothing else, and reads each one differently:
+
+| Day | Empty answers | Hours | Response time | Meters that moved | Reading |
+|---|---|---|---|---|---|
+| Tue 27 Jan | 130 of 168 (77%) | 8 of 19 hours, whole hours at 100% | p90 1.5× | ranker 0.2×, container active 0.4×, model tokens 0.2× | **Outage.** Nothing billed by use; the service was down for most of the day. |
+| Wed 13–Thu 14 May | 54 of 496, 68 of 548 (11–12%) | spread through 16 and 12 hours | p90 1.9× then 1.2× | Search 2.0×, ranker 2.3–2.6×, container active 2.0–2.5× | **Capacity under launch load.** Turns 2.6–2.8× the median; every use-billed meter doubled. |
+| Fri 29 May | 79 of 710 (11%) | 15:00 at 100%, 16:00 at 89%: 57% of the day's errors | p90 1.8× | model tokens 1.5–1.6×; search and container within range | **A burst on the model side.** An hour and a half of total failure with the model meters up and the rest of the stack normal. |
+| Tue 29 Sep | 47 of 905 (5%) | spread through 11 hours | p90 2.4× | container active 2.3×; search and model within range | **Container pressure.** The smallest spike, with the p90 more than doubled and only the container meters moving. |
+
+Each stays a candidate: the readings say where to look, not what happened. They go in the events' detail fields when the team confirms them.
+
+**The chip path is a standing defect, not an incident.** Chip clicks get an empty answer in every month since January, at 4–14% (8.7% in October, 82 of 940), against 0.2–1% of typed first turns in the same months (0.66% in October). It holds on every chip (passport 11%, Back to School 14%, HAP 6%, the new Household Benefits chip 3%), on both surfaces (pop-up 10%, web 6%), at every hour of the day, and the failures are not clustered on particular days. The same text typed by hand is answered. So it is the chip's request path that fails: a click sent before the session is ready, a chip request the backend handles on a different route, or a race between the chip and the first-turn setup. It predates every model change and the launch. **This is the single most actionable finding of the whole diagnosis for the team: roughly one chip click in twelve returns nothing, and has done all year.**
+
+**What it changes for 14 September.** Nothing. The error rate did not move at the change (§57), and the chip defect is constant across it. The incident list is the operations record; the diagnosis stays with the answering model and the prompt.
+
+Next: §53 step 10, safety counts in `redact_feed.py` (identifiers typed in, injection patterns, off-topic themes), counts only.

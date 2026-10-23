@@ -2625,7 +2625,7 @@ function parseUsage(rows){
     newTopic:col(/^newtopic$/i),userFollowup:col(/^userfollowup$/i),suggestedFollowup:col(/^suggestedfollowup$/i),
     modalTurns:col(/^modalturns$/i),webTurns:col(/^webturns$/i),otherTurns:col(/^otherturns$/i),modalSessions:col(/^modalsessions$/i),webSessions:col(/^websessions$/i),
     citations:col(/^citations$/i),latP50:col(/^latencyp50/i),latP90:col(/^latencyp90/i),voiceTurns:col(/^voiceturns$/i),voiceSessions:col(/^voicesessions$/i),
-    likes:col(/^likes$/i),dislikes:col(/^dislikes$/i),dislikesCited:col(/^dislikesoncited$/i),starter:col(/^starterpromptfirstturns$/i),organic:col(/^organicfirstturns$/i),
+    likes:col(/^likes$/i),dislikes:col(/^dislikes$/i),dislikesCited:col(/^dislikesoncited$/i),starter:col(/^starterpromptfirstturns$/i),starterErr:col(/^starterprompterrors$/i),organicErr:col(/^organicfirsterrors$/i),organic:col(/^organicfirstturns$/i),
     scLatin:col(/^scriptlatin$/i),scCyrillic:col(/^scriptcyrillic$/i),scArabic:col(/^scriptarabic$/i),scCJK:col(/^scriptcjk$/i),scDevanagari:col(/^scriptdevanagari$/i),scOther:col(/^scriptother$/i),scNone:col(/^scriptnone$/i),
     latP99:col(/^latencyp99/i),latU10:col(/^latunder10s$/i),lat1020:col(/^lat10to20s$/i),lat2030:col(/^lat20to30s$/i),latO30:col(/^latover30s$/i),
     modalCited:col(/^modalcited$/i),modalNotFound:col(/^modalnotfound$/i),modalScored:col(/^modalscored$/i),webCited:col(/^webcited$/i),webNotFound:col(/^webnotfound$/i),webScored:col(/^webscored$/i),
@@ -5920,6 +5920,38 @@ function renderPages(D,S){
   renderIcons();
 }
 
+// ═══ INCIDENT CANDIDATES (brief §53 step 9, §64) ════════════════════════════
+// Days in range whose empty-answer share is at least 3%, at least three times the trailing 28-day median and 20+
+// errors, each read against the hours (how concentrated), response time, turns, and the cost meters that moved that
+// day against their own trailing median. A meter that jumps names a component under load; meters falling to nothing
+// name an outage. Mirrors tools/incidents.py, which writes the full report at deploy.
+// Search and Container Apps are read as service totals (the page keeps per-meter cost for Foundry only); the full
+// per-meter reading (active against idle, units against ranker queries) is in reports/incidents.md.
+const INC_GROUPS=[['Search (service)',null,'Azure Cognitive Search'],['Container Apps (service)',null,'Azure Container Apps'],['Model input tokens',m=>/\binp|input/i.test(m)&&!/embed|transcribe/i.test(m)&&/Tokens/.test(m)],['Model output tokens',m=>/outp|\bopt\b|out\b/i.test(m)&&!/embed|transcribe/i.test(m)&&/Tokens/.test(m)]];
+function incidentCardHTML(fr){
+  const all=DATA.merged,idx=Object.fromEntries(all.map((d,i)=>[d.date,i]));
+  const med=a=>{const v=a.filter(x=>x!=null&&!isNaN(x)).sort((x,y)=>x-y);return v.length>=7?v[Math.floor(v.length/2)]:null;};
+  const trail=(i,f)=>med(all.slice(Math.max(0,i-28),i).map(f));
+  const errShare=d=>d.ux&&d.queries?(d.ux.error||0)/d.queries:null;
+  const grp=d=>{const o={};INC_GROUPS.forEach(([g,f,svc])=>{o[g]=svc?(d[svc]||0):Object.entries(d.metersByDate||{}).filter(([k])=>f(k)).reduce((s,[,v])=>s+v,0);});return o;};
+  const rows=[];
+  fr.forEach(d=>{const i=idx[d.date],s=errShare(d),e=d.ux?.error||0;if(s==null||e<20||s<0.03)return;const b=trail(i,errShare);if(b!=null&&b>0&&s<3*b)return;
+    const H=HOURS[d.date]||[],hrs=H.map((x,h)=>x?{h,e:x.err||0,t:x.t||0}:null).filter(Boolean),te=hrs.reduce((a,x)=>a+x.e,0),withT=hrs.filter(x=>x.t>0),top=[...hrs].sort((a,b)=>b.e-a.e).slice(0,2);
+    const conc=te?top.reduce((a,x)=>a+x.e,0)/te:null,whole=withT.length&&withT.filter(x=>x.e).length>=0.8*withT.length;
+    const q=trail(i,x=>x.queries),p50=d.ux?.latP50,p90=d.ux?.latP90,b50=trail(i,x=>x.ux?.latP50||null),b90=trail(i,x=>x.ux?.latP90||null);
+    const g=grp(d),moved=[];INC_GROUPS.forEach(([k])=>{const bb=trail(i,x=>x.hasCost?grp(x)[k]:null);if(bb&&d.hasCost){const r=g[k]/bb;if(r>=1.5||r<=0.5)moved.push(`${k} ${r.toFixed(1)}×`);}});
+    const ev=confirmedEvents().concat(EVENTS.candidate||[]).filter(x=>x.start<=d.date&&(x.end||x.start)>=d.date);
+    rows.push({d,s,e,b,conc,top,whole,q,p50,p90,b50,b90,moved,ev,hasH:hrs.length>0});});
+  if(!rows.length)return'';
+  const td=(v,o={})=>`<td style="text-align:${o.left?'left':'right'};padding:7px 9px;font-family:${o.left?'inherit':"'DM Mono',monospace"};font-size:.76rem;vertical-align:top;${o.style||''}">${v}</td>`;
+  const th=(t,left)=>`<th style="text-align:${left?'left':'right'};padding:7px 9px;font-size:.6rem;color:var(--muted);text-transform:uppercase;letter-spacing:.08em;white-space:nowrap">${t}</th>`;
+  const x=(a,b)=>a&&b?`${(a/b).toFixed(1)}×`:'—';
+  return`<div class="card" style="overflow-x:auto"><div class="card-title">Incident candidates<span class="card-title-note">days with 3%+ empty answers, 3× the trailing 28-day median and 20+ errors · each read against the hours, response time and the cost meters that moved that day</span></div>
+    <table style="width:100%;border-collapse:collapse;min-width:900px"><thead><tr style="border-bottom:1px solid var(--b2)">${th('Day',true)}${th('Empty answers')}${th('Share')}${th('Trailing')}${th('Turns')}${th('Hours',true)}${th('p50')}${th('p90')}${th('Cost meters that moved',true)}${th('On record',true)}</tr></thead>
+    <tbody>${rows.map(r=>`<tr style="border-bottom:1px solid var(--b2)">${td(`<a href="#" onclick="openDayPanel('${r.d.date}');return false" style="color:${C.acc};text-decoration:none">${fmtDate(r.d.date)}</a>`,{left:true})}${td(num(r.e))}${td((r.s*100).toFixed(1)+'%',{style:'color:var(--red);font-weight:600'})}${td(r.b!=null?(r.b*100).toFixed(2)+'%':'—')}${td(num(r.d.queries)+(r.q?` <span style="color:var(--muted)">(${(r.d.queries/r.q).toFixed(1)}×)</span>`:''))}${td(r.hasH?(r.whole?'whole day':(r.conc>=0.6?'a burst: ':'spread: ')+r.top.map(t=>`${String(t.h).padStart(2,'0')}:00 ${t.t?Math.round(t.e/t.t*100):0}%`).join(', ')):'—',{left:true,style:'font-size:.7rem'})}${td(x(r.p50,r.b50))}${td(x(r.p90,r.b90))}${td(r.moved.length?r.moved.join('; '):'<span style="color:var(--muted)">none within range</span>',{left:true,style:'font-size:.7rem'})}${td(r.ev.length?r.ev.map(e=>escH(e.title)+' ('+e.status+')').join('; '):'<span style="color:var(--amber)">not in events.json</span>',{left:true,style:'font-size:.7rem'})}</tr>`).join('')}</tbody></table>
+    <div class="share-foot">Reading the row: every hour failing with the use-billed meters at a fraction of normal is an outage; errors spread through a busy day with search and container meters up is capacity under load; one or two hours at 100% with the model meters up is a burst on the model side; container meters up with the p90 doubled is container pressure. Confirmed events are the record; this is the list to check against it.</div></div>`;
+}
+
 // ═══ CONTENT LISTS (brief §53 step 7, §62) ═══════════════════════════════════
 // Five lists that name pages rather than rates: answers that say something is missing by page; pages lost and gained
 // at the latest model change; addresses off the site's list and old pages; pages cited often and never clicked; and
@@ -6108,7 +6140,9 @@ function renderConvs(D,S){
     ${spRows.length?`<div class="card" style="overflow-x:auto"><div class="card-title">Starter prompt scorecard<span class="card-title-note">configured chips matched on first turns · months overlapping the range (${months.map(fmtMonth).join(', ')}) · ${rateText(spTotal,spStarted)} of ${num(spStarted)} conversations started in those months · a dash = under the small-sample minimum</span></div>
       <table style="width:100%;border-collapse:collapse;min-width:${spScore?'1100px':'640px'}"><thead><tr style="border-bottom:1px solid var(--b2)">${th('Prompt',false)}${th('Count')}${th('Share of first turns')}${th('Cited')}${spScore?th('Cited, not partial')+th('Not found')+th('Clarification'):''}${th('Then typed')}${th('Then chip')}${spScore?th('Ended there')+th('Disliked')+th('Words')+th('Response p-mean'):''}</tr></thead>
       <tbody>${spRows.map(([pr,o])=>`<tr style="border-bottom:1px solid var(--b2)">${td(pr,C.acc,false)}${td(num(o.n))}${td(rateText(o.n,spStarted))}${td(rateText(o.cited,o.n),C.green)}${spScore?td(rateText(o.cited-o.partial,o.n),C.green)+td(rateText(o.nf,o.n),C.red)+td(rateText(o.clar,o.n),C.amber):''}${td(rateText(o.typed,o.n))}${td(rateText(o.sugg,o.n))}${spScore?td(rateText(o.ended,o.mature))+td(o.dis?num(o.dis):'0')+td(o.n?Math.round(o.words/o.n).toLocaleString():'—')+td(o.timed?(o.ms/o.timed/1000).toFixed(1)+'s':'—'):''}</tr>`).join('')}</tbody></table>
-      ${spScore?`<div class="share-foot">Each chip's own first-turn answer: cited (and cited without a "couldn't find" phrase), not found, clarification; what the person did next; of the mature conversations it started, the share that ended there; dislikes on the answer; answer length and mean response time. A chip is a fixed question, so a change in its row is a change in the system (brief §55).</div>`:''}
+      ${spScore?(()=>{const ce=fr.reduce((a,d)=>a+(d.ux?.starterErr||0),0),cn=fr.reduce((a,d)=>a+(d.ux?.starter||0),0),oe=fr.reduce((a,d)=>a+(d.ux?.organicErr||0),0),on=fr.reduce((a,d)=>a+(d.ux?.organic||0),0);
+        return cn&&on?`<div class="grid2" style="margin:12px 0 0">${uxTile(rateText(ce,cn),'Chip clicks that got an empty answer',`${num(ce)} of ${num(cn)} chip first turns in range · a standing defect in the chip path, in every month since January (brief §64)`,C.red)}${uxTile(rateText(oe,on),'Typed first questions that got an empty answer',`${num(oe)} of ${num(on)} typed first turns · the same text typed by hand is answered`,C.muted)}</div>`:'';})():''}
+      ${spScore?`<div class="share-foot">Each chip's own first-turn answer: cited (and cited without a "couldn't find" phrase), not found, clarification; what the person did next; of the mature conversations it started, the share that ended there; dislikes on the answer; answer length and mean response time. A chip is a fixed question, so a change in its row is a change in the system (brief §55). The rest of each row (not cited, not found, nor clarification) is empty answers.</div>`:''}
     </div>`:''}
     ${hasRepeats&&RP.length?(()=>{const ft=rpSum('FirstTurns'),ch=rpSum('StarterFirstTurns'),t=rpSum('Turns'),sg=rpSum('SuggestedClicks');
       const tops=[10,25,50,100,250].map(n=>[n,rpSum('Top'+n)]);
@@ -6389,6 +6423,7 @@ function usageDetailHTML(fr){
       const col=hoursMode==='notfound'||hoursMode==='errors'?C.red:hoursMode==='latency'?C.amber:C.acc;
       const cell=(k,hh)=>{const v=val(k,hh),b=best[k][hh];const t=max>min?((v==null?0:(v-min))/(max-min)):0;const a=v==null?0x08:Math.round(0x12+(0xee-0x12)*t);
         return`<div title="${names[k]} ${String(hh).padStart(2,'0')}:00 · ${fmtV(v)}${isRate?` (${num(grid[k][hh])} of ${num(den[k][hh])})`:' '+unit}${b?` · busiest ${fmtDate(b.date)} (${num(b.t)} turns) — click to open`:''}"${b?` onclick="openDayPanel('${b.date}')"`:''} style="height:16px;border-radius:2px;background:${col}${a.toString(16).padStart(2,'0')}${b?';cursor:pointer':''};font-size:.5rem;line-height:16px;text-align:center;color:var(--muted);overflow:hidden">${!isRate&&max<10000&&v>0&&t>0.55?num(v):''}</div>`;};
+      h+=incidentCardHTML(fr);
       h+=`<div class="card"><div class="card-title">Hour of day<span class="card-title-note">${unit} by weekday and hour, Irish time · ${days} day${days===1?'':'s'} with hourly data in range</span>
           <span class="pill-group" style="margin-left:auto"><button class="pill${hoursMode==='turns'?' active':''}" onclick="setHoursMode('turns')">Turns</button><button class="pill${hoursMode==='sessions'?' active':''}" onclick="setHoursMode('sessions')">Conversations</button>${Object.values(HOURS)[0]?.find(x=>x&&x.detail)?`<button class="pill${hoursMode==='notfound'?' active':''}" onclick="setHoursMode('notfound')">Not-found rate</button><button class="pill${hoursMode==='errors'?' active':''}" onclick="setHoursMode('errors')">Error rate</button><button class="pill${hoursMode==='latency'?' active':''}" onclick="setHoursMode('latency')">Mean response</button>`:''}</span></div>
         <div class="grid4">
