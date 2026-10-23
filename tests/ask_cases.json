@@ -286,8 +286,9 @@
   "q": "average response time in October",
   "group": "quality",
   "expect": [
-   "11.2s average"
-  ]
+   "11.2s response time p50"
+  ],
+  "note": "\"average\" no longer echoed for a rate or percentile (review step 4)"
  },
  {
   "q": "slowest day",
@@ -2184,5 +2185,74 @@
   ],
   "group": "review",
   "note": "finding 21: a page name holding a year"
+ },
+ {
+  "q": "not found rate in housing",
+  "then": [
+   "and employment?"
+  ],
+  "expect": [
+   "Following on from",
+   "not-found rate in Employment"
+  ],
+  "not": [
+   "I couldn’t parse that"
+  ],
+  "group": "review",
+  "note": "coverage: a follow-up naming only a topic"
+ },
+ {
+  "q": "questions in September",
+  "then": [
+   "and the pop-up?"
+  ],
+  "expect": [
+   "Following on from",
+   "Modal"
+  ],
+  "not": [
+   "I couldn’t parse that"
+  ],
+  "group": "review",
+  "note": "coverage: a follow-up naming only a source"
+ },
+ {
+  "q": "how much does a question cost",
+  "expect": [
+   "allocated total cost per turn"
+  ],
+  "not": [
+   "136,752 turns overall"
+  ],
+  "group": "review",
+  "note": "coverage"
+ },
+ {
+  "q": "what does a conversation cost",
+  "expect": [
+   "allocated cost per conversation"
+  ],
+  "group": "review",
+  "note": "coverage"
+ },
+ {
+  "q": "unique visitors in September",
+  "expect": [
+   "AskCI has no login",
+   "11,590 conversations"
+  ],
+  "group": "review",
+  "note": "coverage: same behaviour as 'how many users'"
+ },
+ {
+  "q": "average not found rate in September",
+  "expect": [
+   "6.0% not-found rate"
+  ],
+  "not": [
+   "average not-found rate"
+  ],
+  "group": "review",
+  "note": "finding 28"
  }
 ]

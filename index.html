@@ -1534,6 +1534,7 @@ input[type=date]{color-scheme:dark}
 .ask-delta.good{background:color-mix(in srgb,var(--good) 14%,transparent);border-color:color-mix(in srgb,var(--good) 45%,transparent)}
 .ask-delta.bad{background:color-mix(in srgb,var(--bad) 14%,transparent);border-color:color-mix(in srgb,var(--bad) 45%,transparent)}
 .ask-delta.neu{background:var(--s1);border-color:var(--b2)}
+.sr-only{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0}
 .ask-delta.good .ask-arr{color:var(--good)}.ask-delta.bad .ask-arr{color:var(--bad)}.ask-delta.neu .ask-arr{color:var(--muted)}
 details.ask-read{display:block}
 details.ask-read>summary .ask-read-lbl{white-space:nowrap}
@@ -1705,7 +1706,8 @@ Date,Questions,Sessions
         <button type="submit" class="ask-go" id="ask-go">Ask</button>
       </form>
       <div id="ask-chips"></div>
-      <div id="ask-answer" aria-live="polite"></div>
+      <div id="ask-answer"></div>
+      <div id="ask-live" class="sr-only" aria-live="polite"></div>
     </div>
     <div id="hero" class="card" style="display:none"></div>
     <div class="kpi-grid" id="kpi-row"></div>
@@ -7469,6 +7471,7 @@ init();
   function parseCategory(q){
     for(const[slug,phr]of CAT_PHRASES){for(const ph of phr){
       const p=ph.replace(/[&]/g,'\\$&');
+      if(new RegExp('^\\s*(and|but|what about|how about|now|then)\\s+(for\\s+|in\\s+)?(the\\s+)?'+p+'\\s*$').test(q))return slug;   // a follow-up naming only a topic: "and employment?"
       if(new RegExp('\\b(in|for|on|about|within)\\s+(the\\s+)?'+p+'\\b').test(q))return slug;        // "in housing"
       if(new RegExp('\\b'+p+'\\s+'+CAT_NOUNS+'\\b').test(q))return slug;                                   // "housing citations", "health not-found rate"
       if(new RegExp('\\b(are|is|were|was) (about )?'+p+'\\s*$').test(q.trim()))return slug;                      // "what share of questions are social welfare"
@@ -7478,6 +7481,8 @@ init();
   }
   // Source / question-type filter for outcome metrics ("not-found rate for modal", "cited rate for chips").
   function parseFilter(q){
+    // a follow-up naming only a source: "and the pop-up?" (read as modal), "what about the standalone site?"
+    {const m=q.trim().match(/^(and|but|what about|how about|now|then)\s+(for\s+|on\s+)?(the\s+)?(modal|web)\s*$/);if(m)return m[4]==='modal'?{key:'modal',label:'Modal'}:{key:'web',label:'Web'};}
     if(/\bmodal (vs\.?|versus|and|or) web\b|\bweb (vs\.?|versus|and|or) modal\b|\bmodal share\b|\bweb share\b/.test(q))return null;   // the source split itself, not a filter
     if(/\b(for|on|via|from|in)\s+(the\s+)?modal\b|\bmodal (users|turns|conversations|traffic|questions?|not[- ]?found|cited|click|error)/.test(q))return{key:'modal',label:'Modal'};
     if(/\b(for|on|via|from)\s+(the\s+)?web\b|\bweb (users|turns|conversations|traffic|site|questions?|not[- ]?found|cited|click|error)/.test(q))return{key:'web',label:'Web'};
@@ -7489,7 +7494,7 @@ init();
   // Parse rules that build their result from the question (labels with variants, services, model families).
   // Third element: how strongly a match counts (a pattern whose matched length is the score, or a number).
   const PARSE_HOOKS=[
-    [40,(q,svcs)=>{if((/\bwhat does (a|each|one) (question|turn|answer) cost\b|\bcost (per|of a|of each) (question|turn|answer)\b/.test(q))&&!/generation|\bllm\b|model|variable|fixed|allocated/.test(q))return{kind:'cpq_tot',label:'allocated total cost per turn'}; return null;},/\bwhat does (a|each|one) (question|turn|answer) cost\b|\bcost (per|of a|of each) (question|turn|answer)\b/],
+    [40,(q,svcs)=>{if((/\bhow much (does|do|did) (a|each|one|every) (question|turn|answer) cost\b|\bwhat does (a|each|one) (question|turn|answer) cost\b|\bcost (per|of a|of each) (question|turn|answer)\b/.test(q))&&!/generation|\bllm\b|model|variable|fixed|allocated/.test(q))return{kind:'cpq_tot',label:'allocated total cost per turn'}; return null;},/\bhow much (does|do|did) (a|each|one|every) (question|turn|answer) cost\b|\bwhat does (a|each|one) (question|turn|answer) cost\b|\bcost (per|of a|of each) (question|turn|answer)\b/],
     [90,(q,svcs)=>{if(/\bbusiest (day of the week|weekday)\b|\bwhich (day of the week|weekday)\b|\bquietest (day of the week|weekday)\b/.test(q))return{kind:'weekday',label:/quietest/.test(q)?'quietest day of the week':'busiest day of the week'}; return null;},/\bbusiest (day of the week|weekday)\b|\bwhich (day of the week|weekday)\b|\bquietest (day of the week|weekday)\b/],
     [100,(q,svcs)=>{if(/\bwhat time of (the )?day\b|\btime of day\b/.test(q))return{kind:'hour',label:/quietest/.test(q)?'quietest hour':'busiest hour'}; return null;},/\bwhat time of (the )?day\b|\btime of day\b/],
     [130,(q,svcs)=>{if(/\bhow many (different |distinct |unique )?(ci |citizens ?information )?pages?\b|\b(percentage|share|proportion) of (the )?(ci |citizens ?information )?pages\b/.test(q))return/click|follow|visit|read|went|go on/.test(q)?{kind:'clickpages',label:'pages people clicked through to'}:{kind:'pagescited',label:'different pages cited'}; return null;},/\bhow many (different |distinct |unique )?(ci |citizens ?information )?pages?\b|\b(percentage|share|proportion) of (the )?(ci |citizens ?information )?pages\b/],
@@ -7582,7 +7587,8 @@ init();
     if(!d.metricExplicit&&!d.periodExplicit&&!d.category&&!d.filter&&!d.groupBy&&!d.trend&&!d.hours&&!d.days)return null; // too vague standalone → defer
     let period=d.period;
     if(d.trend&&period.kind==='all'&&!d.periodExplicit){const latest=lastDate();period={kind:'range',from:addDays(latest,-89),to:latest,label:'the last 90 days'};} // a trend needs a window; default to 90 days
-    return{raw:orig,period,metric:d.metric,agg:d.agg,bucket:d.bucket,category:d.category,filter:d.filter,groupBy:d.groupBy,trend:d.trend,hours:d.hours,days:d.days,share:!!d.category&&/\b(share|percentage|proportion|what percent)\b/.test(d.q)};
+    const agg=d.agg==='avg'&&isRatioK(d.metric.kind)?'sum':d.agg;   // "average not-found rate" is the rate: no "average" in the label
+    return{raw:orig,period,metric:d.metric,agg,bucket:d.bucket,category:d.category,filter:d.filter,groupBy:d.groupBy,trend:d.trend,hours:d.hours,days:d.days,share:!!d.category&&/\b(share|percentage|proportion|what percent)\b/.test(d.q)};
   }
 
   // "Jan vs Feb", "this month vs last month", "compare X and Y" → two-period compare
@@ -8225,7 +8231,7 @@ init();
     AM('span','Conversations over 5 min','pct',{calc:{src:'conv',n:['Span6to15','Span16to60','SpanOver60'],d:['Span0to1','Span2to5','Span6to15','Span16to60','SpanOver60'],of:'multi-turn conversations',note:'multi-turn conversations lasting over 5 minutes, minute precision',subj:'conversations over 5 minutes'},syn:[[/\bhow long (are|do|did) conversations( last| take)?\b|\bconversation (length|duration)\b/,5,'conversations over 5 minutes'],[/how long|conversation (length|span|duration)|observed span|\bspan\b|duration/,190,'conversations over 5 minutes']],def:'Mature multi-turn conversations lasting more than 5 minutes from first to last turn, minute precision.'}),
     AM('script','Non-Latin script share','pct',{def:'Turns whose question starts with a non-Latin letter, as a share of turns with letters. A script, not a language.'}),
     AM('events','Events','list',{groupable:false,prior:false,syn:[[/\bevents?\b|milestones/,290,'events']]}),
-    AM('cpc','Allocated cost per conversation','pence',{polarity:'down',cost:true,syn:[[/\bcost (per|of a|of each) conversation\b/,30,'allocated cost per conversation']],def:'Allocated total billed cost divided by conversations, over settled billing days with turns.'}),
+    AM('cpc','Allocated cost per conversation','pence',{polarity:'down',cost:true,syn:[[/\bcost (per|of a|of each) conversation\b|\b(how much|what) (does|do|did) (a|each|one|every) conversation cost\b/,30,'allocated cost per conversation']],def:'Allocated total billed cost divided by conversations, over settled billing days with turns.'}),
     AM('oos','Out-of-scope share','pct',{calc:{src:'ux',n:'outOfScope',d:'Q',of:'turns',note:'questions outside CI’s remit, declined by AskCI',subj:'out-of-scope share of turns'},polarity:'down',syn:[[/\bout of scope\b|\boutside (its|the|ci'?s) remit\b|\brefus(ed|al|als)\b|\bdeclined\b/,70,'out-of-scope share of turns']],def:'Turns AskCI declined as outside Citizens Information\'s remit, as a share of all turns.'}),
     AM('adoption','Share of site sessions (at most)','pct',{syn:[[/\b(share|percentage|proportion) of (the )?site (visitors|visits|sessions|traffic)\b|\bsite (visitors|visits|sessions) (use|using|used)\b|\badoption( rate)?\b/,110,'AskCI conversations as a share of site sessions']],def:'AskCI conversations as a share of citizensinformation.ie site sessions. At most: GA4 undercounts sessions (cookie consent) while AskCI counts every conversation.'}),
     AM('infoshare','Share of information-seeking (at most)','pct',{syn:[[/\bsite search(es)?\b|\bcompare(d)? (to|with) (the )?(site )?search\b|\binformation[- ]seeking\b/,120,'share of information-seeking']],def:'AskCI questions as a share of AskCI questions plus site searches. At most, for the same reason as the adoption rate.'}),
@@ -8387,7 +8393,7 @@ init();
     const side=(lbl,v)=>'<div class="ask-cmp-side"><div class="ask-cmp-lbl">'+esc(lbl)+'</div><div class="ask-cmp-num">'+(v==null?'—':esc(fmt(v)))+'</div></div>';
     el.innerHTML='<div class="ask-card" style="flex-direction:column;align-items:stretch">'+
       '<div class="ask-card-q">'+esc(intent.raw)+'</div>'+
-      '<div class="ask-hero"><div class="ask-card-val txt">'+esc(headline)+'</div>'+(dTxt&&va!=null&&vb!=null?'<span class="ask-delta '+cls+'">'+(verdict==='rising'?'<span class="ask-arr">▲</span> ':verdict==='falling'?'<span class="ask-arr">▼</span> ':'')+esc(dTxt)+'</span>':'')+'</div>'+
+      '<div class="ask-hero"><div class="ask-card-val txt">'+esc(headline)+'</div>'+(dTxt&&va!=null&&vb!=null?'<span class="ask-delta '+cls+'">'+(verdict==='rising'?'<span class="ask-arr" aria-hidden="true">▲</span> ':verdict==='falling'?'<span class="ask-arr" aria-hidden="true">▼</span> ':'')+esc(dTxt)+'</span>':'')+'</div>'+
       '<div class="ask-cmp-row">'+side(A.label,va)+'<div class="ask-cmp-mid" style="color:var(--dim);font-size:.7rem">→</div>'+side(B.label,vb)+'</div>'+
       '<div class="ask-card-sub">'+esc(subj+cat+flt+': first half of '+(p.kind==='all'?'the full period':p.label)+' against the second · material when the change reaches '+thr+(why?' · '+why:'')+' · descriptive, no cause claimed')+'</div>'+
       (res.full&&Array.isArray(res.full.series)?vizBlock():'')+
@@ -8500,8 +8506,18 @@ init();
   }
   function readAsHTML(intent){
     if(!intent||!intent.metric)return '';
-    const sel=(name,opts,cur,allowCurrent)=>{const has=opts.some(o=>o[0]===cur);const list=(has||!allowCurrent?opts:[[cur,allowCurrent]].concat(opts));return '<label class="ask-read-chip"><span>'+esc(name)+'</span><select data-dim="'+name+'">'+list.map(o=>'<option value="'+escA(o[0])+'"'+(o[0]===cur?' selected':'')+'>'+esc(o[1])+'</option>').join('')+'</select></label>';};
-    const metrics=READ_METRICS.slice();(DATA.allSvcs||[]).forEach(sv=>metrics.push(['svc:'+sv,sv+' cost']));CONFIG.model_families.forEach(f=>metrics.push(['fam:'+f.family,f.family+' cost']));
+    const opt=o=>'<option value="'+escA(o[0])+'"'+(o[0]===cur0?' selected':'')+'>'+esc(o[1])+'</option>';let cur0='';
+    const sel=(name,opts,cur,allowCurrent)=>{cur0=cur;const has=opts.some(o=>o[0]===cur);const list=(has||!allowCurrent?opts:[[cur,allowCurrent,opts[0][2]]].concat(opts));
+      // options carrying a group (the measure menu) are shown in labelled groups, in the order the groups first appear
+      const body=list[0]&&list[0][2]?[...new Set(list.map(o=>o[2]))].map(g=>'<optgroup label="'+escA(g)+'">'+list.filter(o=>o[2]===g).map(opt).join('')+'</optgroup>').join(''):list.map(opt).join('');
+      return '<label class="ask-read-chip"><span>'+esc(name)+'</span><select data-dim="'+name+'">'+body+'</select></label>';};
+    const GRP={Usage:'questions sessions qps organic citations modal chips starter outofhours hour weekday peakload script events pagescited clickpages adoption infoshare answerlen',
+      Quality:'cited notfound clarification error partial uncited dislikes feedback oos answered unanswered flagged',Conversations:'reached latercited single chipuse span',
+      'Click-throughs':'clicks ctr','Response time':'latency p90 p99 over30'};
+    const grpOf=id=>id.startsWith('svc:')?'Cost by service':id.startsWith('fam:')?'Cost by model':Object.keys(GRP).find(g=>GRP[g].split(' ').includes(id))||(mIs(id,m=>m.cost)?'Cost':'Other');
+    const ORDER=['Usage','Quality','Conversations','Click-throughs','Response time','Cost','Cost by service','Cost by model','Other'];
+    const metrics0=READ_METRICS.slice();(DATA.allSvcs||[]).forEach(sv=>metrics0.push(['svc:'+sv,sv+' cost']));CONFIG.model_families.forEach(f=>metrics0.push(['fam:'+f.family,f.family+' cost']));
+    const metrics=metrics0.map(o=>[o[0],o[1],grpOf(o[0])]).sort((a,b)=>ORDER.indexOf(a[2])-ORDER.indexOf(b[2]));
     const cats=[['','any category']].concat(CAT_PHRASES.map(([slug])=>[slug,catLabel(CAT_ALIAS[slug]||slug)]));
     const filters=[['','all sources and types'],['modal','Modal'],['web','Web'],['nt','new topics'],['uf','typed follow-ups'],['sf','suggested follow-ups']];
     const shapes=[['single','single value'],['month','by month'],['week','by week'],['trend','trend, first half vs second']];
@@ -8562,7 +8578,7 @@ init();
       // A rate or share changes in percentage points, not by a relative per cent of itself.
       const pts=isPctK(m.kind);
       const nearP=pts?Math.abs(vb-va)<0.05:near;
-      delta='<span class="ask-delta '+(nearP||!lowerBetterK(m.kind)&&!mIs(m.kind,x=>x.polarity==='up')&&!isEntity?'neu':(good?'good':'bad'))+'">'+(nearP?'≈':'<span class="ask-arr">'+(up?'▲':'▼')+'</span>')+' '+(pts?Math.abs(vb-va).toFixed(1)+' pts':Math.abs(pct).toFixed(0)+'%')+'</span>';
+      delta='<span class="ask-delta '+(nearP||!lowerBetterK(m.kind)&&!mIs(m.kind,x=>x.polarity==='up')&&!isEntity?'neu':(good?'good':'bad'))+'">'+(nearP?'≈':'<span class="ask-arr" aria-hidden="true">'+(up?'▲':'▼')+'</span>')+' '+(pts?Math.abs(vb-va).toFixed(1)+' pts':Math.abs(pct).toFixed(0)+'%')+'</span>';
       diff=nearP?` · ${intent.periodB.label} is about the same as ${intent.periodA.label}`:` · ${intent.periodB.label} is ${pts?Math.abs(vb-va).toFixed(1)+' points':Math.abs(pct).toFixed(0)+'%'} ${up?'above':'below'} ${intent.periodA.label} (${up?'+':'−'}${pts?Math.abs(vb-va).toFixed(1)+' pts':fmt(Math.abs(vb-va))})`;
     }
     const side=(p,r)=>isEntity
@@ -8724,7 +8740,10 @@ init();
       '<div id="ask-viz-table" style="display:none"></div>'+
     '</div>';
   }
-  function mountViz(cfg,vizData){ askViz=vizData; try{ if(typeof mkChart==='function') mkChart('ask-chart',cfg); }catch(e){} }
+  function mountViz(cfg,vizData){ askViz=vizData; try{ if(typeof mkChart==='function') mkChart('ask-chart',cfg); }catch(e){}
+    // a chart is an image to a screen reader: name it, and point to the table that holds its values
+    const cv=$('ask-chart');if(cv&&vizData){cv.setAttribute('role','img');cv.setAttribute('aria-label',`Chart of ${vizData.cols[1]||'values'}${vizData.cols[0]?' by '+String(vizData.cols[0]).toLowerCase():''}, ${vizData.rows.length} values. The Table button lists them.`);}
+  }
   function askTableHtml(){
     if(!askViz)return '';
     return '<table class="ask-tbl"><thead><tr>'+askViz.cols.map(c=>'<th>'+esc(c)+'</th>').join('')+'</tr></thead><tbody>'+
@@ -8757,7 +8776,7 @@ init();
   const WC_POL={notFoundRate:'down',errorRate:'down',latP50:'down',partialRate:'down',clarRate:'down',dislikesPerK:'down',genPT:'down',costPerDay:'down',varPerDay:'down',citedRate:'up',reachedCited:'up'};
   function wcRow(st){
     const dir=st.d>0?1:st.d<0?-1:0,pol=WC_POL[st.k],good=!pol||!dir?null:(pol==='up')===(dir>0);
-    return '<li class="ask-wc"><span class="ask-delta '+(good==null?'neu':good?'good':'bad')+'">'+(dir>0?'<span class="ask-arr">▲</span> ':dir<0?'<span class="ask-arr">▼</span> ':'')+esc(String(st.dTxt||'').replace(/ \(.*\)$/,''))+'</span><span>'+wcChip(st)+esc(st.text)+'</span></li>';
+    return '<li class="ask-wc"><span class="ask-delta '+(good==null?'neu':good?'good':'bad')+'">'+(good==null?'':'<span class="sr-only">'+(good?'better: ':'worse: ')+'</span>')+(dir>0?'<span class="ask-arr" aria-hidden="true">▲</span> ':dir<0?'<span class="ask-arr" aria-hidden="true">▼</span> ':'')+esc(String(st.dTxt||'').replace(/ \(.*\)$/,''))+'</span><span>'+wcChip(st)+esc(st.text)+'</span></li>';
   }
   const wideSpark=(vals,col)=>(sparkline((vals||[]).map(v=>v==null||!isFinite(v)?null:+v),col,240,36)||'').replace('<svg ','<svg preserveAspectRatio="none" ');
   // A chip for a change between two values of a measure: points for shares and rates, per cent otherwise.
@@ -8766,14 +8785,14 @@ init();
     const M=MET[kind]||{},pts=['pct','per100'].includes(M.unit),d=v-v0,mag=pts?Math.abs(d):Math.abs(d/v0*100),dir=mag<(pts?0.05:1)?0:d>0?1:-1;
     const txt=!dir?'flat':(d>0?'+':'−')+(pts?mag.toFixed(1)+(M.unit==='pct'?' pts':''):mag.toFixed(0)+'%');
     const good=!dir||!M.polarity||M.polarity==='neutral'?null:(M.polarity==='up')===(dir>0);
-    return '<span class="ask-delta '+(good==null?'neu':good?'good':'bad')+'"'+(title?' title="'+escA(title)+'"':'')+'>'+(dir>0?'<span class="ask-arr">▲</span> ':dir<0?'<span class="ask-arr">▼</span> ':'')+esc(txt)+'</span>';
+    return '<span class="ask-delta '+(good==null?'neu':good?'good':'bad')+'"'+(title?' title="'+escA(title)+'"':'')+'>'+(good==null?'':'<span class="sr-only">'+(good?'better: ':'worse: ')+'</span>')+(dir>0?'<span class="ask-arr" aria-hidden="true">▲</span> ':dir<0?'<span class="ask-arr" aria-hidden="true">▼</span> ':'')+esc(txt)+'</span>';
   }
   // The change against the prior window as a chip, coloured by whether that direction is good for the measure.
   function deltaChip(ctx,kind){
     if(!ctx)return '';
     const dir=/^up /.test(ctx)?1:/^down /.test(ctx)?-1:0,pol=(MET[kind]||{}).polarity;
     const good=dir===0||!pol||pol==='neutral'?null:(pol==='up')===(dir>0);
-    return '<span class="ask-delta '+(good==null?'neu':good?'good':'bad')+'">'+(dir>0?'<span class="ask-arr">▲</span> ':dir<0?'<span class="ask-arr">▼</span> ':'')+esc(ctx)+'</span>';
+    return '<span class="ask-delta '+(good==null?'neu':good?'good':'bad')+'">'+(good==null?'':'<span class="sr-only">'+(good?'better: ':'worse: ')+'</span>')+(dir>0?'<span class="ask-arr" aria-hidden="true">▲</span> ':dir<0?'<span class="ask-arr" aria-hidden="true">▼</span> ':'')+esc(ctx)+'</span>';
   }
   function render(res){
     const el=$('ask-answer'); if(!el)return;
@@ -8895,8 +8914,8 @@ init();
       let best=null,bd=9;VOCAB.forEach(v=>{if(v[0]!==w[0])return;const dd=editDist(w,v);if(dd<bd){bd=dd;best=v;}});
       if(best&&bd<=(w.length>=8?2:1)&&!(best.startsWith(w)||w.startsWith(best))){fixed.push(`“${w}” as “${best}”`);return best;}return w;});
     // People and users cannot be counted: there is no login. Conversations are the closest measure.
-    if(/\b(how many|number of|count of)\s+(people|users|individuals|citizens|unique users)\b|\b(people|users|citizens) (used|use|using) askci\b/.test(q)){
-      q=q.replace(/\b(unique users|people|users|individuals|citizens)\b/g,'conversations');
+    if(/\b(how many|number of|count of)\s+(people|users|individuals|citizens|unique users|visitors)\b|\b(people|users|citizens) (used|use|using) askci\b|\b(unique|distinct|individual) (users|visitors|people)\b/.test(q)&&!/\bsite (visitors|users)\b/.test(q)){
+      q=q.replace(/\b(unique|distinct|individual) (users|visitors|people)\b/g,'conversations').replace(/\b(unique users|people|users|individuals|citizens|visitors)\b/g,'conversations');
       addNotice('AskCI has no login, so people can’t be counted: showing conversations, the closest measure.');}
     {const lmD=(DATA.merged.filter(d=>d.queries>0).slice(-1)[0]||{}).date||'',cur=lmD?MONFULL[+lmD.slice(5,7)-1].toLowerCase():'';
       q=q.replace(/\bwhat will (\w+) cost\b/,(m0,mo)=>mo===cur||mo==='this'?'projected spend this month':m0);}
@@ -8982,6 +9001,10 @@ init();
     if(el&&ALSO&&el.innerHTML)el.insertAdjacentHTML('afterbegin','<div class="ask-also"><span>Also read as</span>'+exChip(ALSO)+'</div>');
     if(el&&NOTICES.length&&el.innerHTML)el.insertAdjacentHTML('afterbegin','<div class="ask-notice"><i data-lucide="alert-circle" class="i-sm"></i><span>'+NOTICES.map(esc).join(' ')+'</span></div>');
     if(typeof renderIcons==='function')renderIcons();
+    // Announce a short summary (notices, the headline figure and its sentence), not the whole card; focus stays in
+    // the box so a follow-up can be typed straight away.
+    const live=$('ask-live');if(live&&el){const pick=sel=>[...el.querySelectorAll(sel)].map(x=>x.textContent.trim()).filter(Boolean);
+      live.textContent=[...pick('.ask-notice'),...pick('.ask-card-val'),...pick('.ask-card-sub'),...pick('.ask-know-title')].slice(0,5).map(t=>t.replace(/[.\s]+$/,'')).join('. ').replace(/\s+/g,' ').slice(0,400);}
   }
   // A different measure that explains nearly as much of the question as the chosen one is offered with one click.
   function alsoReadAs(q,intent){

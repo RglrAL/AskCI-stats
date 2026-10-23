@@ -627,3 +627,23 @@ An independent review of the Ask bar (`ask review/`, 29 findings, 42 proposed ca
   - A period inside a month names the months used, since citations are monthly.
   - A page cited 100+ times with no recorded click-through says the link may redirect.
 - 9 review cases added (some merged into existing cases), and 2 Fuel Allowance expectations moved to 4,291. 249 pass.
+
+## 44. Independent review, step 4: coverage and accessibility (23 Oct 2026)
+
+- **Follow-ups that change only the topic or the source.** "not found rate in housing" then "and employment?", or "questions in September" then "and the pop-up?", follow on with the new topic or source. Before, they could not be parsed; only periods carried over.
+- **Phrasings:**
+  - "how much does a question cost" gives the allocated cost per turn, and "what does a conversation cost" the cost per conversation.
+  - "unique visitors", "distinct users" and the like get the no-login notice and conversations, as "how many users" already did. "Site visitors" is still the Reach measure.
+  - "average" is no longer echoed into a rate or percentile label ("6.0% not-found rate", not "average not-found rate"); the method line already says how it is computed.
+- **The "Read as" measure menu** is grouped: Usage, Quality, Conversations, Click-throughs, Response time, Cost, Cost by service, Cost by model. It was one flat list of 72 entries.
+- **Accessibility:**
+  - Answer charts are named for screen readers ("Chart of not-found rate by date, 30 values. The Table button lists them.").
+  - The ▲ and ▼ arrows are hidden from assistive technology. Chips that carry a judgement start with a hidden "better:" or "worse:".
+  - A short live summary is announced instead of the whole card: notices, the headline figure and its sentence.
+  - Focus deliberately stays in the question box, so a follow-up can be typed straight away. The reviewer suggested moving focus to the answer; the live summary gives the same information without taking the cursor away.
+- 6 review cases added; one expectation moved ("average response time" is labelled as the p50 it is). 255 pass.
+
+**The review's 29 findings, after steps 1–4:**
+- Fixed: findings 1–17, 19–29. Finding 3 (topic shares) is fixed at the cause, though it did not reproduce in Chrome.
+- Finding 18, "not found rate for the pop-up vs the standalone site" answering the pop-up only, is still open: the two-tile answer exists for topics but not yet for sources.
+- The reviewer's recommendations on the language-model step and on recording misses are adopted as the plan of record: no model step yet; misses to be counted as structured events, with question text only by opt-in.
