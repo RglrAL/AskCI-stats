@@ -537,3 +537,17 @@ The publish workflow used to redact `costs.csv` and deploy whatever was pushed, 
 - **The page itself refuses a damaged usage file.** One with some feed columns but not all is refused, with the missing columns named. The minimal form (date, questions, conversations) still loads, with an amber "usage columns: minimal" item in the data-quality strip.
 
 Checked by replacing `usage.csv` with its first 3 columns (the audit fails on the schema; the page loads with the warning) and with its first 20 (the page refuses it).
+
+## 39. Usage › Pages: site traffic against AskCI citations (23 Oct 2026)
+
+A new sub-tab compares, page by page, how often a page is read on citizensinformation.ie (GA4 page views, `ga4/categories-and-views.csv`, already loaded but used only at topic level) with how often AskCI cites it (`citations-monthly.csv`). Both files are monthly, so it uses the months overlapping the range. Only English information pages on the site's page list count, so the home page, site search and topic index pages drop out. 99.8% of citations to CI pages join a page with site views (a new audit check requires 98%).
+
+- **Tiles:**
+  - information pages cited: 1,440 of 1,493;
+  - citations per 1,000 site views across them (the typical rate): 17.4;
+  - busy pages rarely cited: 11 of the 150 most-read, under a quarter of the typical rate;
+  - cited pages rarely read: 87 cited 50+ times, over 4× the typical rate.
+- **Scatter:** every information page with 200+ views and at least one citation, both axes logarithmic, the typical rate as a dashed line, and the two lists' top 12 in colour. Click a dot to open the page.
+- **"Read on the site, rarely cited by AskCI":** the 150 most-read pages, fewest citations per 1,000 views first. Mostly quick-fact pages (when the clocks change, school terms, public holidays): busy on the site and rarely asked about. Others are worth a look for how findable their answer is.
+- **"Cited by AskCI, rarely read on the site":** pages cited 50+ times with 200+ views, most citations per 1,000 views first. Returning-to-Ireland pages lead: AskCI brings people to content they rarely reach through the site. The list also shows pages that look out of date, such as "Budget 2023" (224 citations) and "Your rights if you bought in a shop before November 2022", which the content team should review.
+- **Wording:** descriptive throughout; the note says a low or high ratio is a place to look, not a verdict. GA4 views are a minimum (cookie consent).

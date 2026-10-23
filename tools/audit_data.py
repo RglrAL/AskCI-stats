@@ -316,6 +316,13 @@ if os.path.exists(REPO + '/ga4/clicks-daily.csv'):
 else:
     warn('clicks', 'ga4/clicks-daily.csv missing: run tools/make_clicks.py')
 
+# Page join (Usage › Pages): citations to citizensinformation.ie must land on pages that have site-view data.
+nu = lambda u: re.sub(r'[?#].*$', '', u.strip().lower()).rstrip('/')
+PV = {nu('https://www.citizensinformation.ie' + r['Page path and screen class']) for r in rd('ga4/categories-and-views.csv') if r['Page path and screen class'].startswith('/en/')}
+ci_tot = sum(I(r['Citations']) for r in CI if 'citizensinformation.ie' in r['URL'])
+ci_in = sum(I(r['Citations']) for r in CI if 'citizensinformation.ie' in r['URL'] and nu(r['URL']) in PV)
+check('citations to CI pages that join a page with site views (Usage › Pages) at least 98%', ci_tot and ci_in / ci_tot >= 0.98, f'{ci_in / max(1, ci_tot):.2%}')
+
 # ── 10. events.json ──────────────────────────────────────────────────────────
 E = json.load(open(REPO + '/events.json'))['events']
 check('events.json: valid statuses and kinds', all(e['status'] in ('confirmed', 'candidate', 'rejected') and e['kind'] in ('model', 'launch', 'chips', 'observed change', 'other') for e in E))

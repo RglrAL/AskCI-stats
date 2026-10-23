@@ -1797,6 +1797,7 @@ Date,Questions,Sessions
     <div id="pane-categories"  class="pane"></div>
     <div id="pane-convs"       class="pane"></div>
     <div id="pane-clicks"      class="pane"></div>
+    <div id="pane-pages"       class="pane"></div>
     <div id="pane-llm"         class="pane"></div>
     <div id="pane-impact"      class="pane"></div>
     <div id="pane-projections" class="pane"></div>
@@ -2617,6 +2618,9 @@ async function loadGa4Files(){
 // map for the two that don't map 1:1. Shares are later computed across MATCHED content
 // categories only (non-content paths + the two excluded categories are dropped here).
 let CATCITE={}, CATVIEW={}, hasCats=false;
+// Site views by English page and month (PAGEVIEW[month][url], url lower-case without a trailing slash), for the
+// Pages sub-tab: the same export as CATVIEW, before it is rolled up to topics.
+let PAGEVIEW={},hasPageViews=false;
 const CAT_ALIAS={'rti':'returning-to-ireland','family-and-relationships':'birth-family-relationships'};
 const CAT_EXCLUDE=new Set(['about','my-situation','all-categories']); // meta/navigation, not citizen content
 const CAT_NONCONTENT=new Set(['whats-new','search_wagtail','yipg']); // site-only, non-category paths
@@ -2640,14 +2644,17 @@ async function loadCategoryData(){
   // Site views by top-level category by month (rolled up from the page-path export).
   try{
     (await loadCSV('ga4/categories-and-views.csv')).forEach(r=>{
-      const segs=String(r['Page path and screen class']||'').split('/').filter(Boolean);
+      const path=String(r['Page path and screen class']||'');
+      if(/^\/en\//.test(path)){const pm=`${r['Year']}-${String(r['Month']||'').padStart(2,'0')}`,pu=('https://www.citizensinformation.ie'+path).toLowerCase().replace(/[?#].*$/,'').replace(/\/$/,'');
+        (PAGEVIEW[pm]||(PAGEVIEW[pm]={}))[pu]=(PAGEVIEW[pm][pu]||0)+(parseFloat(r['Views']||'0')||0);}
+      const segs=path.split('/').filter(Boolean);
       if(segs.length<2||segs[0]!=='en')return;
       const sl=segs[1]; if(CAT_NONCONTENT.has(sl)||CAT_EXCLUDE.has(sl))return;
       const m=`${r['Year']}-${String(r['Month']||'').padStart(2,'0')}`, v=parseFloat(r['Views']||'0')||0;
       (CATVIEW[m]||(CATVIEW[m]={}))[sl]=(CATVIEW[m][sl]||0)+v;
     });
   }catch(e){}
-  hasCats=Object.keys(CATCITE).length>0;
+  hasCats=Object.keys(CATCITE).length>0;hasPageViews=Object.keys(PAGEVIEW).length>0;
 }
 
 // ═══ HOUR OF DAY (usage-hours.csv: Date, Hour, Turns, Sessions [, NotFound, Errors, Timed, LatencySumMs]; Irish time) ═══
@@ -3222,7 +3229,8 @@ const TAB_GROUPS=[
     {id:'reach',    label:'Reach',         icon:'globe',  when:()=>hasGa4},
     {id:'convs',    label:'Conversations', icon:'messages-square', when:()=>hasConv},
     {id:'categories',label:'Categories',   icon:'shapes', when:()=>hasCats||hasCatOut},
-    {id:'clicks',   label:'Click-throughs',icon:'mouse-pointer-click', when:()=>hasClicks}]},
+    {id:'clicks',   label:'Click-throughs',icon:'mouse-pointer-click', when:()=>hasClicks},
+    {id:'pages',    label:'Pages',         icon:'file-text', when:()=>hasPageViews&&hasCites}]},
   {id:'projections',label:'Scenario planner', icon:'sparkles',    subs:[{id:'projections',label:'Scenario planner',icon:'sparkles'}]},
 ];
 const subAvailable=sb=>!sb.when||sb.when();
@@ -4420,6 +4428,7 @@ function renderPane(id){
   if(id==='usage')      renderUsage(D,S);
   if(id==='reach')      renderReach(D,S);
   if(id==='clicks')     renderClicks(D,S);
+  if(id==='pages')      renderPages(D,S);
   if(id==='categories') renderCategories(D,S);
   if(id==='convs')      renderConvs(D,S);
   if(id==='llm')        renderLLM(D,S);
@@ -5398,6 +5407,72 @@ function renderClicks(D,S){
     options:mergeOpts(baseOpts(),{indexAxis:'y',tableLabel:'Topic',interaction:{mode:'nearest',axis:'y',intersect:false},
       plugins:{tooltip:{callbacks:{label:cx=>{const r=topicRows[cx.dataIndex];return`${r.r.toFixed(1)} per 100 cited answers · ${num(r.n)} click-throughs, ${num(r.den)} cited answers`;}}}},
       scales:{x:{min:0,grid:{color:C.border+'1a'},ticks:{callback:v=>(+v).toFixed(0)}},y:{grid:{display:false},ticks:{autoSkip:false,callback:function(v){return this.getLabelForValue(v)}}}}})});
+  renderIcons();
+}
+
+// ═══ PAGES: site traffic against AskCI citations, page by page ═══════════════════
+// ga4/categories-and-views.csv (site views) × citations-monthly.csv. Both are monthly, so the months overlapping
+// the range are used. Only English information pages on the site's page list count (site-pages.csv): the home
+// page, site search and topic index pages are left out. Descriptive: a low ratio is not a fault by itself.
+const ciKey=u=>String(u||'').toLowerCase().replace(/[?#].*$/,'').replace(/\/$/,'');
+const ciPageTitle=u=>catLabel(ciKey(u).split('/').pop()||'').replace(/\bAnd\b/g,'and');
+const ciPageSection=u=>{const m=ciKey(u).match(/citizensinformation\.ie\/en\/([^/]+)/);return m?catLabel(CAT_ALIAS[m[1]]||m[1]):'';};
+const PAGES_TOP=150,PAGES_MIN_VIEWS=200,PAGES_MIN_CITES=50,PAGES_LIST=12;
+function renderPages(D,S){
+  const el=document.getElementById('pane-pages');
+  const fr=filterRange(D.merged),months=monthsIn(fr).filter(m=>PAGEVIEW[m]&&CITES[m]);
+  if(!hasPageViews||!hasCites||!months.length){el.innerHTML=emptyState('file-text','No page data in range','Needs <code>ga4/categories-and-views.csv</code> (site views by page and month) and <code>citations-monthly.csv</code> for the same months.');renderIcons();return;}
+  const V={},Cn={};
+  months.forEach(m=>{Object.entries(PAGEVIEW[m]).forEach(([u,v])=>{V[u]=(V[u]||0)+v;});(CITES[m]||[]).forEach(r=>{if(!/citizensinformation\.ie/.test(r.url))return;const u=ciKey(r.url);Cn[u]=(Cn[u]||0)+r.n;});});
+  const isInfo=u=>hasSitePages?SITEPAGES.info.has(u):/citizensinformation\.ie\/en\/[^/]+\/[^/]+\/./.test(u);
+  const rows=[...new Set([...Object.keys(V),...Object.keys(Cn)])].filter(isInfo).map(u=>{const v=V[u]||0,c=Cn[u]||0;return{u,v,c,r:v>0?c/v*1000:null};});
+  const tv=rows.reduce((a,r)=>a+r.v,0),tc=rows.reduce((a,r)=>a+r.c,0),typ=tv?tc/tv*1000:null;
+  // The most-read pages, fewest citations per view first; and pages cited often, most citations per view first.
+  const byViews=rows.filter(r=>r.v>0).sort((a,b)=>b.v-a.v),busy=byViews.slice(0,PAGES_TOP).sort((a,b)=>a.r-b.r||b.v-a.v);
+  const buried=rows.filter(r=>r.c>=PAGES_MIN_CITES&&r.v>=PAGES_MIN_VIEWS).sort((a,b)=>b.r-a.r);
+  const unseen=rows.filter(r=>r.c>=PAGES_MIN_CITES&&r.v<PAGES_MIN_VIEWS).length;
+  const busyLow=typ?busy.filter(r=>r.r<typ/4).length:0,buriedHigh=typ?buried.filter(r=>r.r>typ*4).length:0;
+  const cited=rows.filter(r=>r.c>0).length,nInfo=hasSitePages?SITEPAGES.info.size:rows.length;
+  const span=months.length>1?fmtMonth(months[0])+' to '+fmtMonth(months[months.length-1]):fmtMonth(months[0]);
+  const fx=x=>x==null?'—':x<0.1?x.toFixed(2)+'×':x<10?x.toFixed(1)+'×':Math.round(x)+'×';
+  const tiles=[
+    kpi(num(cited),'Information pages cited',`of ${num(nInfo)} on the site's page list · ${span}`,{color:C.acc}),
+    kpi(typ==null?'—':typ.toFixed(1),'Citations per 1,000 site views',`all information pages · ${num(tc)} citations, ${num(tv)} views`,{color:C.purple}),
+    kpi(num(busyLow),'Busy pages rarely cited',`of the ${PAGES_TOP} most-read, under a quarter of the typical rate`,{color:C.amber}),
+    kpi(num(buriedHigh),'Cited pages rarely read',`cited ${PAGES_MIN_CITES}+ times, over 4× the typical rate`,{color:C.green}),
+  ].join('');
+  const td=(v,o={})=>`<td style="text-align:${o.left?'left':'right'};padding:7px 10px;font-family:${o.left?'inherit':"'DM Mono',monospace"};font-size:.78rem">${v}</td>`;
+  const th=(t,left)=>`<th style="text-align:${left?'left':'right'};padding:7px 10px;font-size:.6rem;color:var(--muted);text-transform:uppercase;letter-spacing:.08em;white-space:nowrap">${t}</th>`;
+  const table=list=>`<div class="tbl-wrap"><table style="width:100%;border-collapse:collapse"><thead><tr style="border-bottom:1px solid var(--b2)">${th('Page',true)}${th('Site views')}${th('AskCI citations')}${th('Per 1,000 views')}${th('vs typical')}</tr></thead><tbody>${
+    list.slice(0,PAGES_LIST).map(r=>`<tr style="border-bottom:1px solid var(--b2)">${td(`<a href="${r.u}" target="_blank" rel="noopener" title="${r.u}" style="color:${C.acc};text-decoration:none">${ciPageTitle(r.u)}</a> <span style="color:var(--muted)">· ${ciPageSection(r.u)}</span>`,{left:true})}${td(num(r.v))}${td(num(r.c))}${td(r.r==null?'—':r.r.toFixed(1))}${td(r.r==null||!typ?'—':fx(r.r/typ))}</tr>`).join('')}</tbody></table></div>`;
+  el.innerHTML=`
+    <div class="reach-note"><i data-lucide="info" class="i-sm"></i><span><b>Where AskCI and the site differ.</b> Site views are GA4 page views (visitors who accept analytics cookies, so a minimum); citations count every AskCI answer. Both are monthly, so this covers <b>${span}</b>, the months overlapping the range. A low or high ratio is a place to look, not a verdict: some pages are browsed for a quick fact rather than asked about.</span></div>
+    <div class="grid4" style="margin-bottom:14px">${tiles}</div>
+    <div class="card"><div class="card-title">Site views and AskCI citations, by page<span class="card-title-note">English information pages with ${PAGES_MIN_VIEWS}+ views and at least one citation · both axes logarithmic · dashed line = typical rate · click a dot to open the page</span></div>
+      <div style="position:relative;height:360px"><canvas id="pg-scatter" role="img" aria-label="Scatter of site views against AskCI citations for each information page"></canvas></div></div>
+    <div class="card"><div class="card-title">Read on the site, rarely cited by AskCI<span class="card-title-note">the ${PAGES_TOP} most-read information pages, fewest citations per 1,000 views first</span></div>${table(busy)}
+      <div class="share-foot">Worth a look for content structure or retrieval: is the answer on the page easy for AskCI to find and quote? Pages people consult for one fact (dates, rates) can be busy on the site and rarely asked about.</div></div>
+    <div class="card"><div class="card-title">Cited by AskCI, rarely read on the site<span class="card-title-note">pages cited ${PAGES_MIN_CITES}+ times with ${PAGES_MIN_VIEWS}+ views, most citations per 1,000 views first</span></div>${table(buried)}
+      <div class="share-foot">AskCI brings these pages to people who would not otherwise reach them.${unseen?` A further <b>${num(unseen)}</b> pages were cited ${PAGES_MIN_CITES}+ times with fewer than ${PAGES_MIN_VIEWS} recorded site views.`:''}</div></div>
+    <div class="reach-foot"><i data-lucide="info" class="i-sm"></i><span><b>Per 1,000 views</b> = AskCI citations ÷ site views × 1,000 for the page over the same months. <b>vs typical</b> compares it with the rate across all information pages (${typ==null?'—':typ.toFixed(1)}). One answer can cite several pages. Page names come from the page address.</span></div>`;
+  // Scatter: every qualifying page, the two lists' top ${PAGES_LIST} in colour, the typical rate as a dashed line
+  const pts=rows.filter(r=>r.v>=PAGES_MIN_VIEWS&&r.c>0);
+  if(pts.length&&typ){
+    const A=new Set(busy.slice(0,PAGES_LIST).map(r=>r.u)),B=new Set(buried.slice(0,PAGES_LIST).map(r=>r.u));
+    const ds=(f)=>pts.filter(f).map(r=>({x:r.v,y:r.c,u:r.u}));
+    const x0=Math.min(...pts.map(r=>r.v)),x1=Math.max(...pts.map(r=>r.v));
+    const logTick=v=>{const l=Math.log10(v);return Math.abs(l-Math.round(l))<1e-6?num(v):'';};
+    mkChart('pg-scatter',{type:'scatter',data:{datasets:[
+        {label:'Read on the site, rarely cited',data:ds(r=>A.has(r.u)),backgroundColor:C.amber,borderColor:C.s1,borderWidth:1.5,pointRadius:6,pointHoverRadius:8},
+        {label:'Cited, rarely read on the site',data:ds(r=>B.has(r.u)),backgroundColor:C.green,borderColor:C.s1,borderWidth:1.5,pointRadius:6,pointHoverRadius:8},
+        {label:'Other information pages',data:ds(r=>!A.has(r.u)&&!B.has(r.u)),backgroundColor:C.muted+'55',pointRadius:2.5,pointHoverRadius:5},
+        {type:'line',label:`Typical: ${typ.toFixed(1)} per 1,000 views`,data:[{x:x0,y:x0*typ/1000},{x:x1,y:x1*typ/1000}],borderColor:C.muted,borderDash:[5,4],borderWidth:1.25,pointRadius:0,fill:false}]},
+      options:mergeOpts(baseOpts(),{parsing:false,
+        plugins:{legend:{display:true},tooltip:{callbacks:{title:()=>'',label:cx=>{const p=cx.raw;return p.u?`${ciPageTitle(p.u)} (${ciPageSection(p.u)}): ${num(p.x)} views, ${num(p.y)} citations, ${(p.y/p.x*1000).toFixed(1)} per 1,000`:cx.dataset.label;}}}},
+        scales:{x:{type:'logarithmic',title:{display:true,text:'site views',color:C.muted,font:{size:10,family:'DM Mono'}},ticks:{callback:logTick,autoSkip:false,maxTicksLimit:20}},
+                y:{type:'logarithmic',title:{display:true,text:'AskCI citations',color:C.muted,font:{size:10,family:'DM Mono'}},ticks:{callback:logTick,autoSkip:false,maxTicksLimit:20}}},
+        onClick:(e,els)=>{if(!els.length)return;const p=els[0].element.$context.raw;if(p&&p.u)window.open(p.u,'_blank','noopener');}})});
+  }
   renderIcons();
 }
 
