@@ -7668,7 +7668,7 @@ init();
     const rows=DATA.merged.filter(d=>d.date>=period.from&&d.date<=period.to&&(!intent.days||intent.days.set.includes(isoDow(d.date))));
     if(intent.days&&!intent._sub)addNotice('Counting '+intent.days.label+' only.');
     if(!rows.length)return{empty:true,intent};
-    const money=['spend','llm','service','model','fixed','variable','voice'].includes(metric.kind);
+    const money=isMoneyK(metric.kind);
     let value=null,series=null,note='';
     if(intent.groupBy&&!intent._sub)return computeGrouped(intent);
     if(intent.trend&&!intent._sub)return computeTrend(intent);
@@ -7844,7 +7844,7 @@ init();
       return{value:null,fmt:v=>'—',series:null,note:`${metric.label} is not available by category; try citations, turns, cited, not-found, clarification, error or dislikes in ${cl}`,intent};
     }
     // Source / question-type filter (cross columns in usage.csv)
-    if(filter&&!['cited','notfound','questions','sessions','ctr','clicks','modal'].includes(k))
+    if(filter&&!mIs(k,x=>x.bySource))
       return{value:null,fmt:v=>'—',series:null,note:`${metric.label} isn’t split by ${filter.label}: by source the Ask bar has questions, conversations, the cited answer and not-found rates, and click-throughs`,intent};
     if(filter&&['cited','notfound','questions','sessions'].includes(k)){
       const f=filter.key,cap={modal:'modal',web:'web',sf:'sf',uf:'uf',nt:'nt'}[f];
@@ -7916,7 +7916,7 @@ init();
       return{...rateRes(S('NFLaterCited'),S('NFTurns'),'per answer; the later cited answer may be to a different question','not-found answers'),subj:'not-found answers followed later in the conversation by a cited answer'};
     }
     // Conversation shape (conversations-daily.csv)
-    if(['single','chipuse','span','ctr','reached','latercited','cpc','oos','adoption','infoshare','weekday','pagescited','clickpages'].includes(k)){
+    if(['single','chipuse','span'].includes(k)){
       if(!hasConv)return{value:null,fmt:v=>'—',series:null,note:'no conversations file loaded; regenerate from the QA feed',intent};
       const cv=rows.map(d=>CONV[d.date]||{}),S=f=>cv.reduce((a,o)=>a+(o[f]||0),0),mature=S('Mature');
       if(k==='single')return{...rateRes(S('Turns1'),mature,'mature conversations','mature conversations'),subj:'conversations that ended after the first turn'};
@@ -7966,9 +7966,84 @@ init();
     return null;
   }
   // ── Grouped: one value per month or week, computed exactly as the single answer would be (sum then divide per bucket) ──
-  const UNGROUPABLE=['events','hour','topService','topModel','runrate','weekday'];
-  // Metrics that are ratios: never summed across days or buckets.
-  const RATIO_KINDS=['cpq_llm','cpq_tot','qps','cache','fixedshare','answered','unanswered','flagged','chips','modal','latency','notfound','error','clarification','cited','partial','dislikes','feedback','starter','single','chipuse','span','p90','p99','over30','outofhours','script','ctr','reached','latercited','cpc','oos','adoption','infoshare'];
+  // ── One definition per measure (Ask bar audit, step 3) ──────────────────────────────────────
+  // Every list that used to be typed out by hand (which measures are rates, which are money, which are
+  // better when lower, which can be summed across days or grouped by week and month) is derived from this.
+  //   unit      count | gbp | pence | pct (a share or rate, compared in points) | per100 | perk (per 1,000) |
+  //             ms | ratio (e.g. turns per conversation) | hour | weekday | list
+  //   polarity  down = lower is better (costs, failures, latency), up = higher is better, neutral
+  //   cost      built from billing data, so comparisons end at the billing data's last day
+  //   groupable has a per-week and per-month form;  prior: compared with the prior window by summing days
+  //   bySource  can be split by Modal / Web (and the question-type filters for the outcome rates)
+  //   read      offered in the "read as" metric menu, with this label
+  const AM=(id,label,unit,o={})=>({id,label,unit,polarity:'neutral',cost:false,groupable:true,bySource:false,read:true,...o});
+  const ASK_METRICS=[
+    AM('spend','Total spend','gbp',{polarity:'down',cost:true}),
+    AM('llm','Generation cost','gbp',{polarity:'down',cost:true}),
+    AM('fixed','Fixed cost','gbp',{polarity:'down',cost:true}),
+    AM('variable','Variable cost','gbp',{polarity:'down',cost:true}),
+    AM('voice','Voice cost','gbp',{polarity:'down',cost:true}),
+    AM('fixedshare','Fixed share','pct',{cost:true}),
+    AM('cache','Cached-input cost share','pct',{cost:true}),
+    AM('cpq_llm','Generation cost per turn','pence',{polarity:'down',cost:true}),
+    AM('cpq_tot','Allocated total cost per turn','pence',{polarity:'down',cost:true}),
+    AM('runrate','Run rate, next 30 days','gbp',{cost:true,groupable:false,prior:false}),
+    AM('questions','Turns','count',{bySource:true}),
+    AM('sessions','Conversations','count',{bySource:true}),
+    AM('qps','Turns per conversation','ratio'),
+    AM('organic','Organic first turns','count'),
+    AM('citations','Citations','count'),
+    AM('modal','Modal share of conversations','pct',{bySource:true}),
+    AM('cited','Cited answer rate','pct',{polarity:'up',bySource:true}),
+    AM('notfound','Not-found rate','pct',{polarity:'down',bySource:true}),
+    AM('clarification','Clarification rate','pct',{polarity:'down'}),
+    AM('error','Error rate','pct',{polarity:'down'}),
+    AM('partial','Cited but partial','pct',{polarity:'down'}),
+    AM('dislikes','Dislikes per 1,000 cited','perk',{polarity:'down'}),
+    AM('feedback','Feedback rate','pct'),
+    AM('chips','Suggested follow-up share','pct'),
+    AM('starter','Starter-prompt share','pct'),
+    AM('latency','Response time p50','ms',{polarity:'down'}),
+    AM('p90','Response time p90','ms',{polarity:'down'}),
+    AM('p99','Response time p99','ms',{polarity:'down'}),
+    AM('over30','Turns over 30 s','pct',{polarity:'down'}),
+    AM('hour','Busiest hour','hour',{groupable:false,prior:false}),
+    AM('outofhours','Out-of-hours share','pct'),
+    AM('clicks','Click-throughs','count',{polarity:'up',bySource:true}),
+    AM('ctr','Click-throughs per 100 cited answers','per100',{polarity:'up',bySource:true}),
+    AM('reached','Reached a cited answer','pct',{polarity:'up'}),
+    AM('latercited','Not found, then later cited','pct',{polarity:'up'}),
+    AM('single','Ended after first turn','pct'),
+    AM('chipuse','Suggested follow-up use','pct'),
+    AM('span','Conversations over 5 min','pct'),
+    AM('script','Non-Latin script share','pct'),
+    AM('events','Events','list',{groupable:false,prior:false}),
+    AM('cpc','Allocated cost per conversation','pence',{polarity:'down',cost:true}),
+    AM('oos','Out-of-scope share','pct',{polarity:'down'}),
+    AM('adoption','Share of site sessions (at most)','pct'),
+    AM('infoshare','Share of information-seeking (at most)','pct'),
+    AM('weekday','Busiest day of the week','weekday',{groupable:false,prior:false}),
+    AM('pagescited','Different pages cited','count',{groupable:false,prior:false}),
+    AM('clickpages','Pages clicked through to','count',{groupable:false,prior:false}),
+    AM('answered','Answered share','pct',{polarity:'up',read:false}),
+    AM('unanswered','Unanswered share','pct',{polarity:'down',read:false}),
+    AM('flagged','Flagged share','pct',{polarity:'down',read:false}),
+    AM('service','Service cost','gbp',{polarity:'down',cost:true,read:false}),
+    AM('model','Model cost','gbp',{polarity:'down',cost:true,read:false}),
+    AM('topService','Top service','gbp',{cost:true,groupable:false,prior:false,read:false}),
+    AM('topModel','Top model','gbp',{cost:true,groupable:false,prior:false,read:false}),
+  ];
+  const MET={};ASK_METRICS.forEach(m=>{MET[m.id]=m;});
+  const RATE_UNITS=['pct','pence','per100','perk','ms','ratio'];
+  const mIs=(id,f)=>!!(MET[id]&&f(MET[id]));
+  const isRatioK=id=>mIs(id,m=>RATE_UNITS.includes(m.unit));                 // never summed across days
+  const isPctK=id=>mIs(id,m=>m.unit==='pct'||m.unit==='per100');               // compared in points
+  const isMoneyK=id=>mIs(id,m=>m.unit==='gbp');
+  const isCostK=id=>mIs(id,m=>m.cost);
+  const lowerBetterK=id=>mIs(id,m=>m.polarity==='down');
+  const noPriorK=id=>isRatioK(id)||mIs(id,m=>m.prior===false);
+  const RATIO_KINDS=ASK_METRICS.filter(m=>RATE_UNITS.includes(m.unit)).map(m=>m.id);
+  const UNGROUPABLE=ASK_METRICS.filter(m=>!m.groupable).map(m=>m.id);
   // Figures for an hour-of-day range, from usage-hours.csv. Never silently ignores the hours: a metric with no
   // hourly form says so rather than answering for the whole day.
   function computeHours(intent,rows){
@@ -8010,7 +8085,7 @@ init();
     const items=buckets.map(b=>{const r=compute(subIntent(intent,b));if(r&&r.fmt&&!fmt){fmt=r.fmt;subj=r.subj||null;isMs=!!r.isMs;}const v=(r&&!r.empty)?r.value:null;return{...b,v:(v==null||!isFinite(v))?null:v,note:r&&r.note||''};});
     if(!items.some(i=>i.v!=null))return{empty:true,intent,why:(items.find(i=>i.note)||{}).note||''};
     const m=intent.metric;
-    isRate=['cpq_llm','cpq_tot','qps','cache','fixedshare','answered','unanswered','flagged','chips','modal','latency','notfound','error','clarification','cited','partial','dislikes','feedback','starter','single','chipuse','span','ctr','reached','latercited','cpc','oos','adoption','infoshare','weekday','pagescited','clickpages','p90','p99','over30','outofhours','script'].includes(m.kind)||(intent.category&&!['questions','spend','citations','organic'].includes(m.kind))||(intent.filter&&['cited','notfound'].includes(m.kind));
+    isRate=isRatioK(m.kind)||(intent.category&&!['questions','spend','citations','organic'].includes(m.kind))||(intent.filter&&['cited','notfound'].includes(m.kind));
     return{grouped:true,items,fmt:fmt||(v=>num(Math.round(v))),subj:subj||((m.kind==='service'||m.kind==='model')?m.label+' cost':m.label),subjNamed:!!subj,isRate,isMs:isMs||m.kind==='latency',intent};
   }
   function renderGrouped(res){
@@ -8027,7 +8102,7 @@ init();
       (p.kind!=='all'?'<div class="ask-card-actions" style="flex-direction:row;margin-top:var(--sp-2)"><button class="ask-action" data-act="range" data-arg="'+escA(p.from+'|'+p.to)+'">Set dashboard to this range</button></div>':'')+readAsHTML(intent)+
     '</div>';
     el.classList.add('show'); if(typeof renderIcons==='function')renderIcons();
-    const col=C.acc,tick=res.isMs?(v=>(+v/1000).toFixed(1)+'s'):res.isRate?(v=>(+v).toFixed(['cpq_llm','cpq_tot'].includes(intent.metric.kind)?2:0)+(['cpq_llm','cpq_tot'].includes(intent.metric.kind)?'p':(['qps','dislikes'].includes(intent.metric.kind)?'':'%'))):(['spend','llm','service','model','fixed','variable','voice'].includes(intent.metric.kind)&&!intent.category?(v=>'£'+(+v).toFixed(0)):(v=>num(v)));
+    const col=C.acc,tick=res.isMs?(v=>(+v/1000).toFixed(1)+'s'):res.isRate?(v=>(+v).toFixed(mIs(intent.metric.kind,x=>x.unit==='pence')?2:0)+(mIs(intent.metric.kind,x=>x.unit==='pence')?'p':(mIs(intent.metric.kind,x=>x.unit==='ratio'||x.unit==='perk')?'':'%'))):(isMoneyK(intent.metric.kind)&&!intent.category?(v=>'£'+(+v).toFixed(0)):(v=>num(v)));
     mountViz({type:res.isRate?'line':'bar',data:{labels:items.map(i=>i.label),datasets:[{label:subj,data:items.map(i=>i.v),backgroundColor:res.isRate?(col+'22'):(col+'cc'),borderColor:col,borderWidth:res.isRate?2:0,borderRadius:res.isRate?0:3,pointRadius:3,tension:.3,fill:!!res.isRate,spanGaps:true,maxBarThickness:48}]},
       options:mergeOpts(baseOpts(),{plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>fmt(c.parsed.y)}}},scales:{y:{ticks:{callback:tick}}},onClick:(e,els)=>{if(!els.length)return;const it=items[els[0].index];if(it.act[0]==='month')openMonthPanel(it.act[1]);else{const i=it.act[1].indexOf('|');applyRange(it.act[1].slice(0,i),it.act[1].slice(i+1));}}})},
       {cols:[intent.groupBy,subj],rows:items.map(i=>[i.label,i.v==null?'':+(+i.v).toFixed(4)]),fmt:v=>v===''?'—':fmt(+v)});
@@ -8044,8 +8119,8 @@ init();
     const va=ra&&!ra.empty?ra.value:null,vb=rb&&!rb.empty?rb.value:null;
     const full=compute(subIntent(intent,p));
     const M=CONFIG.materiality;
-    const pct=['cache','fixedshare','answered','unanswered','flagged','chips','modal','notfound','error','clarification','cited','partial','feedback','starter','single','chipuse','span','ctr','reached','latercited','cpc','oos','adoption','infoshare','weekday','pagescited','clickpages','over30','outofhours','script'].includes(m.kind)||(intent.category&&!['questions','spend','citations','organic','dislikes'].includes(m.kind))||(intent.filter&&['cited','notfound'].includes(m.kind));
-    const ms=['latency','p90','p99'].includes(m.kind),pence=['cpq_llm','cpq_tot'].includes(m.kind),perk=m.kind==='dislikes';
+    const pct=isPctK(m.kind)||(intent.category&&!['questions','spend','citations','organic','dislikes'].includes(m.kind))||(intent.filter&&['cited','notfound'].includes(m.kind));
+    const ms=mIs(m.kind,x=>x.unit==='ms'),pence=mIs(m.kind,x=>x.unit==='pence'),perk=m.kind==='dislikes';
     let verdict='',material=false,dTxt='';
     if(va!=null&&vb!=null){
       const d=vb-va,rel=va!==0?d/Math.abs(va)*100:null;
@@ -8063,9 +8138,9 @@ init();
     const {A,B,va,vb,fmt,verdict,material,dTxt,subj,intent,why}=res,p=intent.period;
     const cat=!res.subjNamed&&intent.category?' in '+catLabel(CAT_ALIAS[intent.category]||intent.category):'',flt=!res.subjNamed&&intent.filter?' for '+intent.filter.label:'';
     const M=CONFIG.materiality;
-    const thr=res.isMs?`${M.latency_pct}% or ${M.latency_ms/1000} s`:['cpq_llm','cpq_tot'].includes(intent.metric.kind)?`${M.ratio_pct}% or ${M.ratio_pence}p`:res.isRate?`${M.rate_pts} point${M.rate_pts===1?'':'s'}`:`${M.count_pct}%`;
+    const thr=res.isMs?`${M.latency_pct}% or ${M.latency_ms/1000} s`:mIs(intent.metric.kind,x=>x.unit==='pence')?`${M.ratio_pct}% or ${M.ratio_pence}p`:res.isRate?`${M.rate_pts} point${M.rate_pts===1?'':'s'}`:`${M.count_pct}%`;
     const headline=va==null||vb==null?'not enough data to judge':verdict==='flat'?'no material change':verdict;
-    const colour=verdict==='flat'||va==null||vb==null?'var(--muted)':(()=>{const invert=['cpq_llm','cpq_tot','spend','llm','service','model','fixed','variable','voice','notfound','error','unanswered','flagged','partial','latency','p90','p99','over30','dislikes','single','clarification'].includes(intent.metric.kind);const good=invert?verdict==='falling':verdict==='rising';return good?'var(--green)':'var(--red)';})();
+    const colour=verdict==='flat'||va==null||vb==null?'var(--muted)':(()=>{const invert=lowerBetterK(intent.metric.kind);const good=invert?verdict==='falling':verdict==='rising';return good?'var(--green)':'var(--red)';})();
     const side=(lbl,v)=>'<div class="ask-cmp-side"><div class="ask-cmp-lbl">'+esc(lbl)+'</div><div class="ask-cmp-num">'+(v==null?'—':esc(fmt(v)))+'</div></div>';
     el.innerHTML='<div class="ask-card" style="flex-direction:column;align-items:stretch">'+
       '<div class="ask-card-q">'+esc(intent.raw)+'</div>'+
@@ -8078,7 +8153,7 @@ init();
     el.classList.add('show'); if(typeof renderIcons==='function')renderIcons();
     if(res.full&&Array.isArray(res.full.series)){
       const crows=DATA.merged.filter(d=>d.date>=p.from&&d.date<=p.to),labels=crows.map(d=>d.label),data=res.full.series.map(v=>(v==null||!isFinite(v))?null:+v);
-      const col=C.acc,tick=res.isMs?(v=>(+v/1000).toFixed(1)+'s'):res.isRate?(v=>(+v).toFixed(['cpq_llm','cpq_tot'].includes(intent.metric.kind)?2:0)+(['cpq_llm','cpq_tot'].includes(intent.metric.kind)?'p':(['qps','dislikes'].includes(intent.metric.kind)?'':'%'))):(['spend','llm','service','model','fixed','variable','voice'].includes(intent.metric.kind)&&!intent.category?(v=>'£'+(+v).toFixed(0)):(v=>num(v)));
+      const col=C.acc,tick=res.isMs?(v=>(+v/1000).toFixed(1)+'s'):res.isRate?(v=>(+v).toFixed(mIs(intent.metric.kind,x=>x.unit==='pence')?2:0)+(mIs(intent.metric.kind,x=>x.unit==='pence')?'p':(mIs(intent.metric.kind,x=>x.unit==='ratio'||x.unit==='perk')?'':'%'))):(isMoneyK(intent.metric.kind)&&!intent.category?(v=>'£'+(+v).toFixed(0)):(v=>num(v)));
       const half=labels.indexOf(fmtDate(B.from));
       mountViz({type:res.isRate?'line':'bar',data:{labels,datasets:[{label:subj,data,backgroundColor:res.isRate?(col+'22'):(col+'cc'),borderColor:col,borderWidth:res.isRate?2:0,borderRadius:res.isRate?0:3,pointRadius:0,tension:.3,fill:!!res.isRate,spanGaps:true}]},
         options:mergeOpts(baseOpts(),{plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>fmt(c.parsed.y)}}},scales:{y:{ticks:{callback:tick}}},eventLines:half>=0?[{label:labels[half],color:C.muted,text:'second half',dash:[4,3]}]:[]})},
@@ -8097,11 +8172,11 @@ init();
   }
   function context(intent,value){
     if(value==null||intent.agg!=='sum')return '';
-    if(['cpq_llm','cpq_tot','qps','cache','fixedshare','runrate','topService','topModel','answered','unanswered','flagged','chips','modal','latency','notfound','error','clarification','cited','partial','dislikes','feedback','starter','single','chipuse','span','ctr','reached','latercited','cpc','oos','adoption','infoshare','weekday','pagescited','clickpages','p90','p99','over30','hour','outofhours','script','events'].includes(intent.metric.kind)||(intent.category&&!['questions','sessions'].includes(intent.metric.kind))||intent.filter)return ''; // ratios: never summed
+    if(noPriorK(intent.metric.kind)||(intent.category&&!['questions','sessions'].includes(intent.metric.kind))||intent.filter)return ''; // ratios: never summed
     const p0=intent.period; if(p0.kind==='all'||p0.kind==='year'||p0.since)return '';
     // Compare like with like: a period running past the data (e.g. "October" on 22 Oct) is clipped to the
     // data's last day before the prior window of equal length is taken.
-    const money=['spend','llm','service','model','fixed','variable','voice','fixedshare','cache'].includes(intent.metric.kind);
+    const money=isCostK(intent.metric.kind);
     const lastD=money?(DATA.latest||lastDate()):(DATA.merged.filter(d=>d.queries>0).slice(-1)[0]?.date||lastDate());
     const p={...p0,to:p0.to>lastD?lastD:p0.to};if(p.to<p.from)return '';
     // A single day is compared with the same weekday over the previous four weeks ("a normal Tuesday").
@@ -8120,7 +8195,7 @@ init();
                          :prev.reduce((s,d)=>s+rowVal(d,intent.metric),0);
     if(!(pv>0))return '';
     const pct=(value-pv)/pv*100;
-    const tail=(DATA.latest&&p.to>DATA.latest&&['spend','llm','service','model','fixed','variable'].includes(intent.metric.kind))?' · billing data ends '+fmtDate(DATA.latest):'';
+    const tail=(DATA.latest&&p.to>DATA.latest&&isMoneyK(intent.metric.kind))?' · billing data ends '+fmtDate(DATA.latest):'';
     if(Math.abs(pct)<1)return 'flat vs the prior '+days+'d'+tail;
     return (pct>0?'up ':'down ')+Math.abs(pct).toFixed(0)+'% vs the prior '+days+'d'+tail;
   }
@@ -8140,12 +8215,7 @@ init();
   }
 
   // ── "Read as" chips: the parsed dimensions, each a select so a wrong guess is a one-click fix ──
-  const READ_METRICS=[['spend','Total spend'],['llm','Generation cost'],['fixed','Fixed cost'],['variable','Variable cost'],['voice','Voice cost'],['fixedshare','Fixed share'],['cache','Cached-input cost share'],['cpq_llm','Generation cost per turn'],['cpq_tot','Allocated total cost per turn'],['runrate','Run rate, next 30 days'],
-    ['questions','Turns'],['sessions','Conversations'],['qps','Turns per conversation'],['organic','Organic first turns'],['citations','Citations'],['modal','Modal share of conversations'],
-    ['cited','Cited answer rate'],['notfound','Not-found rate'],['clarification','Clarification rate'],['error','Error rate'],['partial','Cited but partial'],['dislikes','Dislikes per 1,000 cited'],['feedback','Feedback rate'],['chips','Suggested follow-up share'],['starter','Starter-prompt share'],
-    ['latency','Response time p50'],['p90','Response time p90'],['p99','Response time p99'],['over30','Turns over 30 s'],['hour','Busiest hour'],['outofhours','Out-of-hours share'],
-    ['clicks','Click-throughs'],['ctr','Click-throughs per 100 cited answers'],['reached','Reached a cited answer'],['latercited','Not found, then later cited'],
-    ['single','Ended after first turn'],['chipuse','Suggested follow-up use'],['span','Conversations over 5 min'],['script','Non-Latin script share'],['events','Events']];
+  const READ_METRICS=ASK_METRICS.filter(m=>m.read).map(m=>[m.id,m.label]);   // the "read as" metric menu, from the registry
   function metricFromKey(key){
     if(key.startsWith('svc:')){const sname=key.slice(4);return{kind:'service',service:sname,label:sname};}
     if(key.startsWith('fam:')){const fam=key.slice(4);return{kind:'model',match:k=>meterFamily(k)===fam,label:fam,fam};}
@@ -8226,10 +8296,10 @@ init();
     if(va!=null&&vb!=null&&va!==0){
       const pct=(vb-va)/Math.abs(va)*100,up=vb>va,near=Math.abs(pct)<1;
       // Lower is better for costs and for failures: a rising not-found or error rate is not shown as good news.
-      const costLike=isEntity||['spend','llm','service','model','cpq_llm','cpq_tot','cpc','notfound','error','clarification','partial','unanswered','flagged','dislikes','latency','p90','p99','over30','oos'].includes(m.kind);
+      const costLike=isEntity||lowerBetterK(m.kind);
       const good=costLike?!up:up;
       // A rate or share changes in percentage points, not by a relative per cent of itself.
-      const pts=['cited','notfound','clarification','error','partial','answered','unanswered','flagged','chips','modal','feedback','starter','single','chipuse','span','outofhours','script','reached','latercited','oos','adoption','infoshare','fixedshare','cache','over30'].includes(m.kind);
+      const pts=isPctK(m.kind);
       const nearP=pts?Math.abs(vb-va)<0.05:near;
       delta='<span class="impact-change '+(nearP?'':(good?'pos':'neg'))+'">'+(nearP?'≈':(up?'▲':'▼'))+' '+(pts?Math.abs(vb-va).toFixed(1)+' pts':Math.abs(pct).toFixed(0)+'%')+'</span>';
       diff=' · '+(up?'+':'−')+(pts?Math.abs(vb-va).toFixed(1)+' points':fmt(Math.abs(vb-va)))+' vs '+intent.periodA.label;
@@ -8409,10 +8479,10 @@ init();
     if(hasChart){
       const crows=DATA.merged.filter(d=>d.date>=p.from&&d.date<=p.to);
       const labels=res.hourSeries?Array.from({length:24},(_,h)=>String(h).padStart(2,'0')+':00'):crows.map(d=>d.label);
-      const isRate=['cpq_llm','cpq_tot','qps','cache','fixedshare','answered','unanswered','flagged','chips','modal','latency','notfound','error','clarification','cited','partial','dislikes','feedback','starter','p90','p99'].includes(m.kind);
-      const isCount=['questions','sessions','citations','organic','hour'].includes(m.kind)||(intent.category&&['questions','spend','citations'].includes(m.kind))||(intent.filter&&['questions','sessions','spend'].includes(m.kind));
+      const isRate=isRatioK(m.kind);
+      const isCount=mIs(m.kind,x=>x.unit==='count'||x.unit==='hour')||(intent.category&&['questions','spend','citations'].includes(m.kind))||(intent.filter&&['questions','sessions','spend'].includes(m.kind));
       const col=C.acc, data=series.map(v=>(v==null||!isFinite(v))?null:+v);
-      const pctKind=['cache','fixedshare','answered','unanswered','flagged','chips','modal','notfound','error','clarification','cited','partial','feedback','starter'].includes(m.kind);
+      const pctKind=isPctK(m.kind);
       const tick=(m.kind==='latency'||res.isMs)?(v=>(+v/1000).toFixed(1)+'s'):isRate?(v=>(+v).toFixed(pctKind?0:2)+(pctKind?'%':(m.kind==='qps'?'':'p'))):(isCount?(v=>num(v)):(v=>'£'+(+v).toFixed(0)));
       mountViz({type:isRate?'line':'bar',data:{labels:labels,datasets:[{label:subj,data:data,backgroundColor:isRate?(col+'22'):(col+'cc'),borderColor:col,borderWidth:isRate?2:0,borderRadius:isRate?0:3,pointRadius:0,tension:.3,fill:!!isRate,spanGaps:true,maxBarThickness:22}]},options:mergeOpts(baseOpts(),{plugins:{legend:{display:false}},scales:{y:{ticks:{callback:tick}}}})},{cols:['Date',subj],rows:labels.map((l,i)=>[l,data[i]]),fmt:res.fmt});
     }
