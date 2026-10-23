@@ -37,7 +37,7 @@ Usage:
     python3 tools/redact_feed.py qa-feed_20261008.csv              # writes qa-feed-redacted_20261008.csv beside it
     python3 tools/redact_feed.py qa-feed_*.csv --out-dir ~/feeds   # several files, output elsewhere
 """
-import argparse, csv, os, sys
+import argparse, csv, json, os, sys
 
 import re
 
@@ -118,6 +118,78 @@ THEMES = [("creative", re.compile(r"\b(?:write|tell|compose|make up|sing)\b.{0,3
           ("entertainment", re.compile(r"\b(?:netflix|movie|film|tv show|series to watch|taylor swift|song lyrics|eurovision|celebrity)\b", re.I)),
           ("weather", re.compile(r"\b(?:weather (?:today|tomorrow|forecast|this week)|will it rain|forecast for)\b", re.I)),
           ("crisis", re.compile(r"\b(?:suicid\w*|kill (?:myself|me)|end (?:my|it all|my life)|self[- ]harm|want to die|don'?t want to (?:live|be here)|overdos\w*)\b", re.I))]
+
+
+# What people ask (brief §66): an intent class by rule, form flags, and the scheme the question names, from
+# question-lexicon.json (the site's page slugs plus aliases; tools/make_lexicon.py). Read from the question before it is
+# dropped; what leaves is the class name, the flags, the matched page address and its category. INTENT_VERSION covers
+# the rules below; the lexicon carries its own version.
+INTENT_VERSION = "2026.10.24-1"
+INTENT_RULES = [   # in precedence order: the first that matches wins
+    ("status", re.compile(r"\b(?:my (?:claim|application|appeal|payment|case|form|request|renewal)\b.{0,40}\b(?:status|approved|decision|delayed|late|not (?:been )?(?:paid|received|processed)|still waiting|how long more|when will (?:i|it))|why (?:haven'?t|hasn'?t|have i not|has my|did my|was my)|(?:where|what) is my (?:payment|money|claim|application)|has my (?:claim|application|payment)|track my|check (?:the )?status|(?:i|we) (?:applied|submitted|sent).{0,30}\b(?:weeks?|months?|days?) ago|my (?:\w+ ){0,2}(?:claim|application|appeal|payment|renewal|form)\b.{0,80}\b(?:ago|still|yet|waiting|heard|no (?:reply|response|update|word)))\b", re.I)),
+    ("contact", re.compile(r"\b(?:phone number|contact (?:number|details)|email address|opening hours|open(?:ing)? (?:times?|hours)|where is (?:the|my)? ?(?:nearest|local)|nearest (?:office|centre|center|intreo|cic)|(?:intreo|citizens information) (?:office|centre|center)|how (?:do|can) i (?:contact|reach|ring|call|phone|talk to|speak to)|address (?:of|for) the|who (?:do|can|should) i (?:contact|ring|call|talk to|speak to)|helpline)\b", re.I)),
+    ("documents", re.compile(r"\b(?:what (?:documents?|paperwork|proof|id|identification|forms?) (?:do i|will i|are|is|should i)|documents? (?:needed|required|do i need|i need|to bring|to provide)|proof of|supporting documents?|what (?:do i|should i) (?:bring|need to bring|submit|provide|attach|upload))\b", re.I)),
+    ("apply", re.compile(r"\b(?:how (?:do|can|to|would|should|does one|do you) (?:i |we |you |one )?(?:apply|claim|register|renew|sign up|enrol|enroll|get (?:a|an|the|my) |request|book|order)|apply (?:for|online)|application (?:form|process|online)|where (?:do|can) i (?:apply|get the form|sign)|(?:apply|register|renew)ing for|fill (?:in|out) the|the form for|sign up for|register (?:for|with)|how (?:do|can) i (?:change|update|switch|transfer|cancel|stop|withdraw|close))\b", re.I)),
+    ("rate", re.compile(r"\b(?:how much|what (?:is|are|was|will be) the (?:rate|rates|amount|payment|cost|fee|fees|price|charge|threshold|limit|limits|maximum|minimum|weekly|monthly|increase|cap|allowance|grant amount)|rate of|rates? (?:for|of|in|from)|per (?:week|month|year|hour|day|child)|weekly (?:rate|payment|amount)|how many (?:hours|weeks|days|years|contributions|credits)|what (?:do|will|would) (?:i|we|they) (?:get|receive|be paid)|is it (?:paid|taxed|taxable)|€\s?\d|\d+\s?(?:euro|euros|eur)\b|what percentage|income (?:limit|threshold)s?|means test (?:limit|threshold)|budget 20\d\d|increase[sd]? (?:in|by|to) (?:the )?budget|taxable|taxed|limits?|thresholds?|ceiling|maximum|minimum)\b", re.I)),
+    ("eligibility", re.compile(r"\b(?:am i (?:entitled|eligible|able|allowed|covered|exempt)|(?:can|could|will|would|do|does|may|might|should) (?:i|we|my (?:wife|husband|partner|son|daughter|mother|father|child|parents?|family)|he|she|they|a person|someone|you) (?:get|claim|qualify|receive|be entitled|be eligible|apply|still|keep|continue|work|have|be paid|avail|access|be able)|entitled to|eligib(?:le|ility)|qualify(?:ing)? for|who (?:can|is entitled|qualifies|is eligible|gets)|do i (?:have to|need|qualify)|is (?:there|it possible)|if i (?:am|have|was|were|work|earn|move|leave|get|lose|retire|marry|separate|own|rent)|criteria|conditions? (?:for|to)|what (?:if|happens if|about))\b", re.I)),
+    ("timing", re.compile(r"\b(?:how long|when (?:do|does|did|will|can|is|are|should|must)|what (?:date|day|time|age)|(?:closing|due|start|end|payment|pay) dates?|deadline|backdated?|waiting (?:time|list|period)|how (?:soon|often|late|early)|from what age|at what age|until when|(?:this|next|last) (?:week|month|year)|processing time|turnaround|time frame|timeframe|how quickly)\b", re.I)),
+    ("definition", re.compile(r"\b(?:what (?:is|are|does|do|was|were) (?:a |an |the )?(?!my\b|i\b|we\b)(?:[a-z0-9'\-]+\s?){1,6}(?:\?|$|mean|means|cover|covers|include|includes|for)|what does .{1,40} (?:mean|stand for|cover|do)|(?:explain|define|meaning of|definition of|difference between|tell me about|information (?:on|about)|info (?:on|about)|about the)\b|^(?:[a-z0-9'\-]+\s?){1,5}$)", re.I)),
+]
+FORM = {
+    "year": re.compile(r"\b20[12]\d\b"),
+    "euro": re.compile(r"€\s?\d|\d+\s?(?:euro|euros|eur)\b|\d{1,3}(?:,\d{3})+\b"),
+    "yesno": re.compile(r"^(?:is|are|am|can|could|will|would|do|does|did|should|may|might|has|have|was|were)\b", re.I),
+}
+SITUATION_WORDS = 25   # a personal situation: long, first person, with several conditions
+SITUATION_RE = re.compile(r"\b(?:i am|i'm|im|i have|i've|ive|my|we are|we're|i was|i work|i live|i get|i earn|i receive)\b", re.I)
+CONDITION_RE = re.compile(r"\b(?:and|but|also|however|although|while|if|since|because|as well|with|without|after|before)\b", re.I)
+_LEX = None
+
+
+def lexicon():
+    """question-lexicon.json, loaded once; one regex of every phrase, longest first, so the longest wins at a position."""
+    global _LEX
+    if _LEX is None:
+        p = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "question-lexicon.json")
+        try:
+            j = json.load(open(p, encoding="utf-8"))
+            ph = j["phrases"]; keys = sorted(ph, key=lambda k: (-len(k), k))
+            _LEX = {"version": j.get("version", ""), "phrases": ph, "rx": re.compile(r"\b(" + "|".join(re.escape(k) for k in keys) + r")\b")}
+        except (OSError, ValueError, KeyError):
+            _LEX = {"version": "", "phrases": {}, "rx": None}
+    return _LEX
+
+
+def norm_words(q):
+    q = (q or "").translate(APOS).lower().replace("-", " ")
+    return re.sub(r"\s+", " ", re.sub(r"[^a-z0-9'€, ?]+", " ", q)).strip()
+
+
+GREETING_Q = re.compile(r"^(?:hi|hello|hey|hiya|good (?:morning|afternoon|evening)|thanks?|thank you|ok|okay|yes|no|bye|cheers)\b", re.I)
+
+
+def intent_of(q):
+    """(intent, form flags) for one question: the first INTENT_RULES class that matches, else 'other'. Greetings and
+    one-word replies are 'other' whatever the rules say."""
+    nq = norm_words(q)
+    if not nq: return "other", ""
+    intent = "other" if (GREETING_Q.match(nq) and len(nq.split()) <= 4) else next((name for name, rx in INTENT_RULES if rx.search(nq)), "other")
+    flags = [k for k, rx in FORM.items() if rx.search(nq)]
+    words = nq.split()
+    if len(words) >= SITUATION_WORDS and SITUATION_RE.search(nq) and len(CONDITION_RE.findall(nq)) >= 2: flags.append("situation")
+    return intent, ";".join(flags)
+
+
+def topic_of(q):
+    """(page url or '', category or '', schemes named) from the longest lexicon phrase the question contains."""
+    L = lexicon()
+    if not L["rx"]: return "", "", 0
+    nq = norm_words(q).replace("'", "")
+    hits = [m.group(1) for m in L["rx"].finditer(nq)]
+    if not hits: return "", "", 0
+    best = max(hits, key=len); e = L["phrases"][best]
+    pages = {L["phrases"][h]["path"] for h in hits if L["phrases"][h].get("url")}
+    return e.get("url") or "", e.get("category") or "", len(pages)
 
 
 def safety_flags(q):
@@ -204,7 +276,8 @@ def redact(src, dst):
     with open(src, encoding="utf-8-sig", newline="") as fi, open(dst, "w", encoding="utf-8", newline="") as fo:
         r = csv.DictReader(fi)
         keep = [c for c in r.fieldnames if c not in DROP] + ["Outcome", "Partial", "Outcome Rules", "Starter Prompt", "Query Script", "Response Words",
-                                                          "Outcome Rule", "Style Version"] + list(STYLE) + ["Answer Signoff", "Safety Version"] + list(SAFETY) + ["Query Theme"]
+                                                          "Outcome Rule", "Style Version"] + list(STYLE) + ["Answer Signoff", "Safety Version"] + list(SAFETY) + ["Query Theme",
+                                                          "Intent Version", "Query Intent", "Query Form", "Query Page", "Query Category", "Query Schemes"]
         dropped = [c for c in r.fieldnames if c in DROP]
         w = csv.DictWriter(fo, fieldnames=keep, extrasaction="ignore")
         w.writeheader()
@@ -223,6 +296,9 @@ def redact(src, dst):
             row.update(style_counts(row))
             row["Safety Version"] = SAFETY_VERSION
             row.update(safety_flags(row.get("User Query")))
+            row["Intent Version"] = INTENT_VERSION + "+" + lexicon()["version"]
+            row["Query Intent"], row["Query Form"] = intent_of(q)
+            row["Query Page"], row["Query Category"], row["Query Schemes"] = topic_of(q)
             if row["Starter Prompt"]: counts["(starter prompt)"] = counts.get("(starter prompt)", 0) + 1
             w.writerow(row)
             n += 1

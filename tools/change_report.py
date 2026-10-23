@@ -149,6 +149,8 @@ def load():
     D["conv"] = rd("conversations-daily.csv") if os.path.exists(os.path.join(REPO, "conversations-daily.csv")) else []
     D["next"] = rd("answer-next-daily.csv") if os.path.exists(os.path.join(REPO, "answer-next-daily.csv")) else []
     D["clicks"] = rd("ga4/clicks-daily.csv") if os.path.exists(os.path.join(REPO, "ga4/clicks-daily.csv")) else []
+    D["intent"] = rd("question-intent-daily.csv") if os.path.exists(os.path.join(REPO, "question-intent-daily.csv")) else []
+    D["lex"] = json.load(open(os.path.join(REPO, "question-lexicon.json"))) if os.path.exists(os.path.join(REPO, "question-lexicon.json")) else {}
     # generation cost a day: Foundry Models minus embeddings and speech, as the dashboard's "Generation" stage
     gen = C.Counter(); last = None
     if os.path.exists(os.path.join(REPO, "costs.csv")):
@@ -411,6 +413,54 @@ def report(ds, days, skip, EV, D):
             tt = newcombe(k1, n1, k2, n2); mv = (tt[1] > 0 or tt[2] < 0) and abs(tt[0]) * 100 >= MOVE_PTS
             P(f"| {l} | {int(n1):,} | {pct(k1 / n1)} | {int(n2):,} | {pct(k2 / n2)} | {pts(tt)} | {'**moved**' if mv else 'steady'} |")
         P("\nA topic comes from the cited page, so drift is measured only between two answers that both cite one. A follow-up that switched topic is one the rewriting step may have reread; a typed follow-up switching more often than before is the trace of a rewriting change.\n")
+
+    # ── 6c. outcomes by what was asked (brief §66) ───────────────────────────
+    # Typed questions only, by the intent the question asks for and by the personal-situation flag. If the change
+    # landed on rate questions it points at the figure-needs-a-link rule meeting tables; on personal situations at the
+    # relevance check; everywhere at the model's threshold.
+    P("## 6c. Outcomes by what was asked (typed questions)\n")
+    QI = D["intent"]
+    if QI:
+        def qagg(w):
+            o = C.defaultdict(C.Counter)
+            for r in QI:
+                if r["Chip"] == "1" or not w.has(date.fromisoformat(r["Date"])): continue
+                e = o[r["Intent"]]
+                for k in ("Turns", "Cited", "NotFound", "Clarification", "Partial", "Situation", "SituationCited", "SituationNotFound", "SituationPartial"): e[k] += I(r.get(k))
+            return o
+        QB, QA = qagg(B), qagg(A); exp = (D["lex"].get("intents") or {})
+        order = sorted(QA, key=lambda k: -QA[k]["Turns"])
+        P("| Intent | Expected | Before n | Cited | Not found | After n | Cited | Not found | Cited change (95%) | Not-found change (95%) | Cited, not partial change |")
+        P("|---|---|---|---|---|---|---|---|---|---|---|")
+        allb, alla = C.Counter(), C.Counter()
+        for k in order: allb.update(QB[k]); alla.update(QA[k])
+        tc_all = newcombe(allb["Cited"], allb["Turns"], alla["Cited"], alla["Turns"])
+        spread = []
+        for k in order + ["all typed"]:
+            b, a_ = (QB[k], QA[k]) if k != "all typed" else (allb, alla)
+            if b["Turns"] < MIN_N or a_["Turns"] < MIN_N: continue
+            tc = newcombe(b["Cited"], b["Turns"], a_["Cited"], a_["Turns"]); tn = newcombe(b["NotFound"], b["Turns"], a_["NotFound"], a_["Turns"])
+            tp = newcombe(b["Cited"] - b["Partial"], b["Turns"], a_["Cited"] - a_["Partial"], a_["Turns"])
+            if k != "all typed": spread.append((k, tc[0], tn[0]))
+            P(f"| {k} | {exp.get(k) or '—'} | {int(b['Turns']):,} | {pct(b['Cited'] / b['Turns'])} | {pct(b['NotFound'] / b['Turns'])} | {int(a_['Turns']):,} | {pct(a_['Cited'] / a_['Turns'])} | {pct(a_['NotFound'] / a_['Turns'])} | {pts(tc)} | {pts(tn)} | {pts(tp)} |")
+        if spread and tc_all:
+            lo = min(spread, key=lambda x: x[1]); hi = max(spread, key=lambda x: x[1])
+            P(f"\nThe cited rate moved between {lo[1] * 100:+.1f} ({lo[0]}) and {hi[1] * 100:+.1f} points ({hi[0]}) across the intents; all typed {tc_all[0] * 100:+.1f}. "
+              + ("**It moved on every intent in the same direction: the model's threshold, not one instruction.**" if all((x[1] < 0) == (tc_all[0] < 0) for x in spread) and abs(tc_all[0]) >= 0.02 else "The intents did not all move the same way." if abs(tc_all[0]) >= 0.02 else "Little moved."))
+            rate = next((x for x in spread if x[0] == "rate"), None)
+            if rate and abs(tc_all[0]) >= 0.02:
+                P(f"Rate questions moved {rate[1] * 100:+.1f} points against {tc_all[0] * 100:+.1f} for all typed questions: " + ("**more than the rest**, which points at the figure-needs-a-link rule meeting pages whose rates are in tables." if rate[1] < tc_all[0] - 0.02 else "no more than the rest, so the figure-needs-a-link rule is not where it landed."))
+        sb, sa = allb, alla
+        if sb["Situation"] >= MIN_N and sa["Situation"] >= MIN_N:
+            tsn = newcombe(sb["SituationNotFound"], sb["Situation"], sa["SituationNotFound"], sa["Situation"])
+            trn = newcombe(sb["NotFound"] - sb["SituationNotFound"], sb["Turns"] - sb["Situation"], sa["NotFound"] - sa["SituationNotFound"], sa["Turns"] - sa["Situation"])
+            d = tsn[0] - trn[0]; h = (((tsn[2] - tsn[1]) / 2) ** 2 + ((trn[2] - trn[1]) / 2) ** 2) ** 0.5
+            P(f"\n**Personal situations** (long, first person, several conditions; {int(sb['Situation']):,} then {int(sa['Situation']):,} typed questions): not found {pct(sb['SituationNotFound'] / sb['Situation'])} → {pct(sa['SituationNotFound'] / sa['Situation'])} ({pts(tsn)}), against {pct((sb['NotFound'] - sb['SituationNotFound']) / (sb['Turns'] - sb['Situation']))} → {pct((sa['NotFound'] - sa['SituationNotFound']) / (sa['Turns'] - sa['Situation']))} for other typed questions ({pts(trn)}). "
+              f"Difference in differences {pts((d, d - h, d + h))}: " + ("**personal situations moved further than the rest**, which points at the relevance check declining retrieved evidence that does not fit a specific case." if d - h > 0.01 else "**the rest moved further than personal situations.**" if d + h < -0.01 else "alike within the interval."))
+            notes.append(("situation", d))
+        P("")
+    else:
+        P("No question-intent data.\n")
 
     # ── 7. reading ──────────────────────────────────────────────────────────
     P("## 7. Reading\n")

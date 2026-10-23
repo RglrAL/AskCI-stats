@@ -54,6 +54,13 @@ Outputs (all daily counts; nothing per-turn and no text crosses into the dashboa
                             with Outcome Rule, brief §53)
   pages-cited.csv           URL, FirstCited, LastCited, Citations, Answers, Partial, Dislikes, LastMod,
                             FirstCitedAfterLastMod, AnswersAfterLastMod (one row per cited page, all data; brief §62)
+  question-intent-daily.csv Date, Intent, Chip, Turns, outcomes, Partial, Year, Euro, YesNo, Situation, WithTopic,
+                            SituationCited, SituationNotFound, SituationPartial (brief §66)
+  asked-pages-monthly.csv   Month, URL, Category, Asked, CitedSame, CitedSameCategory, CitedOther, NotFound, Clarification,
+                            Other: the page a question named and what the answer did; pages asked under 5 times a month
+                            left out (brief §66)
+  question-topics-daily.csv Date, Category, Turns, outcomes, Partial: the category the question named, for turns whose
+                            answer carried no topic (brief §66)
   safety-daily.csv          Date, Flag, Turns, Cited, NotFound, Clarification, Error, OutOfScope, Greeting, Uncited: turns
                             flagged by redact_feed.py (identifiers typed in, injection phrasings, off-topic and
                             crisis themes) and their outcomes (brief §65)
@@ -178,6 +185,9 @@ def aggregate(files, skip_days=frozenset()):
     rulesd = defaultdict(int)                        # (date, outcome rule id) -> turns (brief §53)
     style = defaultdict(lambda: defaultdict(int))    # (date, outcome) -> wording fingerprint sums
     safety = defaultdict(lambda: defaultdict(int))   # (date, flag) -> turns and their outcomes (brief §65)
+    intent = defaultdict(lambda: defaultdict(int))   # (date, intent, chip) -> turns, outcomes, form flags (brief §66)
+    asked = defaultdict(lambda: defaultdict(int))    # (month, page asked about) -> what the answer did (brief §66)
+    qtopic = defaultdict(lambda: defaultdict(int))   # (date, question category) -> turns whose answer carried no topic (brief §66)
     seen = set(); dupes = 0   # exports taken on different days overlap on their boundary day
     for f in files:
         with open(f, encoding="utf-8-sig", newline="") as fh:
@@ -325,6 +335,34 @@ def aggregate(files, skip_days=frozenset()):
                 for u in urls:
                     nu = norm_url(u)
                     if nu: pages[nu]["cites"] += 1
+                # what people ask (brief §66): intent and form from the question, the page it names, and what the answer did
+                if (row.get("Intent Version") or "").strip():
+                    qi = (row.get("Query Intent") or "other").strip() or "other"; qf = set((row.get("Query Form") or "").split(";")) - {""}
+                    chip = 1 if (row.get("Starter Prompt") or "").strip() else 0
+                    e5 = intent[(d, qi, chip)]; e5["Turns"] += 1
+                    if o_rec: e5["o:" + o_rec] += 1
+                    if (row.get("Partial") or "").strip().lower() == "yes": e5["o:partial"] += 1
+                    for fl in ("year", "euro", "yesno", "situation"): e5["f:" + fl] += fl in qf
+                    if "situation" in qf:   # outcomes of personal-situation questions, for the difference in differences (brief §66)
+                        if o_rec == "Cited answer": e5["s:cited"] += 1
+                        if o_rec == "Not found": e5["s:notfound"] += 1
+                        if (row.get("Partial") or "").strip().lower() == "yes": e5["s:partial"] += 1
+                    qp = (row.get("Query Page") or "").strip(); qc = (row.get("Query Category") or "").strip()
+                    if qc: e5["WithTopic"] += 1
+                    if qp:
+                        a5 = asked[(d.strftime("%Y-%m"), qp)]; a5["Asked"] += 1; a5["_cat"] = qc
+                        qpn = norm_url(qp)
+                        if o_rec == "Cited answer":
+                            if qpn in nus: a5["CitedSame"] += 1
+                            elif any(url_slug(u) == qc for u in nus): a5["CitedSameCategory"] += 1
+                            else: a5["CitedOther"] += 1
+                        elif o_rec == "Not found": a5["NotFound"] += 1
+                        elif o_rec == "Clarification": a5["Clarification"] += 1
+                        else: a5["Other"] += 1
+                    if qc and not own:   # the answer carried no topic; the question did
+                        e6 = qtopic[(d, qc)]; e6["Turns"] += 1
+                        if o_rec: e6["o:" + o_rec] += 1
+                        if (row.get("Partial") or "").strip().lower() == "yes": e6["o:partial"] += 1
                 # latency by response length and by citation count (positive response times only)
                 if has_words:
                     try: ms3 = int(float(row.get("Response Time (ms)") or ""))
@@ -354,11 +392,40 @@ def aggregate(files, skip_days=frozenset()):
                         cat_dropped += sum(1 for x in slugs if x is None)
                         toks = [x for x in slugs if x]
                     for s in set(toks): cats[d][s] += 1
-    return D, sess, lat, hours, hour_sess, cats, bad, has_voice, dupes, cat_dropped, has_outcome, rules, has_starter, has_script, recs, (cites_m, cites_x, pages), latb, rulesd, (style, safety)
+    return D, sess, lat, hours, hour_sess, cats, bad, has_voice, dupes, cat_dropped, has_outcome, rules, has_starter, has_script, recs, (cites_m, cites_x, pages), latb, rulesd, (style, safety, intent, asked, qtopic)
 
 
 STYLE_COLS = ["Lines", "Hedges", "Apologies", "Signposts", "Questions", "Links", "Openers", "Invitations", "Absolutes", "Emphasis", "Nested", "External", "Freshness", "Signoff"]
 SAFETY_FLAGS = ["Query PPS", "Query Phone", "Query Email", "Query IBAN", "Query Card", "Query Injection"]
+
+
+OUT7 = [k for k, _ in [("Cited", "o:Cited answer"), ("NotFound", "o:Not found"), ("Clarification", "o:Clarification"), ("Error", "o:Error"), ("OutOfScope", "o:Out of scope"), ("Greeting", "o:Greeting"), ("Uncited", "o:Uncited answer")]]
+OUT7_SRC = ["o:Cited answer", "o:Not found", "o:Clarification", "o:Error", "o:Out of scope", "o:Greeting", "o:Uncited answer"]
+
+
+def intent_rows(intent):
+    """question-intent-daily.csv: per day, intent and whether the turn was a chip: turns, outcomes, partial, the form
+    flags (a year, a euro amount, a yes/no form, a personal situation) and turns whose question named a scheme (§66)."""
+    cols = ["Date", "Intent", "Chip", "Turns"] + OUT7 + ["Partial", "Year", "Euro", "YesNo", "Situation", "WithTopic", "SituationCited", "SituationNotFound", "SituationPartial"]
+    return cols, [[d.isoformat(), i, c, e["Turns"]] + [e[k] for k in OUT7_SRC] + [e["o:partial"], e["f:year"], e["f:euro"], e["f:yesno"], e["f:situation"], e["WithTopic"], e["s:cited"], e["s:notfound"], e["s:partial"]]
+                  for (d, i, c), e in sorted(intent.items())]
+
+
+def asked_rows(asked, min_asked=5):
+    """asked-pages-monthly.csv: per month and page the question named: how often, and what the answer did: cited that
+    page, cited another page in the same category, cited a different category, not found, clarification, other.
+    Pages named fewer than min_asked times in a month are left out (small-sample rule, brief §66)."""
+    cols = ["Month", "URL", "Category", "Asked", "CitedSame", "CitedSameCategory", "CitedOther", "NotFound", "Clarification", "Other"]
+    rows = [[m, u, e["_cat"], e["Asked"], e["CitedSame"], e["CitedSameCategory"], e["CitedOther"], e["NotFound"], e["Clarification"], e["Other"]]
+            for (m, u), e in asked.items() if e["Asked"] >= min_asked]
+    return cols, sorted(rows, key=lambda r: (r[0], -r[3], r[1]))
+
+
+def qtopic_rows(qtopic):
+    """question-topics-daily.csv: per day and category named in the question, for turns whose answer carried no topic
+    (the 'unknown' rows of category-outcomes-daily.csv): turns, outcomes and partial (brief §66)."""
+    cols = ["Date", "Category", "Turns"] + OUT7 + ["Partial"]
+    return cols, [[d.isoformat(), c, e["Turns"]] + [e[k] for k in OUT7_SRC] + [e["o:partial"]] for (d, c), e in sorted(qtopic.items())]
 
 
 def safety_rows(safety):
@@ -707,7 +774,7 @@ def main():
     # An export taken on day X contains only part of day X; skip those rows unless asked to keep them.
     export_days = {datetime.strptime(m.group(1), "%Y%m%d").date() for m in (re.search(r"(\d{8})_\d{6}", os.path.basename(f)) for f in a.files) if m}
     skip = frozenset() if (a.keep_partial or not export_days) else frozenset({max(export_days)})  # only the newest export's own day is partial
-    D, sess, lat, hours, hour_sess, cats, bad, has_voice, dupes, cat_dropped, has_outcome, rules, has_starter, has_script, recs, (cites_m, cites_x, pages), latb, rulesd, (style, safety) = aggregate(a.files, skip)
+    D, sess, lat, hours, hour_sess, cats, bad, has_voice, dupes, cat_dropped, has_outcome, rules, has_starter, has_script, recs, (cites_m, cites_x, pages), latb, rulesd, (style, safety, intent, asked, qtopic) = aggregate(a.files, skip)
     rules = ", ".join(sorted(r for r in rules if r))
     if skip and any(True for _ in skip): print(f"note: export day(s) {', '.join(str(x) for x in sorted(skip))} skipped as partial (--keep-partial to keep)")
     cd, co, jm, sp, cstats = conversation_pass(recs)
@@ -744,6 +811,10 @@ def main():
             write(os.path.join(a.out_dir, "outcome-rules-daily.csv"), *rule_rows(rulesd))
             write(os.path.join(a.out_dir, "answer-style-daily.csv"), *style_rows(style))
         if safety: write(os.path.join(a.out_dir, "safety-daily.csv"), *safety_rows(safety))
+        if intent:
+            write(os.path.join(a.out_dir, "question-intent-daily.csv"), *intent_rows(intent))
+            write(os.path.join(a.out_dir, "asked-pages-monthly.csv"), *asked_rows(asked))
+            write(os.path.join(a.out_dir, "question-topics-daily.csv"), *qtopic_rows(qtopic))
     elif a.out:
         write(a.out, ucols, urows)
     else:

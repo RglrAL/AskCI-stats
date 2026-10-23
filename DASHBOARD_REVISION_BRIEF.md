@@ -1287,3 +1287,38 @@ Agreed after one round of proposal and critique. The same design as the safety f
 **Acceptance:** at least four in five typed questions land in a named intent; the question-derived topic cuts "unknown" among not-found turns by at least half; per-class reader agreement 80%+; every other file rebuilds byte-identical.
 
 **Order:** the lexicon builder with aliases and stop list, iterated against the most frequent unmatched tokens locally (budget the iteration, not just the build); intent rules and topic match in the redaction step with a synthetic test set; the files, the category fallback, audit and fixture; the sub-tab; the change-report section; the two labelling columns; the brief section with the 14 September reading. Step 11 follows and matters only if an extract appears.
+
+## 67. Step 12: what people ask, and where the 14 September change landed (24 Oct 2026)
+
+**Built, as §66 planned:**
+- **`tools/make_lexicon.py`** builds `question-lexicon.json` (committed, public: the site's own addresses) from the English information page slugs, 194 aliases (the dole, HAP, GP card, social welfare, solar panels …), a stop list of generic slugs and a 6-character minimum. Category-level aliases carry a category and no page. It carries the expected outcome per intent. Its `--unmatched` mode (local) lists the most frequent words in questions it misses; three passes took the match rate from 44% to 58% of all questions, and what remains is intent wording (part time, how long does), not scheme names.
+- **`redact_feed.py`** (`INTENT_VERSION` 2026.10.24-1) sets, from the question before it is dropped: an intent by rule in precedence order (status, contact, documents, apply, rate, eligibility, timing, definition, other; greetings and one-word replies are other), form flags (a year, a euro amount, a yes/no form, a personal situation: 25+ words, first person, two or more conditions), and the longest lexicon phrase found: its page address, category and a count of schemes named. A synthetic test set of 35 questions passes.
+- **`make_usage.py`** writes `question-intent-daily.csv` (intent × chip × day: outcomes, partial, the four flags, turns naming a scheme, and the outcomes of personal-situation questions), `asked-pages-monthly.csv` (the page a question named and what the answer did: cited that page, cited another page in the same category, cited a different category, not found, clarification, other; pages asked under 5 times a month left out) and `question-topics-daily.csv` (the category the question named, for turns whose answer carried none). It is a separate file rather than extra rows in `category-outcomes-daily.csv`, so the two sources never mix; the plan's intent is kept. Every other file rebuilt byte-identical; four audit checks.
+- **Usage › What people ask**: outcomes by intent for the range against its comparison window with the "unexpected" column; the personal-situation, scheme-named and unknown-topic tiles; topics of failed answers from the question; the retrieval agreement tiles; and the two page lists with cells under 5 shown as "<5".
+- **The change report** gains **Outcomes by what was asked**: every intent with intervals, the spread, the rate-question test, and a difference in differences for the personal-situation flag.
+- **The labelling sheet** gains `what_asked` and `scheme_page`; the key carries the rule's intent, form and page; `score_labels.py` reports per-class agreement and the page match rate. The sheet is redrawn with the same 120 items.
+
+**Acceptance:** 60% of typed questions land in a named intent (short of the four-in-five target: 40% are "other", mostly fragments and personal narratives without a question word; the first thing to look at in the labelled sample). The question-derived topic cuts "unknown" among not-found turns from 64% to 9% after 14 September and from 60% to 12% before (target: half). Reader agreement is not yet measured. Every other file identical.
+
+**What the questions say, typed questions 15 Sep–12 Oct against 17 Aug–13 Sep:**
+
+| Intent | Share | Cited before → after | Not found before → after |
+|---|---|---|---|
+| eligibility | 21% | 94.9% → 86.1% (−8.8) | 2.4% → 8.1% |
+| definition (what is X, or a bare scheme name) | 16% | 76.5% → 59.1% (−17.4) | 2.9% → 4.9% |
+| apply | 9% | 95.3% → 87.0% (−8.3) | 1.6% → 7.1% |
+| rate or amount | 8% | 91.4% → 84.0% (−7.3) | 4.5% → 8.8% |
+| timing | 4% | 86.6% → 77.9% (−8.6) | 6.7% → 12.1% |
+| other | 40% | 87.7% → 75.2% (−12.4) | 3.0% → 9.7% |
+| all typed | | 89.1% → 76.9% (−12.1) | 2.9% → 8.4% |
+
+- **The fall is on every intent, in the same direction, between 7 and 17 points.** That is the model's threshold, not one instruction. On 9 March the same test gives the same shape at half the size (−1 to −6 points). "Cited, not partial" fell 12 to 24 points on every intent.
+- **Rate questions moved no more than the rest** (−7.3 against −12.1). The figure-needs-a-link rule meeting rate tables is not where it landed; the HAP chip (§55, §63) is a page-level case, not the pattern.
+- **Personal situations moved further than everything else.** Not found went from 1.8% to 12.8% on them, against 3.0% to 8.1% on other typed questions: a difference in differences of **+5.8 points (+3.6 to +8.1)**. On 9 March the same difference is +2.7 (−2.5 to +7.9), nothing. The relevance-check instruction, which tells the model to decline retrieved content that does not address the question closely enough, is the instruction a more literal model applies hardest to a specific personal case, because no page addresses a specific case. **This is the first result that names an instruction rather than "the model or the prompt".**
+- **Definition questions fell most** (−17.4) and are the only intent whose not-found barely moved; their loss went to clarification (27.8% of them), which is the classifier's "ambiguous" class on bare scheme names and short fragments (§60).
+- **Status questions** (about the person's own claim, 32 in the window) get a cited answer 87.5% of the time, where the design expects a redirect. Few, but the design says they should not be answered from a page.
+- **Retrieval agreement:** where the question named a page, the answer cited that page 57–58% of the time in both August and October, another page in the same category 23–28%, and not-found rose from 2% to 7%. The pages people name and are not answered from (employment permits, capital acquisitions tax, planning permission, applying for local authority housing, the Christmas Bonus) are a chunking list: the content exists and was named.
+
+**What it changes.** The suspects in §53 were the model or the prompt. Steps 1 to 11 narrowed to the answering model applying an existing instruction more readily (§60). This step says which: the relevance check, applied hardest to personal cases, with a general rise in the threshold on everything else. The prompt-side remedy is a question for the team (a softer relevance rule for personal situations, or an instruction to answer the general case and say so); the labelling hour tells whether the declined answers were right to decline. The classes themselves remain a rule until the reader agreement is in.
+
+**Order from here:** the labelling hour (two more columns, ten minutes), then step 11 if an extract ever appears.

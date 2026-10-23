@@ -36,7 +36,7 @@ import argparse, csv, os, random, sys
 from datetime import datetime, date
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-from redact_feed import classify, URL_RE, OUTCOME_RULES_VERSION, normalise_query   # the rules being measured, exactly as they run
+from redact_feed import classify, URL_RE, OUTCOME_RULES_VERSION, normalise_query, intent_of, topic_of, INTENT_VERSION, lexicon   # the rules being measured, exactly as they run
 
 REPO = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 TS = "%b %d, %Y %H:%M"
@@ -115,7 +115,7 @@ def main():
 
     out = a.out or os.path.join(REPO, "exports", f"labelling-{date.today().isoformat()}")
     os.makedirs(out, exist_ok=True)
-    cols = ["item", "question", "answer", "cited_pages", "what_kind", "answered", "detail_on_page", "notes"]
+    cols = ["item", "question", "answer", "cited_pages", "what_kind", "answered", "detail_on_page", "what_asked", "scheme_page", "notes"]
 
     def sheet(path, idx):
         with open(path, "w", newline="", encoding="utf-8") as fh:
@@ -123,16 +123,17 @@ def main():
             for i in idx:
                 row = items[i]
                 w.writerow([f"A{i + 1:03d}", (row.get("User Query") or "").strip(), (row.get("Assistant Response") or "").strip(),
-                            "\n".join(URL_RE.findall(row.get("Citations") or "")), "", "", "", ""])
+                            "\n".join(URL_RE.findall(row.get("Citations") or "")), "", "", "", "", "", ""])
 
     sheet(os.path.join(out, "label_sheet.csv"), order)
     second = rnd.sample(order, min(a.double, len(order)))
     rnd.shuffle(second)
     sheet(os.path.join(out, "label_sheet_second.csv"), second)
     with open(os.path.join(out, "key.csv"), "w", newline="", encoding="utf-8") as fh:
-        w = csv.writer(fh); w.writerow(["item", "period", "rule_outcome", "date", "stratum_population", "stratum_sample", "rules_version", "stratum"])
+        w = csv.writer(fh); w.writerow(["item", "period", "rule_outcome", "date", "stratum_population", "stratum_sample", "rules_version", "stratum", "rule_intent", "rule_form", "rule_page", "rule_category", "intent_version"])
         for i, k in enumerate(key):
-            w.writerow([f"A{i + 1:03d}", k["period"], k["rule_outcome"], k["date"], k["stratum_population"], k["stratum_sample"], OUTCOME_RULES_VERSION, k["stratum"]])
+            qi, qf = intent_of(items[i].get("User Query")); qp, qc, _ = topic_of(items[i].get("User Query"))
+            w.writerow([f"A{i + 1:03d}", k["period"], k["rule_outcome"], k["date"], k["stratum_population"], k["stratum_sample"], OUTCOME_RULES_VERSION, k["stratum"], qi, qf, qp, qc, INTENT_VERSION + "+" + lexicon()["version"]])
     with open(os.path.join(out, "README.txt"), "w", encoding="utf-8") as fh:
         fh.write(f"""AskCI answer labelling ({len(items)} answers; a second sheet of {len(second)} for a second labeller)
 
@@ -149,6 +150,14 @@ For each row of label_sheet.csv, read the question and the answer, then fill in:
                    and say whether the missing detail is in fact there.
                    yes (it was on the page: the answer missed it) / no (a real gap in the content) / can't tell
                    Leave blank for other answers.
+  what_asked       what the question asks for, one of:
+                   status (about their own claim or application) / contact (a number, office or hours) / documents
+                   (what to bring or provide) / apply (how to apply, renew, register, change) / rate (an amount, rate,
+                   limit, how much, how many weeks) / eligibility (can I, am I entitled, who qualifies) / timing (when,
+                   how long, deadline, backdated) / definition (what is X, tell me about X, or just a scheme name) / other
+                   Pick the one the person most wants answered; a personal story with "can I get" is eligibility.
+  scheme_page      the citizensinformation.ie page the question is about, if it names a scheme or subject: paste the
+                   address of the page you would send them to (search the site), or leave blank if it names none.
   notes            anything worth saying (optional)
 
 Judge the answer as a member of the public would read it. "can't tell" is a fine answer: use it rather than guess.

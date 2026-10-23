@@ -25,6 +25,7 @@ KIND = {"answered with a source": "cited", "answered but says something is missi
         "says it couldn't find it": "notfound", "asks to clarify": "clarification", "declines as out of scope": "oos",
         "answered without a source": "uncited", "other": "other", "can't tell": "cant"}
 CLASSES = ["cited", "partial", "notfound", "clarification"]
+INTENTS = {"status", "contact", "documents", "apply", "rate", "eligibility", "timing", "definition", "other"}
 COLS = CLASSES + ["oos", "uncited", "other", "cant"]
 
 
@@ -38,7 +39,8 @@ def read_sheet(path):
         return {}
     with open(path, encoding="utf-8-sig", newline="") as fh:
         return {r["item"]: (norm(r.get("what_kind"), KIND), norm(r.get("answered"), {"yes", "partly", "no", "can't tell"}),
-                            norm(r.get("detail_on_page"), {"yes", "no", "can't tell"})) for r in csv.DictReader(fh)}
+                            norm(r.get("detail_on_page"), {"yes", "no", "can't tell"}), norm(r.get("what_asked"), INTENTS),
+                            (r.get("scheme_page") or "").strip().lower().rstrip("/")) for r in csv.DictReader(fh)}
 
 
 def wilson(k, n, z=1.96):
@@ -71,7 +73,7 @@ def main():
     with open(os.path.join(d, "key.csv"), encoding="utf-8-sig", newline="") as fh:
         key = {r["item"]: r for r in csv.DictReader(fh)}
     lab = read_sheet(os.path.join(d, "label_sheet.csv"))
-    bad = [i for i, (k, a, dp) in lab.items() if k.startswith("?") or a.startswith("?") or dp.startswith("?")]
+    bad = [i for i, (k, a, dp, wa, sp) in lab.items() if k.startswith("?") or a.startswith("?") or dp.startswith("?") or wa.startswith("?")]
     if bad:
         sys.exit(f"{len(bad)} rows have a value that isn't one of the allowed ones (see README.txt), e.g. {bad[:5]}")
     done = {i: v for i, v in lab.items() if v[0]}
@@ -118,6 +120,20 @@ def main():
         summary[period] = {"agreement": round(acc, 3) if acc is not None else None, "n": len(items),
                            "notfound_answered": round(nf_ans, 3) if nf_ans is not None else None,
                            **({"detail_was_on_page": round(on / len(miss), 3)} if miss else {})}
+    # what people ask (brief §66): the rule's intent and page against the reader's, per class
+    wa = [i for i in key if i in lab and lab[i][3] and key[i].get("rule_intent")]
+    if wa:
+        cm2 = C.defaultdict(C.Counter)
+        for i in wa: cm2[key[i]["rule_intent"]][lab[i][3]] += 1
+        agree = sum(cm2[k][k] for k in cm2); print(f"== what was asked: rule intent against the reader on {len(wa)} items: {agree / len(wa):.0%} agree{rng(agree, len(wa))}")
+        for k in sorted(cm2, key=lambda k: -sum(cm2[k].values())):
+            n = sum(cm2[k].values()); print(f"   rule '{k:12}' {n:3} items: reader agrees {cm2[k][k] / n:.0%}{rng(cm2[k][k], n)}" + ("" if cm2[k][k] == n else "; reader said " + ", ".join(f"{v}×{c}" for c, v in cm2[k].most_common() if c != k)))
+        sp = [i for i in wa if key[i].get("rule_page") or lab[i][4]]
+        if sp:
+            same = sum((key[i].get("rule_page") or "").lower().rstrip("/") == lab[i][4] for i in sp if lab[i][4] and key[i].get("rule_page"))
+            both = sum(1 for i in sp if lab[i][4] and key[i].get("rule_page")); only_rule = sum(1 for i in sp if key[i].get("rule_page") and not lab[i][4]); only_reader = sum(1 for i in sp if lab[i][4] and not key[i].get("rule_page"))
+            print(f"   scheme page: both named one on {both} items, the same page on {same} ({same / both:.0%}){rng(same, both) if both else ''}; rule only {only_rule}, reader only {only_reader}\n")
+        summary["asked"] = {"n": len(wa), "intent_agree": round(agree / len(wa), 3)}
     st = [i for i in key if strat(i) == "starter" and i in done]
     if st:
         kinds = C.Counter(KIND[done[i][0]] for i in st); ans = C.Counter(done[i][1] for i in st)
