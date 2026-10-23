@@ -397,3 +397,16 @@ Known and left as they are: fixed share is computed three ways (report: settled 
 
 - **Hour ranges.** "Questions between 8pm and 9am", "between 20:00 and 09:00 in October", "after 8pm on 6 October", "conversations before 7am", "not-found rate between midnight and 6am", "response time after 10pm", and any of these by month or week. Answers come from `usage-hours.csv` (Irish time, hour precision; ranges may wrap midnight) and give the share of the period's questions. Metrics with no hourly form (cost, citations, outcomes other than not-found and error) say so instead of answering for the whole day; previously the hour clause was silently ignored and the full-day total returned.
 - **Comparisons.** "vs the prior Nd" now clips a period that runs past the data (e.g. "October" on 22 Oct) to the last day with data before taking the prior window, so a part month is no longer compared with a whole one; an hour-range answer compares the same hours of the prior window.
+
+## 28. Ask bar covers the Department of the Taoiseach figures; the site's page list (23 Oct 2026)
+
+Every figure sent for the Department of the Taoiseach post can now be asked in several phrasings, and each answer was checked against an independent recount.
+
+- **Named moments.** "Budget Day" and "Budget week" (from the confirmed Budget Day event), "the pop-up launch", "since the launch".
+- **Day ranges.** "5 to 11 October", "October 5 to 11", alongside "15 March to 30 April" and "March to May".
+- **A single day is compared with the same weekday** over the previous four weeks ("2.4× the average of the previous four Tuesdays (924)"), including when narrowed by topic or hours (money and tax on Budget Day: 10.2×; after 8pm: 3.2×). Answers narrowed by topic, filter or hours compare the same narrowing in the prior window.
+- **Growth.** "How much has usage grown since April", "growth since the pop-up launch": questions per day in the base month (for the launch, the whole month before it) against the latest complete month.
+- **Counts.** "How many links" (citations, with the share to citizensinformation.ie), "how many different pages were cited" (1,892 addresses; 1,440 of the site's 1,493 English information pages), "how many pages did people click through to" (814). Any "how many" question returns a count, never a list.
+- **Topics.** "What do people ask about most", "top topics": with each topic's share of questions with an identifiable topic.
+- **Clicks.** "How many times did people click a link", "which page do people read most".
+- **Site page list.** `tools/make_site_pages.py` turns a saved sitemap into `site-pages.csv` (URL, Language, Kind by address depth, LastMod, ListedOn); 3,749 pages on 23 Oct, 1,493 English information pages. The Ask bar uses it for page coverage, and the Click-throughs page table marks cited addresses that are not on the list (old or moved addresses, or links slightly wrong). State Pension (Contributory) is on the list yet had 2,896 citations and no recorded click; worth checking the link in AskCI itself.

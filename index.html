@@ -2609,6 +2609,13 @@ async function loadClickFiles(){
   const ds=Object.keys(CLICKS).sort();hasClicks=ds.length>0;clickRange=hasClicks?{from:ds[0],to:ds[ds.length-1]}:null;
 }
 const clickViews=c=>c?c.embed+c.app+c.other:0;
+// The site's own page list (site-pages.csv from tools/make_site_pages.py): checks cited and clicked addresses
+// against pages that exist. Optional.
+let SITEPAGES={info:new Set(),all:new Set(),asOf:''},hasSitePages=false;
+async function loadSitePages(){
+  try{(await loadCSV('site-pages.csv')).forEach(r=>{const u=String(r['URL']||'').toLowerCase().replace(/\/$/,'');if(!u)return;SITEPAGES.all.add(u);if(r['Kind']==='information'&&r['Language']==='en')SITEPAGES.info.add(u);if(r['ListedOn']&&r['ListedOn']>SITEPAGES.asOf)SITEPAGES.asOf=r['ListedOn'];});}catch(e){}
+  hasSitePages=SITEPAGES.info.size>0;
+}
 // Matched numerator and denominator for one day: a surface counts only from its tracking start.
 // Returns null for a day outside every measured window (no usage row or before tracking began).
 function clickDay(d,src){
@@ -5253,9 +5260,10 @@ function renderClicks(D,S){
   const td=(v,o={})=>`<td class="num" style="text-align:${o.left?'left':'right'};padding:7px 10px;font-family:'DM Mono',monospace;font-size:.78rem${o.col?';color:'+o.col:''}">${v}</td>`;
   const th=(t,left)=>`<th style="text-align:${left?'left':'right'};padding:7px 10px;font-size:.6rem;color:var(--muted);text-transform:uppercase;letter-spacing:.08em;white-space:nowrap">${t}</th>`;
   const sortBtn=(m,l)=>`<button class="pill${clicksSort===m?' active':''}" onclick="setClicksSort('${m}')">${l}</button>`;
-  const pageRows=prow.map(r=>{const rr=r.cited?r.clicks/r.cited*100:null,flag=r.cited>=MINC&&r.clicks===0;
+  const onSite=u=>!hasSitePages||SITEPAGES.all.has(String(u).toLowerCase().replace(/\/$/,''));
+  const pageRows=prow.map(r=>{const rr=r.cited?r.clicks/r.cited*100:null,flag=r.cited>=MINC&&r.clicks===0,gone=!onSite(r.u);
     return`<tr style="border-bottom:1px solid var(--b2)">
-      ${td(`<a href="${r.u}" target="_blank" rel="noopener" style="color:${C.acc};text-decoration:none">${shortCiUrl(r.u)}</a>${flag?` <span class="clk-badge" title="Cited ${num(r.cited)} times with no recorded click. The link may redirect, so its visits are logged under another address; check the page in GA4.">no clicks recorded · may redirect</span>`:''}`,{left:true})}
+      ${td(`<a href="${r.u}" target="_blank" rel="noopener" style="color:${C.acc};text-decoration:none">${shortCiUrl(r.u)}</a>${gone?` <span class="clk-badge" title="This address is not on the site's page list of ${fmtDate(SITEPAGES.asOf)}: an old or moved address, or a link the model got slightly wrong. Visits may be logged under the page's current address.">not on the site's page list</span>`:flag?` <span class="clk-badge" title="Cited ${num(r.cited)} times with no recorded click.">no clicks recorded</span>`:''}`,{left:true})}
       ${td(r.cat?catLabel(CAT_ALIAS[r.cat]||r.cat):'—',{left:true,col:'var(--muted)'})}
       ${td(r.cited?num(r.cited):'—')}${td(num(r.clicks))}
       <td style="padding:7px 10px;min-width:120px"><div class="cell-bar"><span style="width:${rr==null?0:Math.max(2,(r.clicks/r.cited)/maxR*100)}%"></span><b>${r.cited>=MINC||rateOK(r.clicks,r.cited).ok?(rr==null?'—':rr.toFixed(1)):'—'}</b></div></td></tr>`;}).join('');
@@ -7079,6 +7087,7 @@ async function init(){
   await loadHoursFile(); // hour-of-day turns for the Usage pane (graceful if absent)
   await loadConversationFiles(); // conversation-level aggregates (graceful if absent)
   await loadClickFiles(); // GA4 click-throughs from tools/make_clicks.py (graceful if absent)
+  await loadSitePages(); // the site's page list from tools/make_site_pages.py (graceful if absent)
   await loadEvents(); // shared events (events.json) — only confirmed ones draw
   if(cr||ur)buildDashboard(cr,ur);
 }
@@ -7129,6 +7138,13 @@ init();
     if(iso0)return{kind:'day',from:iso0[1],to:iso0[1],label:fmtDate(iso0[1])};
     // Whole month names or their abbreviations only: "[a-z]*" read "decreasing" as December and "marked" as March.
     const MRE='(jan(?:uary)?|feb(?:ruary)?|mar(?:ch)?|apr(?:il)?|may|june?|july?|aug(?:ust)?|sept?(?:ember)?|oct(?:ober)?|nov(?:ember)?|dec(?:ember)?)';
+    // Named moments from confirmed events: "Budget Day", "Budget week", "the pop-up launch", "since the launch".
+    const evOf=re=>confirmedEvents().find(e=>re.test(String(e.title||'')));
+    const bud=evOf(/budget/i),lau=confirmedEvents().find(e=>e.kind==='launch');
+    if(bud&&/\bbudget week\b/.test(q)){const ws=weekStart(bud.start);return{kind:'range',from:ws,to:isoAdd(ws,6),label:'Budget week ('+fmtDate(ws)+' to '+fmtDate(isoAdd(ws,6))+')'};}
+    if(lau&&/\b(since|after|from)\s+(the\s+)?((pop[- ]?up|modal)\s+)?launch\b/.test(q))return{kind:'range',from:lau.start,to:latest,label:fmtDate(lau.start)+' to date (since the pop-up launch)',since:true};
+    if(bud&&/\bbudget( day)?\b/.test(q))return{kind:'day',from:bud.start,to:bud.start,label:'Budget Day ('+fmtDate(bud.start)+')'};
+    if(lau&&/\b((pop[- ]?up|modal)\s+launch|launch day)\b/.test(q))return{kind:'day',from:lau.start,to:lau.start,label:'the pop-up launch ('+fmtDate(lau.start)+')'};
     // Explicit ranges: "15 March to 30 April", "March to May" (each month in its latest year up to the data's end).
     const yrOf=mi=>yy0?+yy0[1]:((mi+1<=+latest.slice(5,7))?+latest.slice(0,4):+latest.slice(0,4)-1),yy0=q.match(/\b(20\d{2})\b/);
     const D_='(\\d{1,2})(?:st|nd|rd|th)?\\s+(?:of\\s+)?',TO='\\s+(?:to|until|till|through|and)\\s+';
@@ -7136,6 +7152,11 @@ init();
     if(rd){const m1=ABBR.indexOf(rd[2].slice(0,3)),m2=ABBR.indexOf(rd[4].slice(0,3)),y1=yrOf(m1),y2=yrOf(m2);
       const f=`${y1}-${String(m1+1).padStart(2,'0')}-${String(+rd[1]).padStart(2,'0')}`,t=`${y2}-${String(m2+1).padStart(2,'0')}-${String(+rd[3]).padStart(2,'0')}`;
       if(f<=t)return{kind:'range',from:f,to:t,label:fmtDate(f)+' to '+fmtDate(t)};}
+    // "5 to 11 October", "5-11 Oct", "October 5 to 11": two days in one month
+    const rs=q.match(new RegExp('\\b(\\d{1,2})(?:st|nd|rd|th)?\\s*(?:to|until|till|through|and|-|–)\\s*'+D_+MRE+'\\b'))||null;
+    const rs2=rs?null:q.match(new RegExp('\\b'+MRE+'\\s+(\\d{1,2})(?:st|nd|rd|th)?\\s*(?:to|until|till|through|and|-|–)\\s*(\\d{1,2})(?:st|nd|rd|th)?\\b'));
+    if(rs||rs2){const mo=rs?rs[3]:rs2[1],d1=+(rs?rs[1]:rs2[2]),d2=+(rs?rs[2]:rs2[3]),mi=ABBR.indexOf(mo.slice(0,3)),y=yrOf(mi),mk=`${y}-${String(mi+1).padStart(2,'0')}`;
+      if(d1>=1&&d2<=dim(mk)&&d1<=d2){const f=`${mk}-${String(d1).padStart(2,'0')}`,t=`${mk}-${String(d2).padStart(2,'0')}`;return{kind:'range',from:f,to:t,label:fmtDate(f)+' to '+fmtDate(t)};}}
     const rm=q.match(new RegExp('\\b'+MRE+TO+MRE+'\\b'));
     if(rm){const m1=ABBR.indexOf(rm[1].slice(0,3)),m2=ABBR.indexOf(rm[2].slice(0,3)),y1=yrOf(m1),y2=yrOf(m2),k2=`${y2}-${String(m2+1).padStart(2,'0')}`;
       const f=`${y1}-${String(m1+1).padStart(2,'0')}-01`,t=`${k2}-${String(dim(k2)).padStart(2,'0')}`;
@@ -7209,7 +7230,9 @@ init();
   function parseMetric(q){
     const svcs=(have()&&DATA.allSvcs)||[];
     // Click-throughs (GA4) and conversation outcomes; before the not-found and citation rules below
-    if(/click[- ]?throughs?|\bctr\b|clicked through|clicks? on (the )?(citations?|links?)/.test(q))return/rate|per 100|\bctr\b|percent|%|share/.test(q)?{kind:'ctr',label:'click-throughs per 100 cited answers'}:{kind:'clicks',label:'click-throughs'};
+    // Counts of distinct pages: "how many (different) pages were cited / did people click through to"
+    if(/\bhow many (different |distinct |unique )?(ci |citizens ?information )?pages?\b/.test(q))return/click|follow|visit|read|went|go on/.test(q)?{kind:'clickpages',label:'pages people clicked through to'}:{kind:'pagescited',label:'different pages cited'};
+    if(/click[- ]?throughs?|\bctr\b|clicked through|clicks? on (the |a )?(citations?|links?)|click(ed|s|ing)? (on )?(a |the )?(links?|citations?)|follow(ed|s)? (the |a |those )?(links?|citations?)/.test(q))return/rate|per 100|\bctr\b|percent|%|share/.test(q)?{kind:'ctr',label:'click-throughs per 100 cited answers'}:{kind:'clicks',label:'click-throughs'};
     if(/later (got )?(a )?cited|after (a )?not[- ]?found/.test(q))return{kind:'latercited',label:'not found, then a later cited answer'};
     if(/reached (a )?cited|conversation success|got (a )?cited answer/.test(q))return{kind:'reached',label:'conversations that reached a cited answer'};
     // Conversation shape, operations detail, hours, voice, script, events (files generated from the feed)
@@ -7258,7 +7281,7 @@ init();
     if(/latency|response time|how (fast|slow)|\bslow(est)?\b|\bfast(est)?\b|\bspeed\b|\bp50\b|median response/.test(q))return{kind:'latency',label:'response time p50',superl:/slowest|\bslow(est)? day/.test(q)?'max':/fastest|quickest/.test(q)?'min':null};
     if(/\bchips?\b|suggested follow|follow[- ]?ups?/.test(q))return{kind:'chips',label:'suggested follow-up share'};
     if(/modal share|web share|share (of|on|from) (the )?(modal|web)|by source|source (split|mix|distribution)/.test(q))return{kind:'modal',label:'Modal share of conversations'};
-    if(/citation/.test(q))return{kind:'citations',label:'citations'};
+    if(/citation|\blinks?\b/.test(q))return{kind:'citations',label:'citations'};
     if(/session|conversation/.test(q))return{kind:'sessions',label:'conversations'};
     if(/question|quer|asked|\bturns?\b/.test(q))return{kind:'questions',label:'turns'};
     if(/\bllm\b|foundry|token|inference|model cost|generation/.test(q))return{kind:'llm',label:'generation cost'};
@@ -7329,6 +7352,21 @@ init();
   }
 
   // "Jan vs Feb", "this month vs last month", "compare X and Y" → two-period compare
+  // Growth: "how much has usage grown since April", "growth since the pop-up launch". Compared per day: the base
+  // month (for the launch, the whole month before it) against the latest complete month.
+  function parseGrowth(orig){
+    const low=' '+orig.toLowerCase().replace(/[?!,]|\.(?!\d)/g,' ').replace(/\s+/g,' ')+' ';
+    if(!/\b(grow(n|th)?|increase[ds]?|risen|rise|gone up|went up|multiplied)\b/.test(low))return null;
+    const latest=DATA.merged.filter(d=>d.queries>0).slice(-1)[0]?.date;if(!latest)return null;
+    const sinceP=parsePeriod(low);if(!sinceP||!sinceP.since)return null;
+    let base=sinceP.from.slice(0,7);const lau=confirmedEvents().find(e=>e.kind==='launch');
+    if(lau&&sinceP.from===lau.start)base=prevMonth(base);   // since the launch: the full month before it
+    const lm=latest.slice(0,7),full=+latest.slice(8)>=daysInMonth(lm)?lm:prevMonth(lm);
+    if(base>=full)return null;
+    const mp=k=>({kind:'month',monthKey:k,from:k+'-01',to:k+'-'+String(daysInMonth(k)).padStart(2,'0'),label:fmtMonth(k)});
+    let metric=parseMetric(low);if(metric.kind==='spend'&&!/spend|cost|spent|bill|£/.test(low))metric={kind:'questions',label:'turns'};
+    return{compare:true,raw:orig,metric,agg:'avg',periodA:mp(base),periodB:mp(full),bucket:'day',category:parseCategory(low),filter:parseFilter(low),growth:true};
+  }
   function parseCompare(orig){
     const low=' '+orig.toLowerCase().replace(/[?!,]|\.(?!\d)/g,' ').replace(/\s+/g,' ')+' ';
     let parts=null,m;
@@ -7448,9 +7486,12 @@ init();
     // "last 3 months" is a period, not a ranking — strip relative-period phrases before sniffing.
     const q=(' '+orig.toLowerCase().replace(/[?!,]|\.(?!\d)/g,' ').replace(/\s+/g,' ')+' ').replace(/\b(last|past|previous)\s+\d+\s+(days?|weeks?|months?)\b/g,' ');
     let entity=null;
+    if(/\bhow many\b/.test(q))return null;   // a count, never a ranked list
     if(/\bservices\b|cost drivers\b/.test(q))entity='service';
-    else if(/\b(categories|category)\b|(?<!new )\btopics?\b/.test(q))entity='category';   // "new topics" is a question-type filter, not the topic list
-    else if(/cited pages|top pages|most cited|pages cited|\bpages\b|\burls?\b/.test(q))entity=/click/.test(q)?'clickpage':'page';
+    else if(/\b(categories|category)\b|(?<!new )\btopics?\b|ask(ed)? about (the )?most|most (asked|popular)|popular subjects?|what do people ask/.test(q))entity='category';   // "new topics" is a question-type filter, not the topic list
+    else if(/\bhow many (different |distinct |unique )?(ci |citizens ?information )?pages?\b/.test(q))entity=null;   // a count of pages, not a list
+    else if(/(read|visit)(ed)? most|most (read|visited)|go(es)? on to read|went on to read|people (read|visit)/.test(q))entity='clickpage';
+    else if(/cited pages|top pages|most cited|pages cited|\bpages\b|\burls?\b|\bwhich page\b/.test(q))entity=/click|follow|read|visit/.test(q)?'clickpage':'page';
     else if(/starter prompts?|\bprompts\b/.test(q)||(/\bchips\b/.test(q)&&!/rate|share|use|cited|found|for chips|of chips|from chips/.test(q)))entity='prompt';
     else if(/journeys?|transitions|category steps|from .* to .* categor/.test(q))entity='journey';
     else if(/\bmodels\b/.test(q))entity='model';
@@ -7487,7 +7528,8 @@ init();
       const spec={turns:[o=>o.Turns||0,v=>num(Math.round(v)),'turns'],organic:[o=>o.OrganicFirstTurns||0,v=>num(Math.round(v)),'organic first turns'],
         notfound:[o=>rateOf(o,'NotFound','Scored'),pctF(1),'not-found rate'],cited:[o=>rateOf(o,'Cited','Scored'),pctF(1),'cited answer rate'],clarification:[o=>rateOf(o,'Clarification','Scored'),pctF(1),'clarification rate'],
         error:[o=>rateOf(o,'Error','Turns'),pctF(1),'error rate'],dislikes:[o=>rateOK(o.DislikesOnCited||0,o.Cited||0).ok&&o.Cited?(o.DislikesOnCited||0)/o.Cited*1000:null,v=>v.toFixed(1),'dislikes per 1,000 cited answers']}[metric];
-      items=Object.entries(agg).map(([c,o])=>({label:catLabel(CAT_ALIAS[c]||c),act:['sub','categories'],v:spec[0](o),extra:` · ${num(o.Turns||0)} turns`})).filter(i=>i.v!=null);
+      const allTurns=Object.values(agg).reduce((a,o)=>a+(o.Turns||0),0);   // questions with an identifiable topic
+      items=Object.entries(agg).map(([c,o])=>({label:catLabel(CAT_ALIAS[c]||c),act:['sub','categories'],v:spec[0](o),extra:` · ${num(o.Turns||0)} turns`+(metric==='turns'&&allTurns?` · ${((o.Turns||0)/allTurns*100).toFixed(1)}% of questions with a topic`:'')})).filter(i=>i.v!=null);
       fmt=spec[1];by=spec[2];
     }else if(entity==='clickpage'){
       if(!hasClicks)return{topn:true,empty:true,intent};
@@ -7759,6 +7801,29 @@ init();
       if(k==='sessions'&&sk)return{value:sumD(d=>d.ux?.[sk]),fmt:v=>num(Math.round(v)),series:rows.map(d=>d.ux?.[sk]||0),note:'conversations started on '+filter.label,intent,subj:filter.label+' conversations'};
       return{value:sumD(d=>d.ux?.[tk]),fmt:v=>num(Math.round(v)),series:rows.map(d=>d.ux?.[tk]||0),note:'turns · '+filter.label,intent,subj:filter.label+' turns'};
     }
+    // Distinct pages: cited (monthly citations file, citizensinformation.ie only, months overlapping the period,
+    // checked against the site's page list when site-pages.csv is loaded) or clicked through to (GA4, exact days).
+    if(k==='pagescited'){
+      if(!hasCites)return{value:null,fmt:v=>'—',series:null,note:'no citations file loaded',intent};
+      const months=[...new Set(rows.map(d=>d.month))],urls=new Set();
+      months.forEach(m=>(CITES[m]||[]).forEach(r=>{if(/citizensinformation\.ie/.test(r.url))urls.add(r.url.toLowerCase().replace(/\/$/,''));}));
+      let note=`different citizensinformation.ie addresses cited in ${months.map(fmtMonth).join(', ')} (citations are monthly)`;
+      if(hasSitePages){const info=SITEPAGES.info,hit=[...info].filter(u=>urls.has(u)).length;
+        note+=` · ${num(hit)} of the site's ${num(info.size)} English information pages (${(hit/info.size*100).toFixed(1)}%), page list of ${fmtDate(SITEPAGES.asOf)}; other addresses are topic index pages, or old or moved addresses`;}
+      return{value:urls.size,fmt:v=>num(v),series:null,note,intent,subj:'different pages cited'};
+    }
+    if(k==='citations'&&!category&&!filter){
+      const tot=sumD(d=>d.ux?.citations);if(!tot)return null;
+      let note='links to pages in AskCI answers';
+      if(hasCites){const months=[...new Set(rows.map(d=>d.month))];let ci=0,all=0;months.forEach(m=>(CITES[m]||[]).forEach(r=>{all+=r.n;if(/citizensinformation\.ie/.test(r.url))ci+=r.n;}));
+        if(all)note+=` · ${(ci/all*100).toFixed(1)}% to citizensinformation.ie (months overlapping the period)`;}
+      return{value:tot,fmt:v=>num(Math.round(v)),series:rows.map(d=>d.ux?.citations||0),note,intent,subj:'links in answers (citations)'};
+    }
+    if(k==='clickpages'){
+      if(!hasClicks)return{value:null,fmt:v=>'—',series:null,note:'no click-through files loaded; run tools/make_clicks.py',intent};
+      const urls=new Set();rows.forEach(d=>(CLICKPAGES[d.date]||[]).forEach(p=>urls.add(p.url)));
+      return{value:urls.size,fmt:v=>num(v),series:null,note:'different citizensinformation.ie pages people reached from AskCI links · GA4, consenting visitors only, so a minimum',intent,subj:'pages people clicked through to'};
+    }
     // Click-throughs (ga4/clicks-daily.csv): a minimum, matched denominators, measured windows only
     if(k==='clicks'||k==='ctr'){
       if(!hasClicks)return{value:null,fmt:v=>'—',series:null,note:'no click-through files loaded; run tools/make_clicks.py on the GA4 exports',intent};
@@ -7956,19 +8021,26 @@ init();
   }
   function context(intent,value){
     if(value==null||intent.agg!=='sum')return '';
-    if(['cpq_llm','cpq_tot','qps','cache','fixedshare','runrate','topService','topModel','answered','unanswered','flagged','chips','modal','latency','notfound','error','clarification','cited','partial','dislikes','feedback','starter','single','chipuse','span','ctr','reached','latercited','p90','p99','over30','hour','outofhours','script','events'].includes(intent.metric.kind)||intent.category||intent.filter)return ''; // ratios: never summed
+    if(['cpq_llm','cpq_tot','qps','cache','fixedshare','runrate','topService','topModel','answered','unanswered','flagged','chips','modal','latency','notfound','error','clarification','cited','partial','dislikes','feedback','starter','single','chipuse','span','ctr','reached','latercited','p90','p99','over30','hour','outofhours','script','events'].includes(intent.metric.kind)||(intent.category&&!['questions','sessions'].includes(intent.metric.kind))||intent.filter)return ''; // ratios: never summed
     const p0=intent.period; if(p0.kind==='all'||p0.kind==='year'||p0.since)return '';
     // Compare like with like: a period running past the data (e.g. "October" on 22 Oct) is clipped to the
     // data's last day before the prior window of equal length is taken.
     const money=['spend','llm','service','model','fixed','variable','voice','fixedshare','cache'].includes(intent.metric.kind);
     const lastD=money?(DATA.latest||lastDate()):(DATA.merged.filter(d=>d.queries>0).slice(-1)[0]?.date||lastDate());
     const p={...p0,to:p0.to>lastD?lastD:p0.to};if(p.to<p.from)return '';
+    // A single day is compared with the same weekday over the previous four weeks ("a normal Tuesday").
+    if(p0.kind==='day'){
+      const wd=new Date(p.from+'T00:00:00Z').toLocaleDateString('en-IE',{weekday:'long',timeZone:'UTC'});
+      const prior=[1,2,3,4].map(i=>isoAdd(p.from,-7*i));
+      const vals=prior.map(d=>{const r=compute(subIntent(intent,{kind:'day',from:d,to:d,label:''}));return r&&!r.empty?r.value:null;}).filter(v=>v!=null);
+      if(vals.length===4){const avg=vals.reduce((a,b)=>a+b,0)/4;if(avg>0)return `${(value/avg).toFixed(1)}× the average of the previous four ${wd}s (${num(Math.round(avg))})`;}
+    }
     const days=Math.round((new Date(p.to)-new Date(p.from))/86400000)+1;
     const prevTo=addDays(p.from,-1),prevFrom=addDays(prevTo,-(days-1));
     const prev=DATA.merged.filter(d=>d.date>=prevFrom&&d.date<=prevTo);
     if(!prev.length)return '';
-    // An hour-range answer compares the same hours of the prior window, never the whole of it.
-    const pv=intent.hours?(()=>{const r=compute(subIntent(intent,{kind:'range',from:prevFrom,to:prevTo,label:''}));return r&&!r.empty?r.value:0;})()
+    // An answer narrowed by hours, topic or filter compares the same narrowing in the prior window, never the whole of it.
+    const pv=(intent.hours||intent.category||intent.filter)?(()=>{const r=compute(subIntent(intent,{kind:'range',from:prevFrom,to:prevTo,label:''}));return r&&!r.empty?r.value:0;})()
                          :prev.reduce((s,d)=>s+rowVal(d,intent.metric),0);
     if(!(pv>0))return '';
     const pct=(value-pv)/pv*100;
@@ -8307,7 +8379,7 @@ init();
     const dg=parseDigest(q);
     if(dg){renderDigest(computeDigest(dg));return;}
     // 1. Full two-period compare ("Jan vs Feb")
-    const cmp=parseCompare(q);
+    const cmp=parseGrowth(q)||parseCompare(q);
     if(cmp){render(computeCompare(cmp));lastIntent={raw:q,metric:cmp.metric,period:cmp.periodB,agg:cmp.agg,bucket:cmp.bucket};return;}
     // 2. Follow-up compare against the last answer ("vs February", "compare to last month").
     // Only for scalar metrics — comparing a "top service/model" across periods is undefined.
@@ -8344,7 +8416,7 @@ init();
     const el=$('ask-chips'); if(!el||!have())return;
     const m=DATA.merged.filter(d=>d.total>0);
     const lm=m.length?fmtMonth(m[m.length-1].date.slice(0,7)):'this month';
-    const ex=['Spend in '+lm,'What changed in '+lm,'Not-found rate by month','Is the not-found rate rising','Which category has the highest not-found rate','Not-found rate for modal this month','p90 by week last 3 months','Most cited pages last month'];
+    const ex=['Spend in '+lm,'What changed in '+lm,'Not-found rate by month','Is the not-found rate rising','Which category has the highest not-found rate','Not-found rate for modal this month','p90 by week last 3 months','Most cited pages last month','Questions between 8pm and 9am','How much has usage grown since April','How many different pages were cited','Questions on Budget Day'];
     el.innerHTML=ex.map(t=>'<button class="ask-chip" data-ex="'+escA(t)+'">'+esc(t)+'</button>').join('');
   }
   function applyRange(f,t){
