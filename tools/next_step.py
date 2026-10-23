@@ -16,8 +16,9 @@ answer class (cited, not partial · partial · not found · clarification):
   Within 1 min   the next question came in the same or the next minute (timestamps are to the minute)
   Next cited  the next answer cited a page
   Disliked    this answer got a thumbs down
-Each share comes with a 95% Wilson interval. The last block puts each class in the 5.4 era beside the
-GPT 5 era's not-found and cited answers, the two profiles it might resemble.
+Each share comes with a 95% Wilson interval. The eras are the model or prompt eras in events.json, as the dashboard's
+era scorecard cuts them (brief §58). The last block puts each class in each later era beside every class of the
+earlier eras, to see which profile it resembles.
 
 It writes answer-next-daily.csv (Date, Class, Answers, Ended, Rephrased, NextTyped, NextChip, NextNew, Within1m,
 NextCited, Disliked) for the dashboard: counts only, by the day of the answer.
@@ -26,7 +27,7 @@ Usage:
     python3 tools/next_step.py exports/qa-feed_*.csv              # print, and write answer-next-daily.csv here
     python3 tools/next_step.py FEEDS --no-write
 """
-import argparse, csv, os, re, sys, collections as C
+import argparse, csv, json, os, re, sys, collections as C
 from datetime import datetime, date, timedelta
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
@@ -36,13 +37,26 @@ csv.field_size_limit(min(sys.maxsize, 2**31 - 1))
 REPO = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 TS = "%b %d, %Y %H:%M"
 Z = 1.96
-ERAS = [("GPT 5", date(2026, 5, 21), date(2026, 6, 29)),            # after the pop-up launch settled (20 May), to the 1 Jul change
-        ("chat-latest", date(2026, 7, 1), date(2026, 9, 13)),
-        ("5.4", date(2026, 9, 14), date(2026, 12, 31))]
 CLASSES = ["cited", "partial", "notfound", "clarification"]
 NAMES = {"cited": "cited, not partial", "partial": "partial", "notfound": "not found", "clarification": "clarification"}
 COLS = ["Answers", "Ended", "Rephrased", "NextTyped", "NextChip", "NextNew", "Within1m", "NextCited", "Disliked"]
 WORD = re.compile(r"[a-z]{3,}")
+
+
+def eras(first, last):
+    """Model or prompt eras from events.json, as the dashboard's era scorecard cuts them (brief §58): a confirmed model
+    or prompt event's `era` names the era it starts, `era_before` on the first names the era before it; the change
+    day and the event's settling days belong to neither."""
+    ev = json.load(open(os.path.join(REPO, "events.json")))["events"]
+    cuts = sorted((e for e in ev if e.get("status") == "confirmed" and e.get("kind") in ("model", "prompt") and len(e.get("start", "")) == 10), key=lambda e: e["start"])
+    if not cuts:
+        return [("all", first, last)]
+    out = [(cuts[0].get("era_before") or "before " + cuts[0]["start"], first, date.fromisoformat(cuts[0]["start"]) - timedelta(days=1))]
+    for i, e in enumerate(cuts):
+        a = date.fromisoformat(e["end"] if len(e.get("end") or "") == 10 else e["start"]) + timedelta(days=1)
+        b = date.fromisoformat(cuts[i + 1]["start"]) - timedelta(days=1) if i + 1 < len(cuts) else last
+        out.append((e.get("era") or "from " + e["start"], a, b))
+    return [x for x in out if x[1] <= x[2]]
 
 
 def wilson(k, n):
@@ -84,6 +98,7 @@ def main():
                                    words(row.get("User Query") or ""), (row.get("Feedback") or "").strip().lower() == "dislike"))
                 last_ts = t if last_ts is None or t > last_ts else last_ts
     cutoff = last_ts - timedelta(hours=24)
+    ERAS = eras(min(t[1] for ts in conv.values() for t in ts).date(), cutoff.date())
     daily = C.defaultdict(C.Counter)
     for cid, turns in conv.items():
         turns.sort(key=lambda x: x[0])
@@ -129,9 +144,10 @@ def main():
     prof = lambda s: [s[k] / s["Answers"] if s["Answers"] else 0 for k in keys]
     dist = lambda p, q: sum(abs(x - y) for x, y in zip(p, q)) / 2
     print("== Which earlier profile each class resembles (half the summed absolute difference in the shares above; 0 = identical)")
-    refs = [(f"{e} {NAMES[c]}", prof(S[(e, c)])) for e in ("GPT 5", "chat-latest") for c in CLASSES]
+    names = [e[0] for e in ERAS]
+    refs = [(f"{e} {NAMES[c]}", prof(S[(e, c)])) for e in names[:-1] for c in CLASSES if S[(e, c)]["Answers"]]
     print("   " + f"{'':28}" + "".join(f"{r[0][:22]:>24}" for r in refs))
-    for era in ("chat-latest", "5.4"):
+    for era in names[1:]:
         for cl in CLASSES:
             p = prof(S[(era, cl)])
             print(f"   {era + ' ' + NAMES[cl]:28}" + "".join(f"{dist(p, r[1]):>24.3f}" for r in refs))

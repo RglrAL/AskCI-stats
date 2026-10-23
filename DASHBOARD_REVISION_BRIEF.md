@@ -1109,3 +1109,27 @@ Next in §53 is step 5, the era scorecard, which the report's per-window sums ca
 **Caveats, in the card's footer and here:** the gpt-4o era is the web box alone before the pop-up, at a sixth of today's traffic, and has no click-through coverage; the GPT 5 Chat era holds the pre-launch rows, the launch and the 20 May step, so its traffic measures mix two populations; the 5.4 era is 39 days with Budget Day inside it; its labels are unvalidated until step 0. The scorecard describes eras; the calibrated change report (§57) is the instrument for the boundaries between them.
 
 Next in §53 is step 6, follow-ups: not-found rates for follow-ups against first turns, before and after, and topic drift between turns.
+
+## 59. Diagnosis step 6: follow-ups against first questions, and topic drift between turns (23 Oct 2026)
+
+**Why it matters.** Follow-up questions pass through the question-rewriting step, which the backend extract showed is the smaller model's only job (§53). First questions do not. If follow-ups moved more than new questions on 14 September, the rewriting step is implicated; if they moved alike, the change is downstream of it.
+
+**Built:**
+- `make_usage.py` now counts, per conversation start day in `conversations-daily.csv`, the follow-up turns where this turn and the one before both carry a topic, and how many changed topic, by the question type of the later turn (`TypedTopicBoth`, `TypedTopicSwitched`, `ChipTopicBoth`, `ChipTopicSwitched`, `NewTopicBoth`, `NewTopicSwitched`). A topic comes from the cited page, so drift is measured only between two cited answers. Every other file rebuilt byte-identical; the audit checks the new columns.
+- The change report has a section **Follow-ups against new questions**: cited and not-found rates by question type on each side with intervals, the difference in differences for typed follow-ups against new topics, and the topic-switch shares. The verdict rests on typed follow-ups: chips are a fixed set of well-covered questions at a 99% ceiling, and the set itself changed on 11 September.
+- **Usage › Conversations › Follow-up mechanisms** shows the share of typed and chip follow-ups that changed topic for the selected range.
+- `next_step.py` now takes its eras from `events.json`, as the era scorecard does, instead of three literal dates. Its conclusions are unchanged (5.4 not-found answers: distance 0.11 to chat-latest's, 0.15 to GPT 5 Chat's; 0.56 to cited).
+
+**Result, 17 Aug–13 Sep against 15 Sep–12 Oct:**
+
+| Question type | Before n | Cited | Not found | After n | Cited | Not found | Cited change |
+|---|---|---|---|---|---|---|---|
+| New topic | 9,658 | 90.1% | 3.6% | 13,478 | 78.4% | 9.9% | −11.7 (−12.6 to −10.8) |
+| Typed follow-up | 4,004 | 91.5% | 3.3% | 5,623 | 77.8% | 9.6% | −13.6 (−15.0 to −12.3) |
+| Chip follow-up | 3,713 | 99.0% | 0.7% | 3,811 | 96.7% | 2.0% | −2.3 (−3.0 to −1.7) |
+
+- **Follow-ups and first questions fell together.** Typed follow-ups fell 1.9 points more than new topics (−3.6 to −0.2), and their not-found rise is identical (+6.3 on both). The rewriting step accounts for at most 14% of the follow-up fall; the rest is shared with questions that never pass through it. **The change is downstream of the rewriting step: in retrieval, the answering model or the prompt.**
+- **Topic drift fell, not rose.** Of typed follow-ups where both answers cite a page, 27.1% changed topic before and 19.7% after (−7.3, −9.4 to −5.2); chips 17.4% → 13.5%. A rewriting step that had started misreading follow-ups would send more of them to another topic, not fewer. The fall is also partly selection: fewer answers are cited, so the pairs that remain are the easier ones. The null date in August moved this measure +2.5 points, so only the September fall is beyond noise.
+- **Calibration:** on 9 March follow-ups and new topics moved alike (+1.5, −1.2 to +4.1); on 1 July typed follow-ups gained 3.7 points less than new topics, so that change did fall unevenly across the two paths; on the August null date nothing moved.
+
+**What it settles.** Of the three suspects left in §53, this step takes the rewriting step out for 14 September as a main cause: a change confined to follow-ups would show here and does not. It cannot tell the answering model from the prompt. The remaining steps are content and chips (7, 8), incidents (9), safety counts (10) and the log parser (11); none of them bears on 14 September directly, and step 0 remains the one that gives ground truth.

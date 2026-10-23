@@ -207,6 +207,10 @@ for d, r in CV.items():
 check('conversations: length histogram = Mature, spans and first outcomes within Mature', bad_c == 0, f'{bad_c} days')
 immature = [d for d in CV if I(CV[d]['Mature']) < I(CV[d]['Started'])]
 check('conversations: only the last day(s) immature', all(d >= days[-2] for d in immature), str(immature[:5]))
+if 'TypedTopicBoth' in next(iter(CV.values())):
+    check('conversations: topic switches within the pairs that carry a topic, pairs within mature turns − mature', all(
+        I(r[t + 'TopicSwitched']) <= I(r[t + 'TopicBoth']) for r in CV.values() for t in ('Typed', 'Chip', 'New'))
+        and all(sum(I(r[t + 'TopicBoth']) for t in ('Typed', 'Chip', 'New')) <= I(r['MatureTurns']) - I(r['Mature']) for r in CV.values()))
 
 # conversation outcomes: identities, then an independent recount of ReachedCited and NFLaterCited
 if 'ReachedCited' in next(iter(CV.values())):

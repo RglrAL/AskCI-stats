@@ -40,6 +40,9 @@ Outputs (all daily counts; nothing per-turn and no text crosses into the dashboa
                             conversation got a cited answer, not necessarily to the same question), PEnded (it was
                             the last turn), PNextTyped/PNextChip/PNextNew/PNextOther (type of the next question);
                             WithTopic, MultiTopic (2+ topics in sequence), TopicReturn (a topic comes back);
+                            TypedTopicBoth, TypedTopicSwitched, ChipTopicBoth, ChipTopicSwitched, NewTopicBoth,
+                            NewTopicSwitched: follow-up turns where this turn and the one before both carry a
+                            topic, and how many changed topic, by question type (brief §53 step 6);
                             Gap0to1..GapOver60 (minutes between consecutive questions)
   category-outcomes-daily.csv  Date, Category (attributed slug or unknown), Turns, Cited, NotFound, Clarification,
                             Error, OutOfScope, Greeting, Uncited, Scored, OrganicFirstTurns, DislikesOnCited
@@ -412,6 +415,13 @@ def conversation_pass(recs):
         if seq: c["with_topic"] += 1
         if len(seq) >= 2: c["multi_topic"] += 1
         if len(set(seq)) < len(seq): c["topic_return"] += 1
+        # topic drift between consecutive turns, by the question type of the later turn. A topic comes from the
+        # cited page, so this is measured only where both turns carry one: mostly two cited answers in a row.
+        for a, b in zip(turns, turns[1:]):
+            t = NEXT_TYPE.get(b[6])
+            if t and a[5] and b[5]:
+                c["drift:" + t + ":both"] += 1
+                if a[5] != b[5]: c["drift:" + t + ":switched"] += 1
         if len(seq) >= 2:
             stats["multi_step"] += 1
             if len(set(seq)) < len(seq): stats["return"] += 1
@@ -432,6 +442,7 @@ def conversation_rows(cd):
     cols += ["ReachedCited"]
     for p in SETBACK.values(): cols += [f"{p}Turns", f"{p}LaterCited", f"{p}Ended", f"{p}NextTyped", f"{p}NextChip", f"{p}NextNew", f"{p}NextOther"]
     cols += ["WithTopic", "MultiTopic", "TopicReturn"] + [k for k, _ in GAP_COLS]
+    cols += [f"{t}Topic{k}" for t in ("Typed", "Chip", "New") for k in ("Both", "Switched")]
     out = []
     for d in sorted(cd):
         c = cd[d]
@@ -443,6 +454,7 @@ def conversation_rows(cd):
         for p in SETBACK.values():
             row += [c[p + ":turns"], c[p + ":later_cited"], c[p + ":ended"]] + [c[p + ":next:" + t] for t in ("Typed", "Chip", "New", "other")]
         row += [c["with_topic"], c["multi_topic"], c["topic_return"]] + [c[k] for _, k in GAP_COLS]
+        row += [c[f"drift:{t}:{k}"] for t in ("Typed", "Chip", "New") for k in ("both", "switched")]
         out.append(row)
     return cols, out
 

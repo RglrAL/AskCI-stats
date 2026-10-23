@@ -5996,7 +5996,13 @@ function renderConvs(D,S){
               <tr><td style="padding:5px 8px">Not found</td>${td(num(sfN))}${td(rateText(sfN,sfS),C.red)}</tr>
               <tr><td style="padding:5px 8px;color:var(--dim)">Scored chip turns</td>${td(num(sfS))}${td('')}</tr>
             </tbody></table>
-            <div style="font-size:.63rem;color:var(--dim);margin-top:8px;font-family:'DM Mono',monospace">Shown side by side, never combined (spec rule).</div></div>
+            <div style="font-size:.63rem;color:var(--dim);margin-top:8px;font-family:'DM Mono',monospace">Shown side by side, never combined (spec rule).</div>
+            ${sum('TypedTopicBoth')||sum('ChipTopicBoth')?`<div style="text-transform:uppercase;letter-spacing:.08em;font-size:.6rem;margin:12px 0 6px">Follow-ups that changed topic</div>
+            <table style="width:100%;border-collapse:collapse"><tbody>
+              <tr><td style="padding:5px 8px">Typed follow-up</td>${td(num(sum('TypedTopicSwitched')))}${td(rateText(sum('TypedTopicSwitched'),sum('TypedTopicBoth')),C.purple)}</tr>
+              <tr><td style="padding:5px 8px">Suggested follow-up</td>${td(num(sum('ChipTopicSwitched')))}${td(rateText(sum('ChipTopicSwitched'),sum('ChipTopicBoth')),C.amber)}</tr>
+            </tbody></table>
+            <div style="font-size:.63rem;color:var(--dim);margin-top:8px;font-family:'DM Mono',monospace">Of follow-ups where this answer and the one before both cite a page (the topic comes from the page): ${num(sum('TypedTopicBoth'))} typed, ${num(sum('ChipTopicBoth'))} chip. A follow-up on a new page may be the same question answered elsewhere.</div>`:''}</div>
         </div>
       </div>
       <div class="card"><div class="card-title">Observed span<span class="card-title-note">${num(multi)} mature multi-turn conversations · minutes between first and last turn · minute precision</span></div>

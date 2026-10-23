@@ -371,6 +371,47 @@ def report(ds, days, skip, EV, D):
     else:
         P("Not enough finished conversations on both sides.\n")
 
+    # ── 6b. follow-ups against first questions ──────────────────────────────
+    # Follow-ups pass through the question-rewriting step (the smaller model, brief §53); first questions do not.
+    # If follow-ups moved more than new questions, that step is implicated; if alike, the change is downstream of it.
+    P("## 6b. Follow-ups against new questions\n")
+    ty = [("New topic", "NewTopic"), ("Typed follow-up", "UserFollowup"), ("Chip follow-up", "Suggested")]
+    if all(S[w][p + "Scored"] >= MIN_N for w in (B, A) for _, p in ty):
+        P("| Question type | Before n | Cited | Not found | After n | Cited | Not found | Cited change (95%) | Not-found change (95%) |")
+        P("|---|---|---|---|---|---|---|---|---|")
+        dd = {}
+        for l, p in ty:
+            b, a_ = S[B], S[A]
+            tc = newcombe(b[p + "Cited"], b[p + "Scored"], a_[p + "Cited"], a_[p + "Scored"]); tn = newcombe(b[p + "NotFound"], b[p + "Scored"], a_[p + "NotFound"], a_[p + "Scored"])
+            dd[p] = (tc, tn)
+            P(f"| {l} | {int(b[p + 'Scored']):,} | {pct(b[p + 'Cited'] / b[p + 'Scored'])} | {pct(b[p + 'NotFound'] / b[p + 'Scored'])} | {int(a_[p + 'Scored']):,} | {pct(a_[p + 'Cited'] / a_[p + 'Scored'])} | {pct(a_[p + 'NotFound'] / a_[p + 'Scored'])} | {pts(tc)} | {pts(tn)} |")
+        # difference in differences: follow-up change minus new-topic change, interval by adding the variances
+        def did(p, i):
+            x, y = dd[p][i], dd["NewTopic"][i]; d = x[0] - y[0]; h = (((x[2] - x[1]) / 2) ** 2 + ((y[2] - y[1]) / 2) ** 2) ** 0.5
+            return d, d - h, d + h
+        # the verdict rests on typed follow-ups: chips are a fixed set near a 99% ceiling, and the set itself changes
+        c, n = did("UserFollowup", 0), did("UserFollowup", 1); tot = dd["UserFollowup"][0][0]
+        fl = (c[1] > 0 or c[2] < 0) and abs(c[0]) * 100 >= MOVE_PTS
+        share = abs(c[0] / tot) if fl and tot and abs(c[0]) < abs(tot) else None
+        P(f"\nTyped follow-ups against new topics: the cited rate moved {pts(c)} more, the not-found rate {pts(n)} more. "
+          + ("**The follow-up path moved on its own.**" if fl and share is None or (fl and share >= 0.5) else f"A small extra on a shared change: the follow-up path accounts for at most {share * 100:.0f}% of the typed follow-up fall." if fl else "Alike: the change is not specific to the follow-up path."))
+        cc = did("Suggested", 0)
+        P(f"Chip follow-ups moved {pts(cc)} more than new topics, but chips are a fixed set of well-covered questions near a 99% ceiling, so they cannot fall as far; they are not used for the verdict.")
+        notes.append(("fu", "own" if fl and (share is None or share >= 0.5) else f"extra:{share * 100:.0f}" if fl else "alike"))
+        P("")
+    else:
+        P("Too few scored turns of one type on a side.\n")
+    if cv[B].get("TypedTopicBoth") is not None and cv[A].get("TypedTopicBoth") is not None:
+        P("| Follow-up turns where both turns carry a topic | Before n | Switched topic | After n | Switched topic | Change (95%) | |")
+        P("|---|---|---|---|---|---|---|")
+        for l, t in (("Typed follow-up", "Typed"), ("Chip follow-up", "Chip"), ("New topic (as classified)", "New")):
+            k1, n1, k2, n2 = cv[B][t + "TopicSwitched"], cv[B][t + "TopicBoth"], cv[A][t + "TopicSwitched"], cv[A][t + "TopicBoth"]
+            if n1 < MIN_N or n2 < MIN_N:
+                P(f"| {l} | {int(n1):,} | — | {int(n2):,} | — | — | under {MIN_N} |"); continue
+            tt = newcombe(k1, n1, k2, n2); mv = (tt[1] > 0 or tt[2] < 0) and abs(tt[0]) * 100 >= MOVE_PTS
+            P(f"| {l} | {int(n1):,} | {pct(k1 / n1)} | {int(n2):,} | {pct(k2 / n2)} | {pts(tt)} | {'**moved**' if mv else 'steady'} |")
+        P("\nA topic comes from the cited page, so drift is measured only between two answers that both cite one. A follow-up that switched topic is one the rewriting step may have reread; a typed follow-up switching more often than before is the trace of a rewriting change.\n")
+
     # ── 7. reading ──────────────────────────────────────────────────────────
     P("## 7. Reading\n")
     if moved_primary:
@@ -388,6 +429,9 @@ def report(ds, days, skip, EV, D):
     m = dict(notes)
     if "mix" in m:
         P("**Topic mix:** " + (("accounts for none of the change in the cited rate." if abs(m['mix']) < 0.05 else f"accounts for {m['mix'] * 100:.0f}% of the change in the cited rate.") if m["mix"] is not None else "no change in the cited rate to account for.") + "  ")
+    fu = dict(notes).get("fu")
+    if fu:
+        P("**Follow-ups:** " + ("typed follow-ups moved on their own, apart from new questions: that points at the question-rewriting step." if fu == "own" else f"typed follow-ups moved a little more than new questions; the rewriting step accounts for at most {fu.split(':')[1]}% of their fall, the rest is shared with first questions." if fu.startswith("extra") else "typed follow-ups and new questions moved alike, so the change is not specific to the rewriting step.") + "  ")
     if "drift" in m:
         d = m["drift"]
         P(f"**Wording:** {d['tvd'] * 100:.0f}% of the phrase mix moved; {pct(d['nf_new'])} of after not-found answers and {pct(d['pt_new'])} of after partial answers use phrases the before window hardly used. "
