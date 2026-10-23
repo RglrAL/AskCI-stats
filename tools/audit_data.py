@@ -55,6 +55,7 @@ SCHEMA = {
     'ga4/clicks-pages-daily.csv': 'Date URL Source Views',
     'outcome-rules-daily.csv': 'Date Rule Turns',
     'answer-style-daily.csv': 'Date Outcome Turns Words Lines Hedges Apologies Signposts Questions Links',
+    'answer-next-daily.csv': 'Date Class Answers Ended Rephrased NextTyped NextChip NextNew Within1m NextCited Disliked',
 }
 for f, cols in SCHEMA.items():
     if not os.path.exists(f'{REPO}/{f}'): FAIL.append(f'schema: {f} is missing'); continue
@@ -177,6 +178,18 @@ ST = rd('answer-style-daily.csv'); stt = C.Counter()
 for r in ST: stt[r['Date']] += I(r['Turns'])
 check('answer style: turns per day = usage.Questions', all(stt[d] == I(U[d]['Questions']) for d in days))
 check('answer style: no "with" count above its outcome\'s turns', all(I(r['With' + k]) <= I(r['Turns']) for r in ST for k in ('Lines', 'Hedges', 'Apologies', 'Signposts', 'Questions', 'Links')))
+
+# ── 3d. what people do next (tools/next_step.py, brief §53 step 3) ───────────
+# Mature conversations only, so Answers per day can only be at or under usage.Questions; an answer either ended the
+# conversation or had a next question, and every "next" count is bounded by the answers that had one.
+NX = rd('answer-next-daily.csv'); nxt = C.Counter(); bad_nx = 0
+for r in NX:
+    n, e = I(r['Answers']), I(r['Ended']); nxt[r['Date']] += n
+    if r['Class'] not in ('cited', 'partial', 'notfound', 'clarification'): bad_nx += 1
+    if e > n or I(r['NextTyped']) + I(r['NextChip']) + I(r['NextNew']) > n - e or I(r['Disliked']) > n: bad_nx += 1
+    if any(I(r[k]) > n - e for k in ('Rephrased', 'Within1m', 'NextCited')): bad_nx += 1
+check('answer next: known classes, Ended within Answers, every next count within Answers − Ended', bad_nx == 0, f'{bad_nx} rows')
+check('answer next: answers per day <= usage.Questions', all(nxt[d] <= I(U[d]['Questions']) for d in nxt if d in U), str([d for d in nxt if d in U and nxt[d] > I(U[d]['Questions'])][:5]))
 
 # ── 4. conversations-daily.csv ───────────────────────────────────────────────
 CV = {r['Date']: r for r in rd('conversations-daily.csv')}

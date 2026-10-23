@@ -2745,7 +2745,7 @@ async function loadHoursFile(){
 // citations-monthly.csv (normalised URL), journeys-monthly.csv (category steps), starter-prompts-monthly.csv.
 // script-outcomes-daily.csv: SCRIPTOUT[date][script] = {t, s, c, nf, cl} (turns, scored, cited, not found, clarification)
 let SCRIPTOUT={},hasScriptOut=false;
-let ORULES={},OSTYLE={},hasRules=false;   // outcome rule ids and the wording fingerprint (brief §53)
+let ORULES={},OSTYLE={},ONEXT={},hasRules=false;   // outcome rule ids, the wording fingerprint and what people do next (brief §53)
 let CONV={},CATOUT={},CITES={},JOURNEYS={},STARTERS={},LATB={},CATDAY={},hasCatDay=false,hasConv=false,hasCatOut=false,hasCites=false,hasJourneys=false,hasStarters=false,hasLatB=false;
 async function loadConversationFiles(){
   try{(await loadCSV('script-outcomes-daily.csv')).forEach(r=>{const d=parseDate(r['Date']);if(!d)return;(SCRIPTOUT[d]||(SCRIPTOUT[d]={}))[r['Script']]={t:nInt(r['Turns']),s:nInt(r['Scored']),c:nInt(r['Cited']),nf:nInt(r['NotFound']),cl:nInt(r['Clarification'])};});}catch(e){}
@@ -2761,6 +2761,8 @@ async function loadConversationFiles(){
   hasLatB=Object.keys(LATB).length>0;
   try{(await loadCSV('outcome-rules-daily.csv')).forEach(r=>{const d=parseDate(r['Date']);if(!d)return;(ORULES[d]||(ORULES[d]={}))[String(r['Rule']||'').trim()]=nInt(r['Turns']);});}catch(e){}
   try{(await loadCSV('answer-style-daily.csv')).forEach(r=>{const d=parseDate(r['Date']);if(!d)return;const o={};Object.entries(r).forEach(([k,v])=>{if(k!=='Date'&&k!=='Outcome')o[k]=nInt(v);});(OSTYLE[d]||(OSTYLE[d]={}))[String(r['Outcome']||'').trim()]=o;});}catch(e){}
+  // answer-next-daily.csv (tools/next_step.py, on the raw feed): ONEXT[date][class] = counts of what came after each answer
+  try{(await loadCSV('answer-next-daily.csv')).forEach(r=>{const d=parseDate(r['Date']);if(!d)return;const o={};Object.entries(r).forEach(([k,v])=>{if(k!=='Date'&&k!=='Class')o[k]=nInt(v);});(ONEXT[d]||(ONEXT[d]={}))[String(r['Class']||'').trim()]=o;});}catch(e){}
   hasRules=Object.keys(ORULES).length>0;
   hasConv=Object.keys(CONV).length>0;hasCatOut=Object.keys(CATOUT).length>0;hasCites=Object.keys(CITES).length>0;hasJourneys=Object.keys(JOURNEYS).length>0;hasStarters=Object.keys(STARTERS).length>0;
 }
@@ -4774,6 +4776,19 @@ function renderWording(D,S){
   const pk=(R,k)=>R.t?(R.o[k]||0)/R.t*1000:null;
   const ruleRows=keys.map(k=>{const a=pk(RA,k),b=pk(RB,k);const big=a!=null&&b!=null&&Math.abs(a-b)>=5&&(b===0||a/b>=2||a/b<=0.5);
     return `<tr style="border-bottom:1px solid var(--b2)">${td(escH(ruleLabel(k)),{left:true})}${td(num(RA.o[k]||0))}${td(a==null?'—':a.toFixed(1))}${td(b==null?'—':b.toFixed(1))}${td(a!=null&&b!=null?(a>=b?'+':'−')+Math.abs(a-b).toFixed(1):'—',{style:big?'color:var(--amber);font-weight:600':''})}</tr>`;}).join('');
+  // what people do next (answer-next-daily.csv): finished conversations only, shares of answers by answer class, range
+  // against the comparison window. A label check without reading answers: not-found answers followed the way cited
+  // answers used to be would make the label suspect; followed as not-found answers always were, the rise is real.
+  const NXC=[['cited','Cited, not partial'],['partial','Partial'],['notfound','Not found'],['clarification','Clarification']];
+  const NXK=[['Ended','ended there'],['Rephrased','rephrased'],['NextTyped','typed next'],['NextChip','chip next'],['NextNew','new topic'],['Within1m','within 1 min'],['NextCited','next cited']];
+  const nxs=(a,b)=>{const o={};Object.entries(ONEXT).forEach(([d,x])=>{if(d<a||d>b)return;Object.entries(x).forEach(([c,v])=>{const t=o[c]||(o[c]={});Object.entries(v).forEach(([k,n])=>{t[k]=(t[k]||0)+n;});});});return o;};
+  const NA=nxs(from,to),NB=nxs(W.from,W.to),hasNext=Object.keys(NA).length>0;
+  const nsh=(o,k)=>o&&o.Answers>=50?o[k]/o.Answers:null;
+  const pts=(a,b)=>a==null||b==null?'':` <span style="color:var(--muted)">(${a>=b?'+':'−'}${Math.abs((a-b)*100).toFixed(0)} pts)</span>`;
+  const nxRows=NXC.map(([c,l])=>`<tr style="border-bottom:1px solid var(--b2)">${td(l,{left:true})}${td(num(NA[c]?.Answers||0))}${NXK.map(([k])=>{const a=nsh(NA[c],k);return td(a==null?'—':(a*100).toFixed(1)+'%'+pts(a,nsh(NB[c],k)));}).join('')}</tr>`).join('');
+  const nprof=o=>NXK.map(([k])=>o[k]/o.Answers),ndist=(p,q)=>p.reduce((t,x,i)=>t+Math.abs(x-q[i]),0)/2;
+  const nxLike=['notfound','partial'].filter(c=>(NA[c]?.Answers||0)>=100&&(NB.notfound?.Answers||0)>=100&&(NB.cited?.Answers||0)>=100).map(c=>{const p=nprof(NA[c]),dn=ndist(p,nprof(NB.notfound)),dc=ndist(p,nprof(NB.cited));
+    return `<li><b>${NXC.find(x=>x[0]===c)[1]}</b> answers in this range are followed like the earlier <b>${dn<dc?'not-found':'cited'}</b> answers (distance ${dn.toFixed(2)} to not found, ${dc.toFixed(2)} to cited).</li>`;}).join('');
   const flagged=RW.filter(x=>x.drift!=null&&x.drift>=WORDING_DRIFT&&x.w>=weekStart(from)&&x.w<=to);
   const flagList=flagged.length?flagged.map(x=>`<li><b>w/c ${fmtDate(x.w)}</b>: phrase mix ${(x.drift*100).toFixed(0)}% different from the 4 weeks before; most moved ${x.movers.map(m=>escH(ruleLabel(m.k))+' '+(m.d>=0?'▲':'▼')).join(', ')}. `+
     (x.ev.length?`Model change in the billing: ${x.ev.map(e=>escH(e.title)+' ('+fmtDate(e.start)+')').join('; ')}.`:x.after.length?`Settling after the model change on ${x.after.map(e=>fmtDate(e.start)).join(', ')}: the 4 weeks it is compared with still include the earlier wording.`:`<span style="color:var(--amber)"><b>No model change in the billing within a week</b>: a candidate prompt or configuration change.</span>`)+'</li>').join(''):'<li>No week in the range moved past the threshold.</li>';
@@ -4785,6 +4800,10 @@ function renderWording(D,S){
     <div class="card"><div class="card-title">How the answers are written<span class="card-title-note">per answer, ${spanLabel(from,to)} · in brackets the change against ${escH(W.rule)} (${spanLabel(W.from,W.to)}) · — under 50 answers</span></div>
       <div class="tbl-wrap"><table style="width:100%;border-collapse:collapse"><thead><tr style="border-bottom:1px solid var(--b2)">${th('Outcome',true)}${th('Answers')}${F.map(([,l])=>th(l)).join('')}</tr></thead><tbody>${fpRows}</tbody></table></div>
       <div class="share-foot">Counts read from the answer text before it is dropped: list lines (bulleted or numbered), hedging words (may, might, generally, usually, depends on …), signposting verbs (contact, phone, visit …), question marks and links. No text is kept.</div></div>
+    ${hasNext?`<div class="card"><div class="card-title">What people do next<span class="card-title-note">share of answers in finished conversations, ${spanLabel(from,to)} · in brackets the change in points against ${escH(W.rule)} (${spanLabel(W.from,W.to)}) · — under 50 answers</span></div>
+      <div class="tbl-wrap"><table style="width:100%;border-collapse:collapse"><thead><tr style="border-bottom:1px solid var(--b2)">${th('After a … answer',true)}${th('Answers')}${NXK.map(([,l])=>th(l)).join('')}</tr></thead><tbody>${nxRows}</tbody></table></div>
+      ${nxLike?`<ul class="wd-flags">${nxLike}</ul>`:''}
+      <div class="share-foot">A check on the labels that needs no reading: if “not found” answers were followed the way cited answers used to be, the label would be suspect. Rephrased = the next typed question shares at least half its words with this one, matched locally on the raw feed; only the count leaves that machine. Distance = half the summed difference across the seven shares; 0 is identical. Evidence, not ground truth: that is the hand-labelled sample.</div></div>`:''}
     <div class="card"><div class="card-title">Every deciding phrase<span class="card-title-note">per 1,000 turns · ${spanLabel(from,to)} against ${spanLabel(W.from,W.to)} · amber = doubled or halved by 5+ per 1,000</span></div>
       <div class="tbl-wrap"><table style="width:100%;border-collapse:collapse"><thead><tr style="border-bottom:1px solid var(--b2)">${th('Phrase',true)}${th('Turns')}${th('Per 1,000')}${th('Before')}${th('Change')}</tr></thead><tbody>${ruleRows}</tbody></table></div></div>`;
   const hollow=inR.map(x=>part(x)!=null);

@@ -1025,3 +1025,34 @@ All three are now candidate `chips` events in `events.json`. The new chip is add
 - **Typed repeats are too rare to say anything.** Only 21 distinct questions were asked twice or more in both windows (54 and 89 turns), and every interval is about ±14 points.
 
 **What it proves:** a system change on fixed questions, not a change in the question mix. As expected, it can't separate the model from the outcome rules. For HAP it narrows the question to one testable thing: whether the "couldn't find" in a HAP answer marks a real gap in the rates or a cautious phrase on a complete answer.
+
+## 56. Diagnosis step 3: what people do next after each kind of answer (23 Oct 2026)
+
+**Built:** `tools/next_step.py` runs locally on the raw feed. For every answer in a finished conversation (no turn in the last 24 hours of the data), by model era and answer class (cited not partial · partial · not found · clarification), it counts what came next: the conversation ended; the next question was typed, a chip or a new topic; it came within a minute; it was a rephrase (a typed question sharing at least half its words with this one, matched on the raw text, count only); the next answer was cited; this answer was disliked. Each share carries a 95% Wilson interval, and a last block gives the distance between each 5.4 class and every earlier class (half the summed absolute difference across the seven shares; 0 is identical). It writes `answer-next-daily.csv` (Date, Class, counts), which the audit checks (known classes, Ended within Answers, every next count within Answers − Ended, answers per day within usage.Questions) and **Usage › Answer wording** shows as a card, "What people do next": the range against the comparison window, with a one-line verdict for not-found and partial answers on which earlier profile they resemble.
+
+**The test.** If, after 14 Sep, "not found" answers were followed the way cited answers used to be, the label would be suspect: people would be moving on satisfied from answers the rules call failures. If they are followed as not-found answers always were, the rise is real.
+
+**Result, by model era (finished conversations, shares of answers):**
+
+| After a … answer | Era | Answers | Ended | Rephrased | Typed next | Chip next | Within 1 min | Next cited |
+|---|---|---|---|---|---|---|---|---|
+| cited, not partial | GPT 5 | 23,624 | 41.7% | 1.2% | 26.1% | 29.2% | 32.9% | 52.4% |
+| | chat-latest | 34,121 | 51.5% | 1.3% | 21.4% | 24.4% | 29.1% | 45.5% |
+| | 5.4 | 19,411 | 53.5% | 1.7% | 21.0% | 21.6% | 28.2% | 40.6% |
+| not found | GPT 5 | 2,294 | 72.8% | 3.0% | 21.0% | 3.1% | 17.7% | 16.3% |
+| | chat-latest | 1,376 | 75.9% | 3.1% | 19.9% | 1.5% | 16.2% | 18.3% |
+| | 5.4 | 2,628 | 80.3% | 2.5% | 15.4% | 0.3% | 12.1% | 12.9% |
+| partial | chat-latest | 5,593 | 60.8% | 2.0% | 20.0% | 16.3% | 24.8% | 35.2% |
+| | 5.4 | 6,881 | 58.9% | 1.9% | 20.8% | 17.7% | 24.6% | 34.6% |
+| clarification | chat-latest | 2,029 | 25.1% | 4.4% | 67.0% | 0.7% | 58.7% | 60.8% |
+| | 5.4 | 3,049 | 22.7% | 5.3% | 63.5% | 1.5% | 67.1% | 47.6% |
+
+Intervals are about ±1 point on the cited rows and ±2 on the others.
+
+- **The not-found rise is real.** 5.4's not-found answers are followed like not-found answers always were: distance 0.11 to chat-latest's and 0.13 to GPT 5's, against 0.56 to chat-latest's cited answers. Four in five conversations end on them, almost nobody clicks a chip after one, and the few who ask again are cited less often than before. They are, if anything, a slightly harder dead end than the old ones.
+- **"Partial" behaves like a cited answer, not a not-found one.** In every era, partial answers sit between the two profiles but nearer cited (5.4: 0.16 to cited, 0.30 to not found; 0.03 from chat-latest's partial). People end on them a little more often than on a clean cited answer and click chips a little less. That fits a mostly complete answer with a cautious phrase better than a real gap, and keeps the HAP question from step 2 open for the hand-labelled sample rather than closing it either way.
+- **Clarification answers changed most in how they are followed.** After 5.4 asks a clarifying question, people reply within a minute far more often (67% against 59%) but the next answer is cited less often (48% against 61%), and 12% go to a new topic (against 7%). The shorter clarifications (43 words, §54) draw a quick reply that less often gets an answer.
+- **Rephrasing is rare after every class** (1–5%), so it is not a useful signal on its own. The rule (half the words of three or more letters in common) is coarse; it is kept because it needs no text to leave the machine.
+- **Dislikes are too rare to use** (0.0–0.4% of answers in every cell).
+
+**What it settles and what it doesn't.** Step 1 showed the wording changed with the model; step 2 showed the same questions get more partial answers; this step shows the not-found label is behaving as a real failure and the partial label as a near-cited answer. None of it reads an answer, so none of it says whether a given label is right: that remains the hand-labelled sample (step 0). Next in §53 is step 4, the change report calibrated on the March model change.
