@@ -370,7 +370,7 @@ check('citations to CI pages that join a page with site views (Usage › Pages) 
 
 # ── 10. events.json ──────────────────────────────────────────────────────────
 E = json.load(open(REPO + '/events.json'))['events']
-check('events.json: valid statuses and kinds', all(e['status'] in ('confirmed', 'candidate', 'rejected') and e['kind'] in ('model', 'launch', 'chips', 'observed change', 'other') for e in E))
+check('events.json: valid statuses and kinds', all(e['status'] in ('confirmed', 'candidate', 'rejected') and e['kind'] in ('model', 'prompt', 'launch', 'chips', 'observed change', 'other') for e in E))
 launch = [e for e in E if e['kind'] == 'launch' and e['status'] == 'confirmed']
 print('confirmed launch events:', [(e['start'], e['title']) for e in launch])
 

@@ -1,5 +1,5 @@
 {
-  "_comment": "Shared AskCI events. Only status=confirmed events draw on charts. Personal markers added in the dashboard popover stay in the browser and are never written here. Fields: start (YYYY-MM-DD or YYYY-MM), end (optional), kind (model | launch | chips | observed change | other), status (confirmed | candidate | rejected), evidence, applies_to, title, detail.",
+  "_comment": "Shared AskCI events. Only status=confirmed events draw on charts. Personal markers added in the dashboard popover stay in the browser and are never written here. Fields: start (YYYY-MM-DD or YYYY-MM), end (optional), kind (model | prompt | launch | chips | observed change | other), status (confirmed | candidate | rejected), evidence, applies_to, title, detail. A confirmed model or prompt event cuts the era scorecard (Usage › Before / after): `era` names the era it starts, `era_before` on the first such event names the era before it.",
   "events": [
     {
       "start": "2026-01-27",
@@ -18,7 +18,9 @@
       "evidence": "Azure billing export",
       "applies_to": "Foundry Models",
       "title": "Model change: gpt-4o retired, GPT 5 Mini and GPT 5 added",
-      "detail": "gpt-4o 1120 and gpt-4o-mini 0718 last billed 9 Mar; GPT 5 Mini first billed 9 Mar; GPT 5 first billed 10 Mar."
+      "detail": "gpt-4o 1120 and gpt-4o-mini 0718 last billed 9 Mar; GPT 5 Mini first billed 9 Mar; GPT 5 first billed 10 Mar.",
+      "era": "GPT 5 Chat",
+      "era_before": "gpt-4o"
     },
     {
       "start": "2026-03-24",
@@ -92,7 +94,8 @@
       "evidence": "Azure billing export",
       "applies_to": "Foundry Models",
       "title": "Model change: GPT 5 Chat retired, chat-latest 05052026 added",
-      "detail": "GPT 5 Chat last billed 30 Jun; chat-latest 05052026 first billed 1 Jul. Generation cost per turn 0.49p in June to 2.94p in July. Before/after, complete months, sum then divide (cost brief 5.7): cited answer rate 86.2% → 91.8% of scored turns; cited but partial 3.0% → 14.0%; not found 8.2% → 3.5%; clarification 4.3% → 4.5%; response time p50 11.3s → 12.5s, p90 16.3s → 17.0s; dislikes per 1,000 cited answers 1.73 → 1.19 (32 and 19); likes per 1,000 4.16 → 3.77. Aug 1–17 separately: cited 91.6%, partial 13.9%, p50 11.9s, dislikes per 1,000 1.66. Descriptive only; the deployment change is not isolated from other changes in the window."
+      "detail": "GPT 5 Chat last billed 30 Jun; chat-latest 05052026 first billed 1 Jul. Generation cost per turn 0.49p in June to 2.94p in July. Before/after, complete months, sum then divide (cost brief 5.7): cited answer rate 86.2% → 91.8% of scored turns; cited but partial 3.0% → 14.0%; not found 8.2% → 3.5%; clarification 4.3% → 4.5%; response time p50 11.3s → 12.5s, p90 16.3s → 17.0s; dislikes per 1,000 cited answers 1.73 → 1.19 (32 and 19); likes per 1,000 4.16 → 3.77. Aug 1–17 separately: cited 91.6%, partial 13.9%, p50 11.9s, dislikes per 1,000 1.66. Descriptive only; the deployment change is not isolated from other changes in the window.",
+      "era": "chat-latest"
     },
     {
       "start": "2026-07-15",
@@ -120,7 +123,8 @@
       "evidence": "Azure billing export",
       "applies_to": "Foundry Models",
       "title": "Model change: GPT 5, GPT 5 Mini and chat-latest retired, 5.4 and 5.4 mini added; voice meters begin",
-      "detail": "GPT 5, GPT 5 Mini and chat-latest 05052026 last billed 14 Sep; 5.4 and 5.4 mini first billed 14 Sep. gpt-4o-transcribe (speech-to-text) and Neural Text To Speech under Foundry Tools also first billed 14 Sep."
+      "detail": "GPT 5, GPT 5 Mini and chat-latest 05052026 last billed 14 Sep; 5.4 and 5.4 mini first billed 14 Sep. gpt-4o-transcribe (speech-to-text) and Neural Text To Speech under Foundry Tools also first billed 14 Sep.",
+      "era": "5.4"
     },
     {
       "start": "2026-09-14",

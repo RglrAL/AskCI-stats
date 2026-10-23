@@ -2194,8 +2194,8 @@ const METER_TYPE_COL={'input':'#58a6ff','cached input':'#3fb950','output':'#f851
 // (events can sit next to each other in any order): unsimulated ΔE ≥ 19 in both themes, colour-blind ΔE 6.9
 // dark / 13 light, the dark figure legal only because every event line carries a text label. A shade per theme.
 // chips (no events yet) takes the palette's violet. Checked with the dataviz skill's validate_palette.js.
-const EVENT_KIND_COL={model:'#3987e5',launch:'#d55181','observed change':'#008300',other:'#c98500',chips:'#9085e9'};
-const EVENT_KIND_COL_LIGHT={model:'#2a78d6',launch:'#e87ba4','observed change':'#008300',other:'#eda100',chips:'#4a3aa7'};
+const EVENT_KIND_COL={model:'#3987e5',prompt:'#2bb3c0',launch:'#d55181','observed change':'#008300',other:'#c98500',chips:'#9085e9'};
+const EVENT_KIND_COL_LIGHT={model:'#2a78d6',prompt:'#13889a',launch:'#e87ba4','observed change':'#008300',other:'#eda100',chips:'#4a3aa7'};
 
 // ═══ CLASSIFIERS ═══════════════════════════════════════════════════
 function classifyMeter(m){if(CONFIG.meters.fixed.includes(m))return'fixed';if(CONFIG.meters.variable.includes(m))return'variable';return'unclassified'}
@@ -3170,6 +3170,52 @@ function whatChanged(rangeRows,set='service'){
 }
 // Descriptive before/after around a confirmed event: equal windows of up to `maxDays`,
 // settled join days only. Labelled before/after — not impact.
+// ═══ ERA SCORECARD (brief §53, step 5) ═══════════════════════════════
+// One row per model or prompt era. The eras are cut at the confirmed model (or prompt) events in events.json: an
+// event's `era` names the era it starts, `era_before` on the first names the era before it. Routing between the two
+// models is ruled out (brief §53), so an era is one model or one prompt, labelled by the event's kind. The change day
+// and the event's settling days belong to neither era. Figures are each era's own sums, so an era that holds a launch
+// or a chip change carries that change inside it; those events are listed under the table rather than adjusted for.
+function eraSpans(){
+  const cuts=confirmedEvents().filter(e=>(e.kind==='model'||e.kind==='prompt')&&e.start.length===10).sort((a,b)=>a.start.localeCompare(b.start));
+  if(!cuts.length||!DATA.merged.length)return[];
+  const first=DATA.merged[0].date,last=DATA.merged[DATA.merged.length-1].date,out=[];
+  out.push({name:cuts[0].era_before||'Before '+fmtDate(cuts[0].start),kind:'',from:first,to:isoAdd(cuts[0].start,-1),ev:null});
+  cuts.forEach((e,i)=>{const from=isoAdd(e.end&&e.end.length===10?e.end:e.start,1),to=i+1<cuts.length?isoAdd(cuts[i+1].start,-1):last;out.push({name:e.era||'From '+fmtDate(e.start),kind:e.kind,from,to,ev:e});});
+  return out.filter(x=>x.from<=x.to);
+}
+function eraStats(x){
+  const rows=DATA.merged.filter(d=>d.date>=x.from&&d.date<=x.to),P=perTurnStats(rows);
+  const u=rows.filter(d=>d.ux&&d.queries>0),ux=k=>u.reduce((s,d)=>s+(d.ux?.[k]||0),0);
+  const cited=ux('cited'),sc=ux('scored'),pa=ux('partial'),cw=ux('citedWords'),cn=ux('citedWordsN'),ci=ux('citations');
+  const ck=u.filter(d=>CLICKS[d.date]),ckv=ck.reduce((s,d)=>{const c=CLICKS[d.date];return s+c.embed+c.app+c.other;},0),ckc=ck.reduce((s,d)=>s+(d.ux?.cited||0),0);
+  const inside=confirmedEvents().filter(e=>e!==x.ev&&e.kind!=='model'&&e.kind!=='prompt'&&e.start>=x.from&&e.start<=x.to);
+  return{...x,P,scored:sc,cleanRate:rate(cited-pa,sc),wordsPerCited:cn?cw/cn:null,pagesPerCited:cited?ci/cited:null,clicksPer100:ck.length>=7&&ckc?ckv/ckc*100:null,clickDays:ck.length,usageDays:u.length,inside};
+}
+function eraCardHTML(){
+  const eras=eraSpans().map(eraStats);
+  if(!eras.length)return'';
+  const dash='<span style="color:var(--dim)">—</span>';
+  const f=(v,fn)=>v==null?dash:fn(v);
+  const pc=v=>v.toFixed(1)+'%',n0=v=>Math.round(v).toLocaleString(),p2=v=>v.toFixed(2)+'p',s1=v=>(v/1000).toFixed(1)+'s',d1=v=>v.toFixed(1),d2=v=>v.toFixed(2);
+  const th=(t,align='right')=>`<th style="text-align:${align};padding:6px 7px;font-size:.58rem;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;line-height:1.3">${t}</th>`;
+  const td=(v,o={})=>`<td style="text-align:${o.left?'left':'right'};padding:7px 7px;font-family:${o.left?'inherit':"'DM Mono',monospace"};font-size:.76rem;white-space:nowrap;${o.style||''}">${v}</td>`;
+  const rows=eras.map(x=>`<tr style="border-bottom:1px solid var(--b2)">
+      ${td(`<b>${escH(x.name)}</b><div style="font-size:.64rem;color:var(--muted);font-weight:400;margin-top:2px">${x.kind?`<span style="color:${eventColor(x.ev)}">${escH(x.kind)}</span> · confirmed · `:''}${spanLabel(x.from,x.to,true)}</div>`,{left:true})}
+      ${td(n0(x.P.uturns))}${td(f(x.P.citedRate,pc))}${td(f(x.P.notFoundRate,pc))}${td(f(x.P.clarRate,pc))}${td(f(x.P.partialRate,pc))}${td(f(x.cleanRate,pc),{style:'font-weight:600'})}
+      ${td(f(x.wordsPerCited,n0))}${td(f(x.pagesPerCited,d2))}${td(f(x.P.latP50,s1))}${td(f(x.P.genPT,p2))}${td(f(x.P.dislikesPerK,d1))}${td(f(x.clicksPer100,d1))}${td(f(x.P.turnsPerConv,d2))}${td(f(x.P.reachedCited,pc))}
+    </tr>`).join('');
+  const notes=eras.filter(x=>x.inside.length).map(x=>`<li><b>${escH(x.name)}</b> holds ${x.inside.map(e=>escH(e.title)+' ('+fmtDate(e.start)+')').join('; ')}.</li>`).join('');
+  return`<div class="card" style="margin-bottom:14px;overflow-x:auto">
+      <div class="card-title">Era scorecard<span class="card-title-note">one row per model or prompt era, cut at confirmed events · each era's own sums · the change day belongs to neither era</span></div>
+      <table style="width:100%;border-collapse:collapse;min-width:1040px">
+        <thead><tr style="border-bottom:2px solid var(--b2)">${th('Era','left')}${th('Turns')}${th('Cited')}${th('Not found')}${th('Clarifi-<br>cation')}${th('Partial,<br>of cited')}${th('Cited, not<br>partial')}${th('Words /<br>cited')}${th('Pages /<br>cited')}${th('Response<br>p50')}${th('Generation<br>p / turn')}${th('Dislikes /<br>1,000 cited')}${th('Clicks /<br>100 cited')}${th('Turns /<br>conv.')}${th('Reached<br>cited')}</tr></thead>
+        <tbody>${rows}</tbody></table>
+      ${notes?`<ul class="wd-flags" style="margin-top:10px">${notes}</ul>`:''}
+      <div style="font-size:.63rem;color:var(--dim);margin-top:10px;font-family:'DM Mono',monospace">Descriptive only. Rates are of scored turns (partial of cited answers); response time is the turn-weighted mean of daily medians; generation cost a turn is over settled join days; click-throughs need GA4 on 7+ days of the era. An era that holds a launch or a chip change carries that change inside it. Outcome labels from 14 Sep 2026 are unvalidated until the hand-labelled sample.</div>
+    </div>`;
+}
+
 function beforeAfter(ev,maxDays=28){
   const start=ev.start;
   const before=DATA.merged.filter(d=>d.date<start&&d.date>=isoAdd(start,-maxDays));
@@ -6560,6 +6606,7 @@ function renderImpact(D,S){
       ${ux.feedback?`<td class="num" style="text-align:right;padding:8px 12px;font-family:'DM Mono',monospace;font-size:.85rem;color:${C.amber}">${cell(P.dislikesPerK,v=>v.toFixed(1),P.dislikesPerK==null?'fewer than '+CONFIG.min_event_numerator+' dislikes on cited answers':'')}</td>`:''}
     </tr>`;
   el.innerHTML=`
+    ${eraCardHTML()}
     <div class="card" style="margin-bottom:14px;overflow-x:auto">
       <div class="card-title">Before / after confirmed events<span class="card-title-note">equal windows of up to 28 days each side · settled join days · sum then divide</span></div>
       <table style="width:100%;border-collapse:collapse;min-width:640px">

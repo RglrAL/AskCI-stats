@@ -1088,3 +1088,24 @@ So in this report a model change looks like: outcomes moving across most topics,
 **Traffic for the record:** the autumn rise means the after window has 5,500 more scored turns than the before window; intervals are correspondingly narrow, and the 1-point floor on "moved" is what keeps tiny effects (uncited +0.09) out of the reading.
 
 Next in §53 is step 5, the era scorecard, which the report's per-window sums can feed directly.
+
+## 58. Diagnosis step 5: the era scorecard (23 Oct 2026)
+
+**Built:** an **Era scorecard** card at the top of Usage › Before / after. One row per model or prompt era, the eras cut at the confirmed model (or prompt) events in `events.json`: a new `era` field on each such event names the era it starts, and `era_before` on the first names the era before it. The change day and an event's settling days belong to neither era. `prompt` is now an allowed event kind, for the day an amber week on Answer wording is confirmed as a prompt change; there is none yet, so every era here is a model era. Each row is that era's own sums over the whole data (not the selected range): turns, the outcome rates, words and pages per cited answer, response time, generation cost a turn on settled join days, dislikes per 1,000 and click-throughs per 100 cited answers, turns per conversation, and the share of finished conversations that reached a cited answer. The launch and chip events inside an era are listed under the table rather than adjusted for. Every figure was recounted from the CSVs independently and agrees. Note on names: billing calls the March-to-June model GPT 5 Chat (with GPT 5 Mini and a little GPT 5); §54–§56 called that era "GPT 5".
+
+| Era | Span | Turns | Cited | Not found | Clarif. | Partial of cited | Cited, not partial | Words | Pages | p50 | Gen. p/turn | Dislikes /1,000 | Clicks /100 | Turns /conv. | Reached cited |
+|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
+| gpt-4o | 1 Jan–8 Mar, 67 d | 11,416 | 95.3% | 3.8% | 0.4% | 3.9% | 91.6% | 162 | 1.90 | 8.0 s | 1.04p | 1.0 | — | 1.93 | 91.1% |
+| GPT 5 Chat | 11 Mar–30 Jun, 112 d | 45,525 | 87.1% | 7.7% | 4.0% | 3.0% | 84.5% | 188 | 1.52 | 13.3 s | 0.55p | 1.4 | 4.0 | 2.20 | 85.8% |
+| chat-latest | 2 Jul–13 Sep, 74 d | 44,091 | 92.1% | 3.1% | 4.7% | 14.1% | 79.1% | 180 | 1.82 | 12.1 s | 3.01p | 1.8 | 5.1 | 1.91 | 92.7% |
+| 5.4 | 15 Sep–23 Oct, 39 d | 33,819 | 82.0% | 8.4% | 9.5% | 26.6% | 60.2% | 190 | 1.73 | 11.4 s | 1.39p | 1.3 | 4.8 | 1.84 | 84.3% |
+
+**What it shows:**
+- **Every model change moved the outcome mix, and not in one direction.** GPT 5 Chat cut the cited rate by 8 points and doubled not-found; chat-latest won most of that back but brought "partial" in at 14%; 5.4 is the weakest row on every outcome. The only monotone line is **cited and not partial: 91.6% → 84.5% → 79.1% → 60.2%**, era by era.
+- **5.4 is the fastest model since gpt-4o and less than half the cost of chat-latest** (11.4 s and 1.39p against 12.1 s and 3.01p). Whatever happened on 14 September, it was not bought with time or money.
+- **People's own signals barely move.** Dislikes sit between 1.0 and 1.8 per 1,000 cited answers in every era, and click-throughs per 100 cited answers are 5.1 under chat-latest and 4.8 under 5.4: the answers that are still cited are clicked as before. The cost of 5.4 shows in the conversations instead: the fewest turns per conversation (1.84) and the lowest share reaching a cited answer (84.3%) of any era with the pop-up live.
+- **Pages per cited answer** fell under GPT 5 Chat (1.90 → 1.52) and have been near 1.7–1.8 since; words rose from 162 to about 190 and stayed there.
+
+**Caveats, in the card's footer and here:** the gpt-4o era is the web box alone before the pop-up, at a sixth of today's traffic, and has no click-through coverage; the GPT 5 Chat era holds the pre-launch rows, the launch and the 20 May step, so its traffic measures mix two populations; the 5.4 era is 39 days with Budget Day inside it; its labels are unvalidated until step 0. The scorecard describes eras; the calibrated change report (§57) is the instrument for the boundaries between them.
+
+Next in §53 is step 6, follow-ups: not-found rates for follow-ups against first turns, before and after, and topic drift between turns.
