@@ -1526,9 +1526,15 @@ input[type=date]{color-scheme:dark}
 .ask-hero>.ask-card-sub{grid-column:1/-1;grid-row:2}
 .ask-hero>.ask-second{grid-column:1/-1}
 .ask-delta{display:inline-flex;align-items:center;gap:4px;padding:4px 10px;border-radius:999px;font-size:var(--t-xs);font-weight:600;font-variant-numeric:tabular-nums;border:1px solid transparent;white-space:nowrap}
-.ask-delta.good{color:var(--green);background:color-mix(in srgb,var(--green) 12%,transparent);border-color:color-mix(in srgb,var(--green) 30%,transparent)}
-.ask-delta.bad{color:var(--red);background:color-mix(in srgb,var(--red) 12%,transparent);border-color:color-mix(in srgb,var(--red) 30%,transparent)}
-.ask-delta.neu{color:var(--text);background:var(--s1);border-color:var(--b2)}
+/* good / bad: validated as a pair for colour-blind separation (dataviz validate_palette.js) in each theme; the
+   text stays in the text colour, the hue sits on the arrow, tint and border */
+#ask-wrap{--good:#56d364;--bad:#da3633}
+[data-theme="light"] #ask-wrap{--good:#0f5323;--bad:#e5534b}
+.ask-delta{color:var(--text)}
+.ask-delta.good{background:color-mix(in srgb,var(--good) 14%,transparent);border-color:color-mix(in srgb,var(--good) 45%,transparent)}
+.ask-delta.bad{background:color-mix(in srgb,var(--bad) 14%,transparent);border-color:color-mix(in srgb,var(--bad) 45%,transparent)}
+.ask-delta.neu{background:var(--s1);border-color:var(--b2)}
+.ask-delta.good .ask-arr{color:var(--good)}.ask-delta.bad .ask-arr{color:var(--bad)}.ask-delta.neu .ask-arr{color:var(--muted)}
 details.ask-read{display:block}
 details.ask-read>summary .ask-read-lbl{white-space:nowrap}
 details.ask-read>summary{cursor:pointer;list-style:none;display:flex;align-items:center;gap:8px;font-size:var(--t-2xs);color:var(--muted)}
@@ -2115,7 +2121,12 @@ const CONFIG={
 const FOUNDRY='Foundry Models';
 const FAMILY_COL={'GPT 5 Chat':'#58a6ff','GPT 5 Mini':'#bc8cff','GPT 5':'#ff7b72','gpt-4o 1120':'#d29922','gpt-4o-mini 0718':'#e879f9','chat-latest 05052026':'#3fb950','5.4':'#39d353','5.4 mini':'#f0883e','gpt-4o-transcribe':'#79c0ff','text-embedding-3-small':'#8b949e','unparsed':'#6e7681'};
 const METER_TYPE_COL={'input':'#58a6ff','cached input':'#3fb950','output':'#f85149','embedding':'#8b949e','voice':'#79c0ff','unparsed':'#6e7681'};
-const EVENT_KIND_COL={model:'#58a6ff',launch:'#d29922',chips:'#bc8cff','observed change':'#39d353',other:'#f0883e'};
+// Event kinds: four hues chosen from the dataviz reference palette as the set that best separates every pair
+// (events can sit next to each other in any order): unsimulated ΔE ≥ 19 in both themes, colour-blind ΔE 6.9
+// dark / 13 light, the dark figure legal only because every event line carries a text label. A shade per theme.
+// chips (no events yet) takes the palette's violet. Checked with the dataviz skill's validate_palette.js.
+const EVENT_KIND_COL={model:'#3987e5',launch:'#d55181','observed change':'#008300',other:'#c98500',chips:'#9085e9'};
+const EVENT_KIND_COL_LIGHT={model:'#2a78d6',launch:'#e87ba4','observed change':'#008300',other:'#eda100',chips:'#4a3aa7'};
 
 // ═══ CLASSIFIERS ═══════════════════════════════════════════════════
 function classifyMeter(m){if(CONFIG.meters.fixed.includes(m))return'fixed';if(CONFIG.meters.variable.includes(m))return'variable';return'unclassified'}
@@ -2184,8 +2195,9 @@ const eventLinesPlugin={
       ctx.beginPath();ctx.moveTo(xp,top);ctx.lineTo(xp,bottom);
       ctx.lineWidth=1.5;ctx.strokeStyle=ev.color;ctx.setLineDash(ev.dash||[5,3]);ctx.stroke();
       ctx.setLineDash([]);
-      const txt=ev.text;ctx.font=`600 9px 'DM Mono',monospace`;
-      const tw=ctx.measureText(txt).width;
+      // Text wears the text colour; the line, the tint and a dot carry the event's colour.
+      const dot=/^[●◆] /.test(ev.text),txt=dot?ev.text.slice(2):ev.text;ctx.font=`600 9px 'DM Mono',monospace`;
+      const tw=ctx.measureText(txt).width+(dot?10:0);
       const bw=tw+8,bh=14,bx=Math.max(chart.chartArea.left,Math.min(xp-tw/2-4,chart.chartArea.right-bw));
       const r=rows.findIndex(row=>row.every(([a,b])=>bx+bw+4<a||bx>b+4));
       if(r<0){ctx.restore();return;}
@@ -2193,8 +2205,9 @@ const eventLinesPlugin={
       ctx.fillStyle=ev.color+'33';
       ctx.beginPath();if(ctx.roundRect)ctx.roundRect(bx,by,bw,bh,3);else ctx.rect(bx,by,bw,bh);
       ctx.fill();
-      ctx.fillStyle=ev.color;ctx.textAlign='center';ctx.textBaseline='middle';
-      ctx.fillText(txt,bx+bw/2,by+bh/2);
+      if(dot){ctx.fillStyle=ev.color;ctx.beginPath();if(ev.text[0]==='◆'){ctx.moveTo(bx+7,by+3.5);ctx.lineTo(bx+10.5,by+7);ctx.lineTo(bx+7,by+10.5);ctx.lineTo(bx+3.5,by+7);ctx.closePath();}else ctx.arc(bx+7,by+bh/2,3,0,Math.PI*2);ctx.fill();}
+      ctx.fillStyle=(typeof C!=='undefined'&&C.text)||ev.color;ctx.textAlign='center';ctx.textBaseline='middle';
+      ctx.fillText(txt,bx+bw/2+(dot?5:0),by+bh/2);
       ctx.restore();
     });
   }
@@ -2726,7 +2739,7 @@ async function loadEvents(){
   }catch(e){}
 }
 function confirmedEvents(){return EVENTS.confirmed||[]}
-function eventColor(ev){return EVENT_KIND_COL[ev.kind]||(typeof C!=='undefined'?C.muted:'#8b949e')}
+function eventColor(ev){return ((typeof isDark!=='undefined'&&!isDark)?EVENT_KIND_COL_LIGHT:EVENT_KIND_COL)[ev.kind]||(typeof C!=='undefined'?C.muted:'#8b949e')}
 function eventsInRange(from,to){return confirmedEvents().filter(e=>e.start<=to&&(e.end||e.start)>=from)}
 // Candidate model events from billing: a family's first billed day ("added") unless it is the
 // first day of the file; its last billed day ("retired") unless it is inside the settlement
@@ -8174,11 +8187,11 @@ init();
     const M=CONFIG.materiality;
     const thr=res.isMs?`${M.latency_pct}% or ${M.latency_ms/1000} s`:mIs(intent.metric.kind,x=>x.unit==='pence')?`${M.ratio_pct}% or ${M.ratio_pence}p`:res.isRate?`${M.rate_pts} point${M.rate_pts===1?'':'s'}`:`${M.count_pct}%`;
     const headline=va==null||vb==null?'not enough data to judge':verdict==='flat'?'no material change':verdict;
-    const colour=verdict==='flat'||va==null||vb==null?'var(--muted)':(()=>{const invert=lowerBetterK(intent.metric.kind);const good=invert?verdict==='falling':verdict==='rising';return good?'var(--green)':'var(--red)';})();
+    const cls=verdict==='flat'||va==null||vb==null?'neu':(()=>{const pol=(MET[intent.metric.kind]||{}).polarity;if(!pol||pol==='neutral')return 'neu';return (pol==='up')===(verdict==='rising')?'good':'bad';})();
     const side=(lbl,v)=>'<div class="ask-cmp-side"><div class="ask-cmp-lbl">'+esc(lbl)+'</div><div class="ask-cmp-num">'+(v==null?'—':esc(fmt(v)))+'</div></div>';
     el.innerHTML='<div class="ask-card" style="flex-direction:column;align-items:stretch">'+
       '<div class="ask-card-q">'+esc(intent.raw)+'</div>'+
-      '<div class="ask-card-val" style="color:'+colour+'">'+esc(headline)+(dTxt&&va!=null&&vb!=null?' <span style="font-size:.6em;color:var(--muted)">'+esc(dTxt)+'</span>':'')+'</div>'+
+      '<div class="ask-hero"><div class="ask-card-val txt">'+esc(headline)+'</div>'+(dTxt&&va!=null&&vb!=null?'<span class="ask-delta '+cls+'">'+(verdict==='rising'?'<span class="ask-arr">▲</span> ':verdict==='falling'?'<span class="ask-arr">▼</span> ':'')+esc(dTxt)+'</span>':'')+'</div>'+
       '<div class="ask-cmp-row">'+side(A.label,va)+'<div class="ask-cmp-mid" style="color:var(--dim);font-size:.7rem">→</div>'+side(B.label,vb)+'</div>'+
       '<div class="ask-card-sub">'+esc(subj+cat+flt+': first half of '+(p.kind==='all'?'the full period':p.label)+' against the second · material when the change reaches '+thr+(why?' · '+why:'')+' · descriptive, no cause claimed')+'</div>'+
       (res.full&&Array.isArray(res.full.series)?vizBlock():'')+
@@ -8392,12 +8405,12 @@ init();
     const diff=totA-totB,pct=totB>0?diff/totB*100:0,up=diff>=0;
     const askedUp=/\b(up|rise|rose|risen|increase[ds]?|higher|more expensive|jump(ed)?|spike[ds]?)\b/.test(String(intent.raw||'').toLowerCase()),askedDown=/\b(down|fall|fell|fallen|drop(ped)?|decrease[ds]?|lower|cheaper)\b/.test(String(intent.raw||'').toLowerCase());
     const contra=(askedUp&&!up)?'Cost didn’t go up in '+A.label+': it fell '+Math.abs(pct).toFixed(0)+'%.':(askedDown&&up&&!askedUp)?'Cost didn’t go down in '+A.label+': it rose '+Math.abs(pct).toFixed(0)+'%.':'';
-    const items=contribs.map(c=>{const sign=c.delta>=0?'+':'−';const col=c.delta>=0?'var(--red)':'var(--green)';return '<li><span class="mono" style="color:'+col+'">'+sign+gbp(Math.abs(c.delta),Math.abs(c.delta)>=100?0:2)+'</span> '+esc(c.name)+'</li>';}).join('');
+    const items=contribs.map(c=>{const sign=c.delta>=0?'+':'−';return '<li><span class="mono" style="color:var(--text)"><span style="color:'+(c.delta>=0?'var(--bad)':'var(--good)')+'">'+(c.delta>=0?'▲':'▼')+'</span> '+sign+gbp(Math.abs(c.delta),Math.abs(c.delta)>=100?0:2)+'</span> '+esc(c.name)+'</li>';}).join('');
     const ba=periodBtn(A);
     el.innerHTML=(contra?'<div class="ask-notice"><i data-lucide="info" class="i-sm"></i><span>'+esc(contra)+'</span></div>':'')+'<div class="ask-card" style="flex-direction:column;align-items:stretch">'+
       '<div class="ask-card-q">'+esc(intent.raw)+'</div>'+
-      '<div class="ask-card-val" style="color:'+(up?'var(--red)':'var(--green)')+'">'+(up?'▲':'▼')+' '+gbp(Math.abs(diff),Math.abs(diff)>=100?0:2)+'</div>'+
-      '<div class="ask-card-sub">spend '+(up?'rose':'fell')+' '+Math.abs(pct).toFixed(0)+'% in '+esc(A.label)+' vs '+esc(B.label)+(contribs.length?' · biggest movers:':'')+'</div>'+
+      '<div class="ask-hero"><div class="ask-card-val">'+(up?'+':'−')+gbp(Math.abs(diff),Math.abs(diff)>=100?0:2)+'</div>'+
+      '<div class="ask-card-sub">spend '+(up?'rose':'fell')+' '+Math.abs(pct).toFixed(0)+'% in '+esc(A.label)+' vs '+esc(B.label)+(contribs.length?' · biggest movers:':'')+'</div>'+changeChip('spend',totA,totB,'vs '+B.label)+'</div>'+
       (contribs.length?'<ul class="ask-why">'+items+'</ul>':'')+
       (contribs.length?vizBlock():'')+
       '<div class="ask-card-actions" style="flex-direction:row;margin-top:var(--sp-2)"><button class="ask-action" data-act="'+ba[0]+'" data-arg="'+escA(ba[1])+'">'+esc(ba[2])+'</button></div>'+
@@ -8408,8 +8421,8 @@ init();
       const ch=contribs.map(c=>({name:c.name,d:c.delta})),other=totA-totB-contribs.reduce((a,c)=>a+c.delta,0);
       if(Math.abs(other)>=0.5)ch.push({name:'Everything else',d:other});
       const money=v=>(v>=0?'+':'−')+gbp(Math.abs(v),Math.abs(v)>=100?0:2);
-      mountViz({type:'bar',data:{labels:ch.map(c=>c.name),datasets:[{label:'Change',data:ch.map(c=>+c.d.toFixed(2)),backgroundColor:ch.map(c=>c.d>=0?C.red:C.green),borderWidth:0,borderRadius:4,maxBarThickness:22}]},
-        options:mergeOpts(baseOpts(),{indexAxis:'y',plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>money(c.raw)+' vs '+B.label}}},scales:{x:{ticks:{callback:v=>(v<0?'−£':'£')+Math.abs(v).toFixed(0)}},y:{ticks:{autoSkip:false,callback:function(v){const l=this.getLabelForValue(v);return this.chart.width<560&&l.length>18?l.slice(0,17)+'…':l;}}}}})},
+      mountViz({type:'bar',data:{labels:ch.map(c=>c.name),datasets:[{label:'Change',data:ch.map(c=>+c.d.toFixed(2)),backgroundColor:(()=>{const cs=getComputedStyle($('ask-wrap'));const g=cs.getPropertyValue('--good').trim()||C.green,b=cs.getPropertyValue('--bad').trim()||C.red;return ch.map(c=>c.d>=0?b:g);})(),borderWidth:0,borderRadius:4,maxBarThickness:22}]},
+        options:mergeOpts(baseOpts(),{indexAxis:'y',plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>money(c.raw)+' vs '+B.label}}},scales:{x:{min:Math.min(0,...ch.map(c=>c.d))*1.12,max:Math.max(0,...ch.map(c=>c.d))*1.12||1,ticks:{maxTicksLimit:5,callback:v=>(v<0?'−£':'£')+Math.abs(v).toFixed(0)}},y:{ticks:{autoSkip:false,callback:function(v){const l=this.getLabelForValue(v);return this.chart.width<560&&l.length>18?l.slice(0,17)+'…':l;}}}}})},
         {cols:['Driver','Change (£)'],rows:ch.map(c=>[c.name,Math.round(c.d)]),fmt:v=>(v>=0?'+£':'−£')+Math.abs(v)});
     }
   }
@@ -8539,7 +8552,7 @@ init();
   const WC_POL={notFoundRate:'down',errorRate:'down',latP50:'down',partialRate:'down',clarRate:'down',dislikesPerK:'down',genPT:'down',costPerDay:'down',varPerDay:'down',citedRate:'up',reachedCited:'up'};
   function wcRow(st){
     const dir=st.d>0?1:st.d<0?-1:0,pol=WC_POL[st.k],good=!pol||!dir?null:(pol==='up')===(dir>0);
-    return '<li class="ask-wc"><span class="ask-delta '+(good==null?'neu':good?'good':'bad')+'">'+(dir>0?'▲ ':dir<0?'▼ ':'')+esc(String(st.dTxt||'').replace(/ \(.*\)$/,''))+'</span><span>'+wcChip(st)+esc(st.text)+'</span></li>';
+    return '<li class="ask-wc"><span class="ask-delta '+(good==null?'neu':good?'good':'bad')+'">'+(dir>0?'<span class="ask-arr">▲</span> ':dir<0?'<span class="ask-arr">▼</span> ':'')+esc(String(st.dTxt||'').replace(/ \(.*\)$/,''))+'</span><span>'+wcChip(st)+esc(st.text)+'</span></li>';
   }
   const wideSpark=(vals,col)=>(sparkline((vals||[]).map(v=>v==null||!isFinite(v)?null:+v),col,240,36)||'').replace('<svg ','<svg preserveAspectRatio="none" ');
   // A chip for a change between two values of a measure: points for shares and rates, per cent otherwise.
@@ -8548,14 +8561,14 @@ init();
     const M=MET[kind]||{},pts=['pct','per100'].includes(M.unit),d=v-v0,mag=pts?Math.abs(d):Math.abs(d/v0*100),dir=mag<(pts?0.05:1)?0:d>0?1:-1;
     const txt=!dir?'flat':(d>0?'+':'−')+(pts?mag.toFixed(1)+(M.unit==='pct'?' pts':''):mag.toFixed(0)+'%');
     const good=!dir||!M.polarity||M.polarity==='neutral'?null:(M.polarity==='up')===(dir>0);
-    return '<span class="ask-delta '+(good==null?'neu':good?'good':'bad')+'"'+(title?' title="'+escA(title)+'"':'')+'>'+(dir>0?'▲ ':dir<0?'▼ ':'')+esc(txt)+'</span>';
+    return '<span class="ask-delta '+(good==null?'neu':good?'good':'bad')+'"'+(title?' title="'+escA(title)+'"':'')+'>'+(dir>0?'<span class="ask-arr">▲</span> ':dir<0?'<span class="ask-arr">▼</span> ':'')+esc(txt)+'</span>';
   }
   // The change against the prior window as a chip, coloured by whether that direction is good for the measure.
   function deltaChip(ctx,kind){
     if(!ctx)return '';
     const dir=/^up /.test(ctx)?1:/^down /.test(ctx)?-1:0,pol=(MET[kind]||{}).polarity;
     const good=dir===0||!pol||pol==='neutral'?null:(pol==='up')===(dir>0);
-    return '<span class="ask-delta '+(good==null?'neu':good?'good':'bad')+'">'+(dir>0?'▲ ':dir<0?'▼ ':'')+esc(ctx)+'</span>';
+    return '<span class="ask-delta '+(good==null?'neu':good?'good':'bad')+'">'+(dir>0?'<span class="ask-arr">▲</span> ':dir<0?'<span class="ask-arr">▼</span> ':'')+esc(ctx)+'</span>';
   }
   function render(res){
     const el=$('ask-answer'); if(!el)return;

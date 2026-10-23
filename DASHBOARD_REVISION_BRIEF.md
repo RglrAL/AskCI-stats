@@ -508,3 +508,20 @@ Next, step 3: the special answers (the "How AskCI is doing" summary, growth, com
 - **Combined questions** ("questions and conversations in September"): two equal tiles, each with its value, sentence, change chip and sparkline. Single-measure comparisons draw the earlier period muted and the later one in the accent colour.
 - **What changed:** each statement leads with its change as a chip, green or red by the measure's polarity (lower is better for failures, latency and cost; higher for cited answers and reached a cited answer), and grey for demand.
 - **Events:** a timeline (coloured dot, date, title, two-line detail) under a questions chart with each event flagged where it happened.
+
+## 37. Ask bar visual audit, step 4: final check and colour validation (23 Oct 2026)
+
+All 26 answer types were screenshotted again in the dark theme on desktop, with the summary, trend, cost-change, weekly and combined answers also in the light theme and at 390 px. Colours were checked with the dataviz skill's `validate_palette.js`, run in headless Chrome, over all pairs on the dashboard's own surfaces.
+
+- **Event colours** (used across the dashboard).
+  - Before: launch amber and "other" orange were indistinguishable even with full colour vision (ΔE 7, floor 15), and the dark-theme colours were used unchanged on the light theme (contrast under 3:1).
+  - Now: four hues from the reference palette, chosen by testing all 70 four-colour sets over every pair (events can sit side by side in any order): model change blue, launch magenta, observed change green, other yellow, and chips violet (no events yet). Each theme has its own shade. Full-colour-vision ΔE is at least 19 in both themes. Colour-blind ΔE is 13 in light and 6.9 in dark; the dark figure is acceptable only with a second cue, and every event line carries a text label.
+  - Flag labels are now drawn in the text colour, with the event's colour on the dot, the tint and the line.
+- **Good and bad.**
+  - Before: the change chips used the dashboard's green and red, which fail for red–green colour blindness (ΔE 2.2).
+  - Now: the Ask bar uses a validated pair per theme (#56d364 / #da3633 dark, #0f5323 / #e5534b light; colour-blind ΔE 17 and 14). Chip text stays in the text colour; the hue is on the arrow, tint and border.
+  - The trend verdict ("rising") and the cost-change answer now use the same chips, the same colours and the same text colours.
+- **Not changed:** the accent-versus-muted highlight of the answer's own bar fails the validator's "chroma floor" check. That check is for categorical palettes; the muted bars are meant to read as grey context.
+- **Also:** the cost-change chart's axis is fitted to the changes, so the bars aren't squeezed on a phone. The screenshot harness now switches the dashboard's theme properly rather than setting the attribute alone.
+
+205 regression cases pass. Two trend expectations gained the chip's arrow ("rising ▲ +39%").

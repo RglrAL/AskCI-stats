@@ -56,7 +56,7 @@
   "q": "is usage going up",
   "group": "mgmt",
   "expect": [
-   "rising +39%"
+   "rising ▲ +39%"
   ]
  },
  {
@@ -237,7 +237,7 @@
   "q": "is the answer quality getting worse",
   "group": "quality",
   "expect": [
-   "falling −8.8 pts",
+   "falling ▼ −8.8 pts",
    "cited answer rate"
   ],
   "not": [
