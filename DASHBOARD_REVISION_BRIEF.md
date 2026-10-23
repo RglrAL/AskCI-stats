@@ -912,3 +912,39 @@ A question list is a report you can run again. It sits under **Lists** in the to
   - the footer, as on every copy.
 - **Format:** the file starts with a UTF-8 BOM and uses CRLF line ends, so Excel opens "£" and "’" correctly. It is named `askci-<view>-<from>-to-<to>.csv`.
 - **The figures match the fact sheet:** September 2026 reads 86.5% cited, 6.0% not found, 7.4% clarification, 88.0% reached a cited answer, 5.5 click-throughs per 100 cited answers, 11.8s and £1,009.80. The test run checks that row and the notes on every run.
+
+## 53. Plan of record: diagnosing 14 September from the data on hand (23 Oct 2026)
+
+Replaces the Phase B order in §48. No team input, no new data. Structural facts from a one-off backend log extract are kept in a local, git-ignored note; the conclusion that matters here is that the second, smaller model does preprocessing only. **Routing between the two models is ruled out as a suspect.** Three suspects remain:
+- the outcome rules misreading the new wording;
+- the model;
+- the prompt.
+
+Prompts can change without a deploy.
+
+The order:
+
+0. **Hand-labelled sample.** The tools and the drawn sample are ready (§48 amendments); the analyst is the labeller, on the machine where the raw feed lives. It is the only step that gives ground truth. It runs whenever the hour can be spared; nothing below waits for it.
+1. **Rule IDs and the wording fingerprint.** `redact_feed.py` records which outcome rule fired on each answer (an ID, no text) and a few wording counts (length, lists, hedges, apologies, signposting, questions back). `make_usage.py` writes daily counts per rule and per outcome. The dashboard shows the rule mix by day with a drift flag.
+   - It tells whether the post-14 Sep not-found answers are one new phrase pattern or spread across the old ones.
+   - A wording shift on a date with no model change in the cost meters is the trace of a prompt change. The data can show **that** a prompt changed, not **what** changed.
+2. **Same question before and after.** Fixed starter prompts, plus questions typed identically on both sides (matched locally, counts only).
+   - Reported as counts with intervals. About 700 per side detects a 4-point drop, not a 2-point one.
+   - First check that the chip texts themselves didn't change around 14 Sep: they load from a database.
+   - This confirms a system change; it cannot separate model from rules.
+3. **What people do next** after each kind of answer: rephrase, new topic, ended, gap. If post-14 Sep "not found" answers are followed the way cited answers used to be, the label is suspect. This is evidence, not a substitute for step 0.
+4. **Change report, calibrated on the March model change** (a known answer) before it is run on 14 Sep. It uses matched windows, the weekday mix, the topic mix with Unknown left out, intervals, guardrail measures and the rule-drift check.
+5. **Era scorecard.** One row per model or prompt era, labelled as such: outcomes, response time, length, pages per answer, cost per turn, dislikes, click-throughs, conversation length.
+6. **Follow-ups.** Not-found rates for follow-ups against first turns, before and after, and topic drift between turns.
+7. **Content lists:**
+   - partial share by page;
+   - pages lost or gained at 14 Sep;
+   - old or off-list addresses;
+   - cited and never clicked;
+   - index lag from LastMod to first citation, with Budget 2027 as the test case.
+8. **Chip scorecards** and how much traffic a starter-prompt cache would cover.
+9. **Incident candidates:** error spikes against cost meters.
+10. **Safety counts** in `redact_feed.py`, counts only: identifiers typed in, injection patterns, off-topic themes.
+11. **Log parser** for any future one-off backend extract, counts only. It matters only if an extract appears.
+
+Correctness against the page and groundedness stay parked: they need people beyond the analyst.
