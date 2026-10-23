@@ -1703,5 +1703,50 @@
   ],
   "note": "summary tiles use the same comparison window as What changed",
   "group": "viz"
+ },
+ {
+  "q": "answer length in september",
+  "expect": [
+   "186 words per cited answer",
+   "17,976 cited answers"
+  ],
+  "group": "content"
+ },
+ {
+  "q": "how long are the answers",
+  "expect": [
+   "183 words per cited answer"
+  ],
+  "not": [
+   "response time"
+  ],
+  "note": "length, not response time",
+  "group": "bestfit"
+ },
+ {
+  "q": "are answers getting longer",
+  "expect": [
+   "no material change",
+   "180",
+   "189"
+  ],
+  "group": "content",
+  "note": "trend of answer length; +5% is under the 10% materiality threshold"
+ },
+ {
+  "q": "peak hourly load",
+  "expect": [
+   "216 turns in the busiest single hour",
+   "6 Oct, 15:00 to 16:00"
+  ],
+  "group": "mgmt"
+ },
+ {
+  "q": "most questions in one hour in september",
+  "expect": [
+   "121 turns",
+   "15 Sep, 13:00 to 14:00"
+  ],
+  "group": "mgmt"
  }
 ]
