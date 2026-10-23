@@ -1322,3 +1322,13 @@ Agreed after one round of proposal and critique. The same design as the safety f
 **What it changes.** The suspects in §53 were the model or the prompt. Steps 1 to 11 narrowed to the answering model applying an existing instruction more readily (§60). This step says which: the relevance check, applied hardest to personal cases, with a general rise in the threshold on everything else. The prompt-side remedy is a question for the team (a softer relevance rule for personal situations, or an instruction to answer the general case and say so); the labelling hour tells whether the declined answers were right to decline. The classes themselves remain a rule until the reader agreement is in.
 
 **Order from here:** the labelling hour (two more columns, ten minutes), then step 11 if an extract ever appears.
+
+## 68. Step 11: a parser for any future backend extract (24 Oct 2026)
+
+**Built, locally.** A parser for container log streams lives in the git-ignored review folder beside the two UAT extracts it was written against, because it has to name the pipeline's stages and the standing rule keeps that detail out of the public repository. It turns a log stream into one row per turn of numeric and categorical fields only (no text, no conversation or turn identifiers): each stage's latency and token counts, the search's fetched and returned counts and each result's reranker score, the distinct pages returned, the follow-up type, language and classifier outcome, and whether the turn was decomposed; and a summary of medians and counts, the cache refreshes seen and the container revision. The summary is the part that can be quoted.
+
+**On the two extracts to hand** (32 turns, 27–28 August 2026, UAT): every turn's search returned results above the relevance threshold, so every not-found in that sample was the answering model's judgement, which is the fact §53 rests on; about two thirds of input tokens were served from the prompt cache; the answering stage takes about two thirds of the turn's time. Nothing in it bears on 14 September directly: the extract predates the change.
+
+**What it is for.** If a production extract around a change date ever appears, the parser gives, within the hour, the per-turn retrieval scores and the stage that declined, which is the one thing the feed cannot. The request stands on the parked list for when contact with the team resumes: an extract of the turns from one week before and one week after 14 September.
+
+With this, the plan of record in §53 is complete apart from step 0, the labelling hour, which now carries four columns (what kind, answered, detail on page, what asked and scheme page) and is the only step that gives ground truth.
