@@ -14,3 +14,6 @@ __pycache__/
 # npm packages for tools/test_ask_node.js (npm install jsdom@24 papaparse@5.4.1)
 node_modules/
 package-lock.json
+
+# The independent review report (PDF) is kept local: it names people and discusses figures sent to a department
+ask review/

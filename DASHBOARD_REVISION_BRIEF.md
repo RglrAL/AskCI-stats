@@ -655,5 +655,5 @@ An independent review of the Ask bar (`ask review/`, 29 findings, 42 proposed ca
 - **On record:**
   - The reviewer's 42 cases are in `tests/review-2026-10-23/` as delivered. Adapted versions are in `tests/ask_cases.json` (group `review`).
   - Their browser-free runner is `tools/test_ask_node.js` (see `tests/README.md`).
-  - The review report itself (PDF) is held outside the repository pending a decision, because the repository is public.
+  - The review report itself (PDF) is kept local, not in this public repository (`ask review/` is git-ignored).
 - 256 cases pass.
