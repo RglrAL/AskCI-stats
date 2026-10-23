@@ -882,3 +882,33 @@ A question list is a report you can run again. It sits under **Lists** in the to
 - **The deploy runs it** after the commit stamp, so the published site carries the sheet for the data it serves. The Lists panel links `reports/facts-latest.md`. `reports/` is git-ignored: any month can be rebuilt from the repo's data.
 - **"Fact sheet" is also a built-in list** in the Lists panel, so it can be run as a full report with charts for any month. "Run for" a month now also moves a question that says "last month" and is kept as written (top topics).
 - **Fixed on the way:** "dislikes per 1,000 cited answers" read as the cited answer rate. The comma in 1,000 had become a space, so the longer "cited answer" match won. The measure now matches the whole phrase, and a case pins it.
+
+## 52. Reports, Phase A step 4: the CSV export (23 Oct 2026)
+
+**Export CSV** (the ⋯ menu and ⌘K) now writes the selected range with one row per day, week or month, following the View. Phase A is complete.
+
+- **Columns:**
+  - the period and its From, To and Days, so a part week or month is visible;
+  - turns and conversations;
+  - every outcome count (scored, cited, not found, clarification, error, out of scope, uncited, partial) and the cited, not-found, clarification and partial rates;
+  - dislikes on cited answers and dislikes per 1,000 cited;
+  - mature conversations, reached a cited answer (count and %), and not-found and clarification answers with how many later got a cited answer (count and %);
+  - click-throughs by surface and in total, and per 100 cited answers;
+  - response time p50;
+  - billed, generation, fixed and variable cost, generation and allocated cost per turn, and the billing status.
+- **Rules:**
+  - counts are summed per row and every rate is computed from those sums;
+  - a rate below the small-sample rule is left blank, never printed;
+  - the click-through rate is blank before both surfaces are measured;
+  - cost per turn uses settled billing days with turns only.
+- **Notes after the table**, a blank row and then "Notes":
+  - the rows and the sum-then-divide rule;
+  - the small-sample thresholds;
+  - the outcome rules version and the unvalidated flag;
+  - the mature-conversation and later-cited definitions;
+  - click-throughs as minimums, with the tracking dates;
+  - a line when the last row runs past the usage data;
+  - response time and cost-per-turn rules;
+  - the footer, as on every copy.
+- **Format:** the file starts with a UTF-8 BOM and uses CRLF line ends, so Excel opens "£" and "’" correctly. It is named `askci-<view>-<from>-to-<to>.csv`.
+- **The figures match the fact sheet:** September 2026 reads 86.5% cited, 6.0% not found, 7.4% clarification, 88.0% reached a cited answer, 5.5 click-throughs per 100 cited answers, 11.8s and £1,009.80. The test run checks that row and the notes on every run.

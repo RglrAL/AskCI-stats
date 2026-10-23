@@ -85,6 +85,10 @@ async function go(){
     else{const R=await window.__ql.run(n,'m:2026-09');closeReportMode();
       if(!R||!R.text.includes('86.5%%')||!R.text.includes('August 2026: 91.9%% (−5.4 pts)')||!R.text.includes('## 2. cited answer rate, September 2026'))window.__errs.push('question list report: '+(R?R.text.slice(0,300):'none'));}
     if(window.__pwn)window.__errs.push('question list link ran markup');}
+  // the CSV export: September 2026 as one month row, the same figures as the fact sheet, and the notes after the table
+  if(typeof exportCsvText==='function'){const x=exportCsvText('month','2026-01-01','2026-10-23');
+    const want=['Sep 2026,2026-09-01,2026-09-30,30,21718,11590,20790,17976,1249,1547,317,349,18,3738,86.5,6.0,7.4,20.8,33,1.8,11590,10195,88.0,1249,223,17.9,1547,998,64.5,873,110,983,5.5,11.8,1009.80','Notes','unvalidated','page '];
+    const miss=want.filter(w=>!x.includes(w));if(miss.length)window.__errs.push('CSV export: missing '+miss.join(' | '));}
   document.body.setAttribute('data-test',JSON.stringify({out,sgBad,tpl,errs:window.__errs.concat((window.__askRegistryProblems||[]).map(x=>'registry: '+x))}));
 }
 </script>"""

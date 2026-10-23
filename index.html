@@ -1834,7 +1834,7 @@ Date,Questions,Sessions
         <button class="icon-btn" onclick="toggleMoreMenu(event)" aria-label="More actions" id="more-btn" title="More actions"><i data-lucide="more-horizontal" class="i-sm"></i></button>
         <div class="popover popover-menu" id="more-popover" role="menu">
           <button class="menu-item" onclick="closeMoreMenu();copyShareLink(document.getElementById('more-btn'))" role="menuitem"><i data-lucide="link" class="i-sm"></i><span>Copy share link</span></button>
-          <button class="menu-item" onclick="closeMoreMenu();exportCSV()" role="menuitem"><i data-lucide="download" class="i-sm"></i><span>Export CSV</span></button>
+          <button class="menu-item" onclick="closeMoreMenu();exportCSV()" role="menuitem"><i data-lucide="download" class="i-sm"></i><span>Export CSV (per day, week or month)</span></button>
           <button class="menu-item" onclick="closeMoreMenu();window.print()" role="menuitem"><i data-lucide="printer" class="i-sm"></i><span>Print page</span></button>
         </div>
       </div>
@@ -4443,7 +4443,7 @@ function getPaletteActions(){
 
   // — Actions —
   if(DATA){
-    actions.push({section:'Actions',title:'Export CSV',desc:'Download the day-by-day breakdown',icon:'download',keywords:'export csv download data',run:()=>exportCSV()});
+    actions.push({section:'Actions',title:'Export CSV',desc:'Download the selected range, one row per day, week or month (the View), with notes',icon:'download',keywords:'export csv download data',run:()=>exportCSV()});
     actions.push({section:'Actions',title:'Print dashboard',desc:'Open browser print dialog',icon:'printer',keywords:'print pdf save',run:()=>window.print()});
     actions.push({section:'Actions',title:'Copy share link',desc:'Copies the current view URL to clipboard',icon:'link',keywords:'share copy url link',run:()=>copyShareLink(document.getElementById('share-btn'))});
   }
@@ -4614,12 +4614,67 @@ document.addEventListener('DOMContentLoaded',()=>{
 });
 
 // ═══ EXPORT ═════════════════════════════════════════════════════════
+// The export (brief §48, Phase A step 4): one row per day, week or month (the View), the dashboard's own measures
+// with the outcome, conversation and click-through columns beside cost. Counts are summed per row and every rate is
+// computed from those sums; a rate below the small-sample rule is left blank. Notes and the footer follow the table.
+function exportRows(gran,from,to){
+  const days=DATA.merged.filter(d=>d.date>=from&&d.date<=to);
+  const key=d=>gran==='week'?d.week:gran==='month'?d.month:d.date;
+  const groups=new Map();days.forEach(d=>{const k=key(d);if(!groups.has(k))groups.set(k,[]);groups.get(k).push(d);});
+  const sum=(rows,f)=>rows.reduce((a,d)=>a+(f(d)||0),0);
+  const pct=(n,d,dp=1)=>rateOK(n,d).ok&&d>0?(n/d*100).toFixed(dp):'';
+  const U=(k)=>d=>d.ux?d.ux[k]:0,CV=k=>d=>(CONV[d.date]||{})[k]||0;
+  const head=['Period','From','To','Days','Turns','Conversations','Scored turns','Cited','Not found','Clarification','Error','Out of scope','Uncited','Partial',
+    'Cited answer rate %','Not-found rate %','Clarification rate %','Partial share of cited %','Dislikes on cited','Dislikes per 1,000 cited',
+    'Mature conversations','Reached a cited answer','Reached a cited answer %','Not-found answers','Not-found then later cited','Later cited after not found %',
+    'Clarification answers','Clarification then later cited','Later cited after clarification %',
+    'Click-throughs pop-up','Click-throughs standalone site','Click-throughs total','Click-throughs per 100 cited answers',
+    'Response time p50 s','Billed GBP','Generation GBP','Fixed GBP','Variable GBP','Generation p per turn','Allocated p per turn','Billing'];
+  const rows=[head];
+  groups.forEach((g,k)=>{
+    const f=g[0].date,t=g[g.length-1].date;
+    const hasU=g.some(d=>d.ux),hasC=g.some(d=>CONV[d.date]);
+    const sc=sum(g,U('scored')),ci=sum(g,U('cited')),dk=sum(g,U('dislikesCited'));
+    const mat=sum(g,CV('Mature')),rc=sum(g,CV('ReachedCited')),nfT=sum(g,CV('NFTurns')),nfL=sum(g,CV('NFLaterCited')),clT=sum(g,CV('ClarTurns')),clL=sum(g,CV('ClarLaterCited'));
+    const ck=g.map(d=>CLICKS[d.date]).filter(Boolean),cr=hasClicks?clickRate(g,'all'):{days:0};
+    const lw=g.filter(d=>d.ux&&d.ux.latP50!=null&&d.queries>0),lq=sum(lw,d=>d.queries);
+    const jn=g.filter(d=>d.join),jq=sum(jn,d=>d.queries),cost=g.filter(d=>d.hasCost);
+    const money=v=>cost.length?v.toFixed(2):'';
+    const label=gran==='week'?'w/c '+fmtDate(k):gran==='month'?MON_S[+k.slice(5,7)-1]+' '+k.slice(0,4):k;
+    rows.push([label,f,t,g.length,sum(g,d=>d.queries),sum(g,d=>d.sessions),
+      ...(hasU?[sc,ci,sum(g,U('notFound')),sum(g,U('clarification')),sum(g,U('error')),sum(g,U('outOfScope')),sum(g,U('uncited')),sum(g,U('partial')),
+        pct(ci,sc),pct(sum(g,U('notFound')),sc),pct(sum(g,U('clarification')),sc),pct(sum(g,U('partial')),ci),dk,rateOK(dk,ci).ok&&ci>0?(dk/ci*1000).toFixed(1):'']:Array(14).fill('')),
+      ...(hasC?[mat,rc,pct(rc,mat),nfT,nfL,pct(nfL,nfT),clT,clL,pct(clL,clT)]:Array(9).fill('')),
+      ...(ck.length||cr.days?[sum(ck,c=>c.embed),sum(ck,c=>c.app),sum(ck,c=>clickViews(c)),cr.days&&rateOK(cr.n,cr.den).ok?cr.rate.toFixed(1):'']:['','','','']),
+      lq?(sum(lw,d=>d.ux.latP50*d.queries)/lq/1000).toFixed(1):'',
+      money(sum(cost,d=>d.total)),money(sum(cost,d=>d.gen)),money(sum(cost,d=>d.fixed)),money(sum(cost,d=>d.variable)),
+      jq?(sum(jn,d=>d.gen)/jq*100).toFixed(3):'',jq?(sum(jn,d=>d.total)/jq*100).toFixed(3):'',
+      !cost.length?'':cost.every(d=>d.settled)?'settled':'provisional']);
+  });
+  const U0=DATA.usageQuality||{},uv=CONFIG.outcome_rules_unvalidated_from,T=CONFIG.click_tracking_from;
+  const notes=[
+    'Rows: '+(gran==='day'?'days':gran==='week'?'weeks (Monday to Sunday)':'calendar months')+' from '+fdY(from)+' to '+fdY(to)+'. A first or last row may be a part week or month: see From, To and Days. Counts are summed per row and every rate is computed from those sums.',
+    'A rate is left blank when its sample is too small: fewer than '+CONFIG.min_rate_denominator+' in the denominator, or fewer than '+CONFIG.min_event_numerator+' events (0 events counts from '+CONFIG.min_zero_denominator+').',
+    'Outcomes (cited, not found, clarification, error, out of scope, uncited, partial) are classified from the answer text by rules '+(U0.outcomeRules||'')+'. Rates are shares of scored turns (all turns except greetings, errors and out-of-scope); partial is a share of cited answers.'+(uv&&!CONFIG.outcome_rules_measured?' Outcome figures from '+fdY(uv)+' are unvalidated: the rules haven’t been re-checked against the model in use since then.':''),
+    'Mature conversations are those 24 hours past their first turn, counted on the day they started; Reached a cited answer is among them. Later cited counts each not-found or clarification answer once: a later question in the same conversation got a cited answer, which may be to a different question.',
+    'Click-throughs are GA4 page views of citizensinformation.ie pages carrying AskCI’s citation tags. They are minimums (only visitors who accept analytics cookies). The total includes a few early tagged visits from neither surface. The rate counts the standalone site from '+fdY(T.app)+' and the pop-up from '+fdY(T.embed)+', and is blank for rows before both are measured.',
+    ...(lastUsageDay()&&to>lastUsageDay()?['Usage data ends '+fdY(lastUsageDay())+'; later days in the last row have cost only.']:[]),
+    'Response time p50: the daily median, averaged weighted by turns. Cost per turn: settled billing days with turns only. Billing "provisional" means at least one day in the row may still change.',
+    reportFooter({outcome:true,clicks:hasClicks})];
+  return {rows,notes};
+}
+function exportCsvText(gran,from,to){
+  const {rows,notes}=exportRows(gran,from,to);
+  const q=v=>{const t=String(v==null?'':v);return /[",\n]/.test(t)?'"'+t.replace(/"/g,'""')+'"':t;};
+  return '﻿'+[...rows.map(r=>r.map(q).join(',')),'','Notes',...notes.map(q)].join('\r\n')+'\r\n';
+}
 function exportCSV(){
   if(!DATA)return;
-  const rows=[['Date','Turns','Conversations','Billed GBP','Generation GBP','Fixed GBP','Variable GBP','Unclassified GBP','p/turn generation','p/turn allocated','Billing status']];
-  filterRange(DATA.merged).forEach(d=>rows.push([d.date,d.queries,d.sessions,d.hasCost?d.total.toFixed(4):'',d.hasCost?d.gen.toFixed(4):'',d.hasCost?d.fixed.toFixed(4):'',d.hasCost?d.variable.toFixed(4):'',d.hasCost?d.unclassified.toFixed(4):'',d.join?d.cpq_llm.toFixed(3):'',d.join?d.cpq_tot.toFixed(3):'',!d.hasCost?'':d.settled?'settled':'provisional']));
-  const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([rows.map(r=>r.join(',')).join('\n')],{type:'text/csv'}));
-  a.download=`askci-${timeRange}-${new Date().toISOString().slice(0,10)}.csv`;a.click();
+  const r=filterRange(DATA.merged);if(!r.length)return;
+  const from=r[0].date,to=r[r.length-1].date;
+  const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([exportCsvText(granularity,from,to)],{type:'text/csv;charset=utf-8'}));
+  a.download=`askci-${granularity}-${from}-to-${to}.csv`;a.click();
+  showToast('CSV downloaded: one row per '+granularity+', notes at the end');
 }
 
 // ═══ RENDER DISPATCH ════════════════════════════════════════════════
