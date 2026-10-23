@@ -81,12 +81,13 @@ STYLE = {
 }
 URL_RE = re.compile(r'https?://[^\s,;|"]+')
 
-# Starter-prompt chips (AGENT_BRIEF.md, 29 Sep 2026). Matched on first turns only, after
-# normalisation. Versioned with the outcome rules; effective dates are not known yet.
+# Starter-prompt chips (AGENT_BRIEF.md, 29 Sep 2026; one added 23 Oct). Matched on first turns only, after
+# normalisation. Dates inferred from the feed are candidate "chips" events in events.json.
 STARTER_PROMPTS = {
     "what is auto-enrolment", "can i get help with low pay", "how much is maternity benefit",
     "what are the housing assistance payment (hap) limits", "how do i renew my passport",
     "how do i apply for the back to school clothing and footwear allowance",
+    "how do i apply for the household benefits package",   # from 14 Oct 2026: found by tools/same_question.py (brief §55)
 }
 SCRIPTS = [("Latin", re.compile(r"[A-Za-z\u00C0-\u024F]")), ("Cyrillic", re.compile(r"[\u0400-\u04FF]")),
            ("Arabic", re.compile(r"[\u0600-\u06FF]")), ("CJK", re.compile(r"[\u4E00-\u9FFF\u3040-\u30FF\uAC00-\uD7AF]")),

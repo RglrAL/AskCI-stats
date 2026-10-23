@@ -989,3 +989,39 @@ Correctness against the page and groundedness stay parked: they need people beyo
   - not-found answers signpost more (2.0 to 2.8 contact or visit verbs).
 
 **What it cannot say.** Whether a "partial" or "not found" label is right. A cited answer that says "I couldn't find the exact figure, but…" may be a good answer or a real gap. The hand-labelled sample (step 0) settles that. The headline comparison for 14 Sep should no longer be the 92.3% of the chat-latest era alone: GPT 5's 87.2% belongs beside it.
+
+## 55. Diagnosis step 2: the same question before and after 14 September (23 Oct 2026)
+
+**Built:** `tools/same_question.py` runs locally on the raw feed and prints only counts and rates. It covers:
+- starter prompts (chip texts are configuration);
+- first-turn typed questions repeated in both windows, matched on the normalised text;
+- 95% Wilson intervals for each rate and Newcombe intervals for each difference;
+- a question-by-question view, so a few common questions can't carry the result;
+- first, a check that the fixed input is fixed: each chip by week, and any first-turn text asked 30+ times in a week that isn't a configured chip.
+
+**The fixed input wasn't fixed.** The chip set changed three times, all inferred from the feed:
+- **15–16 Jul:** Back to School, HAP limits and passport renewal added.
+- **11 Sep:** low pay, maternity benefit and auto-enrolment removed. That was three days before the model change; their last use was 10 Sep.
+- **14 Oct:** "How do I apply for the Household Benefits Package" replaced Back to School.
+
+All three are now candidate `chips` events in `events.json`. The new chip is added to `redact_feed.STARTER_PROMPTS`, and the data was rebuilt:
+- `usage.csv` starter and organic first turns, `category-outcomes-daily.csv` organic first turns and `starter-prompts-monthly.csv` changed;
+- every other file is byte-identical;
+- the audit passes.
+
+**Result, 14 Aug–13 Sep against 14 Sep–13 Oct.** Only three chips span both windows (Back to School, passport, HAP), with 575 and 777 scored first turns:
+
+| Rate | Before | After | Change (95%) |
+|---|---|---|---|
+| cited (any) | 99.8% | 99.6% | −0.2 pts (−1.0 to +0.6) |
+| cited, not partial | 99.1% | 87.1% | **−12.0 pts (−14.6 to −9.5)** |
+| partial | 0.7% | 12.5% | +11.8 pts |
+| not found | 0.0% | 0.4% | +0.4 pts |
+
+- On fixed questions the new model still cites a page every time. What changed is that it adds a "couldn't find" phrase to some answers.
+- That is almost all one chip: HAP limits went from 97% to 67% not partial. Back to School and passport are unchanged.
+- HAP limits is a table of rates. That points at the rates-in-tables question (critique #3), and makes "partial" on rate questions the first thing to read in the hand-labelled sample.
+- **The not-found rise doesn't appear on chip questions.** These are well-covered topics, so it lives in typed questions.
+- **Typed repeats are too rare to say anything.** Only 21 distinct questions were asked twice or more in both windows (54 and 89 turns), and every interval is about ±14 points.
+
+**What it proves:** a system change on fixed questions, not a change in the question mix. As expected, it can't separate the model from the outcome rules. For HAP it narrows the question to one testable thing: whether the "couldn't find" in a HAP answer marks a real gap in the rates or a cautious phrase on a complete answer.
