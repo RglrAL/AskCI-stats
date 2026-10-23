@@ -17,3 +17,6 @@ package-lock.json
 
 # The independent review report (PDF) is kept local: it names people and discusses figures sent to a department
 ask review/
+
+# Everything under exports/ is per-turn or holds feed text (review folders, labelling sheets): never commit it
+exports/

@@ -775,3 +775,16 @@ Agreed after two rounds of proposal and critique. The aim of the second half is 
 **Phase D: needs governance sign-off** (offline text processing; only aggregates leave the machine):
 - **Repair mining:** a not-found answer followed by a rephrase that gets cited gives synonym pairs and second-attempt pages. Only pairs seen 10+ times, with names, numbers and capitalised words stripped.
 - **Not-found themes against the page list:** a theme with no page is a content gap, for the CI content team; a theme whose page exists is a retrieval failure, for the AskCI team.
+
+**Amendments to §48 after review** (23 Oct 2026):
+- **Labelling design** (Phase B step 0, now built):
+  - The sample is stratified by the rule-assigned class *within each period*: 20 cited, 10 partial, 10 not found and 10 clarification before, and the same after. Fifty random answers after 14 Sep would hold about four not-found answers.
+  - Results are weighted back to each period's real mix. Labelling is blind (no date, model or rule class), with a "can't tell" option.
+  - A second labeller gets 20 of the items, for agreement.
+  - `tools/make_label_sample.py` reuses `redact_feed.classify`, so the sample is drawn by exactly the rules being measured. It writes `label_sheet.csv`, `label_sheet_second.csv`, `key.csv` and `README.txt` under `exports/` (now git-ignored as a whole), and never prints text.
+  - `tools/score_labels.py` prints a confusion matrix, each rule class's agreement with a 95% range, an estimated catch rate (within the sampled classes), weighted overall agreement, the figure that settles 14 Sep ("rule 'not found' answers a reader says did answer"), and inter-labeller agreement with Cohen's kappa. Its last line is the `CONFIG.outcome_rules_measured` entry.
+  - The first sample is drawn: 100 answers from 14 Aug–13 Sep and 14 Sep–13 Oct (29 Sep is missing from the raw exports on hand). The scorer was checked on synthetic labels.
+- **Data-quality strip:** once `CONFIG.outcome_rules_measured` is set it reads "agreement X% on N hand-labelled answers, <date>", with the before, after and not-found figures in its tooltip, instead of "unvalidated".
+- **Categories tab:** a note above the outcome-by-topic table explains that failed answers usually have no topic and sit in Unknown, so topic failure rates are lower bounds and period comparisons by topic leave Unknown out.
+- **Phase C order:** the version columns must land before the two experiments, or a week on GPT-5.4 can't be told from any other week. Caching first. Add **per-turn token counts** to the request: they give exact cost per turn by model, which the cost export can only approximate.
+- **Recorded so it isn't re-run:** dislikes on answers that weren't cited went 1 → 6 across 14 Sep; too few to mean anything.

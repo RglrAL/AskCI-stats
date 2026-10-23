@@ -2141,6 +2141,10 @@ const CONFIG={
   // as well as worse answers. Until a hand-labelled sample settles it, outcome figures from this date carry
   // a note. Set to null once the rules are checked against the new model.
   outcome_rules_unvalidated_from:'2026-09-14',
+  // Set from tools/score_labels.py's last line once a hand-labelled sample is scored (brief §48, Phase B step 0).
+  // When set, the data-quality strip shows the measured agreement instead of "unvalidated", and clear
+  // outcome_rules_unvalidated_from if the agreement after the model change is acceptable.
+  outcome_rules_measured:null,
   latency_target_p90_ms:20000, // provisional p90 target (admin-app spec open question 13); drawn as a dashed line
   // Phone-service hours, used only for the "outside phone-service hours" share on the Usage pane.
   phone_service:{days:[1,2,3,4,5],from:9,to:20,label:'Mon–Fri 09:00–20:00',source:'Citizens Information Phone Service published hours, confirmed 23 Oct 2026'},
@@ -5172,6 +5176,10 @@ function appendCategoryDetail(D){
     const OUT=[['Cited','Cited answer',C.green],['NotFound','Not found',C.red],['Clarification','Clarification',C.amber],['OutOfScope','Out of scope',C.purple],['Greeting','Greeting',C.dim],['Error','Error',C.pink],['Uncited','Uncited answer',C.acc]];
     const cell=(o,k,col)=>{const t=o.Turns||0,v=o[k]||0,r=rateOK(v,t);if(!r.ok)return td('—','var(--dim)');const pct=v/t*100;const a=Math.round(0x10+Math.min(1,pct/100)*0xa0).toString(16).padStart(2,'0');return td(pct.toFixed(1)+'%','',true,`;background:${col}${a}`);};
     const byVol=[...rows].sort((a,b)=>(b[1].Turns||0)-(a[1].Turns||0));
+    // Failed answers rarely cite a page, so they rarely carry a topic: the failures sit in Unknown, and a topic's own
+    // failure rates are lower bounds. Comparing periods by topic must leave Unknown out (brief §48: after 14 Sep 2026
+    // no-topic scored turns went from 571 to 2,100 a month; including them distorts any topic-mix adjustment).
+    h+=`<div class="reach-note"><i data-lucide="info" class="i-sm"></i><span><b>Failed answers usually have no topic.</b> A not-found or clarification reply rarely cites a page, so most of them sit in Unknown (${num(unknown.Turns||0)} turns in this range, ${tot?((unknown.Turns||0)/tot*100).toFixed(1):'0'}%). Each topic’s failure rates are therefore lower bounds, and when comparing periods by topic, leave the Unknown row out.</span></div>`;
     h+=`<div class="card"><div class="card-title">Outcome share by attributed category<span class="card-title-note">each row sums to 100% of its turns · cells under the small-sample rule show a dash · sorted by volume</span></div>
       <div class="tbl-wrap"><table style="width:100%;border-collapse:collapse;min-width:760px"><thead><tr style="border-bottom:1px solid var(--b2)">${th('Category',false)}${th('Turns')}${OUT.map(([,l])=>th(l)).join('')}</tr></thead>
       <tbody>${byVol.map(([c,o])=>`<tr style="border-bottom:1px solid var(--b2)">${td(catLabel(CAT_ALIAS[c]||c),C.acc,false)}${td(num(o.Turns||0))}${OUT.map(([k,,col])=>cell(o,k,col)).join('')}</tr>`).join('')}
@@ -7212,6 +7220,8 @@ function renderDqStrip(){
     item('unparsed Foundry meters',(Q.unparsedMeters||[]).length,{amber:(Q.unparsedMeters||[]).length>0,title:list(Q.unparsedMeters)||'all Foundry meters mapped to a family and type'}),
     item('unassigned resources',(Q.unassignedResources||[]).length,{amber:(Q.unassignedResources||[]).length>0,title:list(Q.unassignedResources)||'all resources mapped to service / admin / shared'}),
     item('join window',S.joinDays?`${spanLabel(S.joinFrom,S.joinTo)} · ${S.joinDays}d`:'—',{title:'settled billing days with turns > 0; every per-turn figure is computed on these days'}),
+    U.outcomeRules&&CONFIG.outcome_rules_measured?(()=>{const m=CONFIG.outcome_rules_measured,a=m.agreement_after!=null?m.agreement_after:m.agreement_before;
+      return item('outcome rules',`${U.outcomeRules} · agreement ${a!=null?(a*100).toFixed(0)+'%':'—'} on ${m.n} hand-labelled answers, ${fmtDate(m.measured)}`,{amber:!!CONFIG.outcome_rules_unvalidated_from,title:`Checked by people against a blind, stratified sample (tools/score_labels.py), rules ${m.rules}: agreement before ${m.agreement_before!=null?(m.agreement_before*100).toFixed(0)+'%':'—'}, after ${m.agreement_after!=null?(m.agreement_after*100).toFixed(0)+'%':'—'}`+(m.notfound_answered_after!=null?`; ${(m.notfound_answered_after*100).toFixed(0)}% of rule “not found” answers after the change were judged to answer the question`:'')});})():
     U.outcomeRules?item('outcome rules',U.outcomeRules+(CONFIG.outcome_rules_unvalidated_from?` · unvalidated from ${fmtDate(CONFIG.outcome_rules_unvalidated_from)}`:''),{amber:!!CONFIG.outcome_rules_unvalidated_from,title:'rule-set version written by tools/redact_feed.py; a change replays from the raw feed'+(CONFIG.outcome_rules_unvalidated_from?'. Not yet checked against the model in use from '+fmtDate(CONFIG.outcome_rules_unvalidated_from):'')}):'',
     (U.columns&&Object.values(U.columns).some(Boolean))||hasHours?item('usage detail',['outcomes','types','sources','latency','voice'].filter(k=>U.columns&&U.columns[k]).concat(hasHours?['hours']:[]).join(' · ')||'—',{title:'optional columns found in usage.csv, plus usage-hours.csv'}):'',
     hasClicks?item('click-throughs',`${spanLabel(clickRange.from,clickRange.to)}`,{title:'GA4 page views of CI pages carrying AskCI citation tags (tools/make_clicks.py); consenting visitors only, so a minimum. Rates count the standalone site from '+fmtDate(CONFIG.click_tracking_from.app)+' and the pop-up from '+fmtDate(CONFIG.click_tracking_from.embed)}):'',
