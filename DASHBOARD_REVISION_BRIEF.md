@@ -706,3 +706,72 @@ Built after a proposal and a critique of it; the critique's changes are in.
 - **Placeholder.** One fixed example ("e.g. “not found rate in housing last month”"). No rotating text, per WCAG 2.2.2.
 - **Phone width.** The whole dashboard was measured in a true 390 px frame. A long value in the data-quality strip widened the page to 417 px; strip values now wrap on phones and the page is 390 px. The main tab row already scrolls within itself. The date-range toolbar fits.
 - **Tests:** 11 typing cases (preview, unknown word, decline, correction, ranking, partial word, ↓ highlight, ↓ + Enter asks, Esc closes, Recent and help in an empty box). 280 pass.
+
+## 48. Plan of record: reports, then diagnosing system changes (23 Oct 2026)
+
+Agreed after two rounds of proposal and critique. The aim of the second half is to turn what the data shows *changed* into what to *do*: which rule, model, prompt, page or chip to adjust.
+
+**What the 14 September change looks like** (14 Aug–13 Sep against 14 Sep–13 Oct, from the published files):
+- Cited answer rate 92.3% → 81.7%; not found 2.9% → 8.3%; clarification 4.7% → 9.8%.
+- Partial answers 14.1% → 26.4% of cited answers; out of scope 0.9% → 2.3% of questions.
+- Uncited 0.07% → 0.15% (small).
+- Pages cited per cited answer 1.84 → 1.72; words per cited answer 180 → 189.
+- **Topic mix explains none of it.** Among topic-attributed questions the cited rate falls 95.2% → 89.3%; reweighted to the before period's topic mix, 89.1%.
+  - Failed answers usually carry no topic, so the "unknown" topic grew 571 → 2,100 scored turns.
+  - Any mix adjustment must leave "unknown" out, or it understates the change: done wrongly, it claimed a third of the fall was mix.
+- **Dislikes are not evidence either way.** Per 1,000 cited answers they fell 2.4 → 1.1, but that describes the answers still cited. On other answers they went 1 → 6 in absolute numbers.
+- **Generation spend since 14 Sep:** GPT-5.4 £378, GPT-5.4 mini £63. Without token quantities (the cost export has none), the turn split between them is unknown, so a routing change cannot be told from a model change.
+- **Suspects, none yet ruled out:** the outcome rules misreading the new model's wording; the model itself; the system prompt as read by a more literal model; and routing between 5.4 and 5.4 mini.
+
+**Phase A: reports** (agreed in §47's discussion):
+1. **Copy with definition** on tiles and Ask answers: a sentence with its caveats, Markdown, TSV tables and a light-theme chart image with the title and period drawn on. Formatted and plain text go on the clipboard together. A re-ask link (the hash is untrusted input: escaped and tested).
+   - Footer: data-to date, config and outcome-rules versions, the unvalidated flag, minimums, the page commit (stamped at deploy) and the data commit.
+   - Alongside it, management-question cases with their caveat or decline wording pinned, tagged `"lists": ["monthly"]`: accurate? pressure off the phones? vs last year? twice the volume (Scenario planner)?
+2. **Reports as question lists.**
+   - Each item stores the question and its parsed reading. A re-run that reads it differently says so on the item.
+   - Period tokens (last full month, month to date, last 7 days of data, since January, since the pop-up launch, Budget Day, a fixed range), with pinned items and comparisons re-run on the same token.
+   - "Run for <month>"; print/PDF, Markdown and formatted copy.
+   - Lists are kept in the page address and the browser, and built from case tags.
+3. **Fact sheet** from cases tagged `facts`, each figure with its caveat beside it, written to `reports/facts-<date>.md` at each data refresh.
+4. **CSV export** with the conversation, outcome and click-through columns, and the footer.
+
+**Phase B: diagnosing changes**
+0. **Hand-labelled sample: first, because it settles 14 September directly.**
+   - 50 answers before and 50 after, stratified by outcome, labelled blind (no date, no model, no rule label).
+   - `tools/make_label_sample.py` builds the sheet from the raw feeds on the analyst's machine (git-ignored; text never leaves it). `tools/score_labels.py` gives agreement per outcome class, before and after.
+   - A small monthly re-check afterwards.
+1. **Rule hits.** `redact_feed.py` records which outcome rule matched each answer (an id, no text), and `make_usage.py` writes daily counts per rule. The dashboard shows the rule mix by day and by model era, with a **drift flag** when the mix shifts (the "style fingerprint": hedging and refusal phrases per answer, answer length). This answers "is the new not-found one phrase pattern?".
+2. **Model-era scorecard.** One row per era, taken from confirmed model events until version columns exist. Columns:
+   - cited, partial, not found, clarification, uncited, error;
+   - p50/p99 response time, answer length, pages per answer;
+   - cost per turn, cached-input share, generation spend by family;
+   - dislikes, click-throughs per 100 cited, turns per conversation, ended after the first question.
+3. **Profile matching, not verdicts.** After each outcome, the distribution of what happens next: rephrased, new topic, ended, gap, clicked.
+   - A relabelled answer should look like the class it really belongs to. If after-14-Sep "not found" answers are followed like before-14-Sep cited answers, the label is wrong.
+   - No single behaviour is called satisfied or abandoned.
+4. **Content lists:**
+   - partial share by cited page (pages that exist but lack what is asked);
+   - pages lost and gained at a change;
+   - citations to old or off-list addresses (Budget 2023, moved pages);
+   - old content cited, from `site-pages.csv` LastMod;
+   - pages cited often and never clicked, split into redirect and complete-answer cases.
+5. **Chips and starter prompts:** each one's own outcome, what followed, and the ended-there rate. Clarification loops.
+6. **Incident candidates** from error spikes and cost meters together (a search or container meter jumping on an error day names the component).
+7. **Change reports.** For a confirmed event or a version change: matched windows with the weekday mix controlled, the topic mix standardised (excluding "unknown"), confidence intervals, guardrail measures, and the rule-drift check.
+   - First run on **prompt caching** (4% cached-input share), which cannot affect answer quality, to validate the machinery before it is needed for anything contested.
+
+**Phase C: one request to the AskCI team**
+- **Per-turn columns** (no personal data):
+  - model actually used (5.4 or 5.4 mini, for routing);
+  - prompt version;
+  - retrieval config (index version, top-k, chunking);
+  - chip set version;
+  - UI build;
+  - referring page for pop-up questions.
+- **Token quantities** in the cost export.
+- **A fixed question set** (about 100 staff-written questions, each with the page that should be cited and the expected outcome) run before every model, prompt or index change.
+- **Two experiments with known cost:** route everything to 5.4 for a week, and prompt caching.
+
+**Phase D: needs governance sign-off** (offline text processing; only aggregates leave the machine):
+- **Repair mining:** a not-found answer followed by a rephrase that gets cited gives synonym pairs and second-attempt pages. Only pairs seen 10+ times, with names, numbers and capitalised words stripped.
+- **Not-found themes against the page list:** a theme with no page is a content gap, for the CI content team; a theme whose page exists is a retrieval failure, for the AskCI team.
