@@ -2746,13 +2746,17 @@ async function loadHoursFile(){
 // script-outcomes-daily.csv: SCRIPTOUT[date][script] = {t, s, c, nf, cl} (turns, scored, cited, not found, clarification)
 let SCRIPTOUT={},hasScriptOut=false;
 let ORULES={},OSTYLE={},ONEXT={},hasRules=false;   // outcome rule ids, the wording fingerprint and what people do next (brief §53)
+let PAGESC={},hasPagesC=false;
 let CONV={},CATOUT={},CITES={},JOURNEYS={},STARTERS={},LATB={},CATDAY={},hasCatDay=false,hasConv=false,hasCatOut=false,hasCites=false,hasJourneys=false,hasStarters=false,hasLatB=false;
 async function loadConversationFiles(){
   try{(await loadCSV('script-outcomes-daily.csv')).forEach(r=>{const d=parseDate(r['Date']);if(!d)return;(SCRIPTOUT[d]||(SCRIPTOUT[d]={}))[r['Script']]={t:nInt(r['Turns']),s:nInt(r['Scored']),c:nInt(r['Cited']),nf:nInt(r['NotFound']),cl:nInt(r['Clarification'])};});}catch(e){}
   hasScriptOut=Object.keys(SCRIPTOUT).length>0;
   try{(await loadCSV('conversations-daily.csv')).forEach(r=>{const d=parseDate(r['Date']);if(!d)return;const o={};Object.entries(r).forEach(([k,v])=>{if(k!=='Date')o[k]=nInt(v);});CONV[d]=o;});}catch(e){}
   try{(await loadCSV('category-outcomes-daily.csv')).forEach(r=>{const d=parseDate(r['Date']);if(!d)return;const o={};Object.entries(r).forEach(([k,v])=>{if(k!=='Date'&&k!=='Category')o[k]=nInt(v);});(CATOUT[d]||(CATOUT[d]={}))[r['Category']||'unknown']=o;});}catch(e){}
-  try{(await loadCSV('citations-monthly.csv')).forEach(r=>{const m=String(r['Month']||'').trim();if(!/^\d{4}-\d{2}$/.test(m))return;(CITES[m]||(CITES[m]=[])).push({url:r['URL'],n:nInt(r['Citations']),cat:r['Category']||''});});}catch(e){}
+  try{(await loadCSV('citations-monthly.csv')).forEach(r=>{const m=String(r['Month']||'').trim();if(!/^\d{4}-\d{2}$/.test(m))return;(CITES[m]||(CITES[m]=[])).push({url:r['URL'],n:nInt(r['Citations']),cat:r['Category']||'',ans:r['Answers']!=null?nInt(r['Answers']):null,partial:nInt(r['Partial']),dis:nInt(r['Dislikes'])});});}catch(e){}
+  // pages-cited.csv: one row per cited page over all the data, with the page's LastMod and its first citation after it (brief §62)
+  try{(await loadCSV('pages-cited.csv')).forEach(r=>{const u=ciKey(r['URL']);if(!u)return;PAGESC[u]={first:r['FirstCited'],last:r['LastCited'],n:nInt(r['Citations']),ans:nInt(r['Answers']),partial:nInt(r['Partial']),dis:nInt(r['Dislikes']),mod:r['LastMod']||'',firstAfter:r['FirstCitedAfterLastMod']||'',ansAfter:nInt(r['AnswersAfterLastMod'])};});}catch(e){}
+  hasPagesC=Object.keys(PAGESC).length>0;
   try{(await loadCSV('journeys-monthly.csv')).forEach(r=>{const m=String(r['Month']||'').trim();if(!/^\d{4}-\d{2}$/.test(m))return;(JOURNEYS[m]||(JOURNEYS[m]=[])).push({from:r['From'],to:r['To'],n:nInt(r['Conversations'])});});}catch(e){}
   try{(await loadCSV('starter-prompts-monthly.csv')).forEach(r=>{const m=String(r['Month']||'').trim();if(!/^\d{4}-\d{2}$/.test(m))return;(STARTERS[m]||(STARTERS[m]=[])).push({prompt:r['Prompt'],n:nInt(r['Count']),cited:nInt(r['Cited']),typed:nInt(r['FollowedByTyped']),sugg:nInt(r['FollowedBySuggested'])});});}catch(e){}
   try{(await loadCSV('categories-daily.csv')).forEach(r=>{const d=parseDate(r['Date']);if(!d)return;(CATDAY[d]||(CATDAY[d]={}))[String(r['Category']||'').trim()]=nInt(r['Citations']);});}catch(e){}
@@ -2784,9 +2788,9 @@ async function loadClickFiles(){
 const clickViews=c=>c?c.embed+c.app+c.other:0;
 // The site's own page list (site-pages.csv from tools/make_site_pages.py): checks cited and clicked addresses
 // against pages that exist. Optional.
-let SITEPAGES={info:new Set(),all:new Set(),asOf:''},hasSitePages=false;
+let SITEPAGES={info:new Set(),all:new Set(),asOf:'',mod:{}},hasSitePages=false;
 async function loadSitePages(){
-  try{(await loadCSV('site-pages.csv')).forEach(r=>{const u=String(r['URL']||'').toLowerCase().replace(/\/$/,'');if(!u)return;SITEPAGES.all.add(u);if(r['Kind']==='information'&&r['Language']==='en')SITEPAGES.info.add(u);if(r['ListedOn']&&r['ListedOn']>SITEPAGES.asOf)SITEPAGES.asOf=r['ListedOn'];});}catch(e){}
+  try{(await loadCSV('site-pages.csv')).forEach(r=>{const u=String(r['URL']||'').toLowerCase().replace(/\/$/,'');if(!u)return;SITEPAGES.all.add(u);if(r['Kind']==='information'&&r['Language']==='en')SITEPAGES.info.add(u);if(r['LastMod'])SITEPAGES.mod[u]=String(r['LastMod']).slice(0,10);if(r['ListedOn']&&r['ListedOn']>SITEPAGES.asOf)SITEPAGES.asOf=r['ListedOn'];});}catch(e){}
   hasSitePages=SITEPAGES.info.size>0;
 }
 // Matched numerator and denominator for one day: a surface counts only from its tracking start.
@@ -5889,6 +5893,7 @@ function renderPages(D,S){
       <div class="share-foot">Worth a look for content structure or retrieval: is the answer on the page easy for AskCI to find and quote? Pages people consult for one fact (dates, rates) can be busy on the site and rarely asked about.</div></div>
     <div class="card"><div class="card-title">Cited by AskCI, rarely read on the site<span class="card-title-note">pages cited ${PAGES_MIN_CITES}+ times with ${PAGES_MIN_VIEWS}+ views, most citations per 1,000 views first</span></div>${table(buried)}
       <div class="share-foot">AskCI brings these pages to people who would not otherwise reach them.${unseen?` A further <b>${num(unseen)}</b> pages were cited ${PAGES_MIN_CITES}+ times with fewer than ${PAGES_MIN_VIEWS} recorded site views.`:''}</div></div>
+    ${contentLists(months,fr,td,th)}
     <div class="reach-foot"><i data-lucide="info" class="i-sm"></i><span><b>Per 1,000 views</b> = AskCI citations ÷ site views × 1,000 for the page over the same months. <b>vs typical</b> compares it with the rate across all information pages (${typ==null?'—':typ.toFixed(1)}). One answer can cite several pages. Page names come from the page address.</span></div>`;
   // Scatter: every qualifying page, the two lists' top ${PAGES_LIST} in colour, the typical rate as a dashed line
   const pts=rows.filter(r=>r.v>=PAGES_MIN_VIEWS&&r.c>0);
@@ -5909,6 +5914,82 @@ function renderPages(D,S){
         onClick:(e,els)=>{if(!els.length)return;const p=els[0].element.$context.raw;if(p&&p.u)window.open(p.u,'_blank','noopener');}})});
   }
   renderIcons();
+}
+
+// ═══ CONTENT LISTS (brief §53 step 7, §62) ═══════════════════════════════════
+// Five lists that name pages rather than rates: answers that say something is missing by page; pages lost and gained
+// at the latest model change; addresses off the site's list and old pages; pages cited often and never clicked; and
+// the index lag from a page's LastMod to its first citation after it. Months are the ones overlapping the range.
+function contentLists(months,fr,td,th){
+  if(!months.length)return'';
+  const A={};months.forEach(m=>(CITES[m]||[]).forEach(r=>{if(!/citizensinformation\.ie/.test(r.url))return;const u=ciKey(r.url),a=A[u]||(A[u]={n:0,ans:0,partial:0,dis:0});a.n+=r.n;a.ans+=r.ans||0;a.partial+=r.partial||0;a.dis+=r.dis||0;}));
+  const hasAns=Object.values(A).some(a=>a.ans>0);
+  const span=months.length>1?fmtMonth(months[0])+' to '+fmtMonth(months[months.length-1]):fmtMonth(months[0]);
+  const link=u=>`<a href="${u}" target="_blank" rel="noopener" title="${u}" style="color:${C.acc};text-decoration:none">${ciPageTitle(u)}</a> <span style="color:var(--muted)">· ${ciPageSection(u)}</span>`;
+  const tbl=(heads,rows)=>`<div class="tbl-wrap"><table style="width:100%;border-collapse:collapse"><thead><tr style="border-bottom:1px solid var(--b2)">${heads.map((h,i)=>th(h,i===0)).join('')}</tr></thead><tbody>${rows.map(r=>`<tr style="border-bottom:1px solid var(--b2)">${r.map((v,i)=>td(v,{left:i===0})).join('')}</tr>`).join('')||`<tr><td colspan="${heads.length}" style="padding:10px;color:var(--muted);font-size:.78rem">none</td></tr>`}</tbody></table></div>`;
+  let h='';
+  // 1. answers that say something is missing, by page
+  if(hasAns){
+    const ta=Object.values(A).reduce((s,a)=>s+a.ans,0),tp=Object.values(A).reduce((s,a)=>s+a.partial,0),typ=ta?tp/ta:0;
+    const rows=Object.entries(A).filter(([,a])=>a.ans>=50).sort((x,y)=>y[1].partial/y[1].ans-x[1].partial/x[1].ans);
+    const high=rows.filter(([,a])=>a.partial/a.ans>=Math.max(0.3,typ*1.5));
+    h+=`<div class="card"><div class="card-title">Answers that say something is missing, by page<span class="card-title-note">pages cited in 50+ answers · ${span} · ${(typ*100).toFixed(0)}% of all page-answers say something is missing · ${num(high.length)} page${high.length===1?'':'s'} at 30%+ and 1.5× typical</span></div>
+      ${tbl(['Page','Answers','Say something is missing','vs typical','Disliked'],rows.slice(0,PAGES_LIST).map(([u,a])=>[link(u),num(a.ans),(a.partial/a.ans*100).toFixed(0)+'%',typ?(a.partial/a.ans/typ).toFixed(1)+'×':'—',num(a.dis)]))}
+      <div class="share-foot">A cited answer that also says it couldn't find a detail. The page exists and was found; what was asked may not be on it, or may be in a form the answer did not pick up (a table of rates). Budget pages for past years and the AskCI “about” page lead this list in every month.</div></div>`;
+  }
+  // 2. lost and gained at the latest confirmed model change: the full month before against the latest month after
+  const ev=confirmedEvents().filter(e=>e.kind==='model'&&e.start.length===10).sort((a,b)=>b.start.localeCompare(a.start))[0];
+  if(ev){
+    const em=ev.start.slice(0,7),allM=Object.keys(CITES).sort(),before=allM.filter(m=>m<em).pop(),after=allM.filter(m=>m>em).pop();
+    if(before&&after){
+      const agg=m=>{const o={};(CITES[m]||[]).forEach(r=>{if(/citizensinformation\.ie/.test(r.url)){const u=ciKey(r.url);o[u]=(o[u]||0)+r.n;}});return o;};
+      const B=agg(before),Af=agg(after);
+      const lost=Object.entries(B).filter(([u,n])=>n>=10&&!Af[u]).sort((x,y)=>y[1]-x[1]),gained=Object.entries(Af).filter(([u,n])=>n>=10&&!B[u]).sort((x,y)=>y[1]-x[1]);
+      h+=`<div class="card"><div class="card-title">Pages lost and gained at the ${fmtDate(ev.start)} model change<span class="card-title-note">${fmtMonth(before)} against ${fmtMonth(after)} · cited 10+ times in one month and never in the other · ${num(Object.keys(B).length)} pages cited in ${fmtMonth(before)}, ${num(Object.keys(Af).length)} in ${fmtMonth(after)}</span></div>
+        <div class="grid2">
+          <div><div style="font-size:.6rem;color:var(--muted);text-transform:uppercase;letter-spacing:.08em;margin-bottom:6px">Lost · ${num(lost.length)}</div>${tbl(['Page',fmtMonth(before)],lost.slice(0,8).map(([u,n])=>[link(u),num(n)]))}</div>
+          <div><div style="font-size:.6rem;color:var(--muted);text-transform:uppercase;letter-spacing:.08em;margin-bottom:6px">Gained · ${num(gained.length)}</div>${tbl(['Page',fmtMonth(after)],gained.slice(0,8).map(([u,n])=>[link(u),num(n)]))}</div>
+        </div>
+        <div class="share-foot">A page lost at a model change is one the new model no longer reaches for; a page gained may be new content (Budget pages) or a new preference. Small lists mean the change was in how pages are used, not which.</div></div>`;
+    }
+  }
+  // 3. off the site's list, and old pages
+  if(hasSitePages){
+    const off=Object.entries(A).filter(([u])=>!SITEPAGES.all.has(u)).sort((x,y)=>y[1].n-x[1].n),offN=off.reduce((s,[,a])=>s+a.n,0),tot=Object.values(A).reduce((s,a)=>s+a.n,0);
+    const dated=Object.entries(A).filter(([u,a])=>a.n>=50&&SITEPAGES.mod[u]).map(([u,a])=>[SITEPAGES.mod[u],a.n,u]).sort();
+    const y0=(fr[fr.length-1]?.date||'').slice(0,4)+'-01-01',oldN=dated.filter(x=>x[0]<y0).reduce((s,x)=>s+x[1],0),datedN=dated.reduce((s,x)=>s+x[1],0);
+    h+=`<div class="card"><div class="card-title">Addresses off the site's list, and old pages<span class="card-title-note">${span} · page list as of ${SITEPAGES.asOf?fmtDate(SITEPAGES.asOf):'—'}</span></div>
+      <div class="grid2">
+        <div><div style="font-size:.6rem;color:var(--muted);text-transform:uppercase;letter-spacing:.08em;margin-bottom:6px">Not on the page list · ${num(offN)} citations to ${num(off.length)} addresses (${tot?(offN/tot*100).toFixed(2):'—'}%)</div>${tbl(['Address','Citations'],off.slice(0,6).map(([u,a])=>[`<a href="${u}" target="_blank" rel="noopener" style="color:${C.amber};text-decoration:none;word-break:break-all">${u.replace(/^https?:\/\/www\.citizensinformation\.ie/,'')||'/ (the site root)'}</a>`,num(a.n)]))}</div>
+        <div><div style="font-size:.6rem;color:var(--muted);text-transform:uppercase;letter-spacing:.08em;margin-bottom:6px">Oldest pages cited 50+ times · ${datedN?(oldN/datedN*100).toFixed(0):'—'}% of these citations go to pages last changed before ${y0.slice(0,4)}</div>${tbl(['Page','Last changed','Citations'],dated.slice(0,6).map(([lm,n,u])=>[link(u),fdY(lm),num(n)]))}</div>
+      </div>
+      <div class="share-foot">An address off the list is a moved or retired page that the index still holds. "Last changed" is the site's own LastMod; an old date on a rates page is a content question, on a procedure page it may be fine.</div></div>`;
+  }
+  // 4. cited often, never clicked
+  if(hasClicks){
+    const from=fr[0].date,to=fr[fr.length-1].date,CK={};
+    Object.entries(CLICKPAGES).forEach(([d,list])=>{if(d<from||d>to)return;list.forEach(x=>{const u=ciKey(x.url);CK[u]=(CK[u]||0)+x.n;});});
+    const cand=Object.entries(A).filter(([,a])=>a.n>=100),never=cand.filter(([u])=>!CK[u]).sort((x,y)=>y[1].n-x[1].n);
+    h+=`<div class="card"><div class="card-title">Cited often, never clicked<span class="card-title-note">pages cited 100+ times in ${span} with no GA4 click-through ${spanLabel(from,to)} · ${num(never.length)} of ${num(cand.length)}</span></div>
+      ${tbl(['Page','Citations','Answers saying something is missing'],never.slice(0,PAGES_LIST).map(([u,a])=>[link(u),num(a.n),a.ans?(a.partial/a.ans*100).toFixed(0)+'%':'—']))}
+      <div class="share-foot">Two readings, and the data cannot tell them apart: the answer was complete so nobody needed the page, or the link was not seen. Click-throughs count consenting visitors only, so a zero is "none recorded". The missing-detail share beside each page is a hint: high means people were told something was missing and still did not click.</div></div>`;
+  }
+  // 5. index lag: pages changed on the site and when AskCI first cited the changed page
+  if(hasPagesC){
+    const last=fr[fr.length-1]?.date||'',since=isoAdd(last,-60),settled=isoAdd(last,-7);
+    const rows=Object.entries(PAGESC).filter(([u,p])=>p.mod&&p.mod>=since&&p.mod<=last&&(!hasSitePages||SITEPAGES.info.has(u)));
+    const lag=p=>p.firstAfter?daysBetween(p.mod,p.firstAfter):null;
+    const done=rows.filter(([,p])=>p.firstAfter),hist=[0,0,0,0];done.forEach(([,p])=>{const l=lag(p);hist[l===0?0:l<=3?1:l<=7?2:3]++;});
+    const waiting=rows.filter(([,p])=>!p.firstAfter&&p.mod<=settled).sort((x,y)=>y[1].ans-x[1].ans);
+    const other=confirmedEvents().filter(e=>e.kind==='other'&&e.start>=since&&e.start<=last);
+    h+=`<div class="card"><div class="card-title">Index lag: pages changed on the site, and when AskCI first cited the changed page<span class="card-title-note">information pages with a LastMod in the 60 days to ${fmtDate(last)} that AskCI has ever cited · ${num(rows.length)} pages${other.length?' · '+other.map(e=>escH(e.title)+' '+fmtDate(e.start)).join(', '):''}</span></div>
+      <div class="grid4" style="margin-bottom:10px">
+        ${uxTile(num(hist[0]),'Cited the same day',`of ${num(done.length)} cited since their change`,C.green)}${uxTile(num(hist[1]),'1–3 days later','',C.acc)}${uxTile(num(hist[2]),'4–7 days later','',C.amber)}${uxTile(num(hist[3]+waiting.length),'8+ days, or not yet',`${num(waiting.length)} changed 7+ days ago and not cited since`,C.red)}
+      </div>
+      ${waiting.length?`<div style="font-size:.6rem;color:var(--muted);text-transform:uppercase;letter-spacing:.08em;margin-bottom:6px">Changed 7+ days ago, not cited since the change · by how often the page was cited before</div>${tbl(['Page','Last changed','Answers before the change'],waiting.slice(0,8).map(([u,p])=>[link(u),fdY(p.mod),num(p.ans)]))}`:''}
+      <div class="share-foot">LastMod is the site's own date for the page; a citation on or after it means the index served the changed page (or the old copy under the same address: the data cannot tell). A page nobody asks about will show no citation whatever the index did, so read the list against "answers before the change".</div></div>`;
+  }
+  return h;
 }
 
 function renderConvs(D,S){

@@ -46,7 +46,8 @@ SCHEMA = {
     'category-outcomes-daily.csv': 'Date Category Turns Cited NotFound Clarification Error OutOfScope Greeting Uncited Scored OrganicFirstTurns',
     'categories-daily.csv': 'Date Category Citations',
     'categories.csv': 'Month Citations',
-    'citations-monthly.csv': 'Month URL Citations',
+    'citations-monthly.csv': 'Month URL Citations Answers Partial Dislikes',
+    'pages-cited.csv': 'URL FirstCited LastCited Citations Answers Partial Dislikes LastMod FirstCitedAfterLastMod AnswersAfterLastMod',
     'journeys-monthly.csv': 'From To Conversations',
     'starter-prompts-monthly.csv': 'Month Count Cited FollowedByTyped FollowedBySuggested',
     'latency-buckets-daily.csv': 'Date Kind Turns LatencySumMs',
@@ -371,6 +372,14 @@ PV = {nu('https://www.citizensinformation.ie' + r['Page path and screen class'])
 ci_tot = sum(I(r['Citations']) for r in CI if 'citizensinformation.ie' in r['URL'])
 ci_in = sum(I(r['Citations']) for r in CI if 'citizensinformation.ie' in r['URL'] and nu(r['URL']) in PV)
 check('citations to CI pages that join a page with site views (Usage › Pages) at least 98%', ci_tot and ci_in / ci_tot >= 0.98, f'{ci_in / max(1, ci_tot):.2%}')
+
+# ── 9a. pages-cited.csv against citations-monthly.csv (brief §62) ─────────────
+CM = rd('citations-monthly.csv'); PC = rd('pages-cited.csv')
+check('citations-monthly: Partial <= Answers <= Citations on every row', all(I(r['Partial']) <= I(r['Answers']) <= I(r['Citations']) for r in CM))
+check('pages-cited: citations and answers sum to citations-monthly', sum(I(r['Citations']) for r in PC) == sum(I(r['Citations']) for r in CM) and sum(I(r['Answers']) for r in PC) == sum(I(r['Answers']) for r in CM),
+      f"{sum(I(r['Citations']) for r in PC)} vs {sum(I(r['Citations']) for r in CM)}")
+check('pages-cited: one row per URL, FirstCited <= LastCited, first-after-LastMod on or after LastMod', len({r['URL'] for r in PC}) == len(PC)
+      and all(r['FirstCited'] <= r['LastCited'] for r in PC) and all((not r['FirstCitedAfterLastMod']) or r['FirstCitedAfterLastMod'] >= r['LastMod'] for r in PC))
 
 # ── 9b. prompts.json and the prompt canary ────────────────────────────────────
 # The system prompts stay in the git-ignored review folder; the repo holds a set-level fingerprint only (brief §60).

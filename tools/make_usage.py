@@ -51,6 +51,8 @@ Outputs (all daily counts; nothing per-turn and no text crosses into the dashboa
   starter-prompts-monthly.csv  Month, Prompt, Count, Cited, FollowedByTyped, FollowedBySuggested
   outcome-rules-daily.csv   Date, Rule, Turns: the id of the phrase that decided each outcome (needs feeds redacted
                             with Outcome Rule, brief §53)
+  pages-cited.csv           URL, FirstCited, LastCited, Citations, Answers, Partial, Dislikes, LastMod,
+                            FirstCitedAfterLastMod, AnswersAfterLastMod (one row per cited page, all data; brief §62)
   answer-style-daily.csv    Date, Outcome, Turns, Words, Lines, Hedges, Apologies, Signposts, Questions, Links, Openers,
                             Invitations, Absolutes, Emphasis, Nested, External, Freshness, Signoff (style 2026.10.23-2),
                             WithLines..WithLinks: the wording fingerprint summed per day and outcome
@@ -95,7 +97,9 @@ Usage:
 """
 import argparse, csv, os, re, sys
 from collections import defaultdict
-from datetime import datetime
+from datetime import datetime, date
+
+REPO = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
 TS_FORMAT = "%b %d, %Y %H:%M"   # e.g. "Jun 06, 2026 19:50"
 MONTHS = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"]
@@ -163,6 +167,8 @@ def aggregate(files, skip_days=frozenset()):
     bad = 0; has_voice = False; cat_dropped = 0; has_outcome = False; rules = set(); has_starter = False; has_script = False
     recs = []                                        # per-turn minimal records for the conversation pass (no text)
     cites_m = defaultdict(int)                       # (month, url) -> citations
+    cites_x = defaultdict(lambda: defaultdict(int))  # (month, url) -> answers citing it, partial answers, dislikes (brief §62)
+    pages = {}                                       # url -> first/last citation date and totals (brief §62)
     latb = defaultdict(lambda: defaultdict(int))     # (date, kind, bucket) -> turns, latsum
     has_words = False
     rulesd = defaultdict(int)                        # (date, outcome rule id) -> turns (brief §53)
@@ -282,9 +288,25 @@ def aggregate(files, skip_days=frozenset()):
                 recs.append((conv, tn, t, d, o_rec, own, (row.get("Question Type") or "").strip(),
                              fb == "dislike" and o_rec == "Cited answer", (row.get("Starter Prompt") or "").strip() if has_starter else "",
                              (row.get("Source") or "").strip()))
+                nus = []
                 for u in urls:
                     nu = norm_url(u)
-                    if nu: cites_m[(d.strftime("%Y-%m"), nu)] += 1
+                    if nu:
+                        cites_m[(d.strftime("%Y-%m"), nu)] += 1
+                        if nu not in nus: nus.append(nu)
+                is_partial = (row.get("Partial") or "").strip().lower() == "yes"
+                for nu in nus:   # once per answer and page
+                    x = cites_x[(d.strftime("%Y-%m"), nu)]; x["answers"] += 1
+                    if is_partial: x["partial"] += 1
+                    if fb == "dislike": x["dislikes"] += 1
+                    pg = pages.get(nu)
+                    if pg is None: pg = pages[nu] = {"first": d, "last": d, "cites": 0, "answers": 0, "partial": 0, "dislikes": 0, "days": defaultdict(int)}
+                    pg["first"] = min(pg["first"], d); pg["last"] = max(pg["last"], d); pg["answers"] += 1; pg["days"][d] += 1
+                    if is_partial: pg["partial"] += 1
+                    if fb == "dislike": pg["dislikes"] += 1
+                for u in urls:
+                    nu = norm_url(u)
+                    if nu: pages[nu]["cites"] += 1
                 # latency by response length and by citation count (positive response times only)
                 if has_words:
                     try: ms3 = int(float(row.get("Response Time (ms)") or ""))
@@ -314,7 +336,7 @@ def aggregate(files, skip_days=frozenset()):
                         cat_dropped += sum(1 for x in slugs if x is None)
                         toks = [x for x in slugs if x]
                     for s in set(toks): cats[d][s] += 1
-    return D, sess, lat, hours, hour_sess, cats, bad, has_voice, dupes, cat_dropped, has_outcome, rules, has_starter, has_script, recs, cites_m, latb, rulesd, style
+    return D, sess, lat, hours, hour_sess, cats, bad, has_voice, dupes, cat_dropped, has_outcome, rules, has_starter, has_script, recs, (cites_m, cites_x, pages), latb, rulesd, style
 
 
 STYLE_COLS = ["Lines", "Hedges", "Apologies", "Signposts", "Questions", "Links", "Openers", "Invitations", "Absolutes", "Emphasis", "Nested", "External", "Freshness", "Signoff"]
@@ -473,9 +495,35 @@ def latency_bucket_rows(latb):
     return ["Date", "Kind", "Bucket", "Turns", "LatencySumMs"], [[d.isoformat(), kind, b, e["turns"], e["latsum"]] for (d, kind, b), e in sorted(latb.items())]
 
 
-def citation_rows(cites_m):
+def citation_rows(cites_m, cites_x):
+    """citations-monthly.csv: citations per page and month; Answers = answers citing the page (once each), Partial = of
+    those, answers that also say something is missing; Dislikes = disliked answers citing it (brief §62)."""
     rows = sorted(cites_m.items(), key=lambda kv: (kv[0][0], -kv[1], kv[0][1]))
-    return ["Month", "URL", "Citations", "Category"], [[m, u, n, url_slug(u) or ""] for (m, u), n in rows]
+    return ["Month", "URL", "Citations", "Category", "Answers", "Partial", "Dislikes"], \
+           [[m, u, n, url_slug(u) or "", cites_x[(m, u)]["answers"], cites_x[(m, u)]["partial"], cites_x[(m, u)]["dislikes"]] for (m, u), n in rows]
+
+
+def page_rows(pages, site_pages_csv):
+    """pages-cited.csv: one row per cited page over all the data: first and last citation day, citations, answers,
+    partial answers and dislikes; and, when site-pages.csv is beside the repo, the page's LastMod, the first day it was
+    cited on or after that LastMod and how many answers cited it since. That is the index lag: how long after a page
+    changed before AskCI cited the changed page (brief §62, with Budget 2027 as the test case)."""
+    mod = {}
+    if site_pages_csv and os.path.exists(site_pages_csv):
+        with open(site_pages_csv, encoding="utf-8-sig", newline="") as fh:
+            for r in csv.DictReader(fh):
+                u = (r.get("URL") or "").strip().rstrip("/").lower(); lm = (r.get("LastMod") or "").strip()[:10]
+                if u and re.fullmatch(r"\d{4}-\d{2}-\d{2}", lm): mod[u] = lm
+    cols = ["URL", "FirstCited", "LastCited", "Citations", "Answers", "Partial", "Dislikes", "LastMod", "FirstCitedAfterLastMod", "AnswersAfterLastMod"]
+    out = []
+    for u, pg in sorted(pages.items(), key=lambda kv: (-kv[1]["answers"], kv[0])):
+        lm = mod.get(u.lower(), "")
+        fa = ca = ""
+        if lm:
+            lmd = date.fromisoformat(lm); after = sorted(d for d in pg["days"] if d >= lmd)
+            fa = after[0].isoformat() if after else ""; ca = sum(pg["days"][d] for d in after)
+        out.append([u, pg["first"].isoformat(), pg["last"].isoformat(), pg["cites"], pg["answers"], pg["partial"], pg["dislikes"], lm, fa, ca])
+    return cols, out
 
 
 def journey_rows(jm):
@@ -617,7 +665,7 @@ def main():
     # An export taken on day X contains only part of day X; skip those rows unless asked to keep them.
     export_days = {datetime.strptime(m.group(1), "%Y%m%d").date() for m in (re.search(r"(\d{8})_\d{6}", os.path.basename(f)) for f in a.files) if m}
     skip = frozenset() if (a.keep_partial or not export_days) else frozenset({max(export_days)})  # only the newest export's own day is partial
-    D, sess, lat, hours, hour_sess, cats, bad, has_voice, dupes, cat_dropped, has_outcome, rules, has_starter, has_script, recs, cites_m, latb, rulesd, style = aggregate(a.files, skip)
+    D, sess, lat, hours, hour_sess, cats, bad, has_voice, dupes, cat_dropped, has_outcome, rules, has_starter, has_script, recs, (cites_m, cites_x, pages), latb, rulesd, style = aggregate(a.files, skip)
     rules = ", ".join(sorted(r for r in rules if r))
     if skip and any(True for _ in skip): print(f"note: export day(s) {', '.join(str(x) for x in sorted(skip))} skipped as partial (--keep-partial to keep)")
     cd, co, jm, sp, cstats = conversation_pass(recs)
@@ -645,7 +693,8 @@ def main():
         write(os.path.join(a.out_dir, "categories-daily.csv"), dcols, drows)
         write(os.path.join(a.out_dir, "conversations-daily.csv"), *conversation_rows(cd))
         write(os.path.join(a.out_dir, "category-outcomes-daily.csv"), *category_outcome_rows(co))
-        write(os.path.join(a.out_dir, "citations-monthly.csv"), *citation_rows(cites_m))
+        write(os.path.join(a.out_dir, "citations-monthly.csv"), *citation_rows(cites_m, cites_x))
+        write(os.path.join(a.out_dir, "pages-cited.csv"), *page_rows(pages, os.path.join(REPO, "site-pages.csv")))
         write(os.path.join(a.out_dir, "journeys-monthly.csv"), *journey_rows(jm))
         write(os.path.join(a.out_dir, "starter-prompts-monthly.csv"), *starter_rows(sp))
         if latb: write(os.path.join(a.out_dir, "latency-buckets-daily.csv"), *latency_bucket_rows(latb))
