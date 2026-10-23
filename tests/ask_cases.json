@@ -1135,7 +1135,8 @@
   "expect": [
    "173",
    "319%",
-   "724"
+   "724",
+   "4.2×"
   ]
  },
  {
@@ -1691,6 +1692,16 @@
   "not": [
    "Cost didn’t"
   ],
+  "group": "viz"
+ },
+ {
+  "q": "give me a summary of September",
+  "expect": [
+   "21,718 TURNS",
+   "88.0% REACHED A CITED ANSWER",
+   "+2.9 pts"
+  ],
+  "note": "summary tiles use the same comparison window as What changed",
   "group": "viz"
  }
 ]

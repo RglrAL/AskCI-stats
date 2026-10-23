@@ -497,3 +497,14 @@ Next, step 2: the answer card itself (larger headline, a coloured change chip, a
 - **Tests.** The regression harness now leaves the echoed question out of the answer text, so "must not contain" checks test the answer, and `--record` no longer depends on the echo. Expectations updated for the deliberate changes (money separators, page names, journey labels); 204 pass.
 
 Next, step 3: the special answers (the "How AskCI is doing" summary, growth, combined questions, "What changed", events).
+
+## 36. Ask bar visual audit, step 3: the special answers (23 Oct 2026)
+
+- **Summary** ("how is AskCI doing", "summary of September", "what happened on 27 January"):
+  - Six tiles: turns, conversations, reached a cited answer, not-found rate, click-throughs per 100 cited, and spend. Each has a coloured change chip and a daily sparkline.
+  - Then the top three What changed statements and the period's events, on a timeline.
+  - The tiles compare against the same window as What changed (for a part month, the same elapsed days of the previous month), so one card never shows two different changes for the same measure.
+- **Growth** ("how much has usage grown since April"): the multiple is the headline (4.2×), above the two months compared. The chart is the month-by-month path between them (per day), with events flagged, instead of two bars in unrelated colours.
+- **Combined questions** ("questions and conversations in September"): two equal tiles, each with its value, sentence, change chip and sparkline. Single-measure comparisons draw the earlier period muted and the later one in the accent colour.
+- **What changed:** each statement leads with its change as a chip, green or red by the measure's polarity (lower is better for failures, latency and cost; higher for cited answers and reached a cited answer), and grey for demand.
+- **Events:** a timeline (coloured dot, date, title, two-line detail) under a questions chart with each event flagged where it happened.
