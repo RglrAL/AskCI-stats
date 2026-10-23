@@ -7368,8 +7368,8 @@ init();
     if(qn||qThis||qLast){const lmo=+latest.slice(5,7),ly=+latest.slice(0,4),cur=Math.ceil(lmo/3);
       let n=qn?(qn[1]?+qn[1]:{first:1,second:2,third:3,fourth:4,'1st':1,'2nd':2,'3rd':3,'4th':4}[qn[2]]):qThis?cur:cur-1,y=yy0?+yy0[1]:ly;if(n<1){n=4;y--;}if(!yy0&&qn&&n>cur)y--;
       const f=`${y}-${String(3*n-2).padStart(2,'0')}-01`,lk=`${y}-${String(3*n).padStart(2,'0')}`,t=`${lk}-${String(dim(lk)).padStart(2,'0')}`;
-      return{kind:'range',from:f,to:t>latest?latest:t,label:`Q${n} ${y}`+(t>latest?' to date':'')};}
-    if(/\b(last|past|this|previous) fortnight\b|\b(last|past) two weeks\b/.test(q))return{kind:'range',from:isoAdd(latest,-13),to:latest,label:'the last 14 days'};
+      return{kind:'range',from:f,to:t>latest?latest:t,label:`Q${n} ${y}`+(t>latest?' to date':''),rel:t>latest};}
+    if(/\b(last|past|this|previous) fortnight\b|\b(last|past) two weeks\b/.test(q))return{kind:'range',from:isoAdd(latest,-13),to:latest,label:'the last 14 days',roll:14};
     const wk=q.match(new RegExp('\\b(first|second|third|fourth|last|1st|2nd|3rd|4th) week (?:of|in) '+MRE+'\\b'));
     if(wk){const mi=ABBR.indexOf(wk[2].slice(0,3)),y=yrOf(mi),mk=`${y}-${String(mi+1).padStart(2,'0')}`,D=dim(mk);
       const k={first:0,'1st':0,second:1,'2nd':1,third:2,'3rd':2,fourth:3,'4th':3}[wk[1]],s0=wk[1]==='last'?D-6:1+7*k,e0=Math.min(s0+6,D);
@@ -7379,7 +7379,7 @@ init();
     const evOf=re=>confirmedEvents().find(e=>re.test(String(e.title||'')));
     const bud=evOf(/budget/i),lau=confirmedEvents().find(e=>e.kind==='launch');
     if(bud&&/\bbudget week\b/.test(q)){const ws=weekStart(bud.start);return{kind:'range',from:ws,to:isoAdd(ws,6),label:'Budget week ('+fmtDate(ws)+' to '+fmtDate(isoAdd(ws,6))+')'};}
-    if(lau&&/\b(since|after|from)\s+(the\s+)?((pop[- ]?up|modal)\s+)?launch(ed)?\b|\bsince the (pop[- ]?up|modal) launched\b/.test(q))return{kind:'range',from:lau.start,to:latest,label:fmtDate(lau.start)+' to date (since the pop-up launch)',since:true};
+    if(lau&&/\b(since|after|from)\s+(the\s+)?((pop[- ]?up|modal)\s+)?launch(ed)?\b|\bsince the (pop[- ]?up|modal) launched\b/.test(q))return{kind:'range',rel:true,from:lau.start,to:latest,label:fmtDate(lau.start)+' to date (since the pop-up launch)',since:true};
     if(bud&&/\bbudget( day)?\b/.test(q))return{kind:'day',from:bud.start,to:bud.start,label:'Budget Day ('+fmtDate(bud.start)+')'};
     if(lau&&/\b((pop[- ]?up|modal)\s+launch|launch day)\b/.test(q))return{kind:'day',from:lau.start,to:lau.start,label:'the pop-up launch ('+fmtDate(lau.start)+')'};
     // Explicit ranges: "15 March to 30 April", "March to May" (each month in its latest year up to the data's end).
@@ -7404,7 +7404,7 @@ init();
       const mi=ABBR.indexOf(since[4].slice(0,3));
       const year=yy?+yy[1]:((mi+1<=+latest.slice(5,7))?+latest.slice(0,4):+latest.slice(0,4)-1);
       const from=year+'-'+String(mi+1).padStart(2,'0')+'-01';
-      return{kind:'range',from,to:latest,label:MONFULL[mi]+' '+year+' to date',since:true};
+      return{kind:'range',from,to:latest,label:MONFULL[mi]+' '+year+' to date',since:true,rel:true};
     }
     if(mm){
       const mi=ABBR.indexOf(mm[1].slice(0,3));
@@ -7419,21 +7419,21 @@ init();
     }
     if(yy)return{kind:'year',from:yy[1]+'-01-01',to:yy[1]+'-12-31',label:yy[1]};
     if(/\blast month\b/.test(q)){const mk=prevMonth(latest.slice(0,7));return{kind:'month',monthKey:mk,from:mk+'-01',to:mk+'-'+String(dim(mk)).padStart(2,'0'),label:fmtMonth(mk)};}
-    if(/\bthis month\b/.test(q)){const mk=latest.slice(0,7);return{kind:'month',monthKey:mk,from:mk+'-01',to:latest,label:fmtMonth(mk)};}
+    if(/\bthis month\b/.test(q)){const mk=latest.slice(0,7);return{kind:'month',monthKey:mk,from:mk+'-01',to:latest,label:fmtMonth(mk),rel:true};}
     const nd=q.match(/\blast (\d+) days?\b/);
-    if(nd){const n=Math.max(1,+nd[1]);return{kind:'range',from:addDays(latest,-(n-1)),to:latest,label:'the last '+n+' days'};}
+    if(nd){const n=Math.max(1,+nd[1]);return{kind:'range',from:addDays(latest,-(n-1)),to:latest,label:'the last '+n+' days',roll:n};}
     const nw=q.match(/\blast (\d+) weeks?\b/);
-    if(nw){const n=Math.max(1,+nw[1]);return{kind:'range',from:addDays(latest,-(n*7-1)),to:latest,label:'the last '+n+' weeks'};}
+    if(nw){const n=Math.max(1,+nw[1]);return{kind:'range',from:addDays(latest,-(n*7-1)),to:latest,label:'the last '+n+' weeks',roll:n*7};}
     const nmo=q.match(/\blast (\d+) months?\b/);
-    if(nmo){const n=Math.max(1,+nmo[1]);let mk=latest.slice(0,7);for(let i=1;i<n;i++)mk=prevMonth(mk);return{kind:'range',from:mk+'-01',to:latest,label:'the last '+n+' months'};}
-    if(/\bthis week\b/.test(q))return{kind:'range',from:weekStart(latest),to:latest,label:'this week'};
-    if(/\b(last|past) week\b|\blast 7\b/.test(q))return{kind:'range',from:addDays(latest,-6),to:latest,label:'the last 7 days'};
-    if(/\b(ytd|year to date|this year|so far this year)\b/.test(q))return{kind:'range',from:latest.slice(0,4)+'-01-01',to:latest,label:'year-to-date'};
+    if(nmo){const n=Math.max(1,+nmo[1]);let mk=latest.slice(0,7);for(let i=1;i<n;i++)mk=prevMonth(mk);return{kind:'range',from:mk+'-01',to:latest,label:'the last '+n+' months',rel:true};}
+    if(/\bthis week\b/.test(q))return{kind:'range',from:weekStart(latest),to:latest,label:'this week',rel:true};
+    if(/\b(last|past) week\b|\blast 7\b/.test(q))return{kind:'range',from:addDays(latest,-6),to:latest,label:'the last 7 days',roll:7,lastWeek:/\blast week\b/.test(q)};
+    if(/\b(ytd|year to date|this year|so far this year)\b/.test(q))return{kind:'range',from:latest.slice(0,4)+'-01-01',to:latest,label:'year-to-date',rel:true};
     if(/\byesterday\b/.test(q))return{kind:'day',from:addDays(latest,-1),to:addDays(latest,-1),label:fmtDate(addDays(latest,-1))};
-    if(/\btoday\b|\blatest day\b/.test(q))return{kind:'day',from:latest,to:latest,label:fmtDate(latest)};
+    if(/\btoday\b|\blatest day\b/.test(q))return{kind:'day',from:latest,to:latest,label:fmtDate(latest),today:true};
     const iso=q.match(/\b(20\d{2}-\d{2}-\d{2})\b/);
     if(iso)return{kind:'day',from:iso[1],to:iso[1],label:fmtDate(iso[1])};
-    return{kind:'all',from:first,to:latest,label:'the full period'};
+    return{kind:'all',from:first,to:latest,label:'the full period',rel:true};
   }
   // A service alias must match as whole words: substring tests read "across" as acr (Container Registry),
   // "research" as search and "vacation" as aca.
@@ -7560,7 +7560,7 @@ init();
     if(!d.metricExplicit&&!d.periodExplicit&&!d.category&&!d.filter&&!d.groupBy&&!d.trend&&!d.hours&&!d.days)return null; // too vague standalone → defer
     let period=d.period;
     if(d.trend&&period.kind==='all'&&!d.periodExplicit){const latest=lastDate();period={kind:'range',from:addDays(latest,-89),to:latest,label:'the last 90 days'};} // a trend needs a window; default to 90 days
-    return{raw:orig,period,metric:d.metric,agg:d.agg,bucket:d.bucket,category:d.category,filter:d.filter,groupBy:d.groupBy,trend:d.trend,hours:d.hours,days:d.days};
+    return{raw:orig,period,metric:d.metric,agg:d.agg,bucket:d.bucket,category:d.category,filter:d.filter,groupBy:d.groupBy,trend:d.trend,hours:d.hours,days:d.days,share:!!d.category&&/\b(share|percentage|proportion|what percent)\b/.test(d.q)};
   }
 
   // "Jan vs Feb", "this month vs last month", "compare X and Y" → two-period compare
@@ -7841,6 +7841,12 @@ init();
 
   // ── Compute from real data ──
   function compute(intent){
+    if(!intent._sub&&intent.period&&!intent._anchored){
+      intent.period=anchorPeriod(intent.period,intent.metric.kind);intent._anchored=true;
+      const L=lastDayFor(intent.metric.kind);
+      if(intent.period.beyond||intent.period.from>L)return{empty:true,intent,why:`${fmtDate(intent.period.from)} isn’t in the ${isCostK(intent.metric.kind)?'billing data':'question data'} yet (data to ${fmtDate(L)})`};
+      if(intent.period.lastWeek)addNotice(`“Last week” is read as the last 7 days, ${fmtDate(intent.period.from)} to ${fmtDate(intent.period.to)}, not Monday to Sunday.`);
+    }
     const {metric,period,agg}=intent;
     const rows=DATA.merged.filter(d=>d.date>=period.from&&d.date<=period.to&&(!intent.days||intent.days.set.includes(isoDow(d.date))));
     if(intent.days&&!intent._sub)addNotice('Counting '+intent.days.label+' only.');
@@ -7966,6 +7972,7 @@ init();
     else if(agg==='max'||agg==='min'){let bi=-1;vals.forEach((v,i)=>{if(v<=0)return;if(bi<0||(agg==='max'?v>vals[bi]:v<vals[bi]))bi=i;});if(bi<0)bi=0;value=vals[bi];note=(agg==='max'?'peak on ':'lowest on ')+rows[bi].label;intent._day=rows[bi].date;}
     else value=vals.reduce((a,b)=>a+b,0);
     const fmt=money?(v=>gbp(v,Math.abs(v)>=100?0:2)):(v=>num(Math.round(v)));
+    if(isCostK(metric.kind)&&DATA.settledCutoff){const pv=rows.filter(d=>d.hasCost&&d.date>DATA.settledCutoff).length;if(pv)note=(note?note+' · ':'')+`includes ${pv} provisional billing day${pv>1?'s':''} (after ${fmtDate(DATA.settledCutoff)})`;}
     return{value,fmt,series,note,intent};
   }
   // ── Measures whose registry entry carries a calc: one day's value, and a rate over a period ──
@@ -8010,7 +8017,7 @@ init();
         const cs=rows.map(d=>(CATDAY[d.date]||{})[category]||0);
         return{value:cs.reduce((a,b)=>a+b,0),fmt:v=>num(Math.round(v)),series:cs,note:`turns citing a ${cl} page, one per turn per category`,intent,subj:cl+' citations'};
       }
-      if((k==='questions'||k==='spend')&&/\b(share|percentage|proportion|what percent)\b/.test(String(intent.raw||''))){
+      if((k==='questions'||k==='spend')&&(intent.share||/\b(share|percentage|proportion|what percent)\b/.test(String(intent.raw||'')))){
         let all=0;rows.forEach(d=>Object.entries(CATOUT[d.date]||{}).forEach(([c,o])=>{if(c!=='unknown'&&!CAT_EXCLUDE.has(c))all+=o.Turns||0;}));
         return{...rateRes(S('Turns'),all,'of questions with an identifiable topic','questions with a topic'),subj:'share of questions about '+cl};}
       if(k==='questions'||k==='spend')return{value:S('Turns'),fmt:v=>num(Math.round(v)),series:ser('Turns'),note:`turns attributed to ${cl}`,intent,subj:'turns in '+cl};
@@ -8249,6 +8256,22 @@ init();
     const r=rateOK(n,den),lbl=k==='notfound'?'not-found share of turns':'error share of turns';
     return{value:r.ok&&den>0?n/den*100:null,fmt:v=>v==null?'—':v.toFixed(1)+'%',series:null,note:r.ok?`${num(n)} of ${num(den)} turns ${H.label} · over all turns, not scored turns · ${tz}`:`not shown: ${r.why} (small-sample rule)`,intent,subj:`${lbl} ${H.label}`};
   }
+  // The last day a measure's data reaches: billing data for cost, the click exports for click-throughs, the question
+  // feed for everything else. Relative periods ("last week", "this month", "to date") end on it, so a question measure is
+  // never cut short by a billing day the feed doesn't have yet.
+  const feedLast=()=>(DATA.merged.filter(d=>d.queries>0).slice(-1)[0]||{}).date||lastDate();
+  function lastDayFor(kind){
+    if(isCostK(kind))return DATA.latest||lastDate();
+    if(kind==='clicks'&&typeof clickRange!=='undefined'&&clickRange)return clickRange.to<feedLast()?clickRange.to:feedLast();
+    return feedLast();
+  }
+  function anchorPeriod(p,kind){
+    if(!p)return p;const L=lastDayFor(kind);
+    if(p.roll)return{...p,from:addDays(L,-(p.roll-1)),to:L};
+    if(p.today)return{...p,beyond:p.from>L?L:null};
+    if((p.rel||p.kind==='all'||p.kind==='month'||p.kind==='year'||p.kind==='range')&&p.to>L)return{...p,to:L};
+    return p;
+  }
   function subIntent(intent,p){return{...intent,period:p,raw:'',_sub:true,groupBy:null,trend:false};}
   function bucketsFor(period,groupBy){
     const out=[];
@@ -8381,18 +8404,21 @@ init();
       const vals=prior.map(d=>{const r=compute(subIntent(intent,{kind:'day',from:d,to:d,label:''}));return r&&!r.empty?r.value:null;}).filter(v=>v!=null);
       if(vals.length===4){const avg=vals.reduce((a,b)=>a+b,0)/4;if(avg>0)return `${(value/avg).toFixed(1)}× the average of the previous four ${wd}s (${num(Math.round(avg))})`;}
     }
-    const days=Math.round((new Date(p.to)-new Date(p.from))/86400000)+1;
-    const prevTo=addDays(p.from,-1),prevFrom=addDays(prevTo,-(days-1));
-    const prev=DATA.merged.filter(d=>d.date>=prevFrom&&d.date<=prevTo);
+    // The dashboard's own rule (comparisonWindow): a whole month against the previous calendar month, a month in
+    // progress against the same elapsed days of the previous month, anything else against the window just before.
+    const W=comparisonWindow(p.from,p.to);
+    const vsTxt=W.rule==='the previous calendar month'?MONFULL[+W.from.slice(5,7)-1]:spanLabel(W.from,W.to);
+    const prev=DATA.merged.filter(d=>d.date>=W.from&&d.date<=W.to);
     if(!prev.length)return '';
     // An answer narrowed by hours, topic or filter compares the same narrowing in the prior window, never the whole of it.
-    const pv=(intent.hours||intent.category||intent.filter||intent.days)?(()=>{const r=compute(subIntent(intent,{kind:'range',from:prevFrom,to:prevTo,label:''}));return r&&!r.empty?r.value:0;})()
+    const pv=(intent.hours||intent.category||intent.filter||intent.days)?(()=>{const r=compute(subIntent(intent,{kind:'range',from:W.from,to:W.to,label:''}));return r&&!r.empty?r.value:null;})()
                          :prev.reduce((s,d)=>s+rowVal(d,intent.metric),0);
-    if(!(pv>0))return '';
-    const pct=(value-pv)/pv*100;
+    if(pv==null||!(pv>0))return '';
     const tail=(DATA.latest&&p.to>DATA.latest&&isMoneyK(intent.metric.kind))?' · billing data ends '+fmtDate(DATA.latest):'';
-    if(Math.abs(pct)<1)return 'flat vs the prior '+days+'d'+tail;
-    return (pct>0?'up ':'down ')+Math.abs(pct).toFixed(0)+'% vs the prior '+days+'d'+tail;
+    if(intent.share){const d=value-pv;return Math.abs(d)<0.05?'flat vs '+vsTxt:(d>0?'up ':'down ')+Math.abs(d).toFixed(1)+' pts vs '+vsTxt+' ('+pv.toFixed(1)+'%)';}
+    const pct=(value-pv)/pv*100;
+    if(Math.abs(pct)<1)return 'flat vs '+vsTxt+tail;
+    return (pct>0?'up ':'down ')+Math.abs(pct).toFixed(0)+'% vs '+vsTxt+tail;
   }
   function drillButtons(intent){
     const p=intent.period,m=intent.metric,b=[];
@@ -8483,6 +8509,11 @@ init();
   }
   function renderCompare(res){
     const el=$('ask-answer'); if(!el)return;
+    // Always the later period against the earlier one, whichever order the question names them in, and said in words:
+    // "September 2026 is 20% above August 2026". Sides are shown earlier → later.
+    if(res.intent.periodA&&res.intent.periodB&&res.intent.periodA.from>res.intent.periodB.from){
+      const it=res.intent;res={...res,a:res.b,b:res.a,intent:{...it,periodA:it.periodB,periodB:it.periodA}};
+    }
     const {a,b,intent}=res,m=intent.metric;
     const isEntity=(m.kind==='topService'||m.kind==='topModel');
     const fmt=isEntity?(v=>gbp(v,Math.abs(v)>=100?0:2)):(a.fmt||b.fmt||(v=>v));
@@ -8497,8 +8528,8 @@ init();
       // A rate or share changes in percentage points, not by a relative per cent of itself.
       const pts=isPctK(m.kind);
       const nearP=pts?Math.abs(vb-va)<0.05:near;
-      delta='<span class="impact-change '+(nearP?'':(good?'pos':'neg'))+'">'+(nearP?'≈':(up?'▲':'▼'))+' '+(pts?Math.abs(vb-va).toFixed(1)+' pts':Math.abs(pct).toFixed(0)+'%')+'</span>';
-      diff=' · '+(up?'+':'−')+(pts?Math.abs(vb-va).toFixed(1)+' points':fmt(Math.abs(vb-va)))+' vs '+intent.periodA.label;
+      delta='<span class="ask-delta '+(nearP||!lowerBetterK(m.kind)&&!mIs(m.kind,x=>x.polarity==='up')&&!isEntity?'neu':(good?'good':'bad'))+'">'+(nearP?'≈':'<span class="ask-arr">'+(up?'▲':'▼')+'</span>')+' '+(pts?Math.abs(vb-va).toFixed(1)+' pts':Math.abs(pct).toFixed(0)+'%')+'</span>';
+      diff=nearP?` · ${intent.periodB.label} is about the same as ${intent.periodA.label}`:` · ${intent.periodB.label} is ${pts?Math.abs(vb-va).toFixed(1)+' points':Math.abs(pct).toFixed(0)+'%'} ${up?'above':'below'} ${intent.periodA.label} (${up?'+':'−'}${pts?Math.abs(vb-va).toFixed(1)+' pts':fmt(Math.abs(vb-va))})`;
     }
     const side=(p,r)=>isEntity
       ? '<div class="ask-cmp-side"><div class="ask-cmp-lbl">'+esc(p.label)+'</div><div class="ask-cmp-name">'+esc(r.empty?'—':r.bigVal)+'</div><div class="ask-cmp-cost">'+(r.empty?'':fmt(r.value))+'</div></div>'
@@ -8604,6 +8635,7 @@ init();
   function renderDigest(res){
     const el=$('ask-answer'); if(!el)return;
     if(res.compare){
+      if(res.intent.periodA&&res.intent.periodB&&res.intent.periodA.from>res.intent.periodB.from){const it=res.intent;res={...res,a:res.b,b:res.a,intent:{...it,periodA:it.periodB,periodB:it.periodA}};}
       const {a,b,intent}=res;
       const blk=d=>d
         ? '<div class="ask-cmp-side"><div class="ask-cmp-lbl">'+esc(d.p.label)+'</div><div class="ask-cmp-name">'+gbp(d.spend,d.spend>=100?0:2)+'</div><div class="ask-cmp-cost">'+num(d.q)+' turns · top '+esc(d.top||'—')+'</div></div>'

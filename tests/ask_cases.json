@@ -56,8 +56,9 @@
   "q": "is usage going up",
   "group": "mgmt",
   "expect": [
-   "rising ▲ +39%"
-  ]
+   "rising ▲ +47%"
+  ],
+  "note": "windows end on the question data's last day (22 Oct), not the billing day (review step 1)"
  },
  {
   "q": "what was the busiest week",
@@ -106,12 +107,12 @@
   "q": "questions last fortnight",
   "group": "mgmt",
   "expect": [
-   "11,980 turns"
+   "12,889 turns"
   ],
   "not": [
    "136,752"
   ],
-  "note": "answered a different question before the Ask bar audit (brief §29)"
+  "note": "answered a different question before the Ask bar audit (brief §29) · windows end on the question data's last day (22 Oct), not the billing day (review step 1)"
  },
  {
   "q": "average conversations per day since launch",
@@ -237,13 +238,13 @@
   "q": "is the answer quality getting worse",
   "group": "quality",
   "expect": [
-   "falling ▼ −8.8 pts",
+   "falling ▼ −8.5 pts",
    "cited answer rate"
   ],
   "not": [
    "total spend"
   ],
-  "note": "answered a different question before the Ask bar audit (brief §29)"
+  "note": "answered a different question before the Ask bar audit (brief §29) · windows end on the question data's last day (22 Oct), not the billing day (review step 1)"
  },
  {
   "q": "error rate last week",
@@ -550,12 +551,12 @@
   "q": "click throughs on mobile",
   "group": "clicks",
   "expect": [
-   "3,261 click-throughs"
+   "3,250 click-throughs"
   ],
   "not": [
    "4,883"
   ],
-  "note": "answered a different question before the Ask bar audit (brief §29)"
+  "note": "answered a different question before the Ask bar audit (brief §29) · windows end on the question data's last day (22 Oct), not the billing day (review step 1)"
  },
  {
   "q": "which topic has the highest click through rate",
@@ -784,8 +785,9 @@
   "q": "qs last wk",
   "group": "phrasing",
   "expect": [
-   "5,820 turns"
-  ]
+   "6,679 turns"
+  ],
+  "note": "windows end on the question data's last day (22 Oct), not the billing day (review step 1)"
  },
  {
   "q": "how many querys in august",
@@ -1210,8 +1212,9 @@
   "q": "how many click-throughs",
   "group": "verified",
   "expect": [
-   "4,883 click-throughs"
-  ]
+   "4,869 click-throughs"
+  ],
+  "note": "windows end on the question data's last day (22 Oct), not the billing day (review step 1)"
  },
  {
   "q": "how many pages did people click through to",
@@ -1302,8 +1305,9 @@
   "q": "is the not-found rate decreasing",
   "group": "verified",
   "expect": [
-   "4.6 pts"
-  ]
+   "4.4 pts"
+  ],
+  "note": "windows end on the question data's last day (22 Oct), not the billing day (review step 1)"
  },
  {
   "q": "spend on 2026-05-11",
@@ -1379,8 +1383,9 @@
   "q": "p90 last 30 days",
   "group": "verified",
   "expect": [
-   "18.1s response"
-  ]
+   "18.0s response"
+  ],
+  "note": "windows end on the question data's last day (22 Oct), not the billing day (review step 1)"
  },
  {
   "q": "what changed in September",
@@ -1672,10 +1677,11 @@
   "q": "click throughs by device",
   "expect": [
    "Mobile · 67%",
-   "3,261",
+   "3,250",
    "Desktop · 32%"
   ],
-  "group": "viz"
+  "group": "viz",
+  "note": "windows end on the question data's last day (22 Oct), not the billing day (review step 1)"
  },
  {
   "q": "why did cost go up in september",
@@ -1748,5 +1754,114 @@
    "15 Sep, 13:00 to 14:00"
   ],
   "group": "mgmt"
+ },
+ {
+  "q": "questions in September vs August",
+  "expect": [
+   "September 2026 is 20% above August 2026",
+   "▲ 20%"
+  ],
+  "not": [
+   "▼ 16%"
+  ],
+  "group": "review",
+  "note": "finding 1: later period against earlier, in words"
+ },
+ {
+  "q": "August vs September questions",
+  "expect": [
+   "September 2026 is 20% above August 2026"
+  ],
+  "group": "review",
+  "note": "finding 1: same answer whichever order the periods are named"
+ },
+ {
+  "q": "not found rate in September vs August",
+  "expect": [
+   "September 2026 is 2.9 points above August 2026"
+  ],
+  "not": [
+   "▼ 2.9"
+  ],
+  "group": "review",
+  "note": "finding 2: a rise in not-found is shown as a rise"
+ },
+ {
+  "q": "share of questions about housing in October",
+  "expect": [
+   "11.7%",
+   "2,236 of 19,039"
+  ],
+  "not": [
+   "99%"
+  ],
+  "group": "review",
+  "note": "finding 3: shares compare in points"
+ },
+ {
+  "q": "questions last week",
+  "expect": [
+   "6,679 turns",
+   "“Last week” is read as the last 7 days, 16 Oct to 22 Oct"
+  ],
+  "not": [
+   "5,820",
+   "prior 6d"
+  ],
+  "group": "review",
+  "note": "findings 4 and 27: anchored on the question data's last day; the reading announced"
+ },
+ {
+  "q": "questions in the last 2 weeks",
+  "expect": [
+   "12,889 turns",
+   "vs 25 Sep – 8 Oct"
+  ],
+  "group": "review",
+  "note": "finding 4: the prior window is 14 days too"
+ },
+ {
+  "q": "questions today",
+  "expect": [
+   "23 Oct isn’t in the question data yet (data to 22 Oct)"
+  ],
+  "not": [
+   "0 turns"
+  ],
+  "group": "review",
+  "note": "finding 5"
+ },
+ {
+  "q": "questions in September",
+  "expect": [
+   "21,718 turns",
+   "▲ up 20% vs August"
+  ],
+  "not": [
+   "prior 30d"
+  ],
+  "group": "review",
+  "note": "finding 9: a calendar month against the previous calendar month, as the dashboard does"
+ },
+ {
+  "q": "how much did AskCI cost in September",
+  "expect": [
+   "£1,010",
+   "vs August"
+  ],
+  "not": [
+   "prior 30d"
+  ],
+  "group": "review",
+  "note": "finding 9"
+ },
+ {
+  "q": "spend this month",
+  "expect": [
+   "includes 3 provisional billing days",
+   "vs Sep 1–23"
+  ],
+  "group": "review",
+  "note": "finding 11: provisional days stated; compared with the same elapsed days"
  }
 ]
