@@ -1,0 +1,1480 @@
+[
+ {
+  "q": "how many questions did AskCI get last month",
+  "group": "mgmt",
+  "expect": [
+   "21,718 turns"
+  ]
+ },
+ {
+  "q": "how many people used AskCI in September",
+  "group": "mgmt",
+  "expect": [
+   "AskCI has no login, so people can’t be counted: showing conversations, the closest measure.",
+   "11,590 conversations"
+  ],
+  "not": [
+   "people used"
+  ],
+  "note": "answered a different question before the Ask bar audit (brief §29)"
+ },
+ {
+  "q": "what's the total number of conversations so far this year",
+  "group": "mgmt",
+  "expect": [
+   "69,096 conversations"
+  ]
+ },
+ {
+  "q": "how is AskCI doing",
+  "group": "mgmt",
+  "expect": [
+   "Showing the latest month’s summary.",
+   "21,538 TURNS"
+  ]
+ },
+ {
+  "q": "give me a summary of October",
+  "group": "mgmt",
+  "expect": [
+   "21,538 TURNS",
+   "11,746 CONVERSATIONS"
+  ]
+ },
+ {
+  "q": "how did September compare to August",
+  "group": "mgmt",
+  "expect": [
+   "Which measure should I compare?"
+  ],
+  "not": [
+   "£"
+  ],
+  "note": "answered a different question before the Ask bar audit (brief §29)"
+ },
+ {
+  "q": "is usage going up",
+  "group": "mgmt",
+  "expect": [
+   "rising +39%"
+  ]
+ },
+ {
+  "q": "what was the busiest week",
+  "group": "mgmt",
+  "expect": [
+   "8,323 peak"
+  ]
+ },
+ {
+  "q": "what was the quietest month",
+  "group": "mgmt",
+  "expect": [
+   "4,479 lowest"
+  ]
+ },
+ {
+  "q": "year on year growth",
+  "group": "mgmt",
+  "expect": [
+   "Not enough history for year on year"
+  ]
+ },
+ {
+  "q": "questions this quarter",
+  "group": "mgmt",
+  "expect": [
+   "21,538 turns"
+  ],
+  "not": [
+   "136,752"
+  ],
+  "note": "answered a different question before the Ask bar audit (brief §29)"
+ },
+ {
+  "q": "questions in Q3",
+  "group": "mgmt",
+  "expect": [
+   "57,863 turns"
+  ],
+  "not": [
+   "136,752"
+  ],
+  "note": "answered a different question before the Ask bar audit (brief §29)"
+ },
+ {
+  "q": "questions last fortnight",
+  "group": "mgmt",
+  "expect": [
+   "11,980 turns"
+  ],
+  "not": [
+   "136,752"
+  ],
+  "note": "answered a different question before the Ask bar audit (brief §29)"
+ },
+ {
+  "q": "average conversations per day since launch",
+  "group": "mgmt",
+  "expect": [
+   "353 average conversations"
+  ]
+ },
+ {
+  "q": "how many questions per conversation",
+  "group": "mgmt",
+  "expect": [
+   "2.0 questions"
+  ],
+  "not": [
+   "69,096 conversations"
+  ],
+  "note": "answered a different question before the Ask bar audit (brief §29)"
+ },
+ {
+  "q": "what share of questions come from the pop-up",
+  "group": "mgmt",
+  "expect": [
+   "72.1% Modal"
+  ],
+  "not": [
+   "isn’t split"
+  ],
+  "note": "answered a different question before the Ask bar audit (brief §29)"
+ },
+ {
+  "q": "modal vs web questions in September",
+  "group": "mgmt",
+  "expect": [
+   "86.7% Modal"
+  ],
+  "not": [
+   "21,718 turns"
+  ],
+  "note": "answered a different question before the Ask bar audit (brief §29)"
+ },
+ {
+  "q": "how many questions on weekends",
+  "group": "mgmt",
+  "expect": [
+   "Counting weekends only.",
+   "19,421 turns"
+  ],
+  "not": [
+   "136,752"
+  ],
+  "note": "answered a different question before the Ask bar audit (brief §29)"
+ },
+ {
+  "q": "questions on Mondays",
+  "group": "mgmt",
+  "expect": [
+   "Counting Mondays only.",
+   "23,592 turns"
+  ],
+  "not": [
+   "136,752"
+  ],
+  "note": "answered a different question before the Ask bar audit (brief §29)"
+ },
+ {
+  "q": "what time of day is busiest",
+  "group": "mgmt",
+  "expect": [
+   "11:00 busiest hour"
+  ]
+ },
+ {
+  "q": "busiest day of the week",
+  "group": "mgmt",
+  "expect": [
+   "614 busiest"
+  ]
+ },
+ {
+  "q": "how many questions in the evening",
+  "group": "mgmt",
+  "expect": [
+   "27,604 questions"
+  ],
+  "not": [
+   "136,752"
+  ],
+  "note": "answered a different question before the Ask bar audit (brief §29)"
+ },
+ {
+  "q": "what percentage of questions are answered",
+  "group": "quality",
+  "expect": [
+   "84.7% answered"
+  ]
+ },
+ {
+  "q": "how often does AskCI fail to find an answer",
+  "group": "quality",
+  "expect": [
+   "6.0% not-found"
+  ]
+ },
+ {
+  "q": "not found rate this month vs last month",
+  "group": "quality",
+  "expect": [
+   "8.2%",
+   "2.2 pts",
+   "6.0%"
+  ]
+ },
+ {
+  "q": "which topic has the most not found answers",
+  "group": "quality",
+  "expect": [
+   "1 Justice",
+   "6.0%"
+  ]
+ },
+ {
+  "q": "is the answer quality getting worse",
+  "group": "quality",
+  "expect": [
+   "falling −8.8 pts",
+   "cited answer rate"
+  ],
+  "not": [
+   "total spend"
+  ],
+  "note": "answered a different question before the Ask bar audit (brief §29)"
+ },
+ {
+  "q": "error rate last week",
+  "group": "quality",
+  "expect": [
+   "1.1% error"
+  ]
+ },
+ {
+  "q": "how many errors on 27 January",
+  "group": "quality",
+  "expect": [
+   "77.4% error"
+  ]
+ },
+ {
+  "q": "what happened on 27 January",
+  "group": "quality",
+  "expect": [
+   "168 TURNS"
+  ]
+ },
+ {
+  "q": "clarification rate by month",
+  "group": "quality",
+  "expect": [
+   "clarification rate by month",
+   "Jan'26 0.4%"
+  ]
+ },
+ {
+  "q": "how fast are answers",
+  "group": "quality",
+  "expect": [
+   "12.0s response"
+  ]
+ },
+ {
+  "q": "average response time in October",
+  "group": "quality",
+  "expect": [
+   "11.2s average"
+  ]
+ },
+ {
+  "q": "slowest day",
+  "group": "quality",
+  "expect": [
+   "27.4s peak"
+  ]
+ },
+ {
+  "q": "how many answers took over 30 seconds",
+  "group": "quality",
+  "expect": [
+   "2.0% turns"
+  ]
+ },
+ {
+  "q": "likes and dislikes",
+  "group": "quality",
+  "expect": [
+   "This answers one measure; ask “likes” for the other.",
+   "1.5 dislikes"
+  ]
+ },
+ {
+  "q": "how many dislikes last month",
+  "group": "quality",
+  "expect": [
+   "1.8 dislikes"
+  ]
+ },
+ {
+  "q": "what share of conversations end after one question",
+  "group": "quality",
+  "expect": [
+   "54.5% conversations"
+  ],
+  "not": [
+   "69,096 conversations"
+  ],
+  "note": "answered a different question before the Ask bar audit (brief §29)"
+ },
+ {
+  "q": "how often do people use the suggested follow ups",
+  "group": "quality",
+  "expect": [
+   "19.9% suggested"
+  ],
+  "not": [
+   "no login"
+  ],
+  "note": "answered a different question before the Ask bar audit (brief §29)"
+ },
+ {
+  "q": "after a not found answer how often do people get a cited answer later",
+  "group": "quality",
+  "expect": [
+   "19.4% not-found"
+  ]
+ },
+ {
+  "q": "how many answers were out of scope",
+  "group": "quality",
+  "expect": [
+   "1.4% out-of-scope"
+  ]
+ },
+ {
+  "q": "partial answers in September",
+  "group": "quality",
+  "expect": [
+   "20.8% cited"
+  ]
+ },
+ {
+  "q": "which topics are growing fastest",
+  "group": "content",
+  "expect": [
+   "Ranking topics by change isn’t available yet"
+  ]
+ },
+ {
+  "q": "housing questions by month",
+  "group": "content",
+  "expect": [
+   "turns in Housing by month"
+  ]
+ },
+ {
+  "q": "not found rate for housing vs employment",
+  "group": "content",
+  "expect": [
+   "This answers Housing; ask the same for Employment to compare.",
+   "3.2% not-found"
+  ]
+ },
+ {
+  "q": "which pages are cited most for social welfare",
+  "group": "content",
+  "expect": [
+   "Social Welfare pages",
+   "fuel-allowance"
+  ]
+ },
+ {
+  "q": "top 5 cited pages in October",
+  "group": "content",
+  "expect": [
+   "budget-2027",
+   "fuel-allowance"
+  ]
+ },
+ {
+  "q": "pages cited but never clicked",
+  "group": "content",
+  "expect": [
+   "Ranking pages by click-through rate is on the Click-throughs tab"
+  ]
+ },
+ {
+  "q": "which pages get the most click throughs per citation",
+  "group": "content",
+  "expect": [
+   "Ranking pages by click-through rate is on the Click-throughs tab"
+  ]
+ },
+ {
+  "q": "how many times was the fuel allowance page cited",
+  "group": "content",
+  "expect": [
+   "4,295 citations",
+   "185 click-throughs"
+  ]
+ },
+ {
+  "q": "fuel allowance citations by month",
+  "group": "content",
+  "expect": [
+   "4,295 citations",
+   "By month:"
+  ],
+  "not": [
+   "links in answers"
+  ],
+  "note": "answered a different question before the Ask bar audit (brief §29)"
+ },
+ {
+  "q": "what do people ask about after social welfare",
+  "group": "content",
+  "expect": [
+   "from Social Welfare",
+   "Social Welfare → Money and Tax 585"
+  ]
+ },
+ {
+  "q": "most common topic journeys",
+  "group": "content",
+  "expect": [
+   "10 journeys",
+   "Money and Tax → Social Welfare"
+  ]
+ },
+ {
+  "q": "what questions do people ask about housing",
+  "group": "content",
+  "expect": [
+   "The question text isn’t available here"
+  ]
+ },
+ {
+  "q": "which starter prompts are most used",
+  "group": "content",
+  "expect": [
+   "what is auto-enrolment"
+  ]
+ },
+ {
+  "q": "how many questions in Irish",
+  "group": "content",
+  "expect": [
+   "Languages aren’t detected"
+  ]
+ },
+ {
+  "q": "how many questions in other languages",
+  "group": "content",
+  "expect": [
+   "0.50% non-Latin-script"
+  ]
+ },
+ {
+  "q": "topics on budget day",
+  "group": "content",
+  "expect": [
+   "Social Welfare · 761 turns",
+   "Money and Tax · 449 turns"
+  ]
+ },
+ {
+  "q": "which topics rose on budget day",
+  "group": "content",
+  "expect": [
+   "Ranking topics by change isn’t available yet"
+  ]
+ },
+ {
+  "q": "questions about moving country last month",
+  "group": "content",
+  "expect": [
+   "1,499 turns"
+  ]
+ },
+ {
+  "q": "share of questions about health",
+  "group": "content",
+  "expect": [
+   "4.4% share"
+  ]
+ },
+ {
+  "q": "click through rate",
+  "group": "clicks",
+  "expect": [
+   "4.7 click-throughs"
+  ]
+ },
+ {
+  "q": "click through rate for the pop-up vs the standalone site",
+  "group": "clicks",
+  "expect": [
+   "4.7 click-throughs"
+  ],
+  "not": [
+   "4,510 of 96,257"
+  ],
+  "note": "answered a different question before the Ask bar audit (brief §29)"
+ },
+ {
+  "q": "click throughs by week",
+  "group": "clicks",
+  "expect": [
+   "click-throughs by week"
+  ]
+ },
+ {
+  "q": "how many click throughs on budget day",
+  "group": "clicks",
+  "expect": [
+   "64 click-throughs"
+  ]
+ },
+ {
+  "q": "click throughs on mobile",
+  "group": "clicks",
+  "expect": [
+   "3,261 click-throughs"
+  ],
+  "not": [
+   "4,883"
+  ],
+  "note": "answered a different question before the Ask bar audit (brief §29)"
+ },
+ {
+  "q": "which topic has the highest click through rate",
+  "group": "clicks",
+  "expect": [
+   "Click-throughs by topic are on the Click-throughs tab"
+  ]
+ },
+ {
+  "q": "click through rate in July",
+  "group": "clicks",
+  "expect": [
+   "5.1 click-throughs"
+  ]
+ },
+ {
+  "q": "how much did we spend last month",
+  "group": "cost",
+  "expect": [
+   "£1010 total"
+  ]
+ },
+ {
+  "q": "what does a question cost",
+  "group": "cost",
+  "expect": [
+   "5.12p allocated"
+  ],
+  "not": [
+   "Turns received"
+  ],
+  "note": "answered a different question before the Ask bar audit (brief §29)"
+ },
+ {
+  "q": "cost per conversation",
+  "group": "cost",
+  "expect": [
+   "10.14p allocated"
+  ],
+  "not": [
+   "69,096 conversations"
+  ],
+  "note": "answered a different question before the Ask bar audit (brief §29)"
+ },
+ {
+  "q": "what is our monthly run rate",
+  "group": "cost",
+  "expect": [
+   "£1089 run"
+  ]
+ },
+ {
+  "q": "what will October cost",
+  "group": "cost",
+  "expect": [
+   "£1176 projected"
+  ]
+ },
+ {
+  "q": "forecast for November",
+  "group": "cost",
+  "expect": [
+   "The forecast covers the current month only"
+  ]
+ },
+ {
+  "q": "which service costs the most",
+  "group": "cost",
+  "expect": [
+   "Azure Cognitive Search top service",
+   "£3031"
+  ]
+ },
+ {
+  "q": "search cost in September",
+  "group": "cost",
+  "expect": [
+   "£385 Azure"
+  ]
+ },
+ {
+  "q": "how much did the models cost in October",
+  "group": "cost",
+  "expect": [
+   "£305 generation"
+  ],
+  "not": [
+   "£839"
+  ],
+  "note": "answered a different question before the Ask bar audit (brief §29)"
+ },
+ {
+  "q": "why did costs go up in July",
+  "group": "cost",
+  "expect": [
+   "£467 spend"
+  ]
+ },
+ {
+  "q": "fixed vs variable cost",
+  "group": "cost",
+  "expect": [
+   "61% fixed"
+  ]
+ },
+ {
+  "q": "cost of gpt 5 mini",
+  "group": "cost",
+  "expect": [
+   "£82.43 GPT"
+  ]
+ },
+ {
+  "q": "cost per question by month",
+  "group": "cost",
+  "expect": [
+   "allocated total cost per turn by month",
+   "Jan'26 7.44p"
+  ]
+ },
+ {
+  "q": "how much did budget day cost",
+  "group": "cost",
+  "expect": [
+   "£61.17 total"
+  ]
+ },
+ {
+  "q": "cost per question on budget day",
+  "group": "cost",
+  "expect": [
+   "1 settled join day, minimum 7"
+  ]
+ },
+ {
+  "q": "how many questions since launch",
+  "group": "comms",
+  "expect": [
+   "114,922 turns"
+  ]
+ },
+ {
+  "q": "questions on budget day",
+  "group": "comms",
+  "expect": [
+   "2,213 turns"
+  ]
+ },
+ {
+  "q": "questions after the phone line closed on budget day",
+  "group": "comms",
+  "expect": [
+   "24.5% turns",
+   "542 of 2,213"
+  ]
+ },
+ {
+  "q": "what share of questions come when the phone line is closed",
+  "group": "comms",
+  "expect": [
+   "35.1% turns"
+  ]
+ },
+ {
+  "q": "how many different pages has AskCI linked to",
+  "group": "comms",
+  "expect": [
+   "1,892 different"
+  ]
+ },
+ {
+  "q": "what percentage of CI pages has AskCI cited",
+  "group": "comms",
+  "expect": [
+   "1,892 different",
+   "1,440 of the site"
+  ]
+ },
+ {
+  "q": "how much has usage grown since the pop-up launched",
+  "group": "comms",
+  "expect": [
+   "173",
+   "319%",
+   "724"
+  ],
+  "not": [
+   "136,752"
+  ],
+  "note": "answered a different question before the Ask bar audit (brief §29)"
+ },
+ {
+  "q": "what share of site visitors use AskCI",
+  "group": "comms",
+  "expect": [
+   "≤ 0.78% AskCI"
+  ]
+ },
+ {
+  "q": "how does AskCI compare to site search",
+  "group": "comms",
+  "expect": [
+   "≤ 23.8% share"
+  ]
+ },
+ {
+  "q": "how many questions in the last 24 hours",
+  "group": "comms",
+  "expect": [
+   "The data is daily, so this shows the latest full day.",
+   "1,104 turns"
+  ],
+  "not": [
+   "136,752"
+  ],
+  "note": "answered a different question before the Ask bar audit (brief §29)"
+ },
+ {
+  "q": "Questions in sept",
+  "group": "phrasing",
+  "expect": [
+   "21,718 turns"
+  ]
+ },
+ {
+  "q": "qs last wk",
+  "group": "phrasing",
+  "expect": [
+   "5,820 turns"
+  ]
+ },
+ {
+  "q": "how many querys in august",
+  "group": "phrasing",
+  "expect": [
+   "18,155 turns"
+  ]
+ },
+ {
+  "q": "conversatons in october",
+  "group": "phrasing",
+  "expect": [
+   "Read “conversatons” as “conversations”.",
+   "11,746 conversations"
+  ],
+  "not": [
+   "total spend"
+  ],
+  "note": "answered a different question before the Ask bar audit (brief §29)"
+ },
+ {
+  "q": "not-found %",
+  "group": "phrasing",
+  "expect": [
+   "6.0% not-found"
+  ]
+ },
+ {
+  "q": "NF rate Sep",
+  "group": "phrasing",
+  "expect": [
+   "6.0% not-found"
+  ],
+  "not": [
+   "total spend"
+  ],
+  "note": "answered a different question before the Ask bar audit (brief §29)"
+ },
+ {
+  "q": "turns yesterday",
+  "group": "phrasing",
+  "expect": [
+   "1,104 turns"
+  ]
+ },
+ {
+  "q": "How many questions between 1 and 15 October",
+  "group": "phrasing",
+  "expect": [
+   "14,859 turns"
+  ]
+ },
+ {
+  "q": "questions from 1st September to 30th September",
+  "group": "phrasing",
+  "expect": [
+   "21,718 turns"
+  ]
+ },
+ {
+  "q": "questions in the first week of October",
+  "group": "phrasing",
+  "expect": [
+   "7,433 turns"
+  ]
+ },
+ {
+  "q": "questions over the bank holiday",
+  "group": "phrasing",
+  "expect": [
+   "Ask with dates"
+  ]
+ },
+ {
+  "q": "questions at the weekend in October",
+  "group": "phrasing",
+  "expect": [
+   "Counting weekends only.",
+   "3,299 turns"
+  ],
+  "not": [
+   "21,538 turns"
+  ],
+  "note": "answered a different question before the Ask bar audit (brief §29)"
+ },
+ {
+  "q": "questions between 9 and 5",
+  "group": "phrasing",
+  "expect": [
+   "84,193 questions"
+  ],
+  "not": [
+   "136,752"
+  ],
+  "note": "answered a different question before the Ask bar audit (brief §29)"
+ },
+ {
+  "q": "questions at night",
+  "group": "phrasing",
+  "expect": [
+   "6,518 questions"
+  ],
+  "not": [
+   "136,752"
+  ],
+  "note": "answered a different question before the Ask bar audit (brief §29)"
+ },
+ {
+  "q": "questions in the morning",
+  "group": "phrasing",
+  "expect": [
+   "47,423 questions"
+  ],
+  "not": [
+   "136,752"
+  ],
+  "note": "answered a different question before the Ask bar audit (brief §29)"
+ },
+ {
+  "q": "questions and conversations in September",
+  "group": "multi",
+  "expect": [
+   "This answers one measure; ask “questions in september” for the other.",
+   "11,590 conversations"
+  ]
+ },
+ {
+  "q": "not found rate and error rate last month",
+  "group": "multi",
+  "expect": [
+   "This answers one measure; ask “error rate last month” for the other.",
+   "6.0% not-found"
+  ]
+ },
+ {
+  "q": "cost and questions by month",
+  "group": "multi",
+  "expect": [
+   "This answers one measure; ask “cost by month” for the other.",
+   "turns by month"
+  ]
+ },
+ {
+  "q": "housing not found rate after 8pm",
+  "group": "multi",
+  "expect": [
+   "can’t be combined with Housing"
+  ],
+  "not": [
+   "3.0%"
+  ],
+  "note": "answered a different question before the Ask bar audit (brief §29)"
+ },
+ {
+  "q": "modal not found rate by week",
+  "group": "multi",
+  "expect": [
+   "not-found rate for Modal by week"
+  ]
+ },
+ {
+  "q": "social welfare questions on weekends",
+  "group": "multi",
+  "expect": [
+   "Counting weekends only.",
+   "6,675 turns"
+  ],
+  "not": [
+   "citations in AskCI answers"
+  ],
+  "note": "answered a different question before the Ask bar audit (brief §29)"
+ },
+ {
+  "q": "top topics on the pop-up",
+  "group": "multi",
+  "expect": [
+   "This list covers every source: lists can’t yet be filtered to Modal.",
+   "10 categories"
+  ]
+ },
+ {
+  "q": "cited answer rate for new topics in October",
+  "group": "multi",
+  "expect": [
+   "79.3% cited"
+  ]
+ },
+ {
+  "q": "show me the questions people asked",
+  "group": "refuse",
+  "expect": [
+   "The question text isn’t available here"
+  ]
+ },
+ {
+  "q": "what did people ask about the budget",
+  "group": "refuse",
+  "expect": [
+   "The question text isn’t available here"
+  ],
+  "not": [
+   "£61.17"
+  ],
+  "note": "answered a different question before the Ask bar audit (brief §29)"
+ },
+ {
+  "q": "who is using AskCI",
+  "group": "refuse",
+  "expect": [
+   "Who uses AskCI isn’t recorded"
+  ]
+ },
+ {
+  "q": "what will usage be next year",
+  "group": "refuse",
+  "expect": [
+   "Only spend is forecast"
+  ],
+  "not": [
+   "136,752"
+  ],
+  "note": "answered a different question before the Ask bar audit (brief §29)"
+ },
+ {
+  "q": "is AskCI better than the phone service",
+  "group": "refuse",
+  "expect": [
+   "Not something this data can show"
+  ],
+  "not": [
+   "top service"
+  ],
+  "note": "answered a different question before the Ask bar audit (brief §29)"
+ },
+ {
+  "q": "why did the not found rate go up",
+  "group": "refuse",
+  "expect": [
+   "Causes aren’t established here"
+  ]
+ },
+ {
+  "q": "what is the weather",
+  "group": "refuse",
+  "expect": [
+   "I couldn’t parse that"
+  ]
+ },
+ {
+  "q": "asdfgh",
+  "group": "refuse",
+  "expect": [
+   "I couldn’t parse that"
+  ]
+ },
+ {
+  "q": "questions in September",
+  "then": [
+   "and August?"
+  ],
+  "group": "follow",
+  "expect": [
+   "Following on from “questions in september”.",
+   "18,155 turns"
+  ]
+ },
+ {
+  "q": "not found rate last month",
+  "then": [
+   "what about housing?"
+  ],
+  "group": "follow",
+  "expect": [
+   "Following on from “not found rate last month”.",
+   "3.0% not-found"
+  ]
+ },
+ {
+  "q": "spend in July",
+  "then": [
+   "by week"
+  ],
+  "group": "follow",
+  "expect": [
+   "Following on from “spend in july”.",
+   "total spend by week",
+   "£157"
+  ]
+ },
+ {
+  "q": "questions on budget day",
+  "then": [
+   "after 8pm?"
+  ],
+  "group": "follow",
+  "expect": [
+   "Following on from “questions on budget day”.",
+   "394 questions"
+  ]
+ },
+ {
+  "q": "how many questions since January",
+  "group": "verified",
+  "expect": [
+   "136,752 turns"
+  ]
+ },
+ {
+  "q": "total conversations",
+  "group": "verified",
+  "expect": [
+   "69,096 conversations"
+  ]
+ },
+ {
+  "q": "average questions per day in April",
+  "group": "verified",
+  "expect": [
+   "173 average"
+  ]
+ },
+ {
+  "q": "questions a day in September",
+  "group": "verified",
+  "expect": [
+   "724 average"
+  ]
+ },
+ {
+  "q": "daily average questions in October",
+  "group": "verified",
+  "expect": [
+   "979 average"
+  ]
+ },
+ {
+  "q": "how much has usage grown since April",
+  "group": "verified",
+  "expect": [
+   "173",
+   "319%",
+   "724"
+  ]
+ },
+ {
+  "q": "growth since the pop-up launch",
+  "group": "verified",
+  "expect": [
+   "173",
+   "319%",
+   "724"
+  ]
+ },
+ {
+  "q": "top topics",
+  "group": "verified",
+  "expect": [
+   "Social Welfare · 49,999 turns",
+   "39.7% of questions with a topic"
+  ]
+ },
+ {
+  "q": "what do people ask about most",
+  "group": "verified",
+  "expect": [
+   "Social Welfare · 49,999 turns",
+   "39.7% of questions with a topic"
+  ]
+ },
+ {
+  "q": "out of hours share",
+  "group": "verified",
+  "expect": [
+   "35.1% turns"
+  ]
+ },
+ {
+  "q": "questions when the phone line is closed",
+  "group": "verified",
+  "expect": [
+   "35.1% turns"
+  ]
+ },
+ {
+  "q": "conversation success rate",
+  "group": "verified",
+  "expect": [
+   "88.3% conversations"
+  ]
+ },
+ {
+  "q": "total citations",
+  "group": "verified",
+  "expect": [
+   "197,756 links"
+  ]
+ },
+ {
+  "q": "how many links to CI pages",
+  "group": "verified",
+  "expect": [
+   "197,756 links"
+  ]
+ },
+ {
+  "q": "how many different pages were cited",
+  "group": "verified",
+  "expect": [
+   "1,892 different"
+  ]
+ },
+ {
+  "q": "how many click-throughs",
+  "group": "verified",
+  "expect": [
+   "4,883 click-throughs"
+  ]
+ },
+ {
+  "q": "how many pages did people click through to",
+  "group": "verified",
+  "expect": [
+   "814 pages"
+  ]
+ },
+ {
+  "q": "most cited pages",
+  "group": "verified",
+  "expect": [
+   "fuel-allowance",
+   "4,291"
+  ]
+ },
+ {
+  "q": "which page do people read most",
+  "group": "verified",
+  "expect": [
+   "fuel-allowance 185"
+  ]
+ },
+ {
+  "q": "busiest day",
+  "group": "verified",
+  "expect": [
+   "2,213 peak"
+  ]
+ },
+ {
+  "q": "budget week questions",
+  "group": "verified",
+  "expect": [
+   "8,323 turns"
+  ]
+ },
+ {
+  "q": "questions 5 to 11 October",
+  "group": "verified",
+  "expect": [
+   "8,323 turns"
+  ]
+ },
+ {
+  "q": "money and tax questions on budget day",
+  "group": "verified",
+  "expect": [
+   "449 turns"
+  ]
+ },
+ {
+  "q": "questions after 8pm on budget day",
+  "group": "verified",
+  "expect": [
+   "394 questions"
+  ]
+ },
+ {
+  "q": "questions asked between 8pm and 9am",
+  "group": "verified",
+  "expect": [
+   "35,484 questions"
+  ]
+ },
+ {
+  "q": "conversations before 7am in September",
+  "group": "verified",
+  "expect": [
+   "669 conversations"
+  ]
+ },
+ {
+  "q": "not found rate between midnight and 6am",
+  "group": "verified",
+  "expect": [
+   "5.9% not-found"
+  ]
+ },
+ {
+  "q": "response time after 10pm",
+  "group": "verified",
+  "expect": [
+   "11.2s mean"
+  ]
+ },
+ {
+  "q": "is the not-found rate decreasing",
+  "group": "verified",
+  "expect": [
+   "4.6 pts"
+  ]
+ },
+ {
+  "q": "spend on 2026-05-11",
+  "group": "verified",
+  "expect": [
+   "£21.58 total"
+  ]
+ },
+ {
+  "q": "conversations across September",
+  "group": "verified",
+  "expect": [
+   "11,590 conversations"
+  ]
+ },
+ {
+  "q": "gpt-5.4 mini cost in October",
+  "group": "verified",
+  "expect": [
+   "£43.30"
+  ]
+ },
+ {
+  "q": "cited answer rate for new topics",
+  "group": "verified",
+  "expect": [
+   "85.4% cited"
+  ]
+ },
+ {
+  "q": "which month had the highest cost per turn",
+  "group": "verified",
+  "expect": [
+   "8.54p peak"
+  ]
+ },
+ {
+  "q": "click-through rate from 15 March to 30 April",
+  "group": "verified",
+  "expect": [
+   "4.4 click-throughs"
+  ]
+ },
+ {
+  "q": "highest not found rate by month",
+  "group": "verified",
+  "expect": [
+   "8.2% peak"
+  ]
+ },
+ {
+  "q": "spend in January 2026",
+  "group": "verified",
+  "expect": [
+   "£433 total"
+  ]
+ },
+ {
+  "q": "not-found rate in housing last month",
+  "group": "verified",
+  "expect": [
+   "3.0% not-found"
+  ]
+ },
+ {
+  "q": "busiest hour in September",
+  "group": "verified",
+  "expect": [
+   "13:00 busiest hour"
+  ]
+ },
+ {
+  "q": "p90 last 30 days",
+  "group": "verified",
+  "expect": [
+   "18.1s response"
+  ]
+ },
+ {
+  "q": "what changed in September",
+  "group": "verified",
+  "expect": [
+   "what changed in September 2026"
+  ]
+ },
+ {
+  "q": "generation cost per turn in May",
+  "group": "verified",
+  "expect": [
+   "0.56p generation"
+  ]
+ },
+ {
+  "q": "cited answer rate by month",
+  "group": "verified",
+  "expect": [
+   "cited answer rate by month",
+   "Jan'26 95.7%"
+  ]
+ },
+ {
+  "q": "questions in October",
+  "group": "verified",
+  "expect": [
+   "21,538 turns"
+  ]
+ },
+ {
+  "q": "how many questions about housing in October",
+  "group": "verified",
+  "expect": [
+   "2,236 turns"
+  ]
+ },
+ {
+  "q": "compare April and September",
+  "group": "verified",
+  "expect": [
+   "Which measure should I compare?"
+  ],
+  "not": [
+   "£"
+  ],
+  "note": "answered a different question before the Ask bar audit (brief §29)"
+ },
+ {
+  "q": "questions per day in April vs October",
+  "group": "verified",
+  "expect": [
+   "173",
+   "979",
+   "466%"
+  ]
+ },
+ {
+  "q": "questions on 27 January",
+  "then": [
+   "how fast are answers"
+  ],
+  "group": "bleed",
+  "expect": [
+   "12.0s response"
+  ],
+  "not": [
+   "27 Jan",
+   "Following on"
+  ],
+  "note": "an unrelated question must not inherit the previous question's dates (brief §29)"
+ },
+ {
+  "q": "spend in August",
+  "then": [
+   "what was the busiest week"
+  ],
+  "group": "bleed",
+  "expect": [
+   "8,323 peak"
+  ],
+  "not": [
+   "August",
+   "Following on"
+  ],
+  "note": "an unrelated question must not inherit the previous question's dates (brief §29)"
+ },
+ {
+  "q": "questions on budget day",
+  "then": [
+   "what is the overall click through rate"
+  ],
+  "group": "bleed",
+  "expect": [
+   "4.7 click-throughs"
+  ],
+  "not": [
+   "Budget Day",
+   "Following on"
+  ],
+  "note": "an unrelated question must not inherit the previous question's dates (brief §29)"
+ },
+ {
+  "q": "questions on budget day",
+  "then": [
+   "click through rate"
+  ],
+  "group": "bleed",
+  "expect": [
+   "Following on from “questions on budget day”.",
+   "3.8 click-throughs"
+  ],
+  "note": "three words or fewer reads as a follow-up, and says so"
+ }
+]

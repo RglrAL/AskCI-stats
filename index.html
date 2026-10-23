@@ -7558,7 +7558,8 @@ init();
     }else if(listEntity)metric='count';
     else if(/quietest|busiest|\bbusy\b|\bquiet\b|traffic|usage|questions?|queries/.test(q)&&!/cost|spend|spent|£/.test(q))metric='questions';
     else if(/\bllm\b|token|foundry/.test(q))metric='llm';
-    const category=parseCategory(q);
+    const af=q.match(/\b(?:after|from)\s+(?:the\s+)?(.+?)\s*$/);   // "what do people ask about after social welfare"
+    const category=parseCategory(q)||(entity==='journey'&&af?parseCategory(' about '+af[1]+' '):null);
     return{topn:true,raw:orig,entity,N,dir,metric,category,period:parsePeriod(' '+orig.toLowerCase().replace(/[?!,]|\.(?!\d)/g,' ').replace(/\s+/g,' ')+' ')};
   }
   function computeTopN(intent){
@@ -7597,7 +7598,7 @@ init();
       const months=[...new Set(rows.map(d=>d.month))],agg={},fromC=intent.category||null;
       months.forEach(m=>(JOURNEYS[m]||[]).forEach(r=>{if(fromC&&(CAT_ALIAS[r.from]||r.from)!==fromC)return;const kk=r.from+'→'+r.to;agg[kk]=(agg[kk]||0)+r.n;}));
       items=Object.entries(agg).map(([kk,n])=>{const[a,b]=kk.split('→');return{label:catLabel(CAT_ALIAS[a]||a)+' → '+catLabel(CAT_ALIAS[b]||b),act:['sub','categories'],v:n};});
-      fmt=v=>num(v);by='category steps in mature conversations (months overlapping the period)';
+      fmt=v=>num(v);by='category steps in mature conversations (months overlapping the period)'+(fromC?' · from '+catLabel(CAT_ALIAS[fromC]||fromC):'');
     }else if(entity==='service'){
       items=(DATA.allSvcs||[]).map(s=>({label:s===FOUNDRY?'Foundry Models (generation)':s,act:['service',s],v:rows.reduce((a,d)=>a+(d[s]||0),0)}));
     }else if(entity==='model'){

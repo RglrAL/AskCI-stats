@@ -1,13 +1,33 @@
 #!/bin/sh
-# Refuse a commit whose staged costs.csv still carries an Azure subscription ID (see tools/redact_costs.py).
-# Enable once per clone: git config core.hooksPath tools/hooks
-git diff --cached --name-only --diff-filter=ACM | grep -qx 'costs.csv' || exit 0
+# Pre-commit checks. Enable once per clone: git config core.hooksPath tools/hooks
+#  1. A staged costs.csv must not carry an Azure subscription ID (tools/redact_costs.py).
+#  2. A staged index.html must pass the Ask bar regression test (tools/test_ask.py), when Chrome is installed.
+#     Set SKIP_ASK_TESTS=1 to skip it for one commit.
+STAGED=$(git diff --cached --name-only --diff-filter=ACM)
 for c in /usr/local/bin/python3 /opt/homebrew/bin/python3 /usr/bin/python3; do [ -x "$c" ] && PY="$c" && break; done
-[ -n "$PY" ] || { echo "pre-commit: python3 not found, cannot check costs.csv" >&2; exit 1; }
-TMP=$(mktemp) || exit 1
-trap 'rm -f "$TMP"' EXIT
-git show :costs.csv > "$TMP"   # check the staged version, not the working copy
-"$PY" "$(git rev-parse --show-toplevel)/tools/redact_costs.py" "$TMP" --check 2>/dev/null && exit 0
-echo "pre-commit: staged costs.csv still carries an Azure subscription ID." >&2
-echo "  Run: python3 tools/redact_costs.py costs.csv && git add costs.csv" >&2
-exit 1
+[ -n "$PY" ] || { echo "pre-commit: python3 not found, cannot run the checks" >&2; exit 1; }
+ROOT=$(git rev-parse --show-toplevel)
+TMP=$(mktemp -d) || exit 1
+trap 'rm -rf "$TMP"' EXIT
+
+if echo "$STAGED" | grep -qx 'costs.csv'; then
+  git show :costs.csv > "$TMP/costs.csv"   # the staged version, not the working copy
+  if ! "$PY" "$ROOT/tools/redact_costs.py" "$TMP/costs.csv" --check 2>/dev/null; then
+    echo "pre-commit: staged costs.csv still carries an Azure subscription ID." >&2
+    echo "  Run: python3 tools/redact_costs.py costs.csv && git add costs.csv" >&2
+    exit 1
+  fi
+fi
+
+if echo "$STAGED" | grep -qxE 'index.html|tests/ask_cases.json|tests/ask_fixture_ref' && [ "$SKIP_ASK_TESTS" != "1" ]; then
+  git show :index.html > "$TMP/index.html"
+  echo "pre-commit: running the Ask bar regression test…" >&2
+  if ! "$PY" "$ROOT/tools/test_ask.py" --page "$TMP/index.html" >"$TMP/ask.log" 2>&1; then
+    grep -E "^(FAIL|   )|passed|page errors" "$TMP/ask.log" >&2
+    echo "pre-commit: the Ask bar regression test failed. Fix it, or if an answer changed on purpose, update" >&2
+    echo "  tests/ask_cases.json (python3 tools/test_ask.py --show lists every answer). SKIP_ASK_TESTS=1 skips once." >&2
+    exit 1
+  fi
+  tail -1 "$TMP/ask.log" >&2
+fi
+exit 0

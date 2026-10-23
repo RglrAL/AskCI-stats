@@ -1,0 +1,184 @@
+#!/usr/bin/env python3
+"""Regression test for the dashboard's Ask bar.
+
+Runs every question in tests/ask_cases.json through the real page (headless Chrome) and checks each
+answer against what it should say. The page under test is the CURRENT index.html; the data is frozen at
+the git commit named in tests/ask_fixture_ref, so data refreshes never change the expected answers.
+
+Each case: {"q": "question", "then": ["follow-up", ...]?, "expect": ["text the answer must contain", ...],
+"not": ["text it must not contain", ...]?, "note": "why"?}. A follow-up runs after the question without a
+reset, as a person would type it. Before each case the Ask bar's memory of the previous answer is cleared.
+
+Usage:
+    python3 tools/test_ask.py                 # run all cases; exit 1 on any failure
+    python3 tools/test_ask.py -k budget       # only cases whose question contains "budget"
+    python3 tools/test_ask.py --show          # print every answer, passing or not
+    python3 tools/test_ask.py --page FILE     # test another copy of the page (the pre-commit hook's staged copy)
+    python3 tools/test_ask.py --record        # write each answer's headline into "expect" for cases that
+                                              # have none (review the diff before committing)
+
+Needs Google Chrome (or Chromium) and git. Takes about a minute.
+"""
+import argparse, html, json, os, re, shutil, socket, subprocess, sys, tempfile, threading
+from functools import partial
+from http.server import SimpleHTTPRequestHandler, ThreadingHTTPServer
+
+REPO = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+CASES = os.path.join(REPO, "tests", "ask_cases.json")
+REF = os.path.join(REPO, "tests", "ask_fixture_ref")
+DATA_FILES = ["usage.csv", "usage-hours.csv", "conversations-daily.csv", "category-outcomes-daily.csv", "categories-daily.csv",
+              "categories.csv", "citations-monthly.csv", "journeys-monthly.csv", "starter-prompts-monthly.csv",
+              "latency-buckets-daily.csv", "costs.csv", "events.json", "site-pages.csv", "ga4/session-and-users.csv",
+              "ga4/searches-and-sessions.csv", "ga4/categories-and-views.csv", "ga4/clicks-daily.csv", "ga4/clicks-pages-daily.csv"]
+CHROMES = ["/Applications/Google Chrome.app/Contents/MacOS/Google Chrome", "/Applications/Chromium.app/Contents/MacOS/Chromium",
+           "google-chrome", "chromium", "chromium-browser"]
+WAIT_MS = 250   # per question; the Ask bar renders synchronously, so this is ample
+
+HARNESS = r"""<script>
+window.__errs=[];window.addEventListener('error',e=>window.__errs.push(e.message+' @'+e.lineno));
+window.addEventListener('unhandledrejection',e=>window.__errs.push('rejection: '+String(e.reason&&e.reason.stack||e.reason).slice(0,300)));
+const __C=%s;
+window.addEventListener('load',()=>{const t=setInterval(()=>{if(typeof DATA!=='undefined'&&DATA&&window.askQuery){clearInterval(t);go();}},200);});
+const sleep=ms=>new Promise(r=>setTimeout(r,ms));
+async function go(){
+  const out=[];
+  for(const c of __C){
+    window.__resetAsk();let ans='';
+    for(const q of [c.q,...(c.then||[])]){window.askQuery(q);await sleep(%d);const a=document.getElementById('ask-answer');
+      ans=(a?a.innerText:'').replace(/\s+/g,' ').replace(/READ AS.*/,'').trim();}
+    out.push(ans);
+  }
+  document.body.setAttribute('data-test',JSON.stringify({out,errs:window.__errs}));
+}
+</script>"""
+
+
+def chrome():
+    for c in CHROMES:
+        p = c if os.path.isabs(c) else shutil.which(c)
+        if p and os.path.exists(p):
+            return p
+    return None
+
+
+def headline(ans):
+    """A short form of an answer for printing."""
+    return re.sub(r"\s*(Chart Table CSV|Open |Set dashboard).*$", "", ans).strip()[:200]
+
+
+NOTICE_RE = re.compile(r"^((?:[A-Z][^.]*?(?:\.|”\.)\s)+?)(?=[A-Z0-9 ’'“”?&/\-]{6,})")
+
+
+def key_parts(q, ans):
+    """What --record pins for a case: any notice above the answer, then either the answer's value (the first
+    number after the echoed question) with the word that follows it, or, for a card with no echo (a decline or
+    a "which measure?" prompt), its heading."""
+    parts = []
+    echo = q.upper().split("|")[-1]
+    i = ans.upper().find(echo[:30])
+    if i > 0:
+        lead = ans[:i].strip()
+        if lead: parts.append(lead)
+    if i >= 0:
+        rest = ans[i + len(echo):].strip()
+        m = re.search(r"[≤≥]?\s?£?\d[\d,.]*(?:%|p|s|×| pts)?(?:\s+[A-Za-z’'-]+)?", rest)
+        if m: parts.append(m.group(0).strip())
+        else: parts.append(rest[:40])
+    else:
+        parts.append(" ".join(ans.split()[:5]))
+    return parts
+
+
+def build_site(tmp, ref, page_path):
+    with open(page_path, encoding="utf-8") as fh:
+        page = fh.read()
+    if "  let lastIntent=null;" not in page:
+        sys.exit("index.html: the Ask bar's `let lastIntent=null;` line moved; update tools/test_ask.py")
+    page = page.replace("  let lastIntent=null;", "  let lastIntent=null;window.__resetAsk=()=>{lastIntent=null;};", 1)
+    # chart animation off: the page is never looked at, and it keeps headless timing simple
+    page = page.replace("animation:{duration:350}", "animation:false")
+    for f in DATA_FILES:
+        dest = os.path.join(tmp, f)
+        os.makedirs(os.path.dirname(dest), exist_ok=True)
+        r = subprocess.run(["git", "-C", REPO, "show", f"{ref}:{f}"], capture_output=True)
+        if r.returncode:
+            sys.exit(f"git show {ref}:{f} failed: {r.stderr.decode().strip()}")
+        with open(dest, "wb") as fh:
+            fh.write(r.stdout)
+    return page
+
+
+def run(cases, ref, browser, page_path):
+    tmp = tempfile.mkdtemp(prefix="asktest-")
+    try:
+        page = build_site(tmp, ref, page_path)
+        payload = [{"q": c["q"], "then": c.get("then", [])} for c in cases]
+        with open(os.path.join(tmp, "index.html"), "w", encoding="utf-8") as fh:
+            fh.write(page.replace("</body>", HARNESS % (json.dumps(payload), WAIT_MS) + "</body>", 1))
+        with socket.socket() as s:
+            s.bind(("127.0.0.1", 0)); port = s.getsockname()[1]
+        srv = ThreadingHTTPServer(("127.0.0.1", port), partial(QuietHandler, directory=tmp))
+        threading.Thread(target=srv.serve_forever, daemon=True).start()
+        prof = os.path.join(tmp, "_profile")
+        budget = 60000 + len(cases) * (WAIT_MS * 2 + 400)
+        dom = subprocess.run([browser, "--headless=new", "--disable-gpu", "--no-first-run", f"--user-data-dir={prof}",
+                              f"--virtual-time-budget={budget}", "--dump-dom", f"http://127.0.0.1:{port}/index.html"],
+                             capture_output=True, text=True, timeout=900).stdout
+        srv.shutdown()
+        m = re.search(r'data-test="([^"]*)"', dom)
+        if not m:
+            sys.exit("the page produced no results (it may not have loaded); open index.html to check for errors")
+        res = json.loads(html.unescape(m.group(1)))
+        return res["out"], res["errs"]
+    finally:
+        shutil.rmtree(tmp, ignore_errors=True)
+
+
+class QuietHandler(SimpleHTTPRequestHandler):
+    def log_message(self, *a):
+        pass
+
+
+def main():
+    ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
+    ap.add_argument("-k", help="only cases whose question contains this text")
+    ap.add_argument("--show", action="store_true", help="print every answer")
+    ap.add_argument("--record", action="store_true", help="fill empty expectations from the current answers")
+    ap.add_argument("--page", default=os.path.join(REPO, "index.html"), help="the page to test (default: index.html; the pre-commit hook passes the staged copy)")
+    a = ap.parse_args()
+    browser = chrome()
+    if not browser:
+        print("test_ask: no Chrome or Chromium found; skipped"); return 0
+    with open(CASES, encoding="utf-8") as fh:
+        allc = json.load(fh)
+    cases = [c for c in allc if not a.k or a.k.lower() in c["q"].lower()]
+    ref = open(REF).read().strip()
+    out, errs = run(cases, ref, browser, a.page)
+    fails = []
+    for c, ans in zip(cases, out):
+        missing = [e for e in c.get("expect", []) if e not in ans]
+        present = [n for n in c.get("not", []) if n in ans]
+        if a.record and not c.get("expect"):
+            q = c["then"][-1] if c.get("then") else c["q"]
+            c["expect"] = key_parts(q, ans)
+        ok = not missing and not present and (c.get("expect") or a.record)
+        if not ok:
+            fails.append((c, ans, missing, present))
+        if a.show or not ok:
+            print(("PASS " if ok else "FAIL ") + c["q"] + (" → " + " → ".join(c["then"]) if c.get("then") else ""))
+            if not ok:
+                for e in missing: print("   missing:   " + e)
+                for n in present: print("   should not contain: " + n)
+            print("   answer:    " + headline(ans))
+    if a.record:
+        with open(CASES, "w", encoding="utf-8") as fh:
+            json.dump(allc, fh, indent=1, ensure_ascii=False); fh.write("\n")
+        print("recorded expectations for cases that had none; review `git diff tests/ask_cases.json`")
+    if errs:
+        print("page errors:"); [print("   " + e) for e in errs]
+    print(f"{len(cases) - len(fails)} of {len(cases)} passed" + (f", {len(fails)} failed" if fails else ""))
+    return 1 if fails or errs else 0
+
+
+if __name__ == "__main__":
+    sys.exit(main())
