@@ -44,19 +44,25 @@ import re
 DROP = ["User Query", "Assistant Response", "Report Subject", "Report Description"]
 csv.field_size_limit(min(sys.maxsize, 2**31 - 1))
 
-OUTCOME_RULES_VERSION = "2026.10.08-1"
-# Each pattern is a list of (rule id, alternative). Joined in order they are exactly the patterns the rules version
-# above names, so the outcome is unchanged; the named group that matched says which phrase decided it (brief §53).
+OUTCOME_RULES_VERSION = "2026.10.23-2"
+# Each pattern is a list of (rule id, alternative), joined in order; the named group that matched says which phrase
+# decided the outcome (brief §53). 2026.10.23-2 (brief §60) checked the rules against the system prompts of 28 Aug 2026
+# and added the phrases the prompts prescribe that the feed shows: the fixed no-results sentence (nf.template, listed
+# first so it wins over the shorter phrase inside it), two out-of-scope wordings and two refusals (Out of scope family),
+# and a greeting form. The outcomes of 2026.10.08-1 change on about 20 rows in 145,000 (greetings previously flagged).
 RULES = {
-    "not_found": [("nf.couldnt_find", r"couldn't find"), ("nf.could_not_find", r"could not find"), ("nf.wasnt_able", r"wasn't able to find"),
+    "not_found": [("nf.template", r"couldn't find specific information about this topic in the citizens information content available to me"),
+                  ("nf.couldnt_find", r"couldn't find"), ("nf.could_not_find", r"could not find"), ("nf.wasnt_able", r"wasn't able to find"),
                   ("nf.unable_to_find", r"unable to find"), ("nf.no_specific_info", r"no specific information"), ("nf.not_find_specific", r"not find specific"),
                   ("nf.dont_have_info", r"don't have (specific )?information"), ("nf.does_not_provide", r"does not (currently )?(provide|have)")],
     "clarification": [("cl.could_you", r"could you (please )?(clarify|tell me|let me know)"), ("cl.what_you_mean", r"what you mean"),
                       ("cl.more_detail", r"more detail"), ("cl.which_scheme", r"which (scheme|payment)")],
     "out_of_scope": [("oos.specialise", r"specialise in providing information"), ("oos.specialize", r"specialize in providing information"),
                      ("oos.cant_help_topic", r"can't help with that (particular )?topic"), ("oos.not_able_topic", r"not able to help with that topic"),
-                     ("oos.outside_scope", r"outside (the )?scope")],
-    "greeting": [("gr.hello", r"^(hello|hi)\b"), ("gr.how_can_i_help", r"how can i help"), ("gr.welcome", r"you're welcome"), ("gr.glad_to_help", r"glad to help"),
+                     ("oos.outside_scope", r"outside (the )?scope"), ("oos.not_covered", r"isn't covered by the information i can provide"),
+                     ("oos.public_services", r"information about irish public services and entitlements"),
+                     ("oos.cannot_assist", r"cannot assist with that request"), ("oos.internal_guidelines", r"cannot discuss my internal guidelines")],
+    "greeting": [("gr.hello", r"^(hello|hi)\b"), ("gr.how_can_i_help", r"how can i help"), ("gr.what_would_you_like", r"what would you like information about"), ("gr.welcome", r"you're welcome"), ("gr.glad_to_help", r"glad to help"),
                  ("gr.glad_to_hear", r"glad to hear"), ("gr.glad_you", r"glad you"), ("gr.glad_i_could", r"glad i could")],
 }
 GID = lambda rid: rid.replace(".", "__")
@@ -70,7 +76,11 @@ def rule_of(m):
 
 # Wording fingerprint (brief §53): counts read from the answer text, which is then dropped. Not outcome rules: a shift
 # in these on a date with no model change is the trace of a prompt change.
-STYLE_VERSION = "2026.10.23-1"
+# 2026.10.23-2 adds counts for forms the system prompts of 28 Aug 2026 prescribe or forbid (brief §60), so that a model
+# reading the same prompt more literally shows up here: a sign-off line linking the homepage, a continuity opener on
+# follow-ups, invitation phrases, a bare "Yes." or "No.", heading or bold markup, nested list lines, an "(external)"
+# link marker and the "remain in effect" freshness form. Counts only; the names say what is counted, not why.
+STYLE_VERSION = "2026.10.23-2"
 STYLE = {
     "Answer Lines": re.compile(r"^\s*(?:[-*\u2022]|\d+[.)])\s+", re.M),
     "Answer Hedges": re.compile(r"\b(?:may|might|generally|usually|typically|depends? on|depending on|in some cases|not always)\b", re.I),
@@ -78,7 +88,15 @@ STYLE = {
     "Answer Signposts": re.compile(r"\b(?:contact|get in touch|phone|call|ring|visit|speak to|talk to)\b", re.I),
     "Answer Questions": re.compile(r"\?"),
     "Answer Links": re.compile(r"https?://"),
+    "Answer Openers": re.compile(r"^(?:building on that|in that case|continuing from your earlier question)", re.I),
+    "Answer Invitations": re.compile(r"feel free to ask|let me know if you need|don't hesitate to ask", re.I),
+    "Answer Absolutes": re.compile(r"(?:^|[.!?]\s+)(?:yes|no)\.", re.I | re.M),
+    "Answer Emphasis": re.compile(r"^#{1,6}\s|\*\*", re.M),
+    "Answer Nested": re.compile(r"^\s{2,}(?:[-*\u2022]|\d+[.)])\s+", re.M),
+    "Answer External": re.compile(r"\(external\)", re.I),
+    "Answer Freshness": re.compile(r"remains? in effect", re.I),
 }
+SIGNOFF = re.compile(r"citizensinformation\.ie", re.I)   # Answer Signoff: 1 if the last non-empty line links the site
 URL_RE = re.compile(r'https?://[^\s,;|"]+')
 
 # Starter-prompt chips (AGENT_BRIEF.md, 29 Sep 2026; one added 23 Oct). Matched on first turns only, after
@@ -139,7 +157,10 @@ def classify(row):
 
 def style_counts(row):
     resp = (row.get("Assistant Response") or "").translate(APOS)
-    return {k: len(rx.findall(resp)) for k, rx in STYLE.items()}
+    out = {k: len(rx.findall(resp)) for k, rx in STYLE.items()}
+    lines = [l for l in resp.strip().splitlines() if l.strip()]
+    out["Answer Signoff"] = 1 if lines and SIGNOFF.search(lines[-1]) else 0
+    return out
 
 
 def out_name(path, out_dir):
@@ -152,7 +173,7 @@ def redact(src, dst):
     with open(src, encoding="utf-8-sig", newline="") as fi, open(dst, "w", encoding="utf-8", newline="") as fo:
         r = csv.DictReader(fi)
         keep = [c for c in r.fieldnames if c not in DROP] + ["Outcome", "Partial", "Outcome Rules", "Starter Prompt", "Query Script", "Response Words",
-                                                          "Outcome Rule", "Style Version"] + list(STYLE)
+                                                          "Outcome Rule", "Style Version"] + list(STYLE) + ["Answer Signoff"]
         dropped = [c for c in r.fieldnames if c in DROP]
         w = csv.DictWriter(fo, fieldnames=keep, extrasaction="ignore")
         w.writeheader()

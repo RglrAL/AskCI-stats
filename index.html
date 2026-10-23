@@ -2814,6 +2814,12 @@ function normEvent(e){
   if(/^\d{4}-\d{2}$/.test(start)){end=end||`${start}-${daysInMonth(start)}`;start=`${start}-01`;}
   return{...e,start,end,kind:e.kind||'other',status:e.status||'candidate',title:e.title||'(untitled)'};
 }
+// prompts.json: a set-level fingerprint of the system prompts the outcome rules were checked against (brief §60). The
+// prompts themselves stay on the analyst's machine; the page shows the snapshot date and whether it is known current.
+let PROMPTS=null;
+async function loadPrompts(){
+  try{const r=await fetch('prompts.json?v='+Date.now());if(!r.ok)return;const j=await r.json();if(j&&j.snapshot)PROMPTS=j;}catch(e){}
+}
 async function loadEvents(){
   try{
     const r=await fetch('events.json?v='+Date.now());if(!r.ok)return;
@@ -3212,7 +3218,7 @@ function eraCardHTML(){
         <thead><tr style="border-bottom:2px solid var(--b2)">${th('Era','left')}${th('Turns')}${th('Cited')}${th('Not found')}${th('Clarifi-<br>cation')}${th('Partial,<br>of cited')}${th('Cited, not<br>partial')}${th('Words /<br>cited')}${th('Pages /<br>cited')}${th('Response<br>p50')}${th('Generation<br>p / turn')}${th('Dislikes /<br>1,000 cited')}${th('Clicks /<br>100 cited')}${th('Turns /<br>conv.')}${th('Reached<br>cited')}</tr></thead>
         <tbody>${rows}</tbody></table>
       ${notes?`<ul class="wd-flags" style="margin-top:10px">${notes}</ul>`:''}
-      <div style="font-size:.63rem;color:var(--dim);margin-top:10px;font-family:'DM Mono',monospace">Descriptive only. Rates are of scored turns (partial of cited answers); response time is the turn-weighted mean of daily medians; generation cost a turn is over settled join days; click-throughs need GA4 on 7+ days of the era. An era that holds a launch or a chip change carries that change inside it. Outcome labels from 14 Sep 2026 are unvalidated until the hand-labelled sample.</div>
+      <div style="font-size:.63rem;color:var(--dim);margin-top:10px;font-family:'DM Mono',monospace">Descriptive only. Rates are of scored turns (partial of cited answers); response time is the turn-weighted mean of daily medians; generation cost a turn is over settled join days; click-throughs need GA4 on 7+ days of the era. An era that holds a launch or a chip change carries that change inside it. Eras are model eras: the prompts are assumed constant${PROMPTS?` and are unverified since the ${fmtDate(PROMPTS.snapshot)} snapshot`:''}. Outcome labels from 14 Sep 2026 are unvalidated until the hand-labelled sample.</div>
     </div>`;
 }
 
@@ -4808,7 +4814,8 @@ function renderWording(D,S){
   const W=comparisonWindow(from,to);
   const sty=(a,b)=>{const o={};Object.entries(OSTYLE).forEach(([d,x])=>{if(d<a||d>b)return;Object.entries(x).forEach(([oc,v])=>{const t=o[oc]||(o[oc]={});Object.entries(v).forEach(([k,n])=>{t[k]=(t[k]||0)+n;});});});return o;};
   const A=sty(from,to),B=sty(W.from,W.to);
-  const F=[['Words','words'],['Lines','list lines'],['Hedges','hedges'],['Signposts','signposts'],['Questions','question marks'],['Links','links in the text']];
+  const hasForms=Object.values(OSTYLE).some(x=>Object.values(x).some(o=>o.Signoff!=null));
+  const F=[['Words','words'],['Lines','list lines'],['Hedges','hedges'],['Signposts','signposts'],['Questions','question marks'],['Links','links in the text']].concat(hasForms?[['Emphasis','bold or headings'],['Nested','nested list lines'],['Absolutes','bare yes / no'],['Apologies','apologies'],['Openers','continuity openers'],['Signoff','sign-off link']]:[]);
   const per=(o,k)=>o&&o.Turns>=50?o[k]/o.Turns:null;
   const fmtv=v=>v==null?'—':v>=20?Math.round(v).toString():v.toFixed(2);
   const td=(v,o={})=>`<td style="text-align:${o.left?'left':'right'};padding:7px 10px;font-family:${o.left?'inherit':"'DM Mono',monospace"};font-size:.78rem;${o.style||''}">${v}</td>`;
@@ -4845,7 +4852,7 @@ function renderWording(D,S){
     <div class="card"><div class="card-title">Flagged weeks<span class="card-title-note">drift ${WORDING_DRIFT*100}%+ · blue = a confirmed model change within a week, or the weeks settling after one · amber = none: a candidate prompt or configuration change</span></div><ul class="wd-flags">${flagList}</ul></div>
     <div class="card"><div class="card-title">How the answers are written<span class="card-title-note">per answer, ${spanLabel(from,to)} · in brackets the change against ${escH(W.rule)} (${spanLabel(W.from,W.to)}) · — under 50 answers</span></div>
       <div class="tbl-wrap"><table style="width:100%;border-collapse:collapse"><thead><tr style="border-bottom:1px solid var(--b2)">${th('Outcome',true)}${th('Answers')}${F.map(([,l])=>th(l)).join('')}</tr></thead><tbody>${fpRows}</tbody></table></div>
-      <div class="share-foot">Counts read from the answer text before it is dropped: list lines (bulleted or numbered), hedging words (may, might, generally, usually, depends on …), signposting verbs (contact, phone, visit …), question marks and links. No text is kept.</div></div>
+      <div class="share-foot">Counts read from the answer text before it is dropped: list lines (bulleted or numbered), hedging words (may, might, generally, usually, depends on …), signposting verbs (contact, phone, visit …), question marks and links${hasForms?'; and forms the answer format prescribes or forbids: bold or heading markup, nested list lines, a bare “Yes.” or “No.”, apologies, a continuity opener on follow-ups, and a closing line that links the site (1 = present)':''}. No text is kept.</div></div>
     ${hasNext?`<div class="card"><div class="card-title">What people do next<span class="card-title-note">share of answers in finished conversations, ${spanLabel(from,to)} · in brackets the change in points against ${escH(W.rule)} (${spanLabel(W.from,W.to)}) · — under 50 answers</span></div>
       <div class="tbl-wrap"><table style="width:100%;border-collapse:collapse"><thead><tr style="border-bottom:1px solid var(--b2)">${th('After a … answer',true)}${th('Answers')}${NXK.map(([,l])=>th(l)).join('')}</tr></thead><tbody>${nxRows}</tbody></table></div>
       ${nxLike?`<ul class="wd-flags">${nxLike}</ul>`:''}
@@ -7619,6 +7626,7 @@ function renderDqStrip(){
     U.outcomeRules&&CONFIG.outcome_rules_measured?(()=>{const m=CONFIG.outcome_rules_measured,a=m.agreement_after!=null?m.agreement_after:m.agreement_before;
       return item('outcome rules',`${U.outcomeRules} · agreement ${a!=null?(a*100).toFixed(0)+'%':'—'} on ${m.n} hand-labelled answers, ${fmtDate(m.measured)}`,{amber:!!CONFIG.outcome_rules_unvalidated_from,title:`Checked by people against a blind, stratified sample (tools/score_labels.py), rules ${m.rules}: agreement before ${m.agreement_before!=null?(m.agreement_before*100).toFixed(0)+'%':'—'}, after ${m.agreement_after!=null?(m.agreement_after*100).toFixed(0)+'%':'—'}`+(m.notfound_answered_after!=null?`; ${(m.notfound_answered_after*100).toFixed(0)}% of rule “not found” answers after the change were judged to answer the question`:'')});})():
     U.outcomeRules?item('outcome rules',U.outcomeRules+(CONFIG.outcome_rules_unvalidated_from?` · unvalidated from ${fmtDate(CONFIG.outcome_rules_unvalidated_from)}`:''),{amber:!!CONFIG.outcome_rules_unvalidated_from,title:'rule-set version written by tools/redact_feed.py; a change replays from the raw feed'+(CONFIG.outcome_rules_unvalidated_from?'. Not yet checked against the model in use from '+fmtDate(CONFIG.outcome_rules_unvalidated_from):'')}):'',
+    PROMPTS?item('prompts',`snapshot ${fmtDate(PROMPTS.snapshot)} · ${PROMPTS.verified_current?'confirmed current':'unverified since'}`,{amber:!PROMPTS.verified_current,title:`The outcome rules (${U.outcomeRules||'—'}) were checked against the system prompts exported on ${fmtDate(PROMPTS.snapshot)}: ${PROMPTS.prompts} prompts, set fingerprint ${String(PROMPTS.set_sha256).slice(0,12)}. Prompts can change without a deploy and leave no trace in billing or the feed; whether any changed since is ${PROMPTS.verified_current?'confirmed: none':'unknown'}.`}):'',
     (U.columns&&Object.values(U.columns).some(Boolean))||hasHours?item('usage detail',['outcomes','types','sources','latency','voice'].filter(k=>U.columns&&U.columns[k]).concat(hasHours?['hours']:[]).join(' · ')||'—',{title:'optional columns found in usage.csv, plus usage-hours.csv'}):'',
     hasClicks?item('click-throughs',`${spanLabel(clickRange.from,clickRange.to)}`,{title:'GA4 page views of CI pages carrying AskCI citation tags (tools/make_clicks.py); consenting visitors only, so a minimum. Rates count the standalone site from '+fmtDate(CONFIG.click_tracking_from.app)+' and the pop-up from '+fmtDate(CONFIG.click_tracking_from.embed)}):'',
     U.minimal?item('usage columns','minimal',{amber:true,title:'usage.csv has only date, questions and conversations: outcomes, sources, latency and feedback are not shown. Regenerate it from the QA feed with tools/make_usage.py.'}):'',
@@ -7738,7 +7746,7 @@ async function init(){
   await loadConversationFiles(); // conversation-level aggregates (graceful if absent)
   await loadClickFiles(); // GA4 click-throughs from tools/make_clicks.py (graceful if absent)
   await loadSitePages(); // the site's page list from tools/make_site_pages.py (graceful if absent)
-  await loadEvents(); // shared events (events.json) — only confirmed ones draw
+  await Promise.all([loadEvents(),loadPrompts()]); // shared events (events.json) — only confirmed ones draw
   if(cr||ur)buildDashboard(cr,ur);
 }
 init();

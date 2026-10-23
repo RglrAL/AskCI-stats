@@ -51,7 +51,8 @@ Outputs (all daily counts; nothing per-turn and no text crosses into the dashboa
   starter-prompts-monthly.csv  Month, Prompt, Count, Cited, FollowedByTyped, FollowedBySuggested
   outcome-rules-daily.csv   Date, Rule, Turns: the id of the phrase that decided each outcome (needs feeds redacted
                             with Outcome Rule, brief §53)
-  answer-style-daily.csv    Date, Outcome, Turns, Words, Lines, Hedges, Apologies, Signposts, Questions, Links,
+  answer-style-daily.csv    Date, Outcome, Turns, Words, Lines, Hedges, Apologies, Signposts, Questions, Links, Openers,
+                            Invitations, Absolutes, Emphasis, Nested, External, Freshness, Signoff (style 2026.10.23-2),
                             WithLines..WithLinks: the wording fingerprint summed per day and outcome
   latency-buckets-daily.csv  Date, Kind (words | citations), Bucket, Turns, LatencySumMs — response time by
                             response length and by citation count (needs Response Words from the redaction)
@@ -316,7 +317,7 @@ def aggregate(files, skip_days=frozenset()):
     return D, sess, lat, hours, hour_sess, cats, bad, has_voice, dupes, cat_dropped, has_outcome, rules, has_starter, has_script, recs, cites_m, latb, rulesd, style
 
 
-STYLE_COLS = ["Lines", "Hedges", "Apologies", "Signposts", "Questions", "Links"]
+STYLE_COLS = ["Lines", "Hedges", "Apologies", "Signposts", "Questions", "Links", "Openers", "Invitations", "Absolutes", "Emphasis", "Nested", "External", "Freshness", "Signoff"]
 
 
 def rule_rows(rulesd):

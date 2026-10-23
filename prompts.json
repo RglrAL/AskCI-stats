@@ -1,0 +1,14 @@
+{
+  "_comment": "Set-level fingerprint of the system prompts the outcome rules were checked against (brief §60). The prompts themselves are held locally and never published. A changed fingerprint between two exports is a prompt change; whether anything changed between exports cannot be known from this file.",
+  "snapshot": "2026-08-28",
+  "prompts": 13,
+  "set_sha256": "602d829d4d6ff666d7a4301b3564f8e61a8211cbc9b2e0edc095795fd16ac771",
+  "verified_current": false,
+  "history": [
+    {
+      "snapshot": "2026-08-28",
+      "prompts": 13,
+      "set_sha256": "602d829d4d6ff666d7a4301b3564f8e61a8211cbc9b2e0edc095795fd16ac771"
+    }
+  ]
+}

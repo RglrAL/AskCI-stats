@@ -14,7 +14,7 @@ Usage:
 
 Exit status 1 when any check fails. WARN lines are things to look at, not failures.
 """
-import csv, glob, os, sys, json, re, collections as C
+import subprocess, csv, glob, os, sys, json, re, collections as C
 from datetime import datetime, date
 
 REPO = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -177,7 +177,7 @@ check('outcome rules: each family per day = its usage.csv outcome count', all(fa
 ST = rd('answer-style-daily.csv'); stt = C.Counter()
 for r in ST: stt[r['Date']] += I(r['Turns'])
 check('answer style: turns per day = usage.Questions', all(stt[d] == I(U[d]['Questions']) for d in days))
-check('answer style: no "with" count above its outcome\'s turns', all(I(r['With' + k]) <= I(r['Turns']) for r in ST for k in ('Lines', 'Hedges', 'Apologies', 'Signposts', 'Questions', 'Links')))
+check('answer style: no "with" count above its outcome\'s turns', all(I(r['With' + k]) <= I(r['Turns']) for r in ST for k in ('Lines', 'Hedges', 'Apologies', 'Signposts', 'Questions', 'Links') + (('Openers', 'Invitations', 'Absolutes', 'Emphasis', 'Nested', 'External', 'Freshness', 'Signoff') if 'WithSignoff' in ST[0] else ())))
 
 # ── 3d. what people do next (tools/next_step.py, brief §53 step 3) ───────────
 # Mature conversations only, so Answers per day can only be at or under usage.Questions; an answer either ended the
@@ -371,6 +371,22 @@ PV = {nu('https://www.citizensinformation.ie' + r['Page path and screen class'])
 ci_tot = sum(I(r['Citations']) for r in CI if 'citizensinformation.ie' in r['URL'])
 ci_in = sum(I(r['Citations']) for r in CI if 'citizensinformation.ie' in r['URL'] and nu(r['URL']) in PV)
 check('citations to CI pages that join a page with site views (Usage › Pages) at least 98%', ci_tot and ci_in / ci_tot >= 0.98, f'{ci_in / max(1, ci_tot):.2%}')
+
+# ── 9b. prompts.json and the prompt canary ────────────────────────────────────
+# The system prompts stay in the git-ignored review folder; the repo holds a set-level fingerprint only (brief §60).
+# No tracked file may carry the canary line that every local prompt file starts with.
+if os.path.exists(REPO + '/prompts.json'):
+    PJ = json.load(open(REPO + '/prompts.json'))
+    check('prompts.json: snapshot date, count and set hash present', bool(re.fullmatch(r'\d{4}-\d{2}-\d{2}', str(PJ.get('snapshot', '')))) and int(PJ.get('prompts', 0)) > 0 and len(str(PJ.get('set_sha256', ''))) == 64)
+_can = 'ASKCI-PROMPT-' + 'CANARY'
+_tracked = subprocess.run(['git', '-C', REPO, 'ls-files', '-z'], capture_output=True).stdout.decode().split('\0')
+_leak = []
+for _f in _tracked:
+    if not _f or _f.startswith('tools/hooks/') or _f == 'tools/audit_data.py' or _f == 'tools/prompt_fingerprint.py' or _f == 'tools/check_rules_vs_prompts.py': continue
+    try:
+        if _can in open(REPO + '/' + _f, encoding='utf-8', errors='ignore').read(): _leak.append(_f)
+    except (IsADirectoryError, FileNotFoundError): pass
+check('prompt canary: no tracked file carries a system-prompt copy', not _leak, ', '.join(_leak[:5]))
 
 # ── 10. events.json ──────────────────────────────────────────────────────────
 E = json.load(open(REPO + '/events.json'))['events']

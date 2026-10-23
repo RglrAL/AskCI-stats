@@ -3,7 +3,15 @@
 #  1. A staged costs.csv must not carry an Azure subscription ID (tools/redact_costs.py).
 #  2. A staged index.html must pass the Ask bar regression test (tools/test_ask.py), when Chrome is installed.
 #     Set SKIP_ASK_TESTS=1 to skip it for one commit.
+#  3. No staged file may carry the system-prompt canary line (the prompts live in the git-ignored review folder).
 STAGED=$(git diff --cached --name-only --diff-filter=ACM)
+CANARY="ASKCI-PROMPT-""CANARY"
+for f in $STAGED; do
+  if git show ":$f" 2>/dev/null | grep -q "$CANARY"; then
+    echo "pre-commit: $f carries the system-prompt canary line. Prompt text never leaves the review folder." >&2
+    exit 1
+  fi
+done
 for c in /usr/local/bin/python3 /opt/homebrew/bin/python3 /usr/bin/python3; do [ -x "$c" ] && PY="$c" && break; done
 [ -n "$PY" ] || { echo "pre-commit: python3 not found, cannot run the checks" >&2; exit 1; }
 ROOT=$(git rev-parse --show-toplevel)
