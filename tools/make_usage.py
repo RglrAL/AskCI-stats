@@ -54,6 +54,9 @@ Outputs (all daily counts; nothing per-turn and no text crosses into the dashboa
                             with Outcome Rule, brief §53)
   pages-cited.csv           URL, FirstCited, LastCited, Citations, Answers, Partial, Dislikes, LastMod,
                             FirstCitedAfterLastMod, AnswersAfterLastMod (one row per cited page, all data; brief §62)
+  safety-daily.csv          Date, Flag, Turns, Cited, NotFound, Clarification, Error, OutOfScope, Greeting, Uncited: turns
+                            flagged by redact_feed.py (identifiers typed in, injection phrasings, off-topic and
+                            crisis themes) and their outcomes (brief §65)
   answer-style-daily.csv    Date, Outcome, Turns, Words, Lines, Hedges, Apologies, Signposts, Questions, Links, Openers,
                             Invitations, Absolutes, Emphasis, Nested, External, Freshness, Signoff (style 2026.10.23-2),
                             WithLines..WithLinks: the wording fingerprint summed per day and outcome
@@ -174,6 +177,7 @@ def aggregate(files, skip_days=frozenset()):
     has_words = False
     rulesd = defaultdict(int)                        # (date, outcome rule id) -> turns (brief §53)
     style = defaultdict(lambda: defaultdict(int))    # (date, outcome) -> wording fingerprint sums
+    safety = defaultdict(lambda: defaultdict(int))   # (date, flag) -> turns and their outcomes (brief §65)
     seen = set(); dupes = 0   # exports taken on different days overlap on their boundary day
     for f in files:
         with open(f, encoding="utf-8-sig", newline="") as fh:
@@ -237,6 +241,14 @@ def aggregate(files, skip_days=frozenset()):
                 if wd > 0:
                     c["words"] += wd; c["words_n"] += 1
                     if (row.get("Outcome") or "").strip() == "Cited answer": c["cwords"] += wd; c["cwords_n"] += 1
+                if "Safety Version" in row and (row.get("Safety Version") or "").strip():
+                    o4 = (row.get("Outcome") or "").strip() if outcome_col else ""
+                    flags = [k[6:] for k in SAFETY_FLAGS if (row.get(k) or "").strip() == "1"]
+                    if (row.get("Query Theme") or "").strip(): flags.append("Theme " + row["Query Theme"].strip())
+                    if any(f in ("PPS", "Phone", "Email", "IBAN", "Card") for f in flags): flags.append("Any identifier")
+                    for f in flags:
+                        e4 = safety[(d, f)]; e4["Turns"] += 1
+                        if o4: e4["o:" + o4] += 1
                 if outcome_col and (row.get("Outcome Rule") or "").strip():
                     o3 = (row.get("Outcome") or "").strip()
                     rulesd[(d, row["Outcome Rule"].strip())] += 1
@@ -342,10 +354,19 @@ def aggregate(files, skip_days=frozenset()):
                         cat_dropped += sum(1 for x in slugs if x is None)
                         toks = [x for x in slugs if x]
                     for s in set(toks): cats[d][s] += 1
-    return D, sess, lat, hours, hour_sess, cats, bad, has_voice, dupes, cat_dropped, has_outcome, rules, has_starter, has_script, recs, (cites_m, cites_x, pages), latb, rulesd, style
+    return D, sess, lat, hours, hour_sess, cats, bad, has_voice, dupes, cat_dropped, has_outcome, rules, has_starter, has_script, recs, (cites_m, cites_x, pages), latb, rulesd, (style, safety)
 
 
 STYLE_COLS = ["Lines", "Hedges", "Apologies", "Signposts", "Questions", "Links", "Openers", "Invitations", "Absolutes", "Emphasis", "Nested", "External", "Freshness", "Signoff"]
+SAFETY_FLAGS = ["Query PPS", "Query Phone", "Query Email", "Query IBAN", "Query Card", "Query Injection"]
+
+
+def safety_rows(safety):
+    """safety-daily.csv: per day and flag (PPS, Phone, Email, IBAN, Card, Any identifier, Injection, Theme <name>), the
+    flagged turns and their outcomes (brief §65). Counts only; the flags are set by redact_feed.py before the text is
+    dropped."""
+    cols = ["Date", "Flag", "Turns"] + [k for k, _ in OUTCOME_COLS if k not in ("Partial", "Scored")]
+    return cols, [[d.isoformat(), f, e["Turns"]] + [e[src] for k, src in OUTCOME_COLS if k not in ("Partial", "Scored")] for (d, f), e in sorted(safety.items())]
 
 
 def rule_rows(rulesd):
@@ -686,7 +707,7 @@ def main():
     # An export taken on day X contains only part of day X; skip those rows unless asked to keep them.
     export_days = {datetime.strptime(m.group(1), "%Y%m%d").date() for m in (re.search(r"(\d{8})_\d{6}", os.path.basename(f)) for f in a.files) if m}
     skip = frozenset() if (a.keep_partial or not export_days) else frozenset({max(export_days)})  # only the newest export's own day is partial
-    D, sess, lat, hours, hour_sess, cats, bad, has_voice, dupes, cat_dropped, has_outcome, rules, has_starter, has_script, recs, (cites_m, cites_x, pages), latb, rulesd, style = aggregate(a.files, skip)
+    D, sess, lat, hours, hour_sess, cats, bad, has_voice, dupes, cat_dropped, has_outcome, rules, has_starter, has_script, recs, (cites_m, cites_x, pages), latb, rulesd, (style, safety) = aggregate(a.files, skip)
     rules = ", ".join(sorted(r for r in rules if r))
     if skip and any(True for _ in skip): print(f"note: export day(s) {', '.join(str(x) for x in sorted(skip))} skipped as partial (--keep-partial to keep)")
     cd, co, jm, sp, cstats = conversation_pass(recs)
@@ -722,6 +743,7 @@ def main():
         if rulesd:   # needs feeds redacted with Outcome Rule (redact_feed.py from 23 Oct 2026)
             write(os.path.join(a.out_dir, "outcome-rules-daily.csv"), *rule_rows(rulesd))
             write(os.path.join(a.out_dir, "answer-style-daily.csv"), *style_rows(style))
+        if safety: write(os.path.join(a.out_dir, "safety-daily.csv"), *safety_rows(safety))
     elif a.out:
         write(a.out, ucols, urows)
     else:

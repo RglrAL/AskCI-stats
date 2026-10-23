@@ -48,6 +48,7 @@ SCHEMA = {
     'categories.csv': 'Month Citations',
     'citations-monthly.csv': 'Month URL Citations Answers Partial Dislikes',
     'pages-cited.csv': 'URL FirstCited LastCited Citations Answers Partial Dislikes LastMod FirstCitedAfterLastMod AnswersAfterLastMod',
+    'safety-daily.csv': 'Date Flag Turns Cited NotFound Clarification Error OutOfScope Greeting Uncited',
     'repeat-questions-monthly.csv': 'Month Turns FirstTurns StarterFirstTurns DistinctFirstTurnTexts TextsAskedTwicePlus FirstTurnsOnRepeatedTexts Top10 Top25 Top50 Top100 Top250 SuggestedClicks DistinctSuggestedTexts SuggestedTop25',
     'journeys-monthly.csv': 'From To Conversations',
     'starter-prompts-monthly.csv': 'Month Count Cited FollowedByTyped FollowedBySuggested Partial NotFound Clarification Disliked Words TimedTurns ResponseMsSum Mature EndedThere',
@@ -391,6 +392,11 @@ check('pages-cited: citations and answers sum to citations-monthly', sum(I(r['Ci
       f"{sum(I(r['Citations']) for r in PC)} vs {sum(I(r['Citations']) for r in CM)}")
 check('pages-cited: one row per URL, FirstCited <= LastCited, first-after-LastMod on or after LastMod', len({r['URL'] for r in PC}) == len(PC)
       and all(r['FirstCited'] <= r['LastCited'] for r in PC) and all((not r['FirstCitedAfterLastMod']) or r['FirstCitedAfterLastMod'] >= r['LastMod'] for r in PC))
+
+# ── 9a1. safety-daily.csv (brief §65) ─────────────────────────────────────────
+SF = rd('safety-daily.csv')
+check('safety: outcomes sum to Turns on every row, and no flag exceeds the day\'s turns', all(
+    sum(I(r[k]) for k in ('Cited', 'NotFound', 'Clarification', 'Error', 'OutOfScope', 'Greeting', 'Uncited')) <= I(r['Turns']) and (r['Date'] not in U or I(r['Turns']) <= I(U[r['Date']]['Questions'])) for r in SF))
 
 # ── 9a2. repeat-questions-monthly.csv against usage.csv (brief §63) ───────────
 RQ = {r['Month']: r for r in rd('repeat-questions-monthly.csv')}; um = C.Counter(); usm2 = C.Counter()

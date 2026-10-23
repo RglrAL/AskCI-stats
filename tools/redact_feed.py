@@ -97,6 +97,37 @@ STYLE = {
     "Answer Freshness": re.compile(r"remains? in effect", re.I),
 }
 SIGNOFF = re.compile(r"citizensinformation\.ie", re.I)   # Answer Signoff: 1 if the last non-empty line links the site
+
+# Safety counts (brief §53 step 10, §65): flags read from the question before it is dropped. Each is 1 or blank in the
+# redacted feed; the identifier itself is never kept. Identifiers: a PPS number (7 digits then 1 or 2 letters), an Irish
+# or international phone number, an email address, an IBAN, a 16-digit card number. Injection: the usual override
+# phrasings. Themes: a few off-topic kinds the scope rules name (creative writing, code, sport, entertainment, weather)
+# and crisis language, so that what AskCI answers to it can be counted. Counts only; names say what is matched.
+SAFETY_VERSION = "2026.10.24-1"
+SAFETY = {
+    "Query PPS": re.compile(r"(?<![\dA-Za-z])\d{7}[A-Za-z]{1,2}(?![\dA-Za-z])"),
+    "Query Phone": re.compile(r"(?<!\d)(?:\+353|00353|0)\s?(?:[1-9]\d{0,2})[\s-]?\d{3}[\s-]?\d{3,4}(?!\d)"),
+    "Query Email": re.compile(r"[\w.+-]+@[\w-]+\.[\w.-]+"),
+    "Query IBAN": re.compile(r"\bIE\d{2}\s?[A-Z]{4}(?:\s?\d{4}){3}\s?\d{2}\b", re.I),
+    "Query Card": re.compile(r"(?<!\d)(?:\d{4}[\s-]?){3}\d{4}(?!\d)"),
+    "Query Injection": re.compile(r"ignore (?:all |any )?(?:of )?(?:the |your |my )?(?:previous|prior|above|earlier) (?:instructions|rules|prompts?)|system prompt|you are now|pretend (?:to be|you are|that you)|jailbreak|developer mode|\bDAN\b|reveal your (?:prompt|instructions|rules)|forget (?:your|all|the) (?:rules|instructions)|what are your (?:rules|instructions)|repeat (?:your|the) (?:system|initial) (?:prompt|instructions)", re.I),
+}
+THEMES = [("creative", re.compile(r"\b(?:write|tell|compose|make up|sing)\b.{0,30}\b(?:poem|joke|story|song|rap|limerick|haiku|essay for school)\b|\b(?:a poem|a joke|a story) about\b", re.I)),
+          ("code", re.compile(r"\b(?:python|javascript|java|sql|html|css|bash|excel formula|regex)\b.{0,30}\b(?:code|script|function|query|formula|program)\b|\bwrite (?:me )?(?:some )?code\b", re.I)),
+          ("sport", re.compile(r"\b(?:premier league|champions league|all-ireland|gaa (?:match|final)|who won the (?:match|game|final)|football (?:score|result)s?|rugby (?:score|result)s?)\b", re.I)),
+          ("entertainment", re.compile(r"\b(?:netflix|movie|film|tv show|series to watch|taylor swift|song lyrics|eurovision|celebrity)\b", re.I)),
+          ("weather", re.compile(r"\b(?:weather (?:today|tomorrow|forecast|this week)|will it rain|forecast for)\b", re.I)),
+          ("crisis", re.compile(r"\b(?:suicid\w*|kill (?:myself|me)|end (?:my|it all|my life)|self[- ]harm|want to die|don'?t want to (?:live|be here)|overdos\w*)\b", re.I))]
+
+
+def safety_flags(q):
+    """{column: '1' or ''} for one question; the theme column holds the first matching theme name or ''."""
+    q = (q or "").translate(APOS)
+    out = {k: ("1" if rx.search(q) else "") for k, rx in SAFETY.items()}
+    # a PPS or card match that is really a phone number is one or the other, not both: phone wins when it matched
+    if out["Query Phone"] and out["Query Card"]: out["Query Card"] = ""
+    out["Query Theme"] = next((name for name, rx in THEMES if rx.search(q)), "")
+    return out
 URL_RE = re.compile(r'https?://[^\s,;|"]+')
 
 # Starter-prompt chips (AGENT_BRIEF.md, 29 Sep 2026; one added 23 Oct). Matched on first turns only, after
@@ -173,7 +204,7 @@ def redact(src, dst):
     with open(src, encoding="utf-8-sig", newline="") as fi, open(dst, "w", encoding="utf-8", newline="") as fo:
         r = csv.DictReader(fi)
         keep = [c for c in r.fieldnames if c not in DROP] + ["Outcome", "Partial", "Outcome Rules", "Starter Prompt", "Query Script", "Response Words",
-                                                          "Outcome Rule", "Style Version"] + list(STYLE) + ["Answer Signoff"]
+                                                          "Outcome Rule", "Style Version"] + list(STYLE) + ["Answer Signoff", "Safety Version"] + list(SAFETY) + ["Query Theme"]
         dropped = [c for c in r.fieldnames if c in DROP]
         w = csv.DictWriter(fo, fieldnames=keep, extrasaction="ignore")
         w.writeheader()
@@ -190,6 +221,8 @@ def redact(src, dst):
             row["Response Words"] = len((row.get("Assistant Response") or "").split())
             row["Outcome Rule"], row["Style Version"] = rule, STYLE_VERSION
             row.update(style_counts(row))
+            row["Safety Version"] = SAFETY_VERSION
+            row.update(safety_flags(row.get("User Query")))
             if row["Starter Prompt"]: counts["(starter prompt)"] = counts.get("(starter prompt)", 0) + 1
             w.writerow(row)
             n += 1

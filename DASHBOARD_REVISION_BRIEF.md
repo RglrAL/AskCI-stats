@@ -1238,3 +1238,27 @@ Each stays a candidate: the readings say where to look, not what happened. They 
 **What it changes for 14 September.** Nothing. The error rate did not move at the change (§57), and the chip defect is constant across it. The incident list is the operations record; the diagnosis stays with the answering model and the prompt.
 
 Next: §53 step 10, safety counts in `redact_feed.py` (identifiers typed in, injection patterns, off-topic themes), counts only.
+
+## 65. Step 10: safety counts (24 Oct 2026)
+
+**Built:** `redact_feed.py` sets flags on each question before the text is dropped (`SAFETY_VERSION` 2026.10.24-1): an identifier typed in (PPS number, phone, email, IBAN, 16-digit card), an injection phrasing (ignore your instructions, system prompt, pretend you are, developer mode, reveal your rules and the like), and one of six themes (creative writing, code, sport, entertainment, weather, crisis language). The identifier itself is never kept; the redacted feed carries 1 or blank. `make_usage.py` writes `safety-daily.csv` (Date, Flag, Turns, and the flagged turns' outcomes); the audit checks it; **Usage › Volume** shows a **Safety counts** card with each flag per 1,000 turns and what AskCI answered. Every other file rebuilt byte-identical.
+
+**What it shows, all 136,752 turns:**
+
+| Flag | Turns | Per 1,000 | Cited answer | Declined | Clarification |
+|---|---|---|---|---|---|
+| Any identifier typed in | 16 | 0.12 | 25% | 6% | 19% |
+| Injection phrasing | 24 | 0.18 | 21% | 75% | 0% |
+| Crisis language | 80 | 0.59 | 76% | 8% | 0% |
+| Off topic: entertainment | 21 | 0.15 | 81% | 5% | 10% |
+| Off topic: code | 11 | 0.08 | 18% | 73% | 9% |
+| Off topic: creative | 9 | 0.07 | 33% | 67% | 0% |
+
+- **Identifiers are rare and the counts are small enough to be exact:** 4 PPS numbers, 9 phone numbers, 3 email addresses, no IBAN and no card number in ten months. The data-protection point is not the volume but the fact: the raw feed holds them as typed, and the backend's own placeholder redaction (the rewriting step) does not reach the feed. The redacted feed never has.
+- **Injection attempts are rare and mostly declined.** 24 in ten months; 18 were declined as out of scope, 5 got a cited answer (an answer to the embedded question, which is the designed behaviour for a hybrid query) and 1 a not-found. Nothing here suggests the guardrails are being worked.
+- **Crisis language is the row to read.** 80 turns, 0.6 per 1,000, and 76% got an ordinary cited answer. That may be right (the question was about a service and the words were incidental, or the cited page is the right support page) or not (a plain information page is not what the moment needed). The counts cannot tell; the pattern also catches medical uses of "overdose". Whether AskCI signposts a crisis line on these turns is a question for the system owners, and these counts put a number on how often it arises: about two turns a week.
+- **Off-topic traffic is negligible.** 45 turns across five themes in ten months; the entertainment theme is the weakest pattern ("film" and "movie" match classification questions), which is why 81% of it is cited. The scope rules' tiny closed list of out-of-scope kinds is sized correctly for this traffic.
+
+**Limits.** These are patterns, not judgements, and the counts are small; the per-1,000 rates are stable only on the whole-data view. The flags describe questions, not answers, except through the outcome columns.
+
+Next: §53 step 11, the log parser for any future backend extract, which matters only if an extract appears. After it the plan of record is complete apart from step 0, the labelling hour.

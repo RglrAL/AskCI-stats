@@ -2746,7 +2746,7 @@ async function loadHoursFile(){
 // script-outcomes-daily.csv: SCRIPTOUT[date][script] = {t, s, c, nf, cl} (turns, scored, cited, not found, clarification)
 let SCRIPTOUT={},hasScriptOut=false;
 let ORULES={},OSTYLE={},ONEXT={},hasRules=false;   // outcome rule ids, the wording fingerprint and what people do next (brief §53)
-let PAGESC={},hasPagesC=false,REPEATS={},hasRepeats=false;
+let PAGESC={},hasPagesC=false,REPEATS={},hasRepeats=false,SAFETY={},hasSafety=false;
 let CONV={},CATOUT={},CITES={},JOURNEYS={},STARTERS={},LATB={},CATDAY={},hasCatDay=false,hasConv=false,hasCatOut=false,hasCites=false,hasJourneys=false,hasStarters=false,hasLatB=false;
 async function loadConversationFiles(){
   try{(await loadCSV('script-outcomes-daily.csv')).forEach(r=>{const d=parseDate(r['Date']);if(!d)return;(SCRIPTOUT[d]||(SCRIPTOUT[d]={}))[r['Script']]={t:nInt(r['Turns']),s:nInt(r['Scored']),c:nInt(r['Cited']),nf:nInt(r['NotFound']),cl:nInt(r['Clarification'])};});}catch(e){}
@@ -2763,6 +2763,9 @@ async function loadConversationFiles(){
   // repeat-questions-monthly.csv (tools/cache_coverage.py, counts only): how much of the traffic a cache of fixed question texts would cover (brief §63)
   try{(await loadCSV('repeat-questions-monthly.csv')).forEach(r=>{const m=String(r['Month']||'').trim();if(!/^\d{4}-\d{2}$/.test(m))return;const o={};Object.entries(r).forEach(([k,v])=>{if(k!=='Month')o[k]=nInt(v);});REPEATS[m]=o;});}catch(e){}
   hasRepeats=Object.keys(REPEATS).length>0;
+  // safety-daily.csv: turns flagged by redact_feed.py (identifiers typed in, injection phrasings, off-topic and crisis themes) and their outcomes (brief §65)
+  try{(await loadCSV('safety-daily.csv')).forEach(r=>{const d=parseDate(r['Date']);if(!d)return;const o={};Object.entries(r).forEach(([k,v])=>{if(k!=='Date'&&k!=='Flag')o[k]=nInt(v);});(SAFETY[d]||(SAFETY[d]={}))[String(r['Flag']||'').trim()]=o;});}catch(e){}
+  hasSafety=Object.keys(SAFETY).length>0;
   try{(await loadCSV('categories-daily.csv')).forEach(r=>{const d=parseDate(r['Date']);if(!d)return;(CATDAY[d]||(CATDAY[d]={}))[String(r['Category']||'').trim()]=nInt(r['Citations']);});}catch(e){}
   hasCatDay=Object.keys(CATDAY).length>0;
   try{(await loadCSV('latency-buckets-daily.csv')).forEach(r=>{const d=parseDate(r['Date']);if(!d)return;const k=r['Kind'],b=r['Bucket'];const o=LATB[d]||(LATB[d]={});(o[k]||(o[k]={}))[b]={t:nInt(r['Turns']),sum:nInt(r['LatencySumMs'])};});}catch(e){}
@@ -5920,6 +5923,30 @@ function renderPages(D,S){
   renderIcons();
 }
 
+// ═══ SAFETY COUNTS (brief §53 step 10, §65) ═════════════════════════════════
+// Flags set by redact_feed.py on the question before it is dropped: an identifier typed in (PPS, phone, email, IBAN,
+// card), an injection phrasing, or an off-topic or crisis theme; with what AskCI answered. Counts only, per 1,000 turns.
+function safetyCardHTML(fr){
+  if(!hasSafety)return'';
+  const A={};let turns=0;fr.forEach(d=>{turns+=d.queries;Object.entries(SAFETY[d.date]||{}).forEach(([f,o])=>{const a=A[f]||(A[f]={});Object.entries(o).forEach(([k,v])=>{a[k]=(a[k]||0)+v;});});});
+  if(!turns)return'';
+  const g=f=>A[f]||{Turns:0};const pk=f=>(g(f).Turns/turns*1000);
+  const td=(v,o={})=>`<td style="text-align:${o.left?'left':'right'};padding:7px 10px;font-family:${o.left?'inherit':"'DM Mono',monospace"};font-size:.78rem">${v}</td>`;
+  const th=(t,left)=>`<th style="text-align:${left?'left':'right'};padding:7px 10px;font-size:.6rem;color:var(--muted);text-transform:uppercase;letter-spacing:.08em;white-space:nowrap">${t}</th>`;
+  const rows=[['Any identifier','An identifier typed in (PPS, phone, email, IBAN or card)'],['PPS','PPS number'],['Phone','Phone number'],['Email','Email address'],['IBAN','IBAN'],['Card','16-digit card number'],['Injection','Injection phrasing (ignore your instructions, system prompt, pretend you are…)'],['Theme crisis','Crisis language'],['Theme creative','Off topic: creative writing'],['Theme code','Off topic: code'],['Theme entertainment','Off topic: entertainment'],['Theme sport','Off topic: sport'],['Theme weather','Off topic: weather']].filter(([f])=>A[f]);
+  const out=(a,k)=>a.Turns?`${num(a[k]||0)} <span style="color:var(--muted)">(${Math.round((a[k]||0)/a.Turns*100)}%)</span>`:'—';
+  return`<div class="card"><div class="card-title">Safety counts<span class="card-title-note">flags read from the question before it is dropped · ${num(turns)} turns in range · what AskCI answered to each</span></div>
+    <div class="grid4" style="margin-bottom:10px">
+      ${uxTile(pk('Any identifier').toFixed(2),'Identifiers typed in, per 1,000 turns',`${num(g('Any identifier').Turns)} turns · the feed holds these as typed`,C.amber)}
+      ${uxTile(pk('Injection').toFixed(2),'Injection phrasings, per 1,000',`${num(g('Injection').Turns)} turns · ${g('Injection').Turns?Math.round((g('Injection').OutOfScope||0)/g('Injection').Turns*100)+'% declined':''}`,C.purple)}
+      ${uxTile(pk('Theme crisis').toFixed(2),'Crisis language, per 1,000',`${num(g('Theme crisis').Turns)} turns · ${g('Theme crisis').Turns?Math.round((g('Theme crisis').Cited||0)/g('Theme crisis').Turns*100)+'% got a cited answer':''}`,C.red)}
+      ${uxTile((['Theme creative','Theme code','Theme entertainment','Theme sport','Theme weather'].reduce((s,f)=>s+g(f).Turns,0)/turns*1000).toFixed(2),'Off-topic themes, per 1,000','creative writing, code, entertainment, sport, weather',C.muted)}
+    </div>
+    <div class="tbl-wrap"><table style="width:100%;border-collapse:collapse"><thead><tr style="border-bottom:1px solid var(--b2)">${th('Flag',true)}${th('Turns')}${th('Per 1,000')}${th('Cited answer')}${th('Declined (out of scope)')}${th('Not found')}${th('Clarification')}</tr></thead>
+      <tbody>${rows.map(([f,l])=>{const a=g(f);return`<tr style="border-bottom:1px solid var(--b2)">${td(l,{left:true})}${td(num(a.Turns))}${td(pk(f).toFixed(2))}${td(out(a,'Cited'))}${td(out(a,'OutOfScope'))}${td(out(a,'NotFound'))}${td(out(a,'Clarification'))}</tr>`;}).join('')}</tbody></table></div>
+    <div class="share-foot">Patterns, not judgements: a 16-digit number may be a reference, "film" may be a film classification question, and "overdose" may be a medical one. What matters is the order of magnitude and what the system did: an identifier typed in is a data-protection point for the feed itself; an injection that got a cited answer and a crisis message that got a plain information page are the rows to read.</div></div>`;
+}
+
 // ═══ INCIDENT CANDIDATES (brief §53 step 9, §64) ════════════════════════════
 // Days in range whose empty-answer share is at least 3%, at least three times the trailing 28-day median and 20+
 // errors, each read against the hours (how concentrated), response time, turns, and the cost meters that moved that
@@ -6424,6 +6451,7 @@ function usageDetailHTML(fr){
       const cell=(k,hh)=>{const v=val(k,hh),b=best[k][hh];const t=max>min?((v==null?0:(v-min))/(max-min)):0;const a=v==null?0x08:Math.round(0x12+(0xee-0x12)*t);
         return`<div title="${names[k]} ${String(hh).padStart(2,'0')}:00 · ${fmtV(v)}${isRate?` (${num(grid[k][hh])} of ${num(den[k][hh])})`:' '+unit}${b?` · busiest ${fmtDate(b.date)} (${num(b.t)} turns) — click to open`:''}"${b?` onclick="openDayPanel('${b.date}')"`:''} style="height:16px;border-radius:2px;background:${col}${a.toString(16).padStart(2,'0')}${b?';cursor:pointer':''};font-size:.5rem;line-height:16px;text-align:center;color:var(--muted);overflow:hidden">${!isRate&&max<10000&&v>0&&t>0.55?num(v):''}</div>`;};
       h+=incidentCardHTML(fr);
+      h+=safetyCardHTML(fr);
       h+=`<div class="card"><div class="card-title">Hour of day<span class="card-title-note">${unit} by weekday and hour, Irish time · ${days} day${days===1?'':'s'} with hourly data in range</span>
           <span class="pill-group" style="margin-left:auto"><button class="pill${hoursMode==='turns'?' active':''}" onclick="setHoursMode('turns')">Turns</button><button class="pill${hoursMode==='sessions'?' active':''}" onclick="setHoursMode('sessions')">Conversations</button>${Object.values(HOURS)[0]?.find(x=>x&&x.detail)?`<button class="pill${hoursMode==='notfound'?' active':''}" onclick="setHoursMode('notfound')">Not-found rate</button><button class="pill${hoursMode==='errors'?' active':''}" onclick="setHoursMode('errors')">Error rate</button><button class="pill${hoursMode==='latency'?' active':''}" onclick="setHoursMode('latency')">Mean response</button>`:''}</span></div>
         <div class="grid4">
