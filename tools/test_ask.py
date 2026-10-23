@@ -48,7 +48,7 @@ async function go(){
       ans=(a?a.innerText:'').replace(/\s+/g,' ').replace(/READ AS.*/,'').trim();}
     out.push(ans);
   }
-  document.body.setAttribute('data-test',JSON.stringify({out,errs:window.__errs}));
+  document.body.setAttribute('data-test',JSON.stringify({out,errs:window.__errs.concat((window.__askRegistryProblems||[]).map(x=>'registry: '+x))}));
 }
 </script>"""
 

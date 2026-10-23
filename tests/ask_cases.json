@@ -1476,5 +1476,47 @@
    "3.8 click-throughs"
   ],
   "note": "three words or fewer reads as a follow-up, and says so"
+ },
+ {
+  "q": "define click-through rate",
+  "group": "definitions",
+  "expect": [
+   "Click-throughs per 100 cited answers"
+  ]
+ },
+ {
+  "q": "what does not found rate mean",
+  "group": "definitions",
+  "expect": [
+   "Not-found rate DEFINITION Answers in"
+  ]
+ },
+ {
+  "q": "how is the cited answer rate calculated",
+  "group": "definitions",
+  "expect": [
+   "Cited answer rate DEFINITION Answers"
+  ]
+ },
+ {
+  "q": "explain conversation success rate",
+  "group": "definitions",
+  "expect": [
+   "Reached a cited answer DEFINITION"
+  ]
+ },
+ {
+  "q": "what is meant by out of hours share",
+  "group": "definitions",
+  "expect": [
+   "Out-of-hours share DEFINITION Turns asked"
+  ]
+ },
+ {
+  "q": "how are conversations counted",
+  "group": "definitions",
+  "expect": [
+   "Conversations DEFINITION A conversation is"
+  ]
  }
 ]
