@@ -611,3 +611,19 @@ An independent review of the Ask bar (`ask review/`, 29 findings, 42 proposed ca
   - "top topics in October vs September" gets the ranking-by-change card;
   - "questions in Arabic" gets the languages card.
 - 21 review cases added in our wording; 241 pass.
+
+## 43. Independent review, step 3: notes and labels on correct figures (23 Oct 2026)
+
+- **Click-through rate by month** (finding 6) showed a dash for every month although each month computes. The grouped table took its number format from the first bucket, January, which is "not measured" and formats as a dash. It now takes the format from the first bucket with a value. Months on a different basis are named: "Mar'26, Apr'26: the standalone site only (the pop-up is measured from 11 May)".
+- **Unvalidated outcome figures** (finding 22). Any outcome-based measure (cited, not found, clarification, partial, uncited, out of scope, reached a cited answer, later cited, dislikes) whose period reaches `CONFIG.outcome_rules_unvalidated_from` (14 Sep 2026) carries a notice: "Outcome figures from 14 Sep are unvalidated: the rules that classify answers haven't been re-checked against the model in use since then." August does not.
+- **Partial periods:**
+  - Weekly buckets clipped by the range or by the end of the data say so: "w/c 28 Sep (4 days)" (finding 23).
+  - Monthly labels end on the measure's last day, "Oct 1–22", from step 1's anchoring (finding 24).
+  - The dash note reads "too few to show (small-sample rule) or not measured".
+- **Click-through rate** (finding 25) states the days it covers and when each surface is measured: "measured 11 May to 22 Oct (standalone site from 10 Mar, pop-up from 11 May)". The 4,510 used in the rate no longer looks like a different count from the 4,869 total.
+- **Page answers** (findings 10, 21, 26):
+  - The figure is the page's current address, as the rankings count it: Fuel Allowance 4,291, "and 4 to an older address of the same page". It was 4,295 with the two merged silently.
+  - A page name holding a year ("Budget 2027") is no longer read as a period.
+  - A period inside a month names the months used, since citations are monthly.
+  - A page cited 100+ times with no recorded click-through says the link may redirect.
+- 9 review cases added (some merged into existing cases), and 2 Fuel Allowance expectations moved to 4,291. 249 pass.

@@ -426,21 +426,24 @@
   "q": "how many times was the fuel allowance page cited",
   "group": "content",
   "expect": [
-   "4,295 citations",
-   "185 click-throughs"
-  ]
+   "4,291 citations",
+   "185 click-throughs",
+   "4 to an older address"
+  ],
+  "note": "current address 4,291 as the rankings count it; 4 more to an older address (review finding 10)"
  },
  {
   "q": "fuel allowance citations by month",
   "group": "content",
   "expect": [
-   "4,295 citations",
-   "By month:"
+   "4,291 citations",
+   "By month:",
+   "4 to an older address"
   ],
   "not": [
    "links in answers"
   ],
-  "note": "answered a different question before the Ask bar audit (brief §29)"
+  "note": "answered a different question before the Ask bar audit (brief §29) · current address 4,291 as the rankings count it; 4 more to an older address (review finding 10)"
  },
  {
   "q": "what do people ask about after social welfare",
@@ -519,8 +522,11 @@
   "q": "click through rate",
   "group": "clicks",
   "expect": [
-   "4.7 click-throughs"
-  ]
+   "4.7 click-throughs",
+   "measured 11 May to 22 Oct",
+   "standalone site from 10 Mar, pop-up from 11 May"
+  ],
+  "not": []
  },
  {
   "q": "click through rate for the pop-up vs the standalone site",
@@ -2096,5 +2102,87 @@
   ],
   "group": "review",
   "note": "finding 12"
+ },
+ {
+  "q": "click through rate by month",
+  "expect": [
+   "Mar'26, Apr'26: the standalone site only",
+   "Apr'26 4.2",
+   "Sep'26 5.5"
+  ],
+  "not": [
+   "Sep'26 —"
+  ],
+  "group": "review",
+  "note": "finding 6: the table took its format from a not-measured month"
+ },
+ {
+  "q": "fuel allowance page citations",
+  "expect": [
+   "4,291 citations",
+   "4 to an older address"
+  ],
+  "not": [
+   "4,295"
+  ],
+  "group": "review",
+  "note": "finding 10: the current address, as the rankings count it"
+ },
+ {
+  "q": "cited answer rate in October",
+  "expect": [
+   "Outcome figures from 14 Sep are unvalidated",
+   "82.2%"
+  ],
+  "group": "review",
+  "note": "finding 22"
+ },
+ {
+  "q": "cited answer rate in August",
+  "expect": [
+   "91.9%"
+  ],
+  "not": [
+   "unvalidated"
+  ],
+  "group": "review",
+  "note": "finding 22: only periods reaching 14 Sep"
+ },
+ {
+  "q": "questions by week in October",
+  "expect": [
+   "w/c 28 Sep (4 days)",
+   "w/c 19 Oct (4 days)"
+  ],
+  "group": "review",
+  "note": "finding 23: partial weeks say so"
+ },
+ {
+  "q": "not found rate by month",
+  "expect": [
+   "Oct 1–22"
+  ],
+  "not": [
+   "Oct 1–23"
+  ],
+  "group": "review",
+  "note": "finding 24"
+ },
+ {
+  "q": "citations for state pension contributory",
+  "expect": [
+   "the link may redirect"
+  ],
+  "group": "review",
+  "note": "finding 26"
+ },
+ {
+  "q": "questions about budget 2027",
+  "expect": [
+   "Budget 2027",
+   "742 citations"
+  ],
+  "group": "review",
+  "note": "finding 21: a page name holding a year"
  }
 ]
