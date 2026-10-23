@@ -657,3 +657,25 @@ An independent review of the Ask bar (`ask review/`, 29 findings, 42 proposed ca
   - Their browser-free runner is `tools/test_ask_node.js` (see `tests/README.md`).
   - The review report itself (PDF) is kept local, not in this public repository (`ask review/` is git-ignored).
 - 256 cases pass.
+
+## 46. Ask bar: topics by citations, topic-specific choices, "What can I ask?" (23 Oct 2026)
+
+- **Topics ranked by citations.** "which topics get the most citations" and "most cited topic" rank by citations from `categories-daily.csv` (Social Welfare 50,865, 36.9% of citations). Before, they ranked by questions, or by cited-answer rate. "top topics by cited answer rate" still ranks by the rate, and topics can also be ranked by uncited rate.
+- **A topic with no measure** ("housing last month", or just "social welfare") gets "Which measure for Housing?" with that topic's choices: questions, not-found rate, cited answer rate, citations and share of questions, for the period asked.
+- **"What can I ask?"** (a chip under the box, or "help", "what can I ask", "examples"). The card is built from the registry, so a new measure appears without editing it. It has:
+  - every measure grouped as in the Read-as menu, each a chip that asks it for the latest full month, with the measure's definition on hover;
+  - costs by service or model;
+  - period phrasings;
+  - narrowing by topic or source;
+  - shapes: by week or month, trends, comparisons, combined questions, rankings, what changed, the summary;
+  - definitions;
+  - what is not in the data.
+- **Every chip was asked through the page before release**, which found 8 that parsed wrongly. Each was a bug a person could hit too, and all are fixed:
+  - "response time p90" and "p99" answered with the p50 ("response time" outranked "p90");
+  - "generation cost" answered with cost per turn;
+  - "organic first turns" was read as the new-topics filter;
+  - "out-of-scope" with hyphens wasn't recognised;
+  - "modal share of conversations" and "conversations over 5 minutes" answered with conversations;
+  - "different pages cited" and "pages clicked through to" gave a ranking (the card now asks them as "how many …").
+- **"Also read as" is tighter:** no alternative whose words overlap the chosen reading, and none when the question names the measure outright.
+- 13 cases added; 269 pass.

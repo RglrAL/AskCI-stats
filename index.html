@@ -7471,7 +7471,8 @@ init();
   function parseCategory(q){
     for(const[slug,phr]of CAT_PHRASES){for(const ph of phr){
       const p=ph.replace(/[&]/g,'\\$&');
-      if(new RegExp('^\\s*(and|but|what about|how about|now|then)\\s+(for\\s+|in\\s+)?(the\\s+)?'+p+'\\s*$').test(q))return slug;   // a follow-up naming only a topic: "and employment?"
+      if(new RegExp('^\\s*(and|but|what about|how about|now|then)\\s+(for\\s+|in\\s+)?(the\\s+)?'+p+'\\s*$').test(q))return slug;
+      if(new RegExp('^\\s*(the\\s+)?'+p+'(\\s+topic)?\\s*$').test(q))return slug;                                       // the topic's name alone   // a follow-up naming only a topic: "and employment?"
       if(new RegExp('\\b(in|for|on|about|within)\\s+(the\\s+)?'+p+'\\b').test(q))return slug;        // "in housing"
       if(new RegExp('\\b'+p+'\\s+'+CAT_NOUNS+'\\b').test(q))return slug;                                   // "housing citations", "health not-found rate"
       if(new RegExp('\\b(are|is|were|was) (about )?'+p+'\\s*$').test(q.trim()))return slug;                      // "what share of questions are social welfare"
@@ -7488,7 +7489,7 @@ init();
     if(/\b(for|on|via|from)\s+(the\s+)?web\b|\bweb (users|turns|conversations|traffic|site|questions?|not[- ]?found|cited|click|error)/.test(q))return{key:'web',label:'Web'};
     if(/\b(for|of|from|on)\s+(the\s+)?(suggested follow[- ]?ups?|chips?|chip turns)\b|\bchip turns\b/.test(q))return{key:'sf',label:'suggested follow-ups',phrase:(q.match(/\b(for|of|from|on)\s+(the\s+)?(suggested follow[- ]?ups?|chips?|chip turns)\b|\bchip turns\b/)||[''])[0]};
     if(/\b(for|of|from|on)\s+(the\s+)?(typed|user) follow[- ]?ups?\b/.test(q))return{key:'uf',label:'typed follow-ups',phrase:(q.match(/\b(for|of|from|on)\s+(the\s+)?(typed|user) follow[- ]?ups?\b/)||[''])[0]};
-    if(/\b(for|of|from)\s+(the\s+)?new topics?\b|\bfirst turns\b/.test(q))return{key:'nt',label:'new topics'};
+    if(/\b(for|of|from)\s+(the\s+)?new topics?\b|(?<!organic )\bfirst turns\b/.test(q))return{key:'nt',label:'new topics'};
     return null;
   }
   // Parse rules that build their result from the question (labels with variants, services, model families).
@@ -7508,7 +7509,7 @@ init();
     [330,(q,svcs)=>{if(/\bmodels?\b/.test(q)&&/which|what|most|biggest|cheapest|top|expensive|costliest|priciest/.test(q))return{kind:'topModel',label:'model'}; return null;},/\bmodels?\b/],
     [340,(q,svcs)=>{const famQ=(re,fam)=>re.test(q)?{kind:'model',match:k=>meterFamily(k)===fam,label:fam,fam}:null; const fm=famQ(/\b5[.·]4 ?mini\b/,'5.4 mini')||famQ(/\b5[.·]4\b/,'5.4')||famQ(/transcribe/,'gpt-4o-transcribe')||famQ(/\bgpt[- ]?5 ?mini\b/,'GPT 5 Mini')||famQ(/\bgpt[- ]?5 ?chat\b/,'GPT 5 Chat')||famQ(/chat[- ]?latest/,'chat-latest 05052026')||famQ(/\bgpt[- ]?5\b/,'GPT 5')||famQ(/\b(gpt[- ]?)?4o[- ]?mini\b/,'gpt-4o-mini 0718')||famQ(/\b(gpt[- ]?)?4o\b/,'gpt-4o 1120')||famQ(/\bembed/,'text-embedding-3-small'); if(fm)return fm; return null;},(q)=>((q.match(/\b5[.·]4 ?mini\b|\b5[.·]4\b|transcribe|\bgpt[- ]?5 ?(mini|chat)?\b|chat[- ]?latest|\b(gpt[- ]?)?4o([- ]?mini)?\b|\bembed\w*/)||[''])[0].length+2)],
     [370,(q,svcs)=>{if(/run ?rate/.test(q))return{kind:'runrate',yearly:/year/.test(q),label:(/year/.test(q)?'projected year total':'run rate, next 30 days')}; return null;},/run ?rate/],
-    [390,(q,svcs)=>{if(/cost per (question|turn)|per (question|turn)|\bcpq\b|generation cost/.test(q))return /\b(llm|ai|model|token|generation)/.test(q)?{kind:'cpq_llm',label:'generation cost per turn'}:{kind:'cpq_tot',label:'allocated total cost per turn'}; return null;},/cost per (question|turn)|per (question|turn)|\bcpq\b|generation cost/],
+    [390,(q,svcs)=>{if(/cost per (question|turn)|per (question|turn)|\bcpq\b/.test(q))return /\b(llm|ai|model|token|generation)/.test(q)?{kind:'cpq_llm',label:'generation cost per turn'}:{kind:'cpq_tot',label:'allocated total cost per turn'}; return null;},/cost per (question|turn)|per (question|turn)|\bcpq\b/],
     [540,(q,svcs)=>{if(/latency|response time|how (fast|slow)|\bslow(est)?\b|\bfast(est)?\b|\bspeed\b|\bp50\b|median response/.test(q))return{kind:'latency',label:'response time p50',superl:/slowest|\bslow(est)? day/.test(q)?'max':/fastest|quickest/.test(q)?'min':null}; return null;},/latency|response time|how (fast|slow)|\bslow(est)?\b|\bfast(est)?\b|\bspeed\b|\bp50\b|median response/],
   ];
   let PARSE_RULES=null;
@@ -7759,7 +7760,7 @@ init();
     const dir=/cheapest|quietest|lowest|smallest|fewest|\bleast\b|\bbottom\b|\bbest\b/.test(q)&&!/most/.test(q)?'min':'max';
     let metric='spend';
     if(entity==='category'){
-      metric=/not[- ]?found/.test(q)?'notfound':/cited|answer rate/.test(q)?'cited':/clarif/.test(q)?'clarification':/error/.test(q)?'error':/dislike/.test(q)?'dislikes':/organic|first turns/.test(q)?'organic':'turns';
+      metric=/uncited/.test(q)?'uncited':/not[- ]?found/.test(q)?'notfound':/\bcitations?\b|\bmost cited\b(?! answer)|\bcited (the )?most\b|\blinks?\b/.test(q)&&!/answer rate|cited answer/.test(q)?'citations':/cited|answer rate/.test(q)?'cited':/clarif/.test(q)?'clarification':/error/.test(q)?'error':/dislike/.test(q)?'dislikes':/organic|first turns/.test(q)?'organic':'turns';
     }else if(listEntity)metric='count';
     else if(/quietest|busiest|\bbusy\b|\bquiet\b|traffic|usage|questions?|queries/.test(q)&&!/cost|spend|spent|£/.test(q))metric='questions';
     else if(/\bllm\b|token|foundry/.test(q))metric='llm';
@@ -7776,12 +7777,16 @@ init();
     if(entity==='category'){
       if(!hasCatOut)return{topn:true,empty:true,intent};
       const agg={};rows.forEach(d=>{Object.entries(CATOUT[d.date]||{}).forEach(([c,o])=>{if(c==='unknown'||CAT_EXCLUDE.has(c))return;const a=agg[c]||(agg[c]={});Object.entries(o).forEach(([kk,v])=>{a[kk]=(a[kk]||0)+v;});});});
+      // citations by topic come from categories-daily.csv (turns citing a page in the topic, one per turn per topic)
+      if(metric==='citations')rows.forEach(d=>Object.entries(CATDAY[d.date]||{}).forEach(([c,n])=>{if(c==='unknown'||CAT_EXCLUDE.has(c))return;const a=agg[c]||(agg[c]={});a.Citations=(a.Citations||0)+n;}));
+      const allCites=Object.values(agg).reduce((a,o)=>a+(o.Citations||0),0);
       const rateOf=(o,n,d)=>rateOK(o[n]||0,o[d]||0).ok&&o[d]?(o[n]||0)/o[d]*100:null;
       const spec={turns:[o=>o.Turns||0,v=>num(Math.round(v)),'turns'],organic:[o=>o.OrganicFirstTurns||0,v=>num(Math.round(v)),'organic first turns'],
         notfound:[o=>rateOf(o,'NotFound','Scored'),pctF(1),'not-found rate'],cited:[o=>rateOf(o,'Cited','Scored'),pctF(1),'cited answer rate'],clarification:[o=>rateOf(o,'Clarification','Scored'),pctF(1),'clarification rate'],
-        error:[o=>rateOf(o,'Error','Turns'),pctF(1),'error rate'],dislikes:[o=>rateOK(o.DislikesOnCited||0,o.Cited||0).ok&&o.Cited?(o.DislikesOnCited||0)/o.Cited*1000:null,v=>v.toFixed(1),'dislikes per 1,000 cited answers']}[metric];
+        error:[o=>rateOf(o,'Error','Turns'),pctF(1),'error rate'],uncited:[o=>rateOf(o,'Uncited','Scored'),pctF(1),'uncited answer rate'],
+        citations:[o=>o.Citations||0,v=>num(Math.round(v)),'citations (turns citing a page in the topic)'],dislikes:[o=>rateOK(o.DislikesOnCited||0,o.Cited||0).ok&&o.Cited?(o.DislikesOnCited||0)/o.Cited*1000:null,v=>v.toFixed(1),'dislikes per 1,000 cited answers']}[metric];
       const allTurns=Object.values(agg).reduce((a,o)=>a+(o.Turns||0),0);   // questions with an identifiable topic
-      items=Object.entries(agg).map(([c,o])=>({label:catLabel(CAT_ALIAS[c]||c),act:['sub','categories'],v:spec[0](o),extra:` · ${num(o.Turns||0)} turns`+(metric==='turns'&&allTurns?` · ${((o.Turns||0)/allTurns*100).toFixed(1)}% of questions with a topic`:'')})).filter(i=>i.v!=null);
+      items=Object.entries(agg).map(([c,o])=>({label:catLabel(CAT_ALIAS[c]||c),act:['sub','categories'],v:spec[0](o),extra:` · ${num(o.Turns||0)} turns`+(metric==='turns'&&allTurns?` · ${((o.Turns||0)/allTurns*100).toFixed(1)}% of questions with a topic`:'')+(metric==='citations'&&allCites?` · ${((o.Citations||0)/allCites*100).toFixed(1)}% of citations`:'')})).filter(i=>i.v!=null&&(metric!=='citations'||i.v>0));
       fmt=spec[1];by=spec[2];
     }else if(entity==='clickpage'){
       if(!hasClicks)return{topn:true,empty:true,intent};
@@ -8203,7 +8208,7 @@ init();
     AM('qps','Turns per conversation','ratio',{syn:[[/\b(questions?|turns?) (per|in each|in a) conversation\b/,10,'questions per conversation'],[/questions? per session|per session|engagement/,400,'questions per session']],def:'Turns divided by conversations started, over the same days.'}),
     AM('organic','Organic first turns','count',{calc:{src:'ux',n:'organic'},syn:[[/organic first turns|organic demand|organic/,300,'organic first turns']],def:'First turns that are not starter prompts: questions people typed themselves.'}),
     AM('citations','Citations','count',{calc:{src:'ux',n:'citations'},syn:[[/citation|\blinks?\b/,570,'citations']],def:'Links to pages in AskCI\'s answers; 99.8% go to citizensinformation.ie.'}),
-    AM('modal','Modal share of conversations','pct',{calc:{src:'ux',n:'modalSessions',d:['modalSessions','webSessions'],of:'conversations'},bySource:true,syn:[[/modal share|web share|share (of|on|from) (the )?(modal|web)|\bshare\b.*\b(from|on|via|through) (the )?(modal|web)\b|\bmodal (vs\.?|versus|and|or) web\b|\bweb (vs\.?|versus|and|or) modal\b|by source|source (split|mix|distribution)/,560,'Modal share of conversations']],def:'Conversations started in the pop-up (Modal), as a share of pop-up plus standalone-site conversations.'}),
+    AM('modal','Modal share of conversations','pct',{calc:{src:'ux',n:'modalSessions',d:['modalSessions','webSessions'],of:'conversations'},bySource:true,syn:[[/modal share of conversations|modal share|web share|share (of|on|from) (the )?(modal|web)|\bshare\b.*\b(from|on|via|through) (the )?(modal|web)\b|\bmodal (vs\.?|versus|and|or) web\b|\bweb (vs\.?|versus|and|or) modal\b|by source|source (split|mix|distribution)/,560,'Modal share of conversations']],def:'Conversations started in the pop-up (Modal), as a share of pop-up plus standalone-site conversations.'}),
     AM('cited','Cited answer rate','pct',{calc:{src:'ux',n:'cited',d:'scored',of:'scored turns'},cat:{n:'Cited',d:'Scored',of:'scored turns'},byf:{n:'Cited',d:'Scored'},polarity:'up',bySource:true,syn:[[/\b(answer )?quality\b/,80,'cited answer rate',/data quality/],[/\bcited (answer|rate)|citation rate/,490,'cited answer rate']],def:'Answers that cite at least one citizensinformation.ie page, as a share of scored turns (all turns except greetings, errors and out-of-scope).'}),
     AM('uncited','Uncited answer rate','pct',{calc:{src:'ux',n:'uncited',d:'scored',of:'scored turns'},cat:{n:'Uncited',d:'Scored',of:'scored turns'},polarity:'down',syn:[[/\buncited( answers?)?( rate| share)?\b|\banswers? (with ?out|with no|without any) (a )?citations?\b|\bno citations?\b/,8,'uncited answer rate']],def:'Answers that cite no page and are not a not-found reply, clarification, greeting, error or out-of-scope reply, as a share of scored turns: the riskiest class, an answer with no Citizens Information source behind it.'}),
     AM('notfound','Not-found rate','pct',{calc:{src:'ux',n:'notFound',d:'scored',of:'scored turns'},cat:{n:'NotFound',d:'Scored',of:'scored turns'},byf:{n:'NotFound',d:'Scored'},polarity:'down',bySource:true,syn:[[/\bfail(s|ed)? to find\b|\bcan'?t find\b|\bcannot find\b|\bcouldn'?t find\b|\bno answer found\b/,60,'not-found rate'],[/not[- ]?found/,460,'not-found rate']],def:'Answers in which AskCI says it could not find the information, as a share of scored turns. Classified by text rules (version shown in the data-quality strip).'}),
@@ -8215,8 +8220,8 @@ init();
     AM('chips','Suggested follow-up share','pct',{calc:{src:'ux',n:'suggestedFollowup',d:'Q',of:'turns'},syn:[[/\bchips?\b|suggested follow|follow[- ]?ups?/,550,'suggested follow-up share']],def:'Turns that came from a suggested follow-up chip, as a share of all turns.'}),
     AM('starter','Starter-prompt share','pct',{calc:{src:'ux',n:'starter',d:['starter','organic'],of:'first turns'},syn:[[/starter|chip prompt/,450,'starter-prompt share of first turns']],def:'First turns that used one of the suggested starter prompts, as a share of first turns.'}),
     AM('latency','Response time p50','ms',{polarity:'down',def:'The day\'s median response time, weighted by turns across days. Positive response times only.',syn:[[/\bhow long do (answers|responses|replies) take\b|\btime (to|taken to) (answer|respond)\b|\banswer times?\b/,5,'response time p50']]}),
-    AM('p90','Response time p90','ms',{polarity:'down',syn:[[/\bp90\b|90th/,210,'response time p90']],def:'The day\'s 90th-percentile response time, weighted by turns across days.'}),
-    AM('p99','Response time p99','ms',{polarity:'down',syn:[[/\bp99\b|99th/,200,'response time p99']],def:'The day\'s 99th-percentile response time, weighted by turns across days.'}),
+    AM('p90','Response time p90','ms',{polarity:'down',syn:[[/\b(response time |latency )?p90\b|90th( percentile)?/,210,'response time p90']],def:'The day\'s 90th-percentile response time, weighted by turns across days.'}),
+    AM('p99','Response time p99','ms',{polarity:'down',syn:[[/\b(response time |latency )?p99\b|99th( percentile)?/,200,'response time p99']],def:'The day\'s 99th-percentile response time, weighted by turns across days.'}),
     AM('over30','Turns over 30 s','pct',{calc:{src:'ux',n:'latO30',d:['latU10','lat1020','lat2030','latO30'],of:'timed turns',note:'timed turns over 30 seconds',subj:'turns over 30 s',miss:'usage.csv has no latency band columns; regenerate from the QA feed'},polarity:'down',syn:[[/over 30|more than 30|above 30|30 ?s(ec|econds)?\b|slow (turns|answers|responses)/,220,'turns over 30 s']],def:'Timed turns that took over 30 seconds, as a share of timed turns.'}),
     AM('answerlen','Cited answer length','ratio',{calc:{src:'ux',n:'citedWords',d:'citedWordsN',x:1,dp:0,say:'words over',of:'cited answers',miss:'usage.csv has no answer-length columns; regenerate it from the QA feed',subj:'words per cited answer'},syn:[[/\b(answer|response|reply) (length|size)\b|\bhow long are (the )?(answers|responses|replies)\b|\bwords per (answer|response)\b|\bverbos|\blonger answers\b|\bshorter answers\b|\banswers? (are |have )?(getting|got|become|became) (longer|shorter)\b/,6,'cited answer length']],def:'Words in AskCI\'s cited answers, summed then divided by the number of cited answers with a word count.'}),
     AM('peakload','Peak hourly load','count',{groupable:false,prior:false,syn:[[/\bpeak (hourly )?load\b|\bbusiest single hour\b|\bmost (questions|turns) in (an|one|a single) hour\b|\bpeak hour(ly)? (volume|turns|questions)\b/,7,'peak hourly load']],def:'The most turns in any single hour of the period, Irish time: a load and capacity measure.'}),
@@ -8228,11 +8233,11 @@ init();
     AM('latercited','Not found, then later cited','pct',{calc:{src:'conv',n:'NFLaterCited',d:'NFTurns',of:'not-found answers',note:'per answer; the later cited answer may be to a different question',subj:'not-found answers followed later in the conversation by a cited answer'},polarity:'up',syn:[[/later (got )?(a )?cited|after (a )?not[- ]?found/,150,'not found, then a later cited answer']],def:'Not-found answers after which a later question in the same conversation got a cited answer, counted per answer. The later answer may be to a different question.'}),
     AM('single','Ended after first turn','pct',{calc:{src:'conv',n:'Turns1',d:'Mature',of:'mature conversations',note:'mature conversations',subj:'conversations that ended after the first turn'},syn:[[/\bend(s|ed)? after (one|1|a single|the first) (question|turn)\b|\bone[- ]question conversations?\b/,20,'ended after first turn'],[/ended after (the )?first turn|single[- ]turn|one[- ]turn|abandon/,170,'ended after first turn']],def:'Mature conversations with only one turn, as a share of mature conversations. Never described as abandonment.'}),
     AM('chipuse','Suggested follow-up use','pct',{calc:{src:'conv',n:'ChipUse',d:'Mature',of:'mature conversations',note:'mature conversations with at least one suggested follow-up',subj:'suggested follow-up use'},syn:[[/chip use|used (a )?chip|suggested follow-?up use|follow-?up use/,180,'suggested follow-up use']],def:'Mature conversations with at least one suggested follow-up turn, as a share of mature conversations.'}),
-    AM('span','Conversations over 5 min','pct',{calc:{src:'conv',n:['Span6to15','Span16to60','SpanOver60'],d:['Span0to1','Span2to5','Span6to15','Span16to60','SpanOver60'],of:'multi-turn conversations',note:'multi-turn conversations lasting over 5 minutes, minute precision',subj:'conversations over 5 minutes'},syn:[[/\bhow long (are|do|did) conversations( last| take)?\b|\bconversation (length|duration)\b/,5,'conversations over 5 minutes'],[/how long|conversation (length|span|duration)|observed span|\bspan\b|duration/,190,'conversations over 5 minutes']],def:'Mature multi-turn conversations lasting more than 5 minutes from first to last turn, minute precision.'}),
+    AM('span','Conversations over 5 min','pct',{calc:{src:'conv',n:['Span6to15','Span16to60','SpanOver60'],d:['Span0to1','Span2to5','Span6to15','Span16to60','SpanOver60'],of:'multi-turn conversations',note:'multi-turn conversations lasting over 5 minutes, minute precision',subj:'conversations over 5 minutes'},syn:[[/\bconversations? (over|longer than|lasting( over| more than)?) (5|five) min(ute)?s?\b|\bhow long (are|do|did) conversations( last| take)?\b|\bconversation (length|duration)\b/,5,'conversations over 5 minutes'],[/how long|conversation (length|span|duration)|observed span|\bspan\b|duration/,190,'conversations over 5 minutes']],def:'Mature multi-turn conversations lasting more than 5 minutes from first to last turn, minute precision.'}),
     AM('script','Non-Latin script share','pct',{def:'Turns whose question starts with a non-Latin letter, as a share of turns with letters. A script, not a language.'}),
     AM('events','Events','list',{groupable:false,prior:false,syn:[[/\bevents?\b|milestones/,290,'events']]}),
     AM('cpc','Allocated cost per conversation','pence',{polarity:'down',cost:true,syn:[[/\bcost (per|of a|of each) conversation\b|\b(how much|what) (does|do|did) (a|each|one|every) conversation cost\b/,30,'allocated cost per conversation']],def:'Allocated total billed cost divided by conversations, over settled billing days with turns.'}),
-    AM('oos','Out-of-scope share','pct',{calc:{src:'ux',n:'outOfScope',d:'Q',of:'turns',note:'questions outside CI’s remit, declined by AskCI',subj:'out-of-scope share of turns'},polarity:'down',syn:[[/\bout of scope\b|\boutside (its|the|ci'?s) remit\b|\brefus(ed|al|als)\b|\bdeclined\b/,70,'out-of-scope share of turns']],def:'Turns AskCI declined as outside Citizens Information\'s remit, as a share of all turns.'}),
+    AM('oos','Out-of-scope share','pct',{calc:{src:'ux',n:'outOfScope',d:'Q',of:'turns',note:'questions outside CI’s remit, declined by AskCI',subj:'out-of-scope share of turns'},polarity:'down',syn:[[/\bout[- ]of[- ]scope\b|\boutside (its|the|ci'?s) remit\b|\brefus(ed|al|als)\b|\bdeclined\b/,70,'out-of-scope share of turns']],def:'Turns AskCI declined as outside Citizens Information\'s remit, as a share of all turns.'}),
     AM('adoption','Share of site sessions (at most)','pct',{syn:[[/\b(share|percentage|proportion) of (the )?site (visitors|visits|sessions|traffic)\b|\bsite (visitors|visits|sessions) (use|using|used)\b|\badoption( rate)?\b/,110,'AskCI conversations as a share of site sessions']],def:'AskCI conversations as a share of citizensinformation.ie site sessions. At most: GA4 undercounts sessions (cookie consent) while AskCI counts every conversation.'}),
     AM('infoshare','Share of information-seeking (at most)','pct',{syn:[[/\bsite search(es)?\b|\bcompare(d)? (to|with) (the )?(site )?search\b|\binformation[- ]seeking\b/,120,'share of information-seeking']],def:'AskCI questions as a share of AskCI questions plus site searches. At most, for the same reason as the adoption rate.'}),
     AM('weekday','Busiest day of the week','weekday',{groupable:false,prior:false,def:'Questions per day for each day of the week, averaged over days with data.'}),
@@ -9012,7 +9017,9 @@ init();
     const c=parseMetricAll(qq);if(c.length<2)return;
     // Not a separate reading when its phrase sits inside the chosen one's ("answer rate" in "cited answer rate"),
     // nor a generic fallback (turns, conversations, spend) or a legacy measure kept out of the read-as menu.
-    const inside=(a,b)=>a.at>=0&&b.at>=0&&a.at>=b.at&&a.at+a.len<=b.at+b.len+1;
+    const inside=(a,b)=>a.at>=0&&b.at>=0&&a.at<b.at+b.len&&b.at<a.at+a.len;   // the two readings share words: not a separate reading
+    const own=String((MET[intent.metric.kind]||{}).label||intent.metric.label||'').toLowerCase();
+    if(own.length>=8&&qq.toLowerCase().includes(own))return;   // the question names the measure outright
     const top=c[0],alt=c.find(x=>x.out.kind!==top.out.kind&&x.out.kind!==intent.metric.kind&&!['questions','sessions','spend'].includes(x.out.kind)&&MET[x.out.kind]?.read!==false&&!inside(x,top));
     if(!alt||alt.len<5||alt.len<top.len*0.8)return;
     const tail=(q.match(/\b(in|on|last|this|since|from|by|between|after|before|during|over|for)\b.*$/)||[''])[0]||'';
@@ -9086,8 +9093,37 @@ init();
       `Without ${words.length>1?'those words':'that word'}, the question reads as <b>${esc(reading)}</b>. Topics are the site’s sections (Housing, Social Welfare …); a page can be asked about by name.${pages.length?' Pages that match:':''}`,
       [...pages,reading,'top topics'].slice(0,5));
   }
+  // ── "What can I ask?": built from the registry, so a new measure appears here without anyone editing this card ──
+  function isHelp(q){return /^\s*(help|\?|examples?)\s*\??\s*$|\b(what|which) (can|could|should) (i|you) (ask|answer|do|tell)\b|\bwhat questions (can|could)\b|\bhow (do|does|can) (i|this|the ask bar|ask) (use|work)\b|\bwhat do you know\b|\bwhat can (the ask bar|this) do\b/.test(q);}
+  function renderHelp(){
+    const el=$('ask-answer');if(!el)return;
+    const lm=(DATA.merged.filter(d=>d.queries>0).slice(-1)[0]||{}).date||lastDate(),mon=MONFULL[+lm.slice(5,7)-1],prev=MONFULL[(+lm.slice(5,7)+10)%12];
+    const GROUPS=[['Usage','questions sessions qps organic citations modal chips starter outofhours hour weekday peakload script answerlen'],['Answer quality','cited notfound clarification partial uncited error oos dislikes feedback'],
+      ['Conversations','reached latercited single chipuse span'],['Click-throughs','clicks ctr pagescited clickpages'],['Response time','latency p90 p99 over30'],['Reach','adoption infoshare'],
+      ['Cost','spend llm fixed variable fixedshare cache cpq_llm cpq_tot cpc voice runrate']];
+    const chip=(t,title)=>'<button class="ask-chip" data-ex="'+escA(t)+'"'+(title?' title="'+escA(title)+'"':'')+'>'+esc(t)+'</button>';
+    const ex=id=>{const m=MET[id];if(!m)return '';const lbl=m.label.toLowerCase().replace(/^turns$/,'questions').replace(/^conversations over 5 min$/,'conversations over 5 minutes');
+      const q={pagescited:'how many different pages were cited in '+prev,clickpages:'how many pages did people click through to in '+prev}[id]||(m.unit==='hour'||m.unit==='weekday'||id==='runrate'?lbl:lbl+' in '+prev);
+      return '<button class="ask-chip" data-ex="'+escA(q)+'" title="'+escA((m.def?m.def+' ':'')+'Asks: “'+q+'”')+'">'+esc(lbl)+'</button>';};
+    const sec=(h,body)=>'<div class="ask-sec">'+esc(h)+'</div>'+body;
+    const row=a=>'<div class="ask-guard-chips">'+a.join('')+'</div>';
+    const cats=CAT_PHRASES.slice(0,8).map(([sl])=>catLabel(CAT_ALIAS[sl]||sl));
+    el.innerHTML='<div class="ask-card" style="flex-direction:column;align-items:stretch">'+
+      '<div class="ask-know-head"><i data-lucide="help-circle" class="i-sm"></i><span class="ask-know-title">What you can ask</span></div>'+
+      '<div class="ask-know-body">Ask in plain words: a <b>measure</b>, a <b>period</b>, and if you like a topic, a source or a time of day. Every answer says how the question was read, and the “Read as” line corrects it. Click a measure to ask it for '+esc(prev)+'; hover it for its definition.</div>'+
+      GROUPS.map(([g,ids])=>sec(g,row(ids.split(' ').filter(id=>MET[id]).map(ex)))).join('')+
+      sec('Costs by service or model',row([chip('Azure Cognitive Search cost in '+prev),chip('which service costs the most'),chip('which language model costs the most'),chip('why did cost go up in '+prev)]))+
+      sec('Periods',row(['in '+prev,'last month','last 7 days','this year','Q3','since 14 September','week of 5 October','on Budget Day','between 8pm and 9am','on Tuesdays'].map(t=>chip('questions '+t))))+
+      sec('Narrow by topic or source',row([...cats.slice(0,4).map(c=>chip('not found rate in '+c.toLowerCase()+' in '+prev)),chip('cited answer rate for the pop-up'),chip('questions on the standalone site in '+prev),chip('not found rate for suggested follow-ups')]))+
+      sec('Shapes',row([chip('questions by week'),chip('not found rate by month'),chip('is the not found rate rising'),chip(prev+' vs '+(MONFULL[(+lm.slice(5,7)+9)%12])+' questions'),chip('questions and conversations in '+prev),chip('top 10 cited pages'),chip('top topics'),chip('busiest day'),chip('what changed in '+prev),chip('how is AskCI doing')]))+
+      sec('Definitions',row([chip('define cited answer rate'),chip('how is the not found rate calculated'),chip('what is a turn')]))+
+      sec('Not in the data',`<div class="ask-know-body">The text of questions and answers, who asked, their language (only the alphabet is recorded), and causes: the dashboard shows what changed and when, not why.</div>`)+
+    '</div>';
+    el.classList.add('show');if(typeof renderIcons==='function')renderIcons();
+  }
   function route(q){
     const ans=$('ask-answer');
+    if(isHelp(q)){renderHelp();lastIntent=null;return;}
     // 0a. Knowledge / definition ("what is cost per question?", "what does Cognitive Search do?")
     const kn=parseKnowledge(q);
     if(kn){renderKnowledge(kn);lastIntent=null;return;}
@@ -9160,6 +9196,11 @@ init();
       lastIntent=merged;render(compute(merged));return;
     }
     // No measure named: ask, never default to spend.
+    if(!d.metricExplicit&&d.category&&!d.filter&&!d.hours){
+      const cl=catLabel(CAT_ALIAS[d.category]||d.category),pp=d.periodExplicit?(q.match(/\b(last|this|since|from|between|after|before|during|over|yesterday|today)\b.*$/)||q.match(/\b(in|on)\s+(jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec|q[1-4]|20\d\d|the week|week)\w*.*$/)||[''])[0]:'';
+      const t=x=>(x+' '+pp).replace(/\s+/g,' ').trim();
+      showCard('Which measure for '+cl+'?','The question names a topic but not a measure. Pick one:',[t(cl.toLowerCase()+' questions'),t('not found rate in '+cl.toLowerCase()),t('cited answer rate in '+cl.toLowerCase()),t(cl.toLowerCase()+' citations'),t('share of questions about '+cl.toLowerCase())]);lastIntent=null;return;
+    }
     if(!d.metricExplicit&&(d.periodExplicit||d.trend||d.groupBy||d.category||d.filter||d.hours||d.days)){
       const tail=(q.match(/\b(in|on|last|this|since|from|by|between|after|before|during|over|for|at)\b.*$/)||[''])[0]||'';
       showCard('Which measure?','The question doesn’t name a measure the Ask bar knows. Pick one:',[('questions '+tail).trim(),('conversations '+tail).trim(),('cited answer rate '+tail).trim(),('not found rate '+tail).trim(),('spend '+tail).trim()]);lastIntent=null;return;
@@ -9195,7 +9236,7 @@ init();
     const el=$('ask-chips'); if(!el||!have())return;
     const m=DATA.merged.filter(d=>d.total>0);
     const lm=m.length?fmtMonth(m[m.length-1].date.slice(0,7)):'this month';
-    const ex=['Spend in '+lm,'What changed in '+lm,'Not-found rate by month','Is the not-found rate rising','Which category has the highest not-found rate','Not-found rate for modal this month','p90 by week last 3 months','Most cited pages last month','Questions between 8pm and 9am','How much has usage grown since April','How many different pages were cited','Questions on Budget Day'];
+    const ex=['What can I ask?','Spend in '+lm,'What changed in '+lm,'Not-found rate by month','Is the not-found rate rising','Which category has the highest not-found rate','Not-found rate for modal this month','p90 by week last 3 months','Most cited pages last month','Questions between 8pm and 9am','How much has usage grown since April','How many different pages were cited','Questions on Budget Day'];
     el.innerHTML=ex.map(t=>'<button class="ask-chip" data-ex="'+escA(t)+'">'+esc(t)+'</button>').join('');
   }
   function applyRange(f,t){

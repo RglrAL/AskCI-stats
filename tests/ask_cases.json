@@ -2264,5 +2264,125 @@
   ],
   "group": "review",
   "note": "finding 18: both sources as two tiles"
+ },
+ {
+  "q": "which topics get the most citations",
+  "expect": [
+   "by citations",
+   "Social Welfare",
+   "50,865",
+   "36.9% of citations"
+  ],
+  "group": "content",
+  "note": "topics ranked by citations (categories-daily.csv), not by questions"
+ },
+ {
+  "q": "most cited topic",
+  "expect": [
+   "by citations"
+  ],
+  "not": [
+   "by cited answer rate"
+  ],
+  "group": "content"
+ },
+ {
+  "q": "housing last month",
+  "expect": [
+   "Which measure for Housing?",
+   "not found rate in housing last month"
+  ],
+  "group": "phrasing",
+  "note": "a topic with no measure offers that topic's measures"
+ },
+ {
+  "q": "social welfare",
+  "expect": [
+   "Which measure for Social Welfare?"
+  ],
+  "not": [
+   "I couldn’t parse that"
+  ],
+  "group": "phrasing"
+ },
+ {
+  "q": "what can I ask?",
+  "expect": [
+   "What you can ask",
+   "ANSWER QUALITY",
+   "NOT IN THE DATA"
+  ],
+  "group": "help"
+ },
+ {
+  "q": "help",
+  "expect": [
+   "What you can ask"
+  ],
+  "group": "help"
+ },
+ {
+  "q": "response time p90 in September",
+  "expect": [
+   "17.8s response time p90"
+  ],
+  "not": [
+   "p50"
+  ],
+  "group": "bestfit",
+  "note": "'response time' no longer outranks 'p90'"
+ },
+ {
+  "q": "response time p99 in September",
+  "expect": [
+   "25.5s response time p99"
+  ],
+  "group": "bestfit"
+ },
+ {
+  "q": "generation cost in September",
+  "expect": [
+   "£452 generation cost"
+  ],
+  "not": [
+   "per turn"
+  ],
+  "group": "cost",
+  "note": "generation cost is the £ figure; per turn only when asked"
+ },
+ {
+  "q": "organic first turns in September",
+  "expect": [
+   "10,852 organic first turns"
+  ],
+  "not": [
+   "isn’t split by"
+  ],
+  "group": "bestfit",
+  "note": "'first turns' after 'organic' is not the new-topics filter"
+ },
+ {
+  "q": "out-of-scope share in September",
+  "expect": [
+   "1.6% out-of-scope share"
+  ],
+  "not": [
+   "Which measure"
+  ],
+  "group": "phrasing"
+ },
+ {
+  "q": "modal share of conversations in September",
+  "expect": [
+   "86.7% Modal share of conversations"
+  ],
+  "group": "bestfit"
+ },
+ {
+  "q": "conversations over 5 minutes in September",
+  "expect": [
+   "17.9% conversations over 5 minutes"
+  ],
+  "group": "bestfit"
  }
 ]
