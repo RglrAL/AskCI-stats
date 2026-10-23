@@ -4820,7 +4820,7 @@ function renderWording(D,S){
   const fmtv=v=>v==null?'—':v>=20?Math.round(v).toString():v.toFixed(2);
   const td=(v,o={})=>`<td style="text-align:${o.left?'left':'right'};padding:7px 10px;font-family:${o.left?'inherit':"'DM Mono',monospace"};font-size:.78rem;${o.style||''}">${v}</td>`;
   const th=(t,left)=>`<th style="text-align:${left?'left':'right'};padding:7px 10px;font-size:.6rem;color:var(--muted);text-transform:uppercase;letter-spacing:.08em;white-space:nowrap">${t}</th>`;
-  const chg=(a,b)=>a==null||b==null||!b?'':` <span style="color:var(--muted)">(${a>=b?'+':'−'}${Math.abs((a-b)/b*100).toFixed(0)}%)</span>`;
+  const chg=(a,b)=>a==null||b==null?'':b<0.05?(a<0.05?'':` <span style="color:var(--muted)">(from ${b.toFixed(2)})</span>`):` <span style="color:var(--muted)">(${a>=b?'+':'−'}${Math.abs((a-b)/b*100).toFixed(0)}%)</span>`;
   const fpRows=['Cited answer','Not found','Clarification'].map(oc=>`<tr style="border-bottom:1px solid var(--b2)">${td(oc,{left:true})}${td(num(A[oc]?.Turns||0))}${F.map(([k])=>td(fmtv(per(A[oc],k))+chg(per(A[oc],k),per(B[oc],k)))).join('')}</tr>`).join('');
   // the phrase table: every phrase in range, per 1,000 turns, against the comparison window
   const sumR=(a,b)=>{const o={};let t=0;Object.entries(ORULES).forEach(([d,x])=>{if(d<a||d>b)return;Object.entries(x).forEach(([k,n])=>{o[k]=(o[k]||0)+n;t+=n;});});return {o,t};};
