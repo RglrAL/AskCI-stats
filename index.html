@@ -2746,7 +2746,7 @@ async function loadHoursFile(){
 // script-outcomes-daily.csv: SCRIPTOUT[date][script] = {t, s, c, nf, cl} (turns, scored, cited, not found, clarification)
 let SCRIPTOUT={},hasScriptOut=false;
 let ORULES={},OSTYLE={},ONEXT={},hasRules=false;   // outcome rule ids, the wording fingerprint and what people do next (brief §53)
-let PAGESC={},hasPagesC=false;
+let PAGESC={},hasPagesC=false,REPEATS={},hasRepeats=false;
 let CONV={},CATOUT={},CITES={},JOURNEYS={},STARTERS={},LATB={},CATDAY={},hasCatDay=false,hasConv=false,hasCatOut=false,hasCites=false,hasJourneys=false,hasStarters=false,hasLatB=false;
 async function loadConversationFiles(){
   try{(await loadCSV('script-outcomes-daily.csv')).forEach(r=>{const d=parseDate(r['Date']);if(!d)return;(SCRIPTOUT[d]||(SCRIPTOUT[d]={}))[r['Script']]={t:nInt(r['Turns']),s:nInt(r['Scored']),c:nInt(r['Cited']),nf:nInt(r['NotFound']),cl:nInt(r['Clarification'])};});}catch(e){}
@@ -2758,7 +2758,11 @@ async function loadConversationFiles(){
   try{(await loadCSV('pages-cited.csv')).forEach(r=>{const u=ciKey(r['URL']);if(!u)return;PAGESC[u]={first:r['FirstCited'],last:r['LastCited'],n:nInt(r['Citations']),ans:nInt(r['Answers']),partial:nInt(r['Partial']),dis:nInt(r['Dislikes']),mod:r['LastMod']||'',firstAfter:r['FirstCitedAfterLastMod']||'',ansAfter:nInt(r['AnswersAfterLastMod'])};});}catch(e){}
   hasPagesC=Object.keys(PAGESC).length>0;
   try{(await loadCSV('journeys-monthly.csv')).forEach(r=>{const m=String(r['Month']||'').trim();if(!/^\d{4}-\d{2}$/.test(m))return;(JOURNEYS[m]||(JOURNEYS[m]=[])).push({from:r['From'],to:r['To'],n:nInt(r['Conversations'])});});}catch(e){}
-  try{(await loadCSV('starter-prompts-monthly.csv')).forEach(r=>{const m=String(r['Month']||'').trim();if(!/^\d{4}-\d{2}$/.test(m))return;(STARTERS[m]||(STARTERS[m]=[])).push({prompt:r['Prompt'],n:nInt(r['Count']),cited:nInt(r['Cited']),typed:nInt(r['FollowedByTyped']),sugg:nInt(r['FollowedBySuggested'])});});}catch(e){}
+  try{(await loadCSV('starter-prompts-monthly.csv')).forEach(r=>{const m=String(r['Month']||'').trim();if(!/^\d{4}-\d{2}$/.test(m))return;(STARTERS[m]||(STARTERS[m]=[])).push({prompt:r['Prompt'],n:nInt(r['Count']),cited:nInt(r['Cited']),typed:nInt(r['FollowedByTyped']),sugg:nInt(r['FollowedBySuggested']),
+    partial:nInt(r['Partial']),nf:nInt(r['NotFound']),clar:nInt(r['Clarification']),dis:nInt(r['Disliked']),words:nInt(r['Words']),timed:nInt(r['TimedTurns']),ms:nInt(r['ResponseMsSum']),mature:nInt(r['Mature']),ended:nInt(r['EndedThere']),score:r['EndedThere']!=null});});}catch(e){}
+  // repeat-questions-monthly.csv (tools/cache_coverage.py, counts only): how much of the traffic a cache of fixed question texts would cover (brief §63)
+  try{(await loadCSV('repeat-questions-monthly.csv')).forEach(r=>{const m=String(r['Month']||'').trim();if(!/^\d{4}-\d{2}$/.test(m))return;const o={};Object.entries(r).forEach(([k,v])=>{if(k!=='Month')o[k]=nInt(v);});REPEATS[m]=o;});}catch(e){}
+  hasRepeats=Object.keys(REPEATS).length>0;
   try{(await loadCSV('categories-daily.csv')).forEach(r=>{const d=parseDate(r['Date']);if(!d)return;(CATDAY[d]||(CATDAY[d]={}))[String(r['Category']||'').trim()]=nInt(r['Citations']);});}catch(e){}
   hasCatDay=Object.keys(CATDAY).length>0;
   try{(await loadCSV('latency-buckets-daily.csv')).forEach(r=>{const d=parseDate(r['Date']);if(!d)return;const k=r['Kind'],b=r['Bucket'];const o=LATB[d]||(LATB[d]={});(o[k]||(o[k]={}))[b]={t:nInt(r['Turns']),sum:nInt(r['LatencySumMs'])};});}catch(e){}
@@ -6012,7 +6016,11 @@ function renderConvs(D,S){
   const sfC=fr.reduce((a,d)=>a+(d.ux?.sfCited||0),0),sfN=fr.reduce((a,d)=>a+(d.ux?.sfNotFound||0),0),sfS=fr.reduce((a,d)=>a+(d.ux?.sfScored||0),0);
   // Starter prompts, months overlapping the range
   const months=monthsIn(fr),sp={};
-  months.forEach(m=>(STARTERS[m]||[]).forEach(r=>{const o=sp[r.prompt]||(sp[r.prompt]={n:0,cited:0,typed:0,sugg:0});o.n+=r.n;o.cited+=r.cited;o.typed+=r.typed;o.sugg+=r.sugg;}));
+  months.forEach(m=>(STARTERS[m]||[]).forEach(r=>{const o=sp[r.prompt]||(sp[r.prompt]={n:0,cited:0,typed:0,sugg:0,partial:0,nf:0,clar:0,dis:0,words:0,timed:0,ms:0,mature:0,ended:0,score:false});o.n+=r.n;o.cited+=r.cited;o.typed+=r.typed;o.sugg+=r.sugg;o.partial+=r.partial;o.nf+=r.nf;o.clar+=r.clar;o.dis+=r.dis;o.words+=r.words;o.timed+=r.timed;o.ms+=r.ms;o.mature+=r.mature;o.ended+=r.ended;o.score=o.score||r.score;}));
+  const spScore=Object.values(sp).some(o=>o.score);
+  // cache coverage and clarification loops (brief §63)
+  const RP=months.map(m=>REPEATS[m]).filter(Boolean),rpSum=k=>RP.reduce((a,r)=>a+(r[k]||0),0);
+  const clarLoops=sum('ClarThenClar'),clarTurns=sum('ClarTurns'),clarEnded=sum('ClarEnded');
   const spRows=Object.entries(sp).sort((a,b)=>b[1].n-a[1].n);
   const spTotal=spRows.reduce((a,[,o])=>a+o.n,0);
   // The prompt file is monthly, so its shares divide by conversations started in the same whole months,
@@ -6097,10 +6105,28 @@ function renderConvs(D,S){
         <div class="chart-wrap" style="height:190px"><canvas id="cv-span"></canvas></div>
       </div>
     </div>
-    ${spRows.length?`<div class="card"><div class="card-title">Starter prompts<span class="card-title-note">configured chips matched on first turns · months overlapping the range (${months.map(fmtMonth).join(', ')}) · ${rateText(spTotal,spStarted)} of ${num(spStarted)} conversations started in those months</span></div>
-      <table style="width:100%;border-collapse:collapse"><thead><tr style="border-bottom:1px solid var(--b2)">${th('Prompt',false)}${th('Count')}${th('Share of first turns')}${th('Own outcome cited')}${th('Followed by typed turn 2')}${th('Followed by suggested turn 2')}</tr></thead>
-      <tbody>${spRows.map(([pr,o])=>`<tr style="border-bottom:1px solid var(--b2)">${td(pr,C.acc,false)}${td(num(o.n))}${td(rateText(o.n,spStarted))}${td(rateText(o.cited,o.n),C.green)}${td(rateText(o.typed,o.n))}${td(rateText(o.sugg,o.n))}</tr>`).join('')}</tbody></table>
+    ${spRows.length?`<div class="card" style="overflow-x:auto"><div class="card-title">Starter prompt scorecard<span class="card-title-note">configured chips matched on first turns · months overlapping the range (${months.map(fmtMonth).join(', ')}) · ${rateText(spTotal,spStarted)} of ${num(spStarted)} conversations started in those months · a dash = under the small-sample minimum</span></div>
+      <table style="width:100%;border-collapse:collapse;min-width:${spScore?'1100px':'640px'}"><thead><tr style="border-bottom:1px solid var(--b2)">${th('Prompt',false)}${th('Count')}${th('Share of first turns')}${th('Cited')}${spScore?th('Cited, not partial')+th('Not found')+th('Clarification'):''}${th('Then typed')}${th('Then chip')}${spScore?th('Ended there')+th('Disliked')+th('Words')+th('Response p-mean'):''}</tr></thead>
+      <tbody>${spRows.map(([pr,o])=>`<tr style="border-bottom:1px solid var(--b2)">${td(pr,C.acc,false)}${td(num(o.n))}${td(rateText(o.n,spStarted))}${td(rateText(o.cited,o.n),C.green)}${spScore?td(rateText(o.cited-o.partial,o.n),C.green)+td(rateText(o.nf,o.n),C.red)+td(rateText(o.clar,o.n),C.amber):''}${td(rateText(o.typed,o.n))}${td(rateText(o.sugg,o.n))}${spScore?td(rateText(o.ended,o.mature))+td(o.dis?num(o.dis):'0')+td(o.n?Math.round(o.words/o.n).toLocaleString():'—')+td(o.timed?(o.ms/o.timed/1000).toFixed(1)+'s':'—'):''}</tr>`).join('')}</tbody></table>
+      ${spScore?`<div class="share-foot">Each chip's own first-turn answer: cited (and cited without a "couldn't find" phrase), not found, clarification; what the person did next; of the mature conversations it started, the share that ended there; dislikes on the answer; answer length and mean response time. A chip is a fixed question, so a change in its row is a change in the system (brief §55).</div>`:''}
     </div>`:''}
+    ${hasRepeats&&RP.length?(()=>{const ft=rpSum('FirstTurns'),ch=rpSum('StarterFirstTurns'),t=rpSum('Turns'),sg=rpSum('SuggestedClicks');
+      const tops=[10,25,50,100,250].map(n=>[n,rpSum('Top'+n)]);
+      return`<div class="card"><div class="card-title">What a cache of fixed questions would cover<span class="card-title-note">first turns by exact normalised text · ${months.map(fmtMonth).join(', ')} · counts only, from tools/cache_coverage.py on the raw feed</span></div>
+      <div class="grid4" style="margin-bottom:10px">
+        ${uxTile(rateText(ch,ft),'Chips, of first turns',`${num(ch)} of ${num(ft)} first turns · ${rateText(ch,t)} of all turns`,C.amber)}
+        ${uxTile(rateText(tops[4][1],ft),'Top 250 texts, of first turns',`chips included · ${num(rpSum('TextsAskedTwicePlus'))} texts asked twice or more cover ${rateText(rpSum('FirstTurnsOnRepeatedTexts'),ft)}`,C.purple)}
+        ${uxTile(num(rpSum('DistinctFirstTurnTexts')),'Distinct first-turn texts',`among ${num(ft)} first turns: the long tail`,C.acc)}
+        ${uxTile(rateText(rpSum('SuggestedTop25'),sg),'Top 25 suggested chips, of chip clicks',`${num(sg)} clicks on model-suggested follow-ups`,C.teal)}
+      </div>
+      <table style="width:100%;border-collapse:collapse;max-width:560px"><thead><tr style="border-bottom:1px solid var(--b2)">${th('Cache of the most-asked texts',false)}${tops.map(([n])=>th('top '+n)).join('')}</tr></thead>
+        <tbody><tr>${td('share of first turns served','',false)}${tops.map(([,v])=>td(rateText(v,ft))).join('')}</tr><tr>${td('share of all turns served','',false)}${tops.map(([,v])=>td(rateText(v,t))).join('')}</tr></tbody></table>
+      <div class="share-foot">A cache keyed on the exact question serves only text that recurs. Beyond the chips, the top 250 texts add a few points and the rest is a long tail of one-off wording; a cache would not change the cost or the response-time picture. The suggested follow-ups are the model's own chips: their clicks concentrate more, and the same texts recur across conversations.</div></div>`;})():''}
+    ${clarTurns?`<div class="card"><div class="card-title">Clarification loops${cohort}</div>
+      <div class="grid2" style="margin-bottom:0">
+        ${uxTile(rateText(clarLoops,clarTurns-clarEnded),'Asked to clarify, then asked again',`${num(clarLoops)} of ${num(clarTurns-clarEnded)} clarification answers that got a reply were followed by another clarification`,C.amber)}
+        ${uxTile(rateText(clarEnded,clarTurns),'Asked to clarify, conversation ended',`${num(clarEnded)} of ${num(clarTurns)} clarification answers were the last turn`,C.red)}
+      </div></div>`:''}
   `;
   mkChart('cv-hist',{type:'bar',data:{labels:hist.map(h=>h[1]),datasets:[{label:'Mature conversations',data:hist.map(h=>sum(h[0])),backgroundColor:C.acc+'cc',maxBarThickness:36}]},
     options:mergeOpts(baseOpts(),{scales:{y:{ticks:{callback:v=>num(v)}}},plugins:{tooltip:{callbacks:{label:cx=>`${num(cx.parsed.y)} conversations · ${rateText(cx.parsed.y,mature)}`}}}})});

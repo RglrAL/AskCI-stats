@@ -43,6 +43,7 @@ Outputs (all daily counts; nothing per-turn and no text crosses into the dashboa
                             TypedTopicBoth, TypedTopicSwitched, ChipTopicBoth, ChipTopicSwitched, NewTopicBoth,
                             NewTopicSwitched: follow-up turns where this turn and the one before both carry a
                             topic, and how many changed topic, by question type (brief §53 step 6);
+                            ClarThenClar: clarification answers followed by another clarification (brief §63);
                             Gap0to1..GapOver60 (minutes between consecutive questions)
   category-outcomes-daily.csv  Date, Category (attributed slug or unknown), Turns, Cited, NotFound, Clarification,
                             Error, OutOfScope, Greeting, Uncited, Scored, OrganicFirstTurns, DislikesOnCited
@@ -285,9 +286,12 @@ def aggregate(files, skip_days=frozenset()):
                 if not own and urls: own = next((url_slug(u) for u in urls if url_slug(u)), "") or ""
                 try: tn = int((row.get("Turn #") or "0").strip() or 0)
                 except ValueError: tn = 0
+                try: ms_rec = int(float(row.get("Response Time (ms)") or 0))
+                except ValueError: ms_rec = 0
                 recs.append((conv, tn, t, d, o_rec, own, (row.get("Question Type") or "").strip(),
                              fb == "dislike" and o_rec == "Cited answer", (row.get("Starter Prompt") or "").strip() if has_starter else "",
-                             (row.get("Source") or "").strip()))
+                             (row.get("Source") or "").strip(),
+                             (row.get("Partial") or "").strip().lower() == "yes", int(row.get("Response Words") or 0) if str(row.get("Response Words") or "").isdigit() else 0, ms_rec))
                 nus = []
                 for u in urls:
                     nu = norm_url(u)
@@ -398,6 +402,15 @@ def conversation_pass(recs):
         if first[8]:
             p = sp[(start.strftime("%Y-%m"), first[8])]; p["count"] += 1
             if first[4] == "Cited answer": p["cited"] += 1
+            if first[4] == "Cited answer" and first[10]: p["partial"] += 1
+            if first[4] == "Not found": p["notfound"] += 1
+            if first[4] == "Clarification": p["clarification"] += 1
+            if first[7]: p["disliked"] += 1
+            p["words"] += first[11]; p["ms"] += first[12]
+            if first[12] > 0: p["timed"] += 1
+            if mature:
+                p["mature"] += 1
+                if n == 1: p["ended"] += 1
             if n > 1:
                 qt2 = turns[1][6]
                 if qt2 == "user_followup": p["typed2"] += 1
@@ -425,6 +438,7 @@ def conversation_pass(recs):
             if i == n - 1:
                 c[p + ":ended"] += 1
                 continue
+            if r[4] == "Clarification" and turns[i + 1][4] == "Clarification": c["clar_loop"] += 1   # asked to clarify twice running (brief §63)
             if any(x[4] == "Cited answer" for x in turns[i + 1:]): c[p + ":later_cited"] += 1
             c[p + ":next:" + NEXT_TYPE.get(turns[i + 1][6], "other")] += 1
         # pace: minutes between consecutive questions
@@ -465,7 +479,7 @@ def conversation_rows(cd):
     cols += ["ReachedCited"]
     for p in SETBACK.values(): cols += [f"{p}Turns", f"{p}LaterCited", f"{p}Ended", f"{p}NextTyped", f"{p}NextChip", f"{p}NextNew", f"{p}NextOther"]
     cols += ["WithTopic", "MultiTopic", "TopicReturn"] + [k for k, _ in GAP_COLS]
-    cols += [f"{t}Topic{k}" for t in ("Typed", "Chip", "New") for k in ("Both", "Switched")]
+    cols += [f"{t}Topic{k}" for t in ("Typed", "Chip", "New") for k in ("Both", "Switched")] + ["ClarThenClar"]
     out = []
     for d in sorted(cd):
         c = cd[d]
@@ -477,7 +491,7 @@ def conversation_rows(cd):
         for p in SETBACK.values():
             row += [c[p + ":turns"], c[p + ":later_cited"], c[p + ":ended"]] + [c[p + ":next:" + t] for t in ("Typed", "Chip", "New", "other")]
         row += [c["with_topic"], c["multi_topic"], c["topic_return"]] + [c[k] for _, k in GAP_COLS]
-        row += [c[f"drift:{t}:{k}"] for t in ("Typed", "Chip", "New") for k in ("both", "switched")]
+        row += [c[f"drift:{t}:{k}"] for t in ("Typed", "Chip", "New") for k in ("both", "switched")] + [c["clar_loop"]]
         out.append(row)
     return cols, out
 
@@ -531,8 +545,13 @@ def journey_rows(jm):
 
 
 def starter_rows(sp):
-    return ["Month", "Prompt", "Count", "Cited", "FollowedByTyped", "FollowedBySuggested"], \
-           [[m, p, c["count"], c["cited"], c["typed2"], c["suggested2"]] for (m, p), c in sorted(sp.items(), key=lambda kv: (kv[0][0], -kv[1]["count"]))]
+    """starter-prompts-monthly.csv: each configured chip as a first turn, by month (brief §63): its own outcome
+    (Cited, of which Partial; NotFound; Clarification), what followed, dislikes, answer words and response time
+    sums, and of the mature conversations it started, how many ended there."""
+    return ["Month", "Prompt", "Count", "Cited", "FollowedByTyped", "FollowedBySuggested", "Partial", "NotFound", "Clarification", "Disliked",
+            "Words", "TimedTurns", "ResponseMsSum", "Mature", "EndedThere"], \
+           [[m, p, c["count"], c["cited"], c["typed2"], c["suggested2"], c["partial"], c["notfound"], c["clarification"], c["disliked"],
+             c["words"], c["timed"], c["ms"], c["mature"], c["ended"]] for (m, p), c in sorted(sp.items(), key=lambda kv: (kv[0][0], -kv[1]["count"]))]
 
 
 OUTCOME_COLS = [("Cited", "o:Cited answer"), ("NotFound", "o:Not found"), ("Clarification", "o:Clarification"), ("Error", "o:Error"),

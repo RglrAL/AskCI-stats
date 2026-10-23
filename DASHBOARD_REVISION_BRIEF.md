@@ -1187,3 +1187,30 @@ Next in §53 is step 6, follow-ups: not-found rates for follow-ups against first
 **What it changes.** Of the content fixes others can act on, three stand out: the past-year Budget pages (route current-rate questions to the current page, or say on the old page that it is historical), the AskCI "about" page (it is asked questions it does not answer, in 195 answers over two months, and nobody clicks through), and the 2022-dated rates pages. Nothing here bears on the 14 September cause: the partial rise is across pages, and the index is keeping up.
 
 Next: §53 step 8, chip scorecards and the share of traffic a starter-prompt cache would cover.
+
+## 63. Step 8: chip scorecards, clarification loops, and what a cache would cover (24 Oct 2026)
+
+**Built:**
+- `starter-prompts-monthly.csv` gains, per chip and month: Partial, NotFound, Clarification, Disliked, Words, TimedTurns, ResponseMsSum, Mature and EndedThere. Existing columns identical. `conversations-daily.csv` gains `ClarThenClar`: clarification answers followed by another clarification.
+- **`tools/cache_coverage.py`** (raw feed, local) writes `repeat-questions-monthly.csv`, counts only: first turns, turns, chip first turns, distinct normalised first-turn texts, texts asked twice or more, the first turns covered by the top 10, 25, 50, 100 and 250 texts, and the same for clicks on the model's suggested follow-ups. The texts themselves are printed for the analyst and never written.
+- **Usage › Conversations**: the Starter prompts card is now a **scorecard** (count, share, cited, cited-not-partial, not found, clarification, then typed, then chip, ended there, dislikes, words, mean response time); a card **What a cache of fixed questions would cover**; and **Clarification loops**. The audit checks all three files.
+
+**Chip scorecard, July–August against September–October:**
+
+| Chip | n before → after | Cited, not partial | Not found | Ended there | Response mean |
+|---|---|---|---|---|---|
+| HAP limits | 174 → 516 | 93.7% → **68.2%** | 0.0 → 0.6% | 56.9 → 66.6% | 11.4 → 13.4 s |
+| Renew my passport | 112 → 561 | 91.1% → 88.4% | 0 → 0 | 66.1 → 74.2% | 12.2 → 14.4 s |
+| Back to School allowance | 151 → 254 | 87.4% → 86.6% | 0 → 0 | 62.3 → 78.0% | 10.9 → 11.4 s |
+| Household Benefits Package (from 14 Oct) | — → 242 | 96.3% | 0 | 56.5% | 8.9 s |
+
+- **HAP is the one chip that changed**, as §55 found: a quarter of its answers now carry a "couldn't find" phrase. Nothing else about it moved: still cited 93%, no not-found, no dislikes, the same length. The 20 HAP answers in the labelling sheet will say whether the phrase marks a missing rate.
+- **People end on chip answers more often than before** on every chip that spans the change (passport +8, Back to School +16, HAP +10 points). That could be a better answer or a less inviting one; dislikes are zero either way, and the chip-next share fell on all three (the chip set changed on 11 Sep).
+- **Chips get empty answers six times as often as other first turns.** Of 1,680 chip first turns in September and October, 143 (8.5%) were neither cited, not found nor clarification; the feed check shows they are empty responses (`err.empty`). First turns overall run at 1.4%, later turns at 1.2%. The passport chip is worst at 11%, Back to School 13%, the new Household Benefits chip 3%. A chip is a click, not a typed question, so this points at the chip request path (a click before the session is ready, or a chip request the backend handles differently). **This is the first finding of the diagnosis that is an incident rather than a model question, and goes to step 9 and to the team.**
+- The three retired chips (auto-enrolment, low pay, maternity benefit) still appear 30–40 times a month after 11 September: people typing the old chip text, or a cached page.
+
+**Clarification loops, 15 Sep–12 Oct:** of 2,298 clarification answers, 540 (23.5%) were the last turn, and of the 1,758 that got a reply, 492 (28.0%) were followed by another clarification. Before 14 September the loop rate was 23%: more clarifications, and more of them repeated.
+
+**What a cache would cover, September–October:** chips are 7.2% of first turns (3.9% of all turns). The top 250 first-turn texts, chips included, cover 11.9% of first turns and 6.4% of turns; 21,058 distinct texts among 23,336 first turns is the long tail. A cache keyed on exact text would not change the cost or response-time picture. The model's own suggested follow-ups concentrate more (the top 25 texts take 5.9% of 7,509 clicks), and two of the most clicked are "yes" and "yes please", which the answer format forbids as follow-up questions: the model is offering yes/no follow-ups and people are clicking them.
+
+Next: §53 step 9, incident candidates from error spikes against the cost meters, with the chip empty-answer rate as the first case.

@@ -48,8 +48,9 @@ SCHEMA = {
     'categories.csv': 'Month Citations',
     'citations-monthly.csv': 'Month URL Citations Answers Partial Dislikes',
     'pages-cited.csv': 'URL FirstCited LastCited Citations Answers Partial Dislikes LastMod FirstCitedAfterLastMod AnswersAfterLastMod',
+    'repeat-questions-monthly.csv': 'Month Turns FirstTurns StarterFirstTurns DistinctFirstTurnTexts TextsAskedTwicePlus FirstTurnsOnRepeatedTexts Top10 Top25 Top50 Top100 Top250 SuggestedClicks DistinctSuggestedTexts SuggestedTop25',
     'journeys-monthly.csv': 'From To Conversations',
-    'starter-prompts-monthly.csv': 'Month Count Cited FollowedByTyped FollowedBySuggested',
+    'starter-prompts-monthly.csv': 'Month Count Cited FollowedByTyped FollowedBySuggested Partial NotFound Clarification Disliked Words TimedTurns ResponseMsSum Mature EndedThere',
     'latency-buckets-daily.csv': 'Date Kind Turns LatencySumMs',
     'costs.csv': 'UsageDate Cost Currency ResourceId',
     'ga4/clicks-daily.csv': 'Date Source Views Sessions Mobile Desktop Tablet OtherDevice',
@@ -208,6 +209,8 @@ for d, r in CV.items():
 check('conversations: length histogram = Mature, spans and first outcomes within Mature', bad_c == 0, f'{bad_c} days')
 immature = [d for d in CV if I(CV[d]['Mature']) < I(CV[d]['Started'])]
 check('conversations: only the last day(s) immature', all(d >= days[-2] for d in immature), str(immature[:5]))
+if 'ClarThenClar' in next(iter(CV.values())):
+    check('conversations: ClarThenClar <= ClarTurns - ClarEnded', all(I(r['ClarThenClar']) <= I(r['ClarTurns']) - I(r['ClarEnded']) for r in CV.values()))
 if 'TypedTopicBoth' in next(iter(CV.values())):
     check('conversations: topic switches within the pairs that carry a topic, pairs within mature turns − mature', all(
         I(r[t + 'TopicSwitched']) <= I(r[t + 'TopicBoth']) for r in CV.values() for t in ('Typed', 'Chip', 'New'))
@@ -272,6 +275,8 @@ SP = rd('starter-prompts-monthly.csv'); spm = C.Counter()
 for r in SP:
     spm[r['Month']] += I(r['Count'])
     if I(r['Cited']) > I(r['Count']) or I(r['FollowedByTyped']) + I(r['FollowedBySuggested']) > I(r['Count']): check('starter prompts: row bounds', False, str(r))
+    if 'EndedThere' in r and (I(r['Partial']) > I(r['Cited']) or I(r['Cited']) + I(r['NotFound']) + I(r['Clarification']) > I(r['Count']) or I(r['EndedThere']) > I(r['Mature']) or I(r['Mature']) > I(r['Count']) or I(r['TimedTurns']) > I(r['Count'])):
+        check('starter prompts: scorecard bounds (Partial <= Cited, outcomes <= Count, EndedThere <= Mature <= Count)', False, str(r['Month']) + ' ' + str(r['Prompt'])[:40])
 og = C.Counter()
 for r in CO: og[r['Date'][:7]] += I(r['OrganicFirstTurns'])
 sm = C.Counter()
@@ -380,6 +385,12 @@ check('pages-cited: citations and answers sum to citations-monthly', sum(I(r['Ci
       f"{sum(I(r['Citations']) for r in PC)} vs {sum(I(r['Citations']) for r in CM)}")
 check('pages-cited: one row per URL, FirstCited <= LastCited, first-after-LastMod on or after LastMod', len({r['URL'] for r in PC}) == len(PC)
       and all(r['FirstCited'] <= r['LastCited'] for r in PC) and all((not r['FirstCitedAfterLastMod']) or r['FirstCitedAfterLastMod'] >= r['LastMod'] for r in PC))
+
+# ── 9a2. repeat-questions-monthly.csv against usage.csv (brief §63) ───────────
+RQ = {r['Month']: r for r in rd('repeat-questions-monthly.csv')}; um = C.Counter(); usm2 = C.Counter()
+for d in days: um[d[:7]] += I(U[d]['Questions']); usm2[d[:7]] += I(U[d]['StarterPromptFirstTurns'])
+check('repeat questions: turns per full month = usage.Questions, chips = usage.StarterPromptFirstTurns', all(I(RQ[m]['Turns']) == um[m] and I(RQ[m]['StarterFirstTurns']) == usm2[m] for m in um if m in RQ and m < days[-1][:7]), str([(m, RQ[m]['Turns'], um[m]) for m in um if m in RQ and m < days[-1][:7] and I(RQ[m]['Turns']) != um[m]][:3]))
+check('repeat questions: Top10 <= Top25 <= ... <= Top250 <= FirstTurns; StarterFirstTurns <= Top250 + tail', all(I(r['Top10']) <= I(r['Top25']) <= I(r['Top50']) <= I(r['Top100']) <= I(r['Top250']) <= I(r['FirstTurns']) for r in RQ.values()))
 
 # ── 9b. prompts.json and the prompt canary ────────────────────────────────────
 # The system prompts stay in the git-ignored review folder; the repo holds a set-level fingerprint only (brief §60).
