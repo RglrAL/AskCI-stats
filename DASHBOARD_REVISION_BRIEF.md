@@ -451,3 +451,17 @@ Next steps from the audit: (2) commit the 128-question battery as an automated r
 - **Tests:** 201 cases (16 new, grouped `combined`, `bestfit`, `typos`), all passing.
 
 Still open: "which topics get the most citations" ranks topics by questions (the card says so) rather than by citations; a topic with no measure ("housing last month") asks which measure rather than offering that topic's choices. Moving the calculations onto the registry (rest of step 3) and the optional model step (step 5) are not started.
+
+## 33. Ask bar audit, step 3 finished: calculations on the registry (23 Oct 2026)
+
+29 of the Ask bar's measures now carry their calculation in their `ASK_METRICS` entry rather than in a branch of code. The entry gives the source (`row` = usage and cost, `ux` = the feed's columns in usage.csv, `conv` = conversations-daily.csv), the numerator and, for a rate, the denominator (a column, columns added together, or turns on days with feed columns), the scale (per 100 or per 1,000), and the wording of the denominator and note. `cat` gives the same rate by topic (category-outcomes-daily.csv) and `byf` by source or question type. One function computes them all: one day's value for charts and the busiest or quietest day, and the period's rate (summed then divided, with the small-sample rule). This covers the counts (spend, generation, fixed and variable cost, turns, conversations, citations, organic first turns) and 21 rates: cited, not found, clarification, error, partial, dislikes, feedback, suggested follow-ups, starter prompts, pop-up share, over 30 s, out of scope, reached a cited answer, later cited after not found, ended after the first turn, follow-up use, conversations over 5 minutes, and the answered, unanswered and flagged shares. Five hand-written branches and the hand-kept list of rates by topic and source are gone. The self-check now also fails an entry with an unknown source, a rate without a denominator, or a unit that doesn't match its calculation (a deliberately broken entry was caught).
+
+Measures whose calculation is genuinely its own stay as branches: cost per turn and per conversation (settled billing days), latency (turn-weighted daily percentiles), click-throughs (matched denominators per surface, measured windows), hours, pages cited and clicked, Reach shares, the busiest weekday, script share, voice, run rate and the top service or model.
+
+Checked by comparing the full text of 231 answers (the 201 test cases and 30 more by day, week, month, topic and source) before and after. 217 are identical. The 14 that changed:
+- conversation measures, out-of-scope share and over-30 s now come with a chart, since they now have a daily series;
+- the dislikes notes now end "sum then divide", like the other rates;
+- the peak feedback day is shown to two decimals, like the feedback rate;
+- in "modal share by week", the weeks before the pop-up now show 0.0%. That matches the single-week answer, which was already 0.0% (0 of 869); before, the weekly table showed a dash.
+
+All 201 tests pass.
