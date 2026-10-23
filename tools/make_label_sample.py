@@ -23,6 +23,10 @@ Outputs, in exports/labelling-<date>/ unless --out is given:
                            (for weighting). Keep it away from the labellers until they finish.
   README.txt               the instructions and the allowed values
 
+--starter TEXT --starter-n N adds N first-turn answers to that starter prompt from the after period (any class), as
+their own stratum: the same question asked many times, so the labels say what changed on a fixed input (brief §55:
+HAP limits went from 3% to 33% "partial"). They are scored separately, not weighted into the period mix.
+
 Usage:
     python3 tools/make_label_sample.py ~/Downloads/qa-feed_20260929_*.csv ~/Downloads/qa-feed_20261023_*.csv
     python3 tools/make_label_sample.py FEEDS --before 2026-08-14:2026-09-13 --after 2026-09-14:2026-10-13 \\
@@ -32,7 +36,7 @@ import argparse, csv, os, random, sys
 from datetime import datetime, date
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-from redact_feed import classify, URL_RE, OUTCOME_RULES_VERSION   # the rules being measured, exactly as they run
+from redact_feed import classify, URL_RE, OUTCOME_RULES_VERSION, normalise_query   # the rules being measured, exactly as they run
 
 REPO = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 TS = "%b %d, %Y %H:%M"
@@ -61,12 +65,15 @@ def main():
     ap.add_argument("--per", default="cited=20,partial=10,notfound=10,clarification=10")
     ap.add_argument("--double", type=int, default=20, help="items also given to a second labeller")
     ap.add_argument("--seed", type=int, default=2026)
+    ap.add_argument("--starter", default="what are the housing assistance payment (hap) limits", help="a starter prompt to sample as its own stratum from the after period ('' for none)")
+    ap.add_argument("--starter-n", type=int, default=20)
     ap.add_argument("--out", default=None)
     a = ap.parse_args()
     periods = {"before": span(a.before), "after": span(a.after)}
     per = {k: int(v) for k, v in (x.split("=") for x in a.per.split(","))}
 
     seen, pool = set(), {p: {s: [] for s in per} for p in periods}
+    starter = normalise_query(a.starter) if a.starter else None; spool = []
     for f in a.feeds:
         with open(f, encoding="utf-8-sig", newline="") as fh:
             r = csv.DictReader(fh)
@@ -84,7 +91,9 @@ def main():
                 p = next((n for n, (f0, t0) in periods.items() if f0 <= d <= t0), None)
                 if not p:
                     continue
-                s = stratum(*classify(row))
+                o, partial = classify(row); s = stratum(o, partial)
+                if starter and p == "after" and (row.get("Turn #") or "").strip() == "1" and normalise_query(row.get("User Query")) == starter:
+                    spool.append((d, row, s or o)); continue   # the fixed question is its own stratum, never double-counted
                 if s in per:
                     pool[p][s].append((d, row))
 
@@ -96,13 +105,17 @@ def main():
             pick = rnd.sample(got, min(n, len(got)))
             for d, row in pick:
                 items.append(row)
-                key.append({"period": p, "rule_outcome": s, "date": d.isoformat(), "stratum_population": len(got), "stratum_sample": len(pick)})
+                key.append({"period": p, "rule_outcome": s, "date": d.isoformat(), "stratum_population": len(got), "stratum_sample": len(pick), "stratum": s})
+    spick = rnd.sample(spool, min(a.starter_n, len(spool))) if spool else []
+    for d, row, s in spick:
+        items.append(row)
+        key.append({"period": "after", "rule_outcome": s, "date": d.isoformat(), "stratum_population": len(spool), "stratum_sample": len(spick), "stratum": "starter"})
     order = list(range(len(items)))
     rnd.shuffle(order)
 
     out = a.out or os.path.join(REPO, "exports", f"labelling-{date.today().isoformat()}")
     os.makedirs(out, exist_ok=True)
-    cols = ["item", "question", "answer", "cited_pages", "what_kind", "answered", "notes"]
+    cols = ["item", "question", "answer", "cited_pages", "what_kind", "answered", "detail_on_page", "notes"]
 
     def sheet(path, idx):
         with open(path, "w", newline="", encoding="utf-8") as fh:
@@ -110,16 +123,16 @@ def main():
             for i in idx:
                 row = items[i]
                 w.writerow([f"A{i + 1:03d}", (row.get("User Query") or "").strip(), (row.get("Assistant Response") or "").strip(),
-                            "\n".join(URL_RE.findall(row.get("Citations") or "")), "", "", ""])
+                            "\n".join(URL_RE.findall(row.get("Citations") or "")), "", "", "", ""])
 
     sheet(os.path.join(out, "label_sheet.csv"), order)
     second = rnd.sample(order, min(a.double, len(order)))
     rnd.shuffle(second)
     sheet(os.path.join(out, "label_sheet_second.csv"), second)
     with open(os.path.join(out, "key.csv"), "w", newline="", encoding="utf-8") as fh:
-        w = csv.writer(fh); w.writerow(["item", "period", "rule_outcome", "date", "stratum_population", "stratum_sample", "rules_version"])
+        w = csv.writer(fh); w.writerow(["item", "period", "rule_outcome", "date", "stratum_population", "stratum_sample", "rules_version", "stratum"])
         for i, k in enumerate(key):
-            w.writerow([f"A{i + 1:03d}", k["period"], k["rule_outcome"], k["date"], k["stratum_population"], k["stratum_sample"], OUTCOME_RULES_VERSION])
+            w.writerow([f"A{i + 1:03d}", k["period"], k["rule_outcome"], k["date"], k["stratum_population"], k["stratum_sample"], OUTCOME_RULES_VERSION, k["stratum"]])
     with open(os.path.join(out, "README.txt"), "w", encoding="utf-8") as fh:
         fh.write(f"""AskCI answer labelling ({len(items)} answers; a second sheet of {len(second)} for a second labeller)
 
@@ -128,14 +141,23 @@ it when the labels are scored. Do not open key.csv until labelling is finished.
 
 For each row of label_sheet.csv, read the question and the answer, then fill in:
 
-  what_kind   which best describes the answer:
-              {chr(10) + '              '.join(WHAT_KIND)}
-  answered    did the answer give the person what they asked for?
-              {' / '.join(ANSWERED)}
-  notes       anything worth saying (optional)
+  what_kind        which best describes the answer:
+                   {(chr(10) + ' ' * 19).join(WHAT_KIND)}
+  answered         did the answer give the person what they asked for?
+                   {' / '.join(ANSWERED)}
+  detail_on_page   only when the answer says something is missing or couldn't be found: open the cited page(s)
+                   and say whether the missing detail is in fact there.
+                   yes (it was on the page: the answer missed it) / no (a real gap in the content) / can't tell
+                   Leave blank for other answers.
+  notes            anything worth saying (optional)
 
 Judge the answer as a member of the public would read it. "can't tell" is a fine answer: use it rather than guess.
 The rows are in random order and mix two periods; there is no date or model on purpose.
+
+How to read "says something is missing": the system is designed to say when a specific detail is not in the content
+it retrieved and to point to the nearest page, so an answer that does this is behaving as intended. What matters is
+whether the detail really was missing (detail_on_page = no) or was there to be found (detail_on_page = yes). A table
+of rates on the cited page counts as the detail being there.
 
 When done: python3 tools/score_labels.py {os.path.relpath(out, REPO)}
 """)

@@ -37,7 +37,8 @@ def read_sheet(path):
     if not os.path.exists(path):
         return {}
     with open(path, encoding="utf-8-sig", newline="") as fh:
-        return {r["item"]: (norm(r.get("what_kind"), KIND), norm(r.get("answered"), {"yes", "partly", "no", "can't tell"})) for r in csv.DictReader(fh)}
+        return {r["item"]: (norm(r.get("what_kind"), KIND), norm(r.get("answered"), {"yes", "partly", "no", "can't tell"}),
+                            norm(r.get("detail_on_page"), {"yes", "no", "can't tell"})) for r in csv.DictReader(fh)}
 
 
 def wilson(k, n, z=1.96):
@@ -70,14 +71,15 @@ def main():
     with open(os.path.join(d, "key.csv"), encoding="utf-8-sig", newline="") as fh:
         key = {r["item"]: r for r in csv.DictReader(fh)}
     lab = read_sheet(os.path.join(d, "label_sheet.csv"))
-    bad = [i for i, (k, a) in lab.items() if k.startswith("?") or a.startswith("?")]
+    bad = [i for i, (k, a, dp) in lab.items() if k.startswith("?") or a.startswith("?") or dp.startswith("?")]
     if bad:
         sys.exit(f"{len(bad)} rows have a value that isn't one of the allowed ones (see README.txt), e.g. {bad[:5]}")
     done = {i: v for i, v in lab.items() if v[0]}
     print(f"labelled {len(done)} of {len(key)} items; rules {next(iter(key.values()))['rules_version']}\n")
     summary = {}
+    strat = lambda i: key[i].get("stratum") or key[i]["rule_outcome"]
     for period in ["before", "after"]:
-        items = [i for i, k in key.items() if k["period"] == period and i in done]
+        items = [i for i, k in key.items() if k["period"] == period and i in done and strat(i) != "starter"]
         if not items:
             continue
         cm = C.defaultdict(C.Counter)
@@ -108,8 +110,21 @@ def main():
         print(f"   overall agreement, weighted to the period's real mix: {('—' if acc is None else f'{acc:.0%}')}")
         k_ans = sum(done[i][1] in ("yes", "partly") for i in nf)
         print(f"   rule 'not found' answers a reader says did answer (yes or partly): {('—' if nf_ans is None else f'{nf_ans:.0%}')} of {len(nf)}{rng(k_ans, len(nf))}\n")
+        # of answers that say something is missing (rule 'partial' or 'not found'), was the detail on the cited page?
+        miss = [i for i in items if key[i]["rule_outcome"] in ("partial", "notfound") and done[i][2] in ("yes", "no")]
+        if miss:
+            on = sum(done[i][2] == "yes" for i in miss)
+            print(f"   answers saying something is missing where the detail WAS on the cited page (a miss, not a gap): {on / len(miss):.0%} of {len(miss)}{rng(on, len(miss))}\n")
         summary[period] = {"agreement": round(acc, 3) if acc is not None else None, "n": len(items),
-                           "notfound_answered": round(nf_ans, 3) if nf_ans is not None else None}
+                           "notfound_answered": round(nf_ans, 3) if nf_ans is not None else None,
+                           **({"detail_was_on_page": round(on / len(miss), 3)} if miss else {})}
+    st = [i for i in key if strat(i) == "starter" and i in done]
+    if st:
+        kinds = C.Counter(KIND[done[i][0]] for i in st); ans = C.Counter(done[i][1] for i in st)
+        miss = [i for i in st if done[i][2] in ("yes", "no")]; on = sum(done[i][2] == "yes" for i in miss)
+        print(f"== the fixed starter question, {len(st)} answers after the change (rules called {dict(C.Counter(key[i]['rule_outcome'] for i in st))})")
+        print(f"   reader: kind {dict(kinds)}; answered {dict(ans)}" + (f"; detail was on the page {on} of {len(miss)}{rng(on, len(miss))}" if miss else "") + "\n")
+        summary["starter"] = {"n": len(st), "answered_yes": ans["yes"], "partly": ans["partly"], "no": ans["no"], **({"detail_was_on_page": round(on / len(miss), 3)} if miss else {})}
     sec = read_sheet(os.path.join(d, "label_sheet_second.csv"))
     both = [i for i, v in sec.items() if v[0] and i in done]
     if both:
