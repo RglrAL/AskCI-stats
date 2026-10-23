@@ -1508,7 +1508,9 @@ input[type=date]{color-scheme:dark}
 @keyframes askRise{from{opacity:0;transform:translateY(4px)}to{opacity:1;transform:none}}
 .ask-card{display:flex;align-items:center;gap:var(--sp-5);background:var(--s2);
   border:1px solid var(--b2);border-radius:var(--r-lg);padding:var(--sp-4) var(--sp-5)}
-.ask-card-main{flex:1;min-width:0}
+.ask-card{flex-wrap:wrap}
+.ask-card-main{flex:1 1 auto;min-width:0}
+.ask-card>.ask-read{flex-basis:100%}
 .ask-card-q{font-size:var(--t-2xs);color:var(--dim);font-family:'DM Mono',monospace;
   text-transform:uppercase;letter-spacing:.06em;margin-bottom:6px}
 .ask-card-val{font-family:'DM Mono',monospace;font-variant-numeric:tabular-nums;
@@ -1521,6 +1523,9 @@ input[type=date]{color-scheme:dark}
   white-space:nowrap;transition:border-color .15s}
 .ask-action:hover{border-color:var(--acc)}
 .ask-hint{color:var(--dim)}
+.ask-more{margin-top:var(--sp-2)}
+.ask-more>summary{cursor:pointer;font-size:var(--t-2xs);color:var(--acc);font-family:'DM Mono',monospace;padding:4px 0}
+.ask-breakdown{margin-top:var(--sp-3)}
 .ask-cmp-row{display:flex;gap:var(--sp-3);align-items:stretch;margin:var(--sp-2) 0}
 .ask-cmp-side{flex:1;min-width:0;text-align:center;padding:var(--sp-3);background:var(--s1);border:1px solid var(--b2);border-radius:var(--r-md)}
 .ask-cmp-lbl{font-size:var(--t-2xs);color:var(--muted);text-transform:uppercase;letter-spacing:.06em;font-family:'DM Mono',monospace;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
@@ -1554,6 +1559,8 @@ input[type=date]{color-scheme:dark}
 @media(max-width:760px){
   .ask-card{flex-direction:column;align-items:stretch;gap:var(--sp-3)}
   .ask-card-actions{flex-direction:row;flex-wrap:wrap}
+  .ask-card-main,.ask-breakdown{flex:none}
+  .ask-topn-lbl{flex-basis:44%}
 }
 
 /* ── Data-quality strip, load errors, card-title notes, events popover sections ── */
@@ -2234,7 +2241,7 @@ function baseOpts(){return{
     x:{
       grid:{display:false},
       border:{color:C.border+'4d'},
-      ticks:{color:C.muted,font:{size:10,family:'DM Mono'},maxRotation:0,autoSkip:true,maxTicksLimit:8,padding:6},
+      ticks:{color:C.muted,font:{size:10,family:'DM Mono'},maxRotation:0,autoSkip:true,autoSkipPadding:14,maxTicksLimit:8,padding:6},
     },
     y:{
       grid:{color:C.border+'1a',drawTicks:false},
@@ -7863,6 +7870,9 @@ init();
       // By surface (pop-up / standalone) or by device (click-throughs only; cited answers have no device)
       const surf=filter?({modal:'embed',web:'app'})[filter.key]:null,dev=(String(intent.raw||'').match(/\b(mobile|desktop|tablet)\b/)||[])[1];
       if(filter&&!surf)return{value:null,fmt:v=>'—',series:null,note:'click-throughs split by pop-up or standalone site only',intent};
+      const byDev=/\bby (device|devices|device type)\b|\bwhich devices?\b|\b(mobile|phone) (vs\.?|versus|and|or) desktop\b|\bdesktop (vs\.?|versus|and|or) (mobile|phone)\b/.test(String(intent.raw||'').toLowerCase());
+      if(byDev&&k==='clicks'){const parts=[['Mobile','mobile'],['Desktop','desktop'],['Tablet','tablet'],['Other devices','otherDevice']].map(([l,f])=>({label:l,v:sumD(d=>CLICKS[d.date]?.[f]||0)})).filter(x=>x.v>0),tot=parts.reduce((a,x)=>a+x.v,0);
+        return{value:tot,fmt:v=>num(Math.round(v)),series:null,breakdown:parts.map(x=>({...x,extra:' · '+(tot?(x.v/tot*100).toFixed(0):0)+'%'})),note:'GA4 device of the visit · a minimum: consenting visitors only',intent,subj:'click-throughs by device'};}
       if(dev&&k==='ctr')return{value:null,fmt:v=>'—',series:null,note:'cited answers aren’t recorded by device, so the rate can’t be split by device; click-through counts can be',intent};
       if(k==='clicks'&&dev)return{value:sumD(d=>CLICKS[d.date]?.[dev]||0),fmt:v=>num(Math.round(v)),series:rows.map(d=>CLICKS[d.date]?.[dev]||0),note:`click-throughs on ${dev} (GA4 device of the visit) · a minimum: consenting visitors only`,intent,subj:'click-throughs on '+dev};
       if(k==='clicks'&&surf)return{value:sumD(d=>CLICKS[d.date]?.[surf]||0),fmt:v=>num(Math.round(v)),series:rows.map(d=>CLICKS[d.date]?.[surf]||0),note:`click-throughs from the ${surf==='embed'?'pop-up':'standalone site'} · a minimum: consenting visitors only`,intent,subj:'click-throughs from the '+(surf==='embed'?'pop-up':'standalone site')};
@@ -8060,7 +8070,9 @@ init();
       '<div class="ask-card-q">'+esc(intent.raw)+'</div>'+
       '<div class="ask-card-sub">'+esc(subj+cat+flt+' by '+intent.groupBy+(p.kind==='all'?', overall':', '+p.label)+' · each bucket summed then divided'+dashNote)+'</div>'+
       vizBlock()+
+      (items.length>12?'<details class="ask-more"><summary>Show all '+items.length+' '+esc(intent.groupBy)+'s as a table</summary>':'')+
       '<div class="ask-tbl-wrap" style="margin-top:var(--sp-2)"><table class="ask-tbl"><thead><tr><th>'+esc(intent.groupBy)+'</th><th style="text-align:right">'+esc(subj)+'</th></tr></thead><tbody>'+rows+'</tbody></table></div>'+
+      (items.length>12?'</details>':'')+
       (p.kind!=='all'?'<div class="ask-card-actions" style="flex-direction:row;margin-top:var(--sp-2)"><button class="ask-action" data-act="range" data-arg="'+escA(p.from+'|'+p.to)+'">Set dashboard to this range</button></div>':'')+readAsHTML(intent)+
     '</div>';
     el.classList.add('show'); if(typeof renderIcons==='function')renderIcons();
@@ -8238,7 +8250,7 @@ init();
     lastIntent=it;const inp=$('ask-input');if(inp)inp.value=it.raw;
     render(compute(it));
   }
-  (function(){var s=document.createElement('style');s.textContent='.ask-read{display:flex;flex-wrap:wrap;gap:6px;align-items:center;margin-top:var(--sp-2);padding-top:var(--sp-2);border-top:1px dashed var(--b2)}.ask-read-lbl{font-size:var(--t-2xs);color:var(--dim);text-transform:uppercase;letter-spacing:.08em;margin-right:2px}.ask-read-chip{display:inline-flex;align-items:center;gap:4px;background:var(--s2);border:1px solid var(--b2);border-radius:999px;padding:2px 8px;font-size:var(--t-2xs);color:var(--muted)}.ask-read-chip select{background:transparent;border:0;color:var(--text);font-size:var(--t-2xs);font-family:DM Mono,monospace;max-width:180px;cursor:pointer}.ask-read-chip select:focus{outline:none}';document.head.appendChild(s);})();
+  (function(){var s=document.createElement('style');s.textContent='.ask-read{display:flex;flex-wrap:wrap;gap:6px;align-items:center;margin-top:var(--sp-2);padding-top:var(--sp-2);border-top:1px dashed var(--b2)}.ask-read-lbl{font-size:var(--t-2xs);color:var(--dim);text-transform:uppercase;letter-spacing:.08em;margin-right:2px}.ask-read-chip{display:inline-flex;align-items:center;gap:4px;background:var(--s2);border:1px solid var(--b2);border-radius:999px;padding:2px 8px;font-size:var(--t-2xs);color:var(--muted)}.ask-read-chip select{background:transparent;border:0;color:var(--text);font-size:var(--t-2xs);font-family:DM Mono,monospace;max-width:200px;text-overflow:ellipsis;padding-right:2px;cursor:pointer}.ask-read-chip select:focus{outline:none}';document.head.appendChild(s);})();
 
   // ── Render answer ──
   function info(msg){return '<div class="ask-card"><div class="ask-card-main"><div class="ask-card-sub">'+msg+'</div></div></div>';}
@@ -8300,9 +8312,11 @@ init();
     if(res.empty){el.innerHTML=info('Not enough history to explain '+esc(res.A.label)+' yet.');el.classList.add('show');if(typeof renderIcons==='function')renderIcons();return;}
     const {A,B,totA,totB,contribs,intent}=res;
     const diff=totA-totB,pct=totB>0?diff/totB*100:0,up=diff>=0;
+    const askedUp=/\b(up|rise|rose|risen|increase[ds]?|higher|more expensive|jump(ed)?|spike[ds]?)\b/.test(String(intent.raw||'').toLowerCase()),askedDown=/\b(down|fall|fell|fallen|drop(ped)?|decrease[ds]?|lower|cheaper)\b/.test(String(intent.raw||'').toLowerCase());
+    const contra=(askedUp&&!up)?'Cost didn’t go up in '+A.label+': it fell '+Math.abs(pct).toFixed(0)+'%.':(askedDown&&up&&!askedUp)?'Cost didn’t go down in '+A.label+': it rose '+Math.abs(pct).toFixed(0)+'%.':'';
     const items=contribs.map(c=>{const sign=c.delta>=0?'+':'−';const col=c.delta>=0?'var(--red)':'var(--green)';return '<li><span class="mono" style="color:'+col+'">'+sign+gbp(Math.abs(c.delta),Math.abs(c.delta)>=100?0:2)+'</span> '+esc(c.name)+'</li>';}).join('');
     const ba=periodBtn(A);
-    el.innerHTML='<div class="ask-card" style="flex-direction:column;align-items:stretch">'+
+    el.innerHTML=(contra?'<div class="ask-notice"><i data-lucide="info" class="i-sm"></i><span>'+esc(contra)+'</span></div>':'')+'<div class="ask-card" style="flex-direction:column;align-items:stretch">'+
       '<div class="ask-card-q">'+esc(intent.raw)+'</div>'+
       '<div class="ask-card-val" style="color:'+(up?'var(--red)':'var(--green)')+'">'+(up?'▲':'▼')+' '+gbp(Math.abs(diff),Math.abs(diff)>=100?0:2)+'</div>'+
       '<div class="ask-card-sub">spend '+(up?'rose':'fell')+' '+Math.abs(pct).toFixed(0)+'% in '+esc(A.label)+' vs '+esc(B.label)+(contribs.length?' · biggest movers:':'')+'</div>'+
@@ -8312,12 +8326,13 @@ init();
     '</div>';
     el.classList.add('show'); if(typeof renderIcons==='function')renderIcons();
     if(contribs.length){
-      let run=totB; const pts=[],bg=[],labs=[];
-      labs.push(B.label);pts.push([0,totB]);bg.push(C.muted);
-      contribs.forEach(c=>{const x=run,y=run+c.delta;labs.push(c.name);pts.push([Math.min(x,y),Math.max(x,y)]);bg.push(c.delta>=0?C.red:C.green);run=y;});
-      const other=totA-run; if(Math.abs(other)>=0.5){const x=run,y=run+other;labs.push('Other');pts.push([Math.min(x,y),Math.max(x,y)]);bg.push(other>=0?C.red:C.green);run=y;}
-      labs.push(A.label);pts.push([0,totA]);bg.push(C.muted);
-      mountViz({type:'bar',data:{labels:labs,datasets:[{data:pts,backgroundColor:bg,borderWidth:0,borderRadius:2,maxBarThickness:40}]},options:mergeOpts(baseOpts(),{plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>'£'+Math.abs(c.raw[1]-c.raw[0]).toFixed(0)}}},scales:{y:{ticks:{callback:v=>'£'+(+v).toFixed(0)}}}})},{cols:['Driver','Change (£)'],rows:contribs.map(c=>[c.name,Math.round(c.delta)]),fmt:v=>(v>=0?'+£':'−£')+Math.abs(v)});
+      // The changes themselves, either side of zero: drawn from £0 a £100 change on a £1,000 total is a hairline.
+      const ch=contribs.map(c=>({name:c.name,d:c.delta})),other=totA-totB-contribs.reduce((a,c)=>a+c.delta,0);
+      if(Math.abs(other)>=0.5)ch.push({name:'Everything else',d:other});
+      const money=v=>(v>=0?'+':'−')+gbp(Math.abs(v),Math.abs(v)>=100?0:2);
+      mountViz({type:'bar',data:{labels:ch.map(c=>c.name),datasets:[{label:'Change',data:ch.map(c=>+c.d.toFixed(2)),backgroundColor:ch.map(c=>c.d>=0?C.red:C.green),borderWidth:0,borderRadius:4,maxBarThickness:22}]},
+        options:mergeOpts(baseOpts(),{indexAxis:'y',plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>money(c.raw)+' vs '+B.label}}},scales:{x:{ticks:{callback:v=>(v<0?'−£':'£')+Math.abs(v).toFixed(0)}},y:{ticks:{autoSkip:false,callback:function(v){const l=this.getLabelForValue(v);return this.chart.width<560&&l.length>18?l.slice(0,17)+'…':l;}}}}})},
+        {cols:['Driver','Change (£)'],rows:ch.map(c=>[c.name,Math.round(c.d)]),fmt:v=>(v>=0?'+£':'−£')+Math.abs(v)});
     }
   }
   function renderTopN(res){
@@ -8428,13 +8443,14 @@ init();
     const headline=esc(res.headline||(aggWord+subj+' '+where+(note?' · '+note:'')+(ctx?' · '+ctx:'')));
     const bigVal=res.bigVal!=null?esc(res.bigVal):fmt(value);
     const acts=drillButtons(intent);
-    const hasChart=(!res.bigVal||res.hourSeries)&&Array.isArray(series)&&series.filter(v=>v!=null&&isFinite(v)).length>=2;
+    const hasChart=!res.breakdown&&(!res.bigVal||res.hourSeries)&&Array.isArray(series)&&series.filter(v=>v!=null&&isFinite(v)).length>=2;
     const sv=(series||[]).map(v=>(v==null||!isFinite(v))?0:v);
     const spark=(!hasChart&&sv.filter(v=>v!==0).length>1)?'<div class="ask-card-spark">'+sparkline(sv,C.acc,240,46)+'</div>':'';
     el.innerHTML='<div class="ask-card"'+(hasChart?' style="flex-direction:column;align-items:stretch"':'')+'><div class="ask-card-main">'+
       '<div class="ask-card-q">'+esc(intent.raw)+'</div>'+
       '<div class="ask-card-val">'+bigVal+'</div>'+
       '<div class="ask-card-sub">'+headline+'</div></div>'+
+      (res.breakdown?'<div class="ask-topn ask-breakdown" style="flex-basis:100%">'+(()=>{const mx=Math.max.apply(null,res.breakdown.map(b=>b.v))||1;return res.breakdown.map((b,i)=>'<div class="ask-topn-row" style="cursor:default"><span class="ask-topn-rank">'+(i+1)+'</span><span class="ask-topn-lbl">'+esc(b.label)+(b.extra?'<span style="color:var(--dim)">'+esc(b.extra)+'</span>':'')+'</span><span class="ask-topn-bar"><span style="width:'+Math.max(2,b.v/mx*100).toFixed(1)+'%"></span></span><span class="ask-topn-val">'+fmt(b.v)+'</span></div>').join('');})()+'</div>':'')+
       (hasChart?vizBlock():spark)+
       (acts?'<div class="ask-card-actions"'+(hasChart?' style="flex-direction:row;margin-top:var(--sp-2)"':'')+'>'+acts+'</div>':'')+(intent.raw?readAsHTML(intent):'')+'</div>';
     el.classList.add('show'); if(typeof renderIcons==='function')renderIcons();

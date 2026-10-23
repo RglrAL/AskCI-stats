@@ -1666,5 +1666,31 @@
    "isn’t a service"
   ],
   "group": "bleed"
+ },
+ {
+  "q": "click throughs by device",
+  "expect": [
+   "Mobile · 67%",
+   "3,261",
+   "Desktop · 32%"
+  ],
+  "group": "viz"
+ },
+ {
+  "q": "why did cost go up in september",
+  "expect": [
+   "Cost didn’t go up in September 2026: it fell 10%."
+  ],
+  "group": "viz"
+ },
+ {
+  "q": "why did cost fall in september",
+  "expect": [
+   "spend fell 10%"
+  ],
+  "not": [
+   "Cost didn’t"
+  ],
+  "group": "viz"
  }
 ]

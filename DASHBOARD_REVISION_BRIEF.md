@@ -465,3 +465,17 @@ Checked by comparing the full text of 231 answers (the 201 test cases and 30 mor
 - in "modal share by week", the weeks before the pop-up now show 0.0%. That matches the single-week answer, which was already 0.0% (0 of 869); before, the weekly table showed a dash.
 
 All 201 tests pass.
+
+## 34. Ask bar visual audit, step 1: broken layouts fixed (23 Oct 2026)
+
+Screenshots of 26 kinds of answer (dark and light themes, desktop, and phone width in a true 390 px frame) found five broken things, now fixed:
+
+- **Squeezed cards.** Answers without a chart (busiest weekday, top model, combined questions) squeezed their text into a one-word column, with "Read as" over it. The card now wraps, and "Read as" always takes its own row.
+- **Cost change.** "Why did cost go up" when it fell now says so first ("Cost didn't go up in September 2026: it fell 10%"). The waterfall measured from £0, where changes were hairlines; it is now a chart of the changes themselves, either side of zero, with service names on the axis.
+- **Click-throughs by device** answered with the total. It now shows the split (mobile 67%, desktop 32%, tablet 2%), as ranked bars with counts.
+- **Long tables.** Grouped answers with more than 12 rows (weekly) fold their table under "Show all N weeks as a table". Monthly tables stay open.
+- **Phone width.** Axis labels on dense charts no longer collide, ranked labels have more room, and long service names are shortened on narrow charts.
+
+The earlier finding that answers overflow a phone screen was wrong: headless Chrome has a 500 px minimum window, so the screenshots were cropped. In a real 390 px frame the page is exactly 390 px wide.
+
+Next, step 2: the answer card itself (larger headline, a coloured change chip, a one-line "Read as"), and chart rules by answer type (weekly roll-up for long ranges, highlighted busiest bar, event flags, average line, page names in ranked lists).
