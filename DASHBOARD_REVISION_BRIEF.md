@@ -1262,3 +1262,28 @@ Next: §53 step 10, safety counts in `redact_feed.py` (identifiers typed in, inj
 **Limits.** These are patterns, not judgements, and the counts are small; the per-1,000 rates are stable only on the whole-data view. The flags describe questions, not answers, except through the outcome columns.
 
 Next: §53 step 11, the log parser for any future backend extract, which matters only if an extract appears. After it the plan of record is complete apart from step 0, the labelling hour.
+
+## 66. Plan of record, step 12: what people ask, from the question text (24 Oct 2026)
+
+Agreed after one round of proposal and critique. The same design as the safety flags (§65): rules run in the redaction step on the analyst's machine; class names, counts and the site's own page addresses leave it; nothing a citizen typed does.
+
+**What gets classified, per turn:**
+- **Intent, one class by rule on the normalised question**, in precedence order: personal case status (my claim, my application, why haven't I), contact or office, documents needed, how to apply, rate or amount, eligibility, timing (when, how long, deadline, backdated), definition (what is), other. Chips are included and reported separately, since their intent is fixed.
+- **Form flags beside the intent**, so every question has an intent and a form: a year mentioned; a euro amount mentioned; a yes/no form; and **personal situation** (long, first person, several conditions), which is a flag and not a class because it would otherwise swallow the intent. The 14 September question is whether the rise landed on rate questions phrased personally, which needs both.
+- **Topic from the question itself.** A versioned lexicon built from the site's page titles plus an alias list (dole, HAP, GP card …) and a stop list of generic titles (Housing, Rights …), with a minimum match length. The longest scheme name found gives a matched page and its category; a flag marks two or more schemes named. Stored as the page address and category.
+- **Expected outcome per intent**, recorded once in the lexicon file: status → redirect expected (AskCI cannot see a claim; a not-found there is correct); contact, documents, apply, rate, eligibility, timing, definition → cited expected. "Unexpected outcomes" is the quality measure; the raw mix sits beside it so the table is not misread.
+
+**What gets published:**
+- `question-intent-daily.csv`: Date, Intent, Chip (yes/no), Turns, outcomes, and the form-flag counts.
+- `asked-pages-monthly.csv`: Month, matched page, Asked, and what the answer did: cited that page, cited another page in the same category, cited a different category, not found, clarification, other. The agreement column is the nearest thing to a retrieval hit rate the feed can give: pages people name that retrieval does not return are a chunking list, not a content list. Small-sample rule on every page × outcome cell (under 5 suppressed).
+- `category-outcomes-daily.csv` gains the question-derived topic as a fallback where the answer carried none, with a source column, so the two are never mixed silently.
+- The lexicon (`question-lexicon.json`) and a rules version; audit checks; the test fixture.
+
+**Where it shows and what it tests:**
+- A **What people ask** sub-tab under Usage: intent mix over time; unexpected outcomes by intent for the range against its comparison window, with the raw mix; the share of failed answers that now have a topic; the asked-about pages list with the agreement columns, sorted by not-found.
+- The change report gets **Outcomes by what was asked**: intervals and difference-in-differences by intent and by the personal-situation flag, calibrated on 9 March before 14 September is read. Rate questions point at the figure-needs-a-link rule meeting tables; personal situations at the relevance check; everywhere at the model's threshold.
+- **Validation before any claim.** The labelling sheet gains two columns: the intent the reader sees, and the scheme asked about as a page from the lexicon. The scorer reports agreement per class, since 80% overall can hide a 40% class. Below 80% in a class, that class is relabelled or merged before it appears in the brief.
+
+**Acceptance:** at least four in five typed questions land in a named intent; the question-derived topic cuts "unknown" among not-found turns by at least half; per-class reader agreement 80%+; every other file rebuilds byte-identical.
+
+**Order:** the lexicon builder with aliases and stop list, iterated against the most frequent unmatched tokens locally (budget the iteration, not just the build); intent rules and topic match in the redaction step with a synthetic test set; the files, the category fallback, audit and fixture; the sub-tab; the change-report section; the two labelling columns; the brief section with the 14 September reading. Step 11 follows and matters only if an extract appears.
