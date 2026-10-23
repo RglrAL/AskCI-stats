@@ -1497,6 +1497,11 @@ input[type=date]{color-scheme:dark}
   color:var(--text);background:color-mix(in srgb,var(--amber) 10%,transparent);border:1px solid color-mix(in srgb,var(--amber) 30%,transparent)}
 .ask-notice [data-lucide]{color:var(--amber);flex-shrink:0;margin-top:2px}
 .ask-guard-chips{display:flex;flex-wrap:wrap;gap:6px;margin-top:10px}
+.ask-second{display:flex;flex-wrap:wrap;align-items:baseline;gap:4px 10px;margin:8px 0;padding:10px 14px;border:1px solid var(--b2);border-radius:var(--r-md);background:var(--s1)}
+.ask-second-val{font-family:'DM Mono',monospace;font-size:1.1rem;font-weight:700;color:var(--text)}
+.ask-second-subj{font-size:.8rem;color:var(--text)}
+.ask-second-note{flex-basis:100%;font-size:.68rem;color:var(--dim)}
+.ask-also{display:flex;align-items:center;gap:8px;margin:0 0 8px;font-size:.72rem;color:var(--muted)}
 .ask-fu-lbl{font-size:var(--t-2xs);color:var(--dim);font-family:'DM Mono',monospace;align-self:center;margin-right:2px;text-transform:uppercase;letter-spacing:.06em}
 #ask-answer{margin-top:var(--sp-3);display:none}
 #ask-answer.show{display:block;animation:askRise .25s ease both}
@@ -7245,41 +7250,53 @@ init();
     if(/\bmodal (vs\.?|versus|and|or) web\b|\bweb (vs\.?|versus|and|or) modal\b|\bmodal share\b|\bweb share\b/.test(q))return null;   // the source split itself, not a filter
     if(/\b(for|on|via|from|in)\s+(the\s+)?modal\b|\bmodal (users|turns|conversations|traffic|questions?|not[- ]?found|cited|click|error)/.test(q))return{key:'modal',label:'Modal'};
     if(/\b(for|on|via|from)\s+(the\s+)?web\b|\bweb (users|turns|conversations|traffic|site|questions?|not[- ]?found|cited|click|error)/.test(q))return{key:'web',label:'Web'};
-    if(/\b(for|of|from)\s+(the\s+)?(suggested follow-?ups?|chips?|chip turns)\b|\bchip turns\b/.test(q))return{key:'sf',label:'suggested follow-ups'};
-    if(/\b(for|of|from)\s+(the\s+)?(typed|user) follow-?ups?\b/.test(q))return{key:'uf',label:'typed follow-ups'};
+    if(/\b(for|of|from|on)\s+(the\s+)?(suggested follow[- ]?ups?|chips?|chip turns)\b|\bchip turns\b/.test(q))return{key:'sf',label:'suggested follow-ups',phrase:(q.match(/\b(for|of|from|on)\s+(the\s+)?(suggested follow[- ]?ups?|chips?|chip turns)\b|\bchip turns\b/)||[''])[0]};
+    if(/\b(for|of|from|on)\s+(the\s+)?(typed|user) follow[- ]?ups?\b/.test(q))return{key:'uf',label:'typed follow-ups',phrase:(q.match(/\b(for|of|from|on)\s+(the\s+)?(typed|user) follow[- ]?ups?\b/)||[''])[0]};
     if(/\b(for|of|from)\s+(the\s+)?new topics?\b|\bfirst turns\b/.test(q))return{key:'nt',label:'new topics'};
     return null;
   }
-  // Parse rules that build their result from the question (labels with variants, services, model families),
-  // ordered with the registry synonyms by priority: the first rule that matches decides the measure.
+  // Parse rules that build their result from the question (labels with variants, services, model families).
+  // Third element: how strongly a match counts (a pattern whose matched length is the score, or a number).
   const PARSE_HOOKS=[
-    [40,(q,svcs)=>{if((/\bwhat does (a|each|one) (question|turn|answer) cost\b|\bcost (per|of a|of each) (question|turn|answer)\b/.test(q))&&!/generation|\bllm\b|model|variable|fixed|allocated/.test(q))return{kind:'cpq_tot',label:'allocated total cost per turn'}; return null;}],
-    [90,(q,svcs)=>{if(/\bbusiest (day of the week|weekday)\b|\bwhich (day of the week|weekday)\b|\bquietest (day of the week|weekday)\b/.test(q))return{kind:'weekday',label:/quietest/.test(q)?'quietest day of the week':'busiest day of the week'}; return null;}],
-    [100,(q,svcs)=>{if(/\bwhat time of (the )?day\b|\btime of day\b/.test(q))return{kind:'hour',label:/quietest/.test(q)?'quietest hour':'busiest hour'}; return null;}],
-    [130,(q,svcs)=>{if(/\bhow many (different |distinct |unique )?(ci |citizens ?information )?pages?\b|\b(percentage|share|proportion) of (the )?(ci |citizens ?information )?pages\b/.test(q))return/click|follow|visit|read|went|go on/.test(q)?{kind:'clickpages',label:'pages people clicked through to'}:{kind:'pagescited',label:'different pages cited'}; return null;}],
-    [140,(q,svcs)=>{if(/click[- ]?throughs?|\bctr\b|clicked through|clicks? on (the |a )?(citations?|links?)|click(ed|s|ing)? (on )?(a |the )?(links?|citations?)|follow(ed|s)? (the |a |those )?(links?|citations?)/.test(q))return/rate|per 100|\bctr\b|percent|%|share/.test(q)?{kind:'ctr',label:'click-throughs per 100 cited answers'}:{kind:'clicks',label:'click-throughs'}; return null;}],
-    [230,(q,svcs)=>{if(/busiest hour|peak hour|quietest hour|what hour|which hour|hour of (the )?day/.test(q))return{kind:'hour',label:/quietest/.test(q)?'quietest hour':'busiest hour'}; return null;}],
-    [260,(q,svcs)=>{if(/cyrillic/.test(q))return{kind:'script',script:'scCyrillic',label:'Cyrillic-script share'}; return null;}],
-    [270,(q,svcs)=>{if(/arabic/.test(q))return{kind:'script',script:'scArabic',label:'Arabic-script share'}; return null;}],
-    [280,(q,svcs)=>{if(/non[- ]?latin|language|script|other languages|foreign/.test(q))return{kind:'script',script:null,label:'non-Latin-script share'}; return null;}],
-    [310,(q,svcs)=>{for(const s of svcs){if(q.includes(s.toLowerCase()))return{kind:'service',service:s,label:s};} return null;}],
-    [320,(q,svcs)=>{for(const name in SVC_ALIAS){const real=svcs.find(s=>s.toLowerCase()===name);if(real&&SVC_ALIAS[name].some(a=>aliasHit(q,a)))return{kind:'service',service:real,label:real};} return null;}],
-    [330,(q,svcs)=>{if(/\bmodels?\b/.test(q)&&/which|what|most|biggest|cheapest|top|expensive|costliest|priciest/.test(q))return{kind:'topModel',label:'model'}; return null;}],
-    [340,(q,svcs)=>{const famQ=(re,fam)=>re.test(q)?{kind:'model',match:k=>meterFamily(k)===fam,label:fam,fam}:null; const fm=famQ(/\b5[.·]4 ?mini\b/,'5.4 mini')||famQ(/\b5[.·]4\b/,'5.4')||famQ(/transcribe/,'gpt-4o-transcribe')||famQ(/\bgpt[- ]?5 ?mini\b/,'GPT 5 Mini')||famQ(/\bgpt[- ]?5 ?chat\b/,'GPT 5 Chat')||famQ(/chat[- ]?latest/,'chat-latest 05052026')||famQ(/\bgpt[- ]?5\b/,'GPT 5')||famQ(/\b(gpt[- ]?)?4o[- ]?mini\b/,'gpt-4o-mini 0718')||famQ(/\b(gpt[- ]?)?4o\b/,'gpt-4o 1120')||famQ(/\bembed/,'text-embedding-3-small'); if(fm)return fm; return null;}],
-    [370,(q,svcs)=>{if(/run ?rate/.test(q))return{kind:'runrate',yearly:/year/.test(q),label:(/year/.test(q)?'projected year total':'run rate, next 30 days')}; return null;}],
-    [390,(q,svcs)=>{if(/cost per (question|turn)|per (question|turn)|\bcpq\b|generation cost/.test(q))return /\b(llm|ai|model|token|generation)/.test(q)?{kind:'cpq_llm',label:'generation cost per turn'}:{kind:'cpq_tot',label:'allocated total cost per turn'}; return null;}],
-    [540,(q,svcs)=>{if(/latency|response time|how (fast|slow)|\bslow(est)?\b|\bfast(est)?\b|\bspeed\b|\bp50\b|median response/.test(q))return{kind:'latency',label:'response time p50',superl:/slowest|\bslow(est)? day/.test(q)?'max':/fastest|quickest/.test(q)?'min':null}; return null;}],
+    [40,(q,svcs)=>{if((/\bwhat does (a|each|one) (question|turn|answer) cost\b|\bcost (per|of a|of each) (question|turn|answer)\b/.test(q))&&!/generation|\bllm\b|model|variable|fixed|allocated/.test(q))return{kind:'cpq_tot',label:'allocated total cost per turn'}; return null;},/\bwhat does (a|each|one) (question|turn|answer) cost\b|\bcost (per|of a|of each) (question|turn|answer)\b/],
+    [90,(q,svcs)=>{if(/\bbusiest (day of the week|weekday)\b|\bwhich (day of the week|weekday)\b|\bquietest (day of the week|weekday)\b/.test(q))return{kind:'weekday',label:/quietest/.test(q)?'quietest day of the week':'busiest day of the week'}; return null;},/\bbusiest (day of the week|weekday)\b|\bwhich (day of the week|weekday)\b|\bquietest (day of the week|weekday)\b/],
+    [100,(q,svcs)=>{if(/\bwhat time of (the )?day\b|\btime of day\b/.test(q))return{kind:'hour',label:/quietest/.test(q)?'quietest hour':'busiest hour'}; return null;},/\bwhat time of (the )?day\b|\btime of day\b/],
+    [130,(q,svcs)=>{if(/\bhow many (different |distinct |unique )?(ci |citizens ?information )?pages?\b|\b(percentage|share|proportion) of (the )?(ci |citizens ?information )?pages\b/.test(q))return/click|follow|visit|read|went|go on/.test(q)?{kind:'clickpages',label:'pages people clicked through to'}:{kind:'pagescited',label:'different pages cited'}; return null;},/\bhow many (different |distinct |unique )?(ci |citizens ?information )?pages?\b|\b(percentage|share|proportion) of (the )?(ci |citizens ?information )?pages\b/],
+    [140,(q,svcs)=>{if(/click[- ]?throughs?|\bctr\b|clicked through|clicks? on (the |a )?(citations?|links?)|click(ed|s|ing)? (on )?(a |the )?(links?|citations?)|follow(ed|s)? (the |a |those )?(links?|citations?)/.test(q))return/rate|per 100|\bctr\b|percent|%|share/.test(q)?{kind:'ctr',label:'click-throughs per 100 cited answers'}:{kind:'clicks',label:'click-throughs'}; return null;},/click[- ]?throughs?|\bctr\b|clicked through|clicks? on (the |a )?(citations?|links?)|click(ed|s|ing)? (on )?(a |the )?(links?|citations?)|follow(ed|s)? (the |a |those )?(links?|citations?)/],
+    [230,(q,svcs)=>{if(/busiest hour|peak hour|quietest hour|what hour|which hour|hour of (the )?day/.test(q))return{kind:'hour',label:/quietest/.test(q)?'quietest hour':'busiest hour'}; return null;},/busiest hour|peak hour|quietest hour|what hour|which hour|hour of (the )?day/],
+    [260,(q,svcs)=>{if(/cyrillic/.test(q))return{kind:'script',script:'scCyrillic',label:'Cyrillic-script share'}; return null;},/cyrillic/],
+    [270,(q,svcs)=>{if(/arabic/.test(q))return{kind:'script',script:'scArabic',label:'Arabic-script share'}; return null;},/arabic/],
+    [280,(q,svcs)=>{if(/non[- ]?latin|language|script|other languages|foreign/.test(q))return{kind:'script',script:null,label:'non-Latin-script share'}; return null;},/non[- ]?latin|language|script|other languages|foreign/],
+    [310,(q,svcs)=>{for(const s of svcs){if(q.includes(s.toLowerCase()))return{kind:'service',service:s,label:s};} return null;},(q,svcs)=>Math.max(0,...svcs.filter(x=>q.includes(x.toLowerCase())).map(x=>x.length))],
+    [320,(q,svcs)=>{for(const name in SVC_ALIAS){const real=svcs.find(s=>s.toLowerCase()===name);if(real&&SVC_ALIAS[name].some(a=>aliasHit(q,a)))return{kind:'service',service:real,label:real};} return null;},(q)=>Math.max(0,...Object.values(SVC_ALIAS).flat().filter(x=>aliasHit(q,x)).map(x=>x.length))],
+    [330,(q,svcs)=>{if(/\bmodels?\b/.test(q)&&/which|what|most|biggest|cheapest|top|expensive|costliest|priciest/.test(q))return{kind:'topModel',label:'model'}; return null;},/\bmodels?\b/],
+    [340,(q,svcs)=>{const famQ=(re,fam)=>re.test(q)?{kind:'model',match:k=>meterFamily(k)===fam,label:fam,fam}:null; const fm=famQ(/\b5[.·]4 ?mini\b/,'5.4 mini')||famQ(/\b5[.·]4\b/,'5.4')||famQ(/transcribe/,'gpt-4o-transcribe')||famQ(/\bgpt[- ]?5 ?mini\b/,'GPT 5 Mini')||famQ(/\bgpt[- ]?5 ?chat\b/,'GPT 5 Chat')||famQ(/chat[- ]?latest/,'chat-latest 05052026')||famQ(/\bgpt[- ]?5\b/,'GPT 5')||famQ(/\b(gpt[- ]?)?4o[- ]?mini\b/,'gpt-4o-mini 0718')||famQ(/\b(gpt[- ]?)?4o\b/,'gpt-4o 1120')||famQ(/\bembed/,'text-embedding-3-small'); if(fm)return fm; return null;},(q)=>((q.match(/\b5[.·]4 ?mini\b|\b5[.·]4\b|transcribe|\bgpt[- ]?5 ?(mini|chat)?\b|chat[- ]?latest|\b(gpt[- ]?)?4o([- ]?mini)?\b|\bembed\w*/)||[''])[0].length+2)],
+    [370,(q,svcs)=>{if(/run ?rate/.test(q))return{kind:'runrate',yearly:/year/.test(q),label:(/year/.test(q)?'projected year total':'run rate, next 30 days')}; return null;},/run ?rate/],
+    [390,(q,svcs)=>{if(/cost per (question|turn)|per (question|turn)|\bcpq\b|generation cost/.test(q))return /\b(llm|ai|model|token|generation)/.test(q)?{kind:'cpq_llm',label:'generation cost per turn'}:{kind:'cpq_tot',label:'allocated total cost per turn'}; return null;},/cost per (question|turn)|per (question|turn)|\bcpq\b|generation cost/],
+    [540,(q,svcs)=>{if(/latency|response time|how (fast|slow)|\bslow(est)?\b|\bfast(est)?\b|\bspeed\b|\bp50\b|median response/.test(q))return{kind:'latency',label:'response time p50',superl:/slowest|\bslow(est)? day/.test(q)?'max':/fastest|quickest/.test(q)?'min':null}; return null;},/latency|response time|how (fast|slow)|\bslow(est)?\b|\bfast(est)?\b|\bspeed\b|\bp50\b|median response/],
   ];
   let PARSE_RULES=null;
-  function parseMetric(q){
+  // Best fit, not first match: every rule that matches is a candidate, scored by the length of the phrase it
+  // matched (the most specific reading explains the most of the question); priority breaks ties. A different
+  // measure scoring close behind is offered as "Also read as" (parseMetric.alt).
+  function parseMetricAll(q){
     const svcs=(have()&&DATA.allSvcs)||[];
-    if(!PARSE_RULES){   // registry synonyms and hooks, merged in priority order (lower first)
+    if(!PARSE_RULES){
       PARSE_RULES=[];
-      ASK_METRICS.forEach(m=>(m.syn||[]).forEach(([re,pr,say,not])=>PARSE_RULES.push([pr,qq=>re.test(qq)&&!(not&&not.test(qq))?{kind:m.id,label:say}:null])));
+      ASK_METRICS.forEach(m=>(m.syn||[]).forEach(([re,pr,say,not])=>PARSE_RULES.push([pr,qq=>re.test(qq)&&!(not&&not.test(qq))?{kind:m.id,label:say}:null,re])));
       PARSE_HOOKS.forEach(h=>PARSE_RULES.push(h));PARSE_RULES.sort((a,b)=>a[0]-b[0]);
     }
-    for(const [,f] of PARSE_RULES){const out=f(q,svcs);if(out)return out;}
-    return{kind:'spend',label:'total spend'};
+    const cands=[];
+    for(const [pr,f,sc] of PARSE_RULES){const out=f(q,svcs);if(!out)continue;
+      let len=0,at=-1;
+      if(sc instanceof RegExp){const mm=q.match(sc);if(mm){len=mm[0].trim().length;at=mm.index;}}else len=typeof sc==='function'?sc(q,svcs):(+sc||0);
+      cands.push({out,pr,len,at});}
+    cands.sort((a,b)=>b.len-a.len||a.pr-b.pr);
+    return cands;
+  }
+  function parseMetric(q){
+    const c=parseMetricAll(q);
+    return c.length?c[0].out:{kind:'spend',label:'total spend'};
   }
 
   function parseAgg(q){
@@ -7317,7 +7334,9 @@ init();
   // (vs defaulted) — the explicitness flags drive follow-up inheritance.
   function parseDims(orig){
     const q=' '+orig.toLowerCase().replace(/[?!,]|\.(?!\d)/g,' ').replace(/\s+/g,' ')+' ';
-    const period=parsePeriod(q),metric=parseMetric(q),agg=parseAgg(q);
+    // A filter phrase ("for the suggested follow-ups") is taken out before the measure is scored, so it can't
+    // be read as the measure itself.
+    const fp=parseFilter(q),period=parsePeriod(q),metric=parseMetric(fp&&fp.phrase?q.replace(fp.phrase,' '):q),agg=parseAgg(q);
     let bucket='day';
     if((agg==='max'||agg==='min')&&!/\bday\b|\bdaily\b/.test(q)){
       if(/\bweek(s|ly)?\b/.test(q))bucket='week';
@@ -7490,6 +7509,8 @@ init();
     const q=(' '+orig.toLowerCase().replace(/[?!,]|\.(?!\d)/g,' ').replace(/\s+/g,' ')+' ').replace(/\b(last|past|previous)\s+\d+\s+(days?|weeks?|months?)\b/g,' ');
     let entity=null;
     if(/\bhow many\b/.test(q))return null;   // a count, never a ranked list
+    // "the justice category" names one topic, not the topic list
+    for(const[,phr]of CAT_PHRASES)for(const ph of phr)if(new RegExp('\\b'+ph.replace(/[&]/g,'\\$&')+'\\s+(category|topic)\\b').test(q))return null;
     if(/\b(percentage|share|proportion) of (the )?(ci |citizens ?information )?pages\b/.test(q))return null;
     if(/journeys?|transitions|category steps|from .* to .* categor|\b(ask|asked|go|move|moved|turn) (about |on |to )?(next |after)\b|\bafter\b.*\b(what|which) (topic|next)\b/.test(q))entity='journey';
     else if(/\bservices\b|cost drivers\b/.test(q))entity='service';
@@ -7963,7 +7984,7 @@ init();
     AM('feedback','Feedback rate','pct',{syn:[[/\blikes?\b|feedback/,440,'feedback rate']],def:'Turns with a like or a dislike, as a share of all turns.'}),
     AM('chips','Suggested follow-up share','pct',{syn:[[/\bchips?\b|suggested follow|follow[- ]?ups?/,550,'suggested follow-up share']],def:'Turns that came from a suggested follow-up chip, as a share of all turns.'}),
     AM('starter','Starter-prompt share','pct',{syn:[[/starter|chip prompt/,450,'starter-prompt share of first turns']],def:'First turns that used one of the suggested starter prompts, as a share of first turns.'}),
-    AM('latency','Response time p50','ms',{polarity:'down',def:'The day\'s median response time, weighted by turns across days. Positive response times only.'}),
+    AM('latency','Response time p50','ms',{polarity:'down',def:'The day\'s median response time, weighted by turns across days. Positive response times only.',syn:[[/\bhow long do (answers|responses|replies) take\b|\btime (to|taken to) (answer|respond)\b|\banswer times?\b/,5,'response time p50']]}),
     AM('p90','Response time p90','ms',{polarity:'down',syn:[[/\bp90\b|90th/,210,'response time p90']],def:'The day\'s 90th-percentile response time, weighted by turns across days.'}),
     AM('p99','Response time p99','ms',{polarity:'down',syn:[[/\bp99\b|99th/,200,'response time p99']],def:'The day\'s 99th-percentile response time, weighted by turns across days.'}),
     AM('over30','Turns over 30 s','pct',{polarity:'down',syn:[[/over 30|more than 30|above 30|30 ?s(ec|econds)?\b|slow (turns|answers|responses)/,220,'turns over 30 s']],def:'Timed turns that took over 30 seconds, as a share of timed turns.'}),
@@ -7975,7 +7996,7 @@ init();
     AM('latercited','Not found, then later cited','pct',{polarity:'up',syn:[[/later (got )?(a )?cited|after (a )?not[- ]?found/,150,'not found, then a later cited answer']],def:'Not-found answers after which a later question in the same conversation got a cited answer, counted per answer. The later answer may be to a different question.'}),
     AM('single','Ended after first turn','pct',{syn:[[/\bend(s|ed)? after (one|1|a single|the first) (question|turn)\b|\bone[- ]question conversations?\b/,20,'ended after first turn'],[/ended after (the )?first turn|single[- ]turn|one[- ]turn|abandon/,170,'ended after first turn']],def:'Mature conversations with only one turn, as a share of mature conversations. Never described as abandonment.'}),
     AM('chipuse','Suggested follow-up use','pct',{syn:[[/chip use|used (a )?chip|suggested follow-?up use|follow-?up use/,180,'suggested follow-up use']],def:'Mature conversations with at least one suggested follow-up turn, as a share of mature conversations.'}),
-    AM('span','Conversations over 5 min','pct',{syn:[[/how long|conversation (length|span|duration)|observed span|\bspan\b|duration/,190,'conversations over 5 minutes']],def:'Mature multi-turn conversations lasting more than 5 minutes from first to last turn, minute precision.'}),
+    AM('span','Conversations over 5 min','pct',{syn:[[/\bhow long (are|do|did) conversations( last| take)?\b|\bconversation (length|duration)\b/,5,'conversations over 5 minutes'],[/how long|conversation (length|span|duration)|observed span|\bspan\b|duration/,190,'conversations over 5 minutes']],def:'Mature multi-turn conversations lasting more than 5 minutes from first to last turn, minute precision.'}),
     AM('script','Non-Latin script share','pct',{def:'Turns whose question starts with a non-Latin letter, as a share of turns with letters. A script, not a language.'}),
     AM('events','Events','list',{groupable:false,prior:false,syn:[[/\bevents?\b|milestones/,290,'events']]}),
     AM('cpc','Allocated cost per conversation','pence',{polarity:'down',cost:true,syn:[[/\bcost (per|of a|of each) conversation\b/,30,'allocated cost per conversation']],def:'Allocated total billed cost divided by conversations, over settled billing days with turns.'}),
@@ -7991,7 +8012,7 @@ init();
     AM('service','Service cost','gbp',{polarity:'down',cost:true,read:false}),
     AM('model','Model cost','gbp',{polarity:'down',cost:true,read:false}),
     AM('topService','Top service','gbp',{cost:true,groupable:false,prior:false,read:false,syn:[[/\bservices?\b|cost driver|biggest driver|where.*(money|spend|cost)|what.*cost.*most|breakdown by service/,380,'service']]}),
-    AM('topModel','Top model','gbp',{cost:true,groupable:false,prior:false,read:false}),
+    AM('topModel','Top model','gbp',{cost:true,groupable:false,prior:false,read:false,syn:[[/\b(which|what) (language |ai |llm )?models? (costs?|is|was|are|were)\b.*\b(most|expensive|costliest|priciest)|\bmost expensive (language |ai )?models?\b/,5,'model']]}),
   ];
   const MET={};ASK_METRICS.forEach(m=>{MET[m.id]=m;});
   const RATE_UNITS=['pct','pence','per100','perk','ms','ratio'];
@@ -8475,7 +8496,7 @@ init();
   // ── Never answer a different question without saying so (Ask bar audit, step 1) ──
   // NOTICES are shown above any answer: a correction made to the question, a filter that could not be
   // applied, a follow-up that inherited the previous question, or a second measure that was not answered.
-  let NOTICES=[];
+  let NOTICES=[],ALSO=null,SECOND=null;
   const addNotice=t=>{if(t&&!NOTICES.includes(t))NOTICES.push(t);};   // not "note": several functions have a local of that name
   const exChip=t=>'<button class="ask-chip" data-ex="'+escA(t)+'">'+esc(t)+'</button>';
   function showCard(title,bodyHtml,chipList,icon){
@@ -8487,16 +8508,26 @@ init();
   // Abbreviations, synonyms and near-miss spellings, corrected visibly before parsing.
   const ABBREV=[[/\bnf\b/g,'not found'],[/\bq'?s\b/g,'questions'],[/\bwks?\b/g,m=>m.length>2?'weeks':'week'],[/\bmn?th\b/g,'month'],[/\bconvos?\b/g,'conversations'],
     [/\bpop[- ]?ups?\b|\bembed(ded)?\b/g,'modal'],[/\bstand[- ]?alone( site)?\b/g,'web'],[/\bctr\b/g,'click-through rate']];
-  const VOCAB=['conversations','conversation','questions','question','queries','citations','citation','clicks','september','october','november','december','january','february','august','response','housing','welfare','employment','dislikes','average','category','categories','answers','answered','weekends','weekdays','evening','morning','afternoon','monthly','weekly','yesterday','service','services','allowance','benefit','click-throughs','throughs','percentage'];
+  // Words a near-miss spelling is corrected to: the registry's measure names, topic phrases, service names, months and
+  // weekdays, plus a few hand-kept ones. PLAIN words are never corrected (they would otherwise drift to a near
+  // vocabulary word: "spent" to "spend", "latest" to "latency").
+  const PLAIN=['spent','latest','total','totals','today','there','their','which','where','about','these','those','after','before','since','during','compared','highest','lowest','biggest','under','over','between','would','could','should','people','other','others','first','second','third','times','share','split','trend','rising','falling','change','changed','changes','month','months','weeks','years','daily','days','hours','every','percent','minutes','seconds','shown','showing','asked','asking','using','users'];
+  const VOCAB=(()=>{const w=new Set(['conversations','conversation','questions','question','queries','citations','citation','clicks','response','answers','answered','average','category','categories','weekends','weekdays','evening','morning','afternoon','monthly','weekly','yesterday','service','services','allowance','benefit','click-throughs','throughs','percentage','latency']);
+    const add=t=>String(t||'').toLowerCase().split(/[^a-z-]+/).forEach(x=>{x=x.replace(/^-+|-+$/g,'');if(x.length>=5)w.add(x);});
+    ASK_METRICS.forEach(m=>{add(m.label);(m.syn||[]).forEach(r=>add(r[2]));});
+    CAT_PHRASES.forEach(([slug,ph])=>{add(slug.replace(/-/g,' '));ph.forEach(add);});
+    Object.entries(SVC_ALIAS).forEach(([k,a])=>{add(k);a.forEach(add);});
+    MONFULL.forEach(add);['monday','tuesday','wednesday','thursday','friday','saturday','sunday'].forEach(add);
+    PLAIN.forEach(x=>w.delete(x));return [...w];})();
   function editDist(a,b){if(Math.abs(a.length-b.length)>2)return 9;const d=Array.from({length:a.length+1},(_,i)=>[i]);for(let j=1;j<=b.length;j++)d[0][j]=j;
-    for(let i=1;i<=a.length;i++)for(let j=1;j<=b.length;j++)d[i][j]=Math.min(d[i-1][j]+1,d[i][j-1]+1,d[i-1][j-1]+(a[i-1]===b[j-1]?0:1));return d[a.length][b.length];}
+    for(let i=1;i<=a.length;i++)for(let j=1;j<=b.length;j++){d[i][j]=Math.min(d[i-1][j]+1,d[i][j-1]+1,d[i-1][j-1]+(a[i-1]===b[j-1]?0:1));if(i>1&&j>1&&a[i-1]===b[j-2]&&a[i-2]===b[j-1])d[i][j]=Math.min(d[i][j],d[i-2][j-2]+1);}return d[a.length][b.length];} // swapped letters count once
   function normaliseQ(q0){
     let q=q0.toLowerCase();
     // "How is AskCI doing?" → the latest month's summary
     if(/\bhow('s| is| are) (askci|it|we|things) (doing|going|performing)\b|\bhow did (askci|it|we) do\b|^\s*(overview|summary|headlines?)\s*\??$/.test(q)){
       const lmD=(DATA.merged.filter(d=>d.queries>0).slice(-1)[0]||{}).date||'';if(lmD){q='summary of '+MONFULL[+lmD.slice(5,7)-1].toLowerCase();addNotice('Showing the latest month’s summary.');}}ABBREV.forEach(([re,to])=>{q=q.replace(re,to);});
     const fixed=[];
-    q=q.replace(/[a-z][a-z-]{4,}/g,w=>{if(VOCAB.includes(w))return w;
+    q=q.replace(/[a-z][a-z-]{4,}/g,w=>{if(VOCAB.includes(w)||PLAIN.includes(w))return w;
       let best=null,bd=9;VOCAB.forEach(v=>{if(v[0]!==w[0])return;const dd=editDist(w,v);if(dd<bd){bd=dd;best=v;}});
       if(best&&bd<=(w.length>=8?2:1)&&!(best.startsWith(w)||w.startsWith(best))){fixed.push(`“${w}” as “${best}”`);return best;}return w;});
     // People and users cannot be counted: there is no login. Conversations are the closest measure.
@@ -8561,14 +8592,39 @@ init();
   async function run(){
     const inp=$('ask-input'); if(!inp)return;
     const q0=(inp.value||'').trim(); if(!q0||!have())return;
-    NOTICES=[];
+    NOTICES=[];ALSO=null;SECOND=null;
     const q=normaliseQ(q0);
     const handled=guard(' '+q+' ')||pageAnswer(' '+q+' ');
     if(!handled)route(q);
     const el=$('ask-answer');
     if(el)el.querySelectorAll('.ask-card-q').forEach(x=>{x.textContent=q0;});   // the question as typed, not as normalised
+    if(el&&ALSO&&el.innerHTML)el.insertAdjacentHTML('afterbegin','<div class="ask-also"><span>Also read as</span>'+exChip(ALSO)+'</div>');
     if(el&&NOTICES.length&&el.innerHTML)el.insertAdjacentHTML('afterbegin','<div class="ask-notice"><i data-lucide="alert-circle" class="i-sm"></i><span>'+NOTICES.map(esc).join(' ')+'</span></div>');
     if(typeof renderIcons==='function')renderIcons();
+  }
+  // A different measure that explains nearly as much of the question as the chosen one is offered with one click.
+  function alsoReadAs(q,intent){
+    const fp=parseFilter(' '+q+' '),qq=fp&&fp.phrase?(' '+q+' ').replace(fp.phrase,' '):' '+q+' ';
+    const c=parseMetricAll(qq);if(c.length<2)return;
+    // Not a separate reading when its phrase sits inside the chosen one's ("answer rate" in "cited answer rate"),
+    // nor a generic fallback (turns, conversations, spend) or a legacy measure kept out of the read-as menu.
+    const inside=(a,b)=>a.at>=0&&b.at>=0&&a.at>=b.at&&a.at+a.len<=b.at+b.len+1;
+    const top=c[0],alt=c.find(x=>x.out.kind!==top.out.kind&&x.out.kind!==intent.metric.kind&&!['questions','sessions','spend'].includes(x.out.kind)&&MET[x.out.kind]?.read!==false&&!inside(x,top));
+    if(!alt||alt.len<5||alt.len<top.len*0.8)return;
+    const tail=(q.match(/\b(in|on|last|this|since|from|by|between|after|before|during|over|for)\b.*$/)||[''])[0]||'';
+    ALSO=((alt.out.label||MET[alt.out.kind]?.label||'')+' '+tail).trim();
+  }
+  // The second half of a combined question ("questions and conversations", "housing vs employment"), shown under
+  // the first. Grouped and trend answers keep a pointer instead, since two tables in one card don't read well.
+  function secondAnswer(intent){
+    if(!SECOND)return;
+    if(intent.groupBy||intent.trend){addNotice(SECOND.fallback);return;}
+    const it2={...intent,_sub:true,...(SECOND.metric?{metric:SECOND.metric}:{}),...(SECOND.category?{category:SECOND.category}:{})};
+    const r=compute(it2);const el=$('ask-answer');if(!el||!r||r.empty||!r.fmt)return;
+    const subj=r.subj||(SECOND.category?catLabel(CAT_ALIAS[SECOND.category]||SECOND.category)+' · '+it2.metric.label:it2.metric.label);
+    const sub=el.querySelector('.ask-card-sub');if(!sub)return;
+    sub.insertAdjacentHTML('afterend','<div class="ask-second"><span class="ask-second-val">'+esc(r.value==null?'—':r.fmt(r.value))+'</span><span class="ask-second-subj">'+esc(subj)+'</span><span class="ask-second-note">'+esc(r.note||'')+'</span></div>');
+    SECOND=null;
   }
   function route(q){
     const ans=$('ask-answer');
@@ -8651,16 +8707,21 @@ init();
     // Two measures joined by "and": answer one, offer the other.
     {const cats=Object.keys(CATOUT[Object.keys(CATOUT)[0]]||{}).length?[...new Set(Object.values(CATOUT).flatMap(o=>Object.keys(o)))].filter(c=>c!=='unknown'&&!CAT_EXCLUDE.has(c)):[];
       const named=cats.filter(c=>new RegExp('\\b'+catLabel(CAT_ALIAS[c]||c).toLowerCase().replace(/ and /,' (and|&) ')+'\\b').test(q));
-      if(named.length>=2&&d.category){const other=named.find(c=>c!==d.category);if(other)addNotice('This answers '+catLabel(CAT_ALIAS[d.category]||d.category)+'; ask the same for '+catLabel(CAT_ALIAS[other]||other)+' to compare.');}}
+      if(named.length>=2&&d.category){const other=named.find(c=>c!==d.category);if(other)SECOND={category:other,fallback:'This answers '+catLabel(CAT_ALIAS[d.category]||d.category)+'; ask the same for '+catLabel(CAT_ALIAS[other]||other)+' to compare.'};}}
     {const parts=q.split(/\s+(?:and|vs\.?|versus)\s+/);if(parts.length===2){const m1=parseMetric(' '+parts[0]+' '),m2=parseMetric(' '+parts[1]+' ');
       const ex=m=>m.kind!=='spend'||/spend|cost|spent|£/.test(m.label);
       if(m1.kind!==m2.kind&&(m1.kind!=='spend'||/spend|cost/.test(parts[0]))&&(m2.kind!=='spend'||/spend|cost/.test(parts[1]))){
         const shown=d.metric.kind,other=shown===m1.kind?parts[1]:parts[0];
         const tail=(q.match(/\b(in|on|last|this|since|from|by|between|after|before|during|over)\b.*$/)||[''])[0]||'';
         const otherQ=(other.replace(/\b(in|on|last|this|since|from|by|between|after|before|during|over)\b.*$/,'').trim()+' '+tail).trim();
-        addNotice('This answers one measure; ask “'+otherQ+'” for the other.');}}}
+        SECOND={metric:shown===m1.kind?m2:m1,fallback:'This answers one measure; ask “'+otherQ+'” for the other.'};}}}
     const intent=parseAsk(q);
-    if(intent){lastIntent=intent;render(compute(intent));return;}
+    // "cost of foo": the default measure is total spend, so say so when the named thing isn't one the cost data knows
+    {const um=intent&&intent.metric.kind==='spend'&&!intent.category&&!intent.groupBy&&q.match(/\b(?:costs?|spend|spent|bill)\s+(?:of|on|for)\s+(?:the\s+)?([a-z][a-z0-9.-]*)/);
+      if(um&&(/^(modal|web)$/.test(um[1])||!/^(last|this|each|every|all|per|a|an|the|today|yesterday|askci|azure|everything|running|operating|hosting|it|that|month|week|year|day|days|weeks|months|q[1-4]|budget|launch|\d.*)$/.test(um[1])&&!VOCAB.includes(um[1])&&!PLAIN.includes(um[1])&&!MONFULL.some(m=>m.toLowerCase().startsWith(um[1].slice(0,3)))))
+        addNotice(/^(modal|web|pop-?up|embed|standalone)$/.test(um[1])?'Costs aren’t split by pop-up and standalone site, so this is total spend.':'“'+um[1]+'” isn’t a service, model or topic in the cost data, so this is total spend.');}
+    if(intent&&intent.category&&intent.metric.kind==='spend'&&/\b(costs?|spend|spent|bill)\b/.test(q))addNotice('Costs aren’t split by topic, so this shows questions in '+catLabel(CAT_ALIAS[intent.category]||intent.category)+'.');
+    if(intent){lastIntent=intent;render(compute(intent));alsoReadAs(q,intent);secondAnswer(intent);return;}
     // 4. Not understood — say so; there is no model fallback.
     ans.innerHTML=info('I couldn’t parse that. Try e.g. <b>spend in January 2026</b>, <b>not-found rate in housing last month</b>, <b>which category has the most dislikes</b>, <b>cited rate for chips</b>, <b>most cited pages this year</b>, <b>busiest hour in September</b>, <b>p90 last 30 days</b>, <b>events in May</b>, <b>voice cost this month</b>, <b>generation cost per turn last 3 months</b>, <b>fixed share this year</b> or <b>projected spend this month</b>.');
     ans.classList.add('show');if(typeof renderIcons==='function')renderIcons();

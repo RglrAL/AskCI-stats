@@ -437,3 +437,17 @@ Next steps from the audit: (2) commit the 128-question battery as an automated r
 - **Definitions:** "define X", "explain X", "what does X mean", "what is meant by X", "how is X calculated / counted" answer from the registry, in the dashboard's own words.
 - **Self-check:** malformed entries (duplicate id, unknown unit or polarity, a bad synonym) are listed in `window.__askRegistryProblems`, and `tools/test_ask.py` fails on any.
 - **Adding a measure** now takes a registry entry and, unless it is a simple daily sum or share already handled, a calculation branch. Moving the calculations themselves onto the registry (numerator, denominator, source file) is the remaining part of this step; the scored grammar is step 4.
+
+## 32. Ask bar audit, step 4: best fit, combined questions, typos (23 Oct 2026)
+
+- **Best fit.** Every synonym rule and hook that matches a question is collected with where and how much of it matched. The longest match wins and priority breaks ties, rather than the first rule in the list. "Which language model costs the most" is now about models (chat-latest), not total cost. "How long do answers take" is response time (12.0s), and "how long are conversations" is conversation length (22.1% over five minutes). A filter phrase ("for the suggested follow ups") is taken out before the measure is scored, so it can't be read as the measure. Other readings that matched apart from the winner and aren't generic are offered as "Also read as" chips.
+- **Combined questions answered in full.** "Questions and conversations in September", "not-found rate and error rate last month" and "not-found rate for housing vs employment" show both values in one card, the second under the first with its own counts and note. When the answer is a table or a trend ("cost and questions by month") it still says "This answers one measure; ask … for the other", because two tables in one card don't read well.
+- **Typos.** Near-miss spellings are corrected against a vocabulary built from the registry's measure names, the topic phrases, service names, months and weekdays, plus a short hand list. Before, it was a fixed list of 40 words; "latncy", "clarifcation", "helth", "tuesdy" and "cosmso" were missed. Swapped letters count as one edit. Plain question words ("spent", "latest", "total") are never corrected. Every correction is still announced ("Read 'helth' as 'health'"), and none of the suite's other questions picked one up.
+- **Silent answers closed:**
+  - "cost of foo" says that foo isn't in the cost data and that the answer is total spend.
+  - "spend on housing" says that costs aren't split by topic and shows questions in Housing.
+  - "cost of the modal" says that costs aren't split by surface.
+  - "citations for the justice category" is Justice's citations, not the topic ranking.
+- **Tests:** 201 cases (16 new, grouped `combined`, `bestfit`, `typos`), all passing.
+
+Still open: "which topics get the most citations" ranks topics by questions (the card says so) rather than by citations; a topic with no measure ("housing last month") asks which measure rather than offering that topic's choices. Moving the calculations onto the registry (rest of step 3) and the optional model step (step 5) are not started.

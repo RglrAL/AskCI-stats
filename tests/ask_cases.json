@@ -306,9 +306,13 @@
   "q": "likes and dislikes",
   "group": "quality",
   "expect": [
-   "This answers one measure; ask “likes” for the other.",
-   "1.5 dislikes"
-  ]
+   "1.5 dislikes",
+   "0.50% feedback rate"
+  ],
+  "not": [
+   "This answers"
+  ],
+  "note": "combined question: both halves answered in one card"
  },
  {
   "q": "how many dislikes last month",
@@ -378,9 +382,14 @@
   "q": "not found rate for housing vs employment",
   "group": "content",
   "expect": [
-   "This answers Housing; ask the same for Employment to compare.",
-   "3.2% not-found"
-  ]
+   "3.2% not-found rate in Housing",
+   "not-found rate in Employment",
+   "365 of 11,253"
+  ],
+  "not": [
+   "This answers"
+  ],
+  "note": "combined question: both halves answered in one card"
  },
  {
   "q": "which pages are cited most for social welfare",
@@ -899,17 +908,25 @@
   "q": "questions and conversations in September",
   "group": "multi",
   "expect": [
-   "This answers one measure; ask “questions in september” for the other.",
-   "11,590 conversations"
-  ]
+   "11,590 conversations",
+   "21,718 turns"
+  ],
+  "not": [
+   "This answers"
+  ],
+  "note": "combined question: both halves answered in one card"
  },
  {
   "q": "not found rate and error rate last month",
   "group": "multi",
   "expect": [
-   "This answers one measure; ask “error rate last month” for the other.",
-   "6.0% not-found"
-  ]
+   "6.0% not-found",
+   "1.5% error rate"
+  ],
+  "not": [
+   "This answers"
+  ],
+  "note": "combined question: both halves answered in one card"
  },
  {
   "q": "cost and questions by month",
@@ -1518,5 +1535,136 @@
   "expect": [
    "Conversations DEFINITION A conversation is"
   ]
+ },
+ {
+  "q": "click throughs and click through rate in September",
+  "expect": [
+   "5.5 click-throughs per 100",
+   "983 click-throughs"
+  ],
+  "group": "combined"
+ },
+ {
+  "q": "which language model costs the most",
+  "expect": [
+   "chat-latest"
+  ],
+  "note": "best fit: the longest measure match wins",
+  "group": "bestfit"
+ },
+ {
+  "q": "how long do answers take",
+  "expect": [
+   "12.0s"
+  ],
+  "group": "bestfit"
+ },
+ {
+  "q": "how long are conversations",
+  "expect": [
+   "22.1%"
+  ],
+  "group": "bestfit"
+ },
+ {
+  "q": "not found rate for the suggested follow ups",
+  "expect": [
+   "2.4%"
+  ],
+  "note": "the filter phrase is not read as a measure",
+  "group": "bestfit"
+ },
+ {
+  "q": "latncy in september",
+  "expect": [
+   "Read “latncy” as “latency”.",
+   "11.8s"
+  ],
+  "group": "typos"
+ },
+ {
+  "q": "clarifcation rate last month",
+  "expect": [
+   "Read “clarifcation” as “clarification”.",
+   "7.4%"
+  ],
+  "group": "typos"
+ },
+ {
+  "q": "not found rate in helth",
+  "expect": [
+   "Read “helth” as “health”.",
+   "2.8% not-found rate in Health"
+  ],
+  "group": "typos"
+ },
+ {
+  "q": "cost of cosmso last month",
+  "expect": [
+   "Read “cosmso” as “cosmos”.",
+   "£0.24"
+  ],
+  "note": "swapped letters count as one edit",
+  "group": "typos"
+ },
+ {
+  "q": "questions on tuesdy",
+  "expect": [
+   "Read “tuesdy” as “tuesday”.",
+   "Counting Tuesdays only."
+  ],
+  "group": "typos"
+ },
+ {
+  "q": "spent in september",
+  "expect": [
+   "£1010"
+  ],
+  "not": [
+   "Read “"
+  ],
+  "note": "plain words are never corrected",
+  "group": "typos"
+ },
+ {
+  "q": "citations for the justce category",
+  "expect": [
+   "3,030 Justice citations"
+  ],
+  "not": [
+   "Top 10"
+  ],
+  "group": "typos"
+ },
+ {
+  "q": "cost of foo last month",
+  "expect": [
+   "“foo” isn’t a service, model or topic in the cost data, so this is total spend."
+  ],
+  "group": "bleed"
+ },
+ {
+  "q": "spend on housing",
+  "expect": [
+   "Costs aren’t split by topic, so this shows questions in Housing."
+  ],
+  "group": "bleed"
+ },
+ {
+  "q": "cost of the modal",
+  "expect": [
+   "Costs aren’t split by pop-up and standalone site"
+  ],
+  "group": "bleed"
+ },
+ {
+  "q": "cost of cosmos last month",
+  "expect": [
+   "£0.24"
+  ],
+  "not": [
+   "isn’t a service"
+  ],
+  "group": "bleed"
  }
 ]
