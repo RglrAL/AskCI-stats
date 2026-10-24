@@ -413,14 +413,14 @@
   "q": "pages cited but never clicked",
   "group": "content",
   "expect": [
-   "Ranking pages by click-through rate is on the Click-throughs tab"
+   "Ranking pages by click-through rate is under Pages, in Click-throughs"
   ]
  },
  {
   "q": "which pages get the most click throughs per citation",
   "group": "content",
   "expect": [
-   "Ranking pages by click-through rate is on the Click-throughs tab"
+   "Ranking pages by click-through rate is under Pages, in Click-throughs"
   ]
  },
  {
@@ -570,7 +570,7 @@
   "q": "which topic has the highest click through rate",
   "group": "clicks",
   "expect": [
-   "Click-throughs by topic are on the Click-throughs tab"
+   "Click-throughs by topic are under Pages, in Click-throughs"
   ]
  },
  {

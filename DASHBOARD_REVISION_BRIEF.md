@@ -1965,3 +1965,35 @@ live on the Models, Services and Cost summary views in both themes. The Ask bar 
 strip wording are unchanged; no definitions moved. The removed hero's forecast sentence ("£777 settled to 20 Oct
 plus 11 days at the 28-day pattern") survives in the tile's sub-line and on Cost → Summary.
 
+## 78. UI pass 2: Usage regrouped into six views, the old ids kept as doors (24 Oct 2026, night)
+
+§76 item 6. Usage carried ten sub-views in one row, ordered by data file; both UI reviews asked for fewer views
+grouped by the reader's question, with every `#tab=` id still working. Built:
+
+- **Six sub-views, in this order:** Quality, Questions, Pages, Conversations, Answer wording, Volume. The Usage
+  tab now opens on Quality (the owners' door) rather than Volume. Volume, Conversations and Answer wording are
+  unchanged.
+- **Three merged views.** Quality holds the former Quality and Before / after; Questions holds What people ask
+  and Categories; Pages holds Pages, Click-throughs and Reach. Inside a merged view each former sub-view is a
+  **part**: a section with a head (name, one-line note) and an anchor, in that order. A row at the top of the
+  view, "In this view", lists the parts present and jumps to them. A part whose file is absent is hidden, with
+  the same availability rule it had as a sub-view, and a view is offered when any of its parts is.
+- **Nothing moved within a part.** Every card, chart and table renders as before, into the same functions; only
+  the element each function writes to changed (`part-<id>` inside `pane-<view>`). No measure was removed or
+  re-derived.
+- **The old ids are aliases.** `#tab=impact`, `#tab=categories`, `#tab=clicks` and `#tab=reach` open the view
+  they now live in and scroll to the part; saved preferences, the Overview tiles that open Click-throughs, the
+  chart clicks that open Categories, the Ask bar's jump cards and the command palette all resolve through the
+  same table (`SUB_ALIAS`). The palette lists the parts as "Usage · Pages · Click-throughs" and so on. Two Ask
+  bar cards that named "the Click-throughs tab" now say "under Pages, in Click-throughs"; the three test cases
+  that quoted them were updated, and the Ask bar test passes 311 of 311.
+
+**Checked live** in both themes: the three merged views render with no console errors; the four aliases land on
+their part; six pills fit one row at 1,330 px.
+
+**Deferred, from the design review's fuller version of this item:** hour of day moving from Quality to Volume;
+"Where the question named a page" appearing once instead of on both What people ask and Categories; the Reach
+"Key insight" sentence as the Pages view's lead; the sub-nav collapsing to a select under 900 px. Each is a
+content edit inside a part and can follow item 7 (outcome-over-time on Quality) without touching the navigation
+again.
+

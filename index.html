@@ -1142,6 +1142,17 @@ details.card:not([open])>summary.card-title{margin-bottom:0}
   border-radius:0 0 var(--r-xl) var(--r-xl);padding:var(--sp-6);display:none;
 }
 .pane.active{display:block;animation:fadeIn .18s ease}
+/* A merged view (brief §78): the former sub-views sit as parts, each with a head and an anchor the old #tab= id opens. */
+.part{scroll-margin-top:96px}
+.part+.part{margin-top:var(--sp-7);padding-top:var(--sp-5);border-top:1px solid var(--border)}
+.part-head{display:flex;align-items:center;gap:8px;font-family:'Space Grotesk',sans-serif;font-weight:600;font-size:1rem;color:var(--text);margin-bottom:var(--sp-4)}
+.part-head .i-sm{color:var(--acc)}
+.part-head-note{font-size:var(--t-2xs);color:var(--dim);font-family:'DM Mono',monospace;font-weight:400;margin-left:auto;text-align:right}
+.part-nav{display:flex;flex-wrap:wrap;gap:6px;align-items:center;margin-bottom:var(--sp-4);font-size:.72rem;color:var(--dim)}
+.part-nav:empty{display:none}
+.part-nav-label{font-family:'DM Mono',monospace;font-size:var(--t-2xs);text-transform:uppercase;letter-spacing:.08em;margin-right:4px}
+.part-link{background:var(--s2);border:1px solid var(--border);color:var(--muted);border-radius:999px;padding:3px 10px;font:inherit;font-size:.72rem;cursor:pointer;display:inline-flex;gap:5px;align-items:center}
+.part-link:hover,.part-link:focus-visible{color:var(--text);border-color:var(--acc)}
 @keyframes fadeIn{from{opacity:0;transform:translateY(3px)}to{opacity:1;transform:translateY(0)}}
 
 /* ── Cards ── */
@@ -1859,16 +1870,22 @@ Date,Questions,Sessions
     <div id="pane-timeline"    class="pane"></div>
     <div id="pane-breakdown"   class="pane"></div>
     <div id="pane-usage"       class="pane"></div>
-    <div id="pane-quality"     class="pane"></div>
-    <div id="pane-reach"       class="pane"></div>
-    <div id="pane-categories"  class="pane"></div>
+    <div id="pane-quality"     class="pane"><div class="part-nav" id="partnav-quality"></div>
+      <section class="part" id="sec-quality"><div id="part-quality"></div></section>
+      <section class="part" id="sec-impact"><div class="part-head"><i data-lucide="git-compare" class="i-sm"></i>Before / after<span class="part-head-note">28 days either side of each lasting change</span></div><div id="part-impact"></div></section>
+    </div>
     <div id="pane-convs"       class="pane"></div>
-    <div id="pane-clicks"      class="pane"></div>
-    <div id="pane-pages"       class="pane"></div>
+    <div id="pane-pages"       class="pane"><div class="part-nav" id="partnav-pages"></div>
+      <section class="part" id="sec-pages"><div id="part-pages"></div></section>
+      <section class="part" id="sec-clicks"><div class="part-head"><i data-lucide="mouse-pointer-click" class="i-sm"></i>Click-throughs<span class="part-head-note">GA4 page views carrying AskCI's citation tags · consenting visitors only</span></div><div id="part-clicks"></div></section>
+      <section class="part" id="sec-reach"><div class="part-head"><i data-lucide="globe" class="i-sm"></i>Reach<span class="part-head-note">AskCI beside the site's own traffic, by day</span></div><div id="part-reach"></div></section>
+    </div>
     <div id="pane-wording"     class="pane"></div>
-    <div id="pane-asked"       class="pane"></div>
+    <div id="pane-asked"       class="pane"><div class="part-nav" id="partnav-asked"></div>
+      <section class="part" id="sec-asked"><div id="part-asked"></div></section>
+      <section class="part" id="sec-categories"><div class="part-head"><i data-lucide="shapes" class="i-sm"></i>Categories<span class="part-head-note">what the answers cited, by category of the page</span></div><div id="part-categories"></div></section>
+    </div>
     <div id="pane-llm"         class="pane"></div>
-    <div id="pane-impact"      class="pane"></div>
     <div id="pane-projections" class="pane"></div>
   </div>
 </div>
@@ -3417,9 +3434,9 @@ document.querySelectorAll('#gran-group .pill').forEach(b=>b.addEventListener('cl
   b.classList.add('active');refreshActiveTab();
 }));
 // ── Two-level navigation: top "group" tabs → in-pane sub-views ──
-// The sub-panes (#pane-*) and their renderX functions are unchanged; groups
-// just organise how they're reached. Sub-ids match the original tab ids, so
-// persisted PREFS.tab values keep working with no migration.
+// The renderX functions are unchanged; groups just organise how they're reached. Sub-ids match the original
+// tab ids, and the four ids folded into other views (brief §78) resolve through SUB_ALIAS, so persisted
+// PREFS.tab values and shared #tab= links keep working with no migration.
 const TAB_GROUPS=[
   // Overview first: outcomes before activity. One screen — headline, six tiles, What changed (service), two charts.
   {id:'home',       label:'Overview',    icon:'layout-dashboard', subs:[{id:'home',label:'Overview',icon:'layout-dashboard'}]},
@@ -3427,26 +3444,39 @@ const TAB_GROUPS=[
     {id:'overview', label:'Summary',  icon:'layout-grid'},
     {id:'breakdown',label:'Services', icon:'microscope'},
     {id:'llm',      label:'Models',   icon:'bot'}]},
-  // Usage is optional: shown only when usage.csv is loaded; Reach / Categories only when their files are present.
+  // Usage is optional: shown only when usage.csv is loaded. Six sub-views (brief §78): the four former views
+  // Before / after, Categories, Click-throughs and Reach are parts of Quality, Questions and Pages (PARTS below);
+  // their old ids still work as deep links and jump targets through SUB_ALIAS and open the right part.
   {id:'usage',      label:'Usage',       icon:'users',       when:()=>!!(DATA&&DATA.hasUsage), subs:[
-    {id:'usage',    label:'Volume',        icon:'users'},
-    {id:'quality',  label:'Quality',       icon:'badge-check', when:()=>!!(DATA&&DATA.usageQuality&&DATA.usageQuality.columns&&(DATA.usageQuality.columns.outcomes||DATA.usageQuality.columns.taxonomy))},
-    {id:'impact',   label:'Before / after',icon:'git-compare'},
-    {id:'reach',    label:'Reach',         icon:'globe',  when:()=>hasGa4},
+    {id:'quality',  label:'Quality',       icon:'badge-check', when:()=>partLive('quality')||partLive('impact')},
+    {id:'asked',    label:'Questions',     icon:'help-circle', when:()=>partLive('asked')||partLive('categories')},
+    {id:'pages',    label:'Pages',         icon:'file-text',   when:()=>partLive('pages')||partLive('clicks')||partLive('reach')},
     {id:'convs',    label:'Conversations', icon:'messages-square', when:()=>hasConv},
-    {id:'categories',label:'Categories',   icon:'shapes', when:()=>hasCats||hasCatOut},
-    {id:'clicks',   label:'Click-throughs',icon:'mouse-pointer-click', when:()=>hasClicks},
-    {id:'pages',    label:'Pages',         icon:'file-text', when:()=>hasPageViews&&hasCites},
     {id:'wording',  label:'Answer wording',icon:'text-search', when:()=>hasRules},
-    {id:'asked',    label:'What people ask',icon:'help-circle', when:()=>hasIntent}]},
+    {id:'usage',    label:'Volume',        icon:'users'}]},
   {id:'projections',label:'Scenario planner', icon:'sparkles',    subs:[{id:'projections',label:'Scenario planner',icon:'sparkles'}]},
 ];
 const subAvailable=sb=>!sb.when||sb.when();
+// The parts of the merged views, in page order, with the availability rule each had as a sub-view.
+const PARTS={quality:['quality','impact'],asked:['asked','categories'],pages:['pages','clicks','reach']};
+const PART_DEF={
+  quality:   {label:'Quality',        icon:'badge-check', when:()=>!!(DATA&&DATA.usageQuality&&DATA.usageQuality.columns&&(DATA.usageQuality.columns.outcomes||DATA.usageQuality.columns.taxonomy))},
+  impact:    {label:'Before / after', icon:'git-compare'},
+  asked:     {label:'What people ask',icon:'help-circle', when:()=>hasIntent},
+  categories:{label:'Categories',     icon:'shapes',      when:()=>hasCats||hasCatOut},
+  pages:     {label:'Pages',          icon:'file-text',   when:()=>hasPageViews&&hasCites},
+  clicks:    {label:'Click-throughs', icon:'mouse-pointer-click', when:()=>hasClicks},
+  reach:     {label:'Reach',          icon:'globe',       when:()=>hasGa4},
+};
+const partLive=p=>{const d=PART_DEF[p];return !!d&&(!d.when||d.when());};
+const SUB_ALIAS={impact:'quality',categories:'asked',clicks:'pages',reach:'pages'};   // old sub id → the view it lives in
+const partOf=id=>SUB_ALIAS[id]?id:null;
+function scrollToPart(p){const sec=document.getElementById('sec-'+p);if(sec)sec.scrollIntoView({behavior:'smooth',block:'start'});}
 const groupAvailable=g=>(!g.when||g.when())&&g.subs.some(subAvailable);
 function syncTabVisibility(){
   document.querySelectorAll('.tab-btn[data-tab]').forEach(b=>{const g=TAB_GROUPS.find(x=>x.id===b.dataset.tab);b.style.display=(g&&groupAvailable(g))?'':'none';});
 }
-function groupOf(subId){return TAB_GROUPS.find(g=>g.subs.some(s=>s.id===subId));}
+function groupOf(subId){subId=SUB_ALIAS[subId]||subId;return TAB_GROUPS.find(g=>g.subs.some(s=>s.id===subId));}
 const groupLastSub={}; // remembers the last sub-view visited within each group
 
 function renderSubnav(group,activeSubId){
@@ -3463,6 +3493,7 @@ function renderSubnav(group,activeSubId){
 // Activate a sub-view (e.g. 'timeline'): sets the owning group's tab active,
 // rebuilds the sub-nav, shows the pane, and lazy-renders it once.
 function activateSub(subId){
+  const part=partOf(subId);if(part)subId=SUB_ALIAS[subId];   // an old id opens its view, then scrolls to its part
   let group=groupOf(subId);if(!group)return;
   if(!groupAvailable(group)){group=TAB_GROUPS.find(groupAvailable);if(!group)return;subId=group.subs.find(subAvailable).id;}
   else if(!subAvailable(group.subs.find(x=>x.id===subId))){subId=group.subs.find(subAvailable).id;}
@@ -3478,6 +3509,7 @@ function activateSub(subId){
     if(!rendered[subId]){rendered[subId]=true;renderPane(subId);}
     Object.values(charts).forEach(c=>{try{c.resize()}catch(e){}});
     renderIcons();updateTabOverflow();
+    if(part&&partLive(part))setTimeout(()=>scrollToPart(part),60);
   }));
 }
 
@@ -4509,7 +4541,10 @@ function getPaletteActions(){
 
   // — Navigation: tabs & sub-views —
   const TABS=[];
-  TAB_GROUPS.filter(groupAvailable).forEach(g=>g.subs.filter(subAvailable).forEach(sb=>TABS.push({id:sb.id,label:g.subs.length>1?g.label+' · '+sb.label:sb.label,icon:sb.icon})));
+  TAB_GROUPS.filter(groupAvailable).forEach(g=>g.subs.filter(subAvailable).forEach(sb=>{
+    TABS.push({id:sb.id,label:g.subs.length>1?g.label+' · '+sb.label:sb.label,icon:sb.icon});
+    (PARTS[sb.id]||[]).slice(1).filter(partLive).forEach(p=>TABS.push({id:p,label:`${g.label} · ${sb.label} · ${PART_DEF[p].label}`,icon:PART_DEF[p].icon}));
+  }));
   TABS.forEach(t=>actions.push({
     section:'Go to',
     title:t.label,
@@ -4819,21 +4854,32 @@ function exportCSV(){
 function renderPane(id){
   if(typeof renderCaveatStrip==='function')renderCaveatStrip();
   const D=DATA,S=D.stats;
-  if(id==='home')       renderHome(D,S);
-  if(id==='overview')   renderOverview(D,S);
-  if(id==='breakdown')  renderBreakdown(D,S);
-  if(id==='usage')      renderUsage(D,S);
-  if(id==='quality')    renderQuality(D,S);
-  if(id==='reach')      renderReach(D,S);
-  if(id==='clicks')     renderClicks(D,S);
-  if(id==='pages')      renderPages(D,S);
-  if(id==='wording')    renderWording(D,S);
-  if(id==='asked')      renderAsked(D,S);
-  if(id==='categories') renderCategories(D,S);
-  if(id==='convs')      renderConvs(D,S);
-  if(id==='llm')        renderLLM(D,S);
-  if(id==='impact')     renderImpact(D,S);
-  if(id==='projections')renderProjections(D,S);
+  const one=pid=>{
+    if(pid==='home')       renderHome(D,S);
+    if(pid==='overview')   renderOverview(D,S);
+    if(pid==='breakdown')  renderBreakdown(D,S);
+    if(pid==='usage')      renderUsage(D,S);
+    if(pid==='quality')    renderQuality(D,S);
+    if(pid==='reach')      renderReach(D,S);
+    if(pid==='clicks')     renderClicks(D,S);
+    if(pid==='pages')      renderPages(D,S);
+    if(pid==='wording')    renderWording(D,S);
+    if(pid==='asked')      renderAsked(D,S);
+    if(pid==='categories') renderCategories(D,S);
+    if(pid==='convs')      renderConvs(D,S);
+    if(pid==='llm')        renderLLM(D,S);
+    if(pid==='impact')     renderImpact(D,S);
+    if(pid==='projections')renderProjections(D,S);
+  };
+  const parts=PARTS[id];
+  if(parts){
+    // a merged view: show the parts whose data is loaded, list them once at the top, render each
+    const live=parts.filter(partLive);
+    parts.forEach(p=>{const sec=document.getElementById('sec-'+p);if(sec)sec.style.display=live.includes(p)?'':'none';});
+    const nav=document.getElementById('partnav-'+id);
+    if(nav)nav.innerHTML=live.length>1?'<span class="part-nav-label">In this view</span>'+live.map(p=>`<button class="part-link" type="button" onclick="scrollToPart('${p}')"><i data-lucide="${PART_DEF[p].icon}" class="i-sm" style="width:12px;height:12px"></i>${PART_DEF[p].label}</button>`).join(''):'';
+    live.forEach(p=>{try{one(p);}catch(e){console.error('render '+p,e);}});
+  } else one(id);
   renderIcons();
 }
 
@@ -5593,7 +5639,7 @@ function drawRagConnectors(stageCosts){
 // ═══ USAGE ══════════════════════════════════════════════════════════
 // ═══ REACH & ADOPTION (chatbot usage vs GA4 site analytics) ══════════
 function renderReach(D,S){
-  const el=document.getElementById('pane-reach');
+  const el=document.getElementById('part-reach');
   // Join chatbot days with GA4 by date, over the overlap — respects the date-range filter.
   const days=filterRange(D.merged).filter(d=>GA4[d.date]&&(d.queries>0||d.sessions>0));
   if(!hasGa4||!days.length){
@@ -5703,7 +5749,7 @@ function renderCategories(D,S){
   try{appendCategoryDetail(D);}catch(e){console.error(e);}
 }
 function appendCategoryDetail(D){
-  const el=document.getElementById('pane-categories');
+  const el=document.getElementById('part-categories');
   const fr=filterRange(D.merged);if(!fr.length)return;
   const span=usageSpan(fr),months=monthsIn(fr);
   const td=(v,col,right=true,extra='')=>`<td class="num" style="text-align:${right?'right':'left'};padding:6px 10px;font-family:'DM Mono',monospace;font-size:.78rem${col?';color:'+col:''}${extra}">${v}</td>`;
@@ -5774,7 +5820,7 @@ function appendCategoryDetail(D){
   if(h)el.insertAdjacentHTML('beforeend',h);
 }
 function renderCategoriesBase(D,S){
-  const el=document.getElementById('pane-categories');
+  const el=document.getElementById('part-categories');
   if(!hasCats){
     el.innerHTML=emptyState('shapes','No category data loaded',
       `Add <code>categories.csv</code> (chatbot citations by category) and <code>ga4/categories-and-views.csv</code> (site views) to compare what topics people ask AskCI about vs what they browse.`);
@@ -5913,7 +5959,7 @@ function shareBar(parts){
     <div class="share-legend">${parts.map(p=>`<span><i style="background:${p.color}"></i>${p.label} <b>${(p.n/tot*100).toFixed(p.n/tot<0.01&&p.n?1:0)}%</b> <span class="share-n">${num(p.n)}</span></span>`).join('')}</div>`;
 }
 function renderClicks(D,S){
-  const el=document.getElementById('pane-clicks');
+  const el=document.getElementById('part-clicks');
   const fr=filterRange(D.merged).filter(d=>d.ux&&clickRange&&d.date<=clickRange.to);
   if(!hasClicks||!fr.length){el.innerHTML=emptyState('mouse-pointer-click','No click-through data in range','Run <code>tools/make_clicks.py</code> on the GA4 exports, or widen the range.');renderIcons();return;}
   const T=CONFIG.click_tracking_from,from=fr[0].date,to=fr[fr.length-1].date,span=spanLabel(from,to);
@@ -6024,7 +6070,7 @@ const ciPageTitle=u=>catLabel(ciKey(u).split('/').pop()||'').replace(/\bAnd\b/g,
 const ciPageSection=u=>{const m=ciKey(u).match(/citizensinformation\.ie\/en\/([^/]+)/);return m?catLabel(CAT_ALIAS[m[1]]||m[1]):'';};
 const PAGES_TOP=150,PAGES_MIN_VIEWS=200,PAGES_MIN_CITES=50,PAGES_LIST=12;
 function renderPages(D,S){
-  const el=document.getElementById('pane-pages');
+  const el=document.getElementById('part-pages');
   const fr=filterRange(D.merged),months=monthsIn(fr).filter(m=>PAGEVIEW[m]&&CITES[m]);
   if(!hasPageViews||!hasCites||!months.length){el.innerHTML=emptyState('file-text','No page data in range','Needs <code>ga4/categories-and-views.csv</code> (site views by page and month) and <code>citations-monthly.csv</code> for the same months.');renderIcons();return;}
   const V={},Cn={};
@@ -6127,7 +6173,7 @@ function derivCaveat(k){const m=CONFIG.derivation_measured;if(!m)return 'not yet
 function intentCaveat(){const m=CONFIG.intent_measured;return `by rule from the question${LEXICON?' ('+escH(LEXICON.version)+')':''} · reader agreement ${m&&m.n?`${Math.round(m.agreement*100)}% on ${m.n} labelled questions`:'not yet measured'}`;}
 const INTENT_LABEL={status:'Own claim or application',contact:'Contact or office',documents:'Documents needed',apply:'How do I …',rate:'Rate or amount',eligibility:'Can I … (eligibility)',timing:'Timing',definition:'What is …',statement:'A situation, no question',other:'Other'};
 function renderAsked(D,S){
-  const el=document.getElementById('pane-asked');
+  const el=document.getElementById('part-asked');
   const fr=filterRange(D.merged).filter(d=>QINTENT[d.date]);
   if(!fr.length){el.innerHTML=emptyState('help-circle','No question data in range','Needs <code>question-intent-daily.csv</code> from <code>make_usage.py</code> on feeds redacted from 24 Oct 2026.');renderIcons();return;}
   const from=fr[0].date,to=fr[fr.length-1].date,W=comparisonWindow(from,to);
@@ -6695,7 +6741,7 @@ function renderUsage(D,S){
 
 // ═══ QUALITY (brief §69 item 7): the answer side of Usage, split from Volume ═══
 function renderQuality(D,S){
-  const el=document.getElementById('pane-quality');
+  const el=document.getElementById('part-quality');
   const fr=filterRange(D.merged);
   if(!fr.length||!D.hasUsage){el.innerHTML=emptyState('badge-check','No usage data in range','Widen the date range, or add usage.csv with outcome columns.');renderIcons();return;}
   el.innerHTML=`
@@ -7194,7 +7240,7 @@ function buildVoiceChart(vd){
 
 // ═══ BEFORE / AFTER (descriptive, keyed to confirmed events) ═════════
 function renderImpact(D,S){
-  const el=document.getElementById('pane-impact');
+  const el=document.getElementById('part-impact');
   // Only events that start a lasting change get a 28-day before/after; a one-off day (kind 'other',
   // e.g. Budget Day) draws on charts but a before/after around it would describe a spike, not a change.
   const evs=confirmedEvents().filter(e=>e.kind!=='other'&&D.merged.some(d=>d.date===e.start));
@@ -10603,13 +10649,13 @@ init();
       const lq=' '+q+' ';
       // List questions the lists cannot answer: say so and point to where the answer is.
       if((tn.entity==='page'||tn.entity==='clickpage')&&/never clicked|not clicked|no clicks|per citation|per 100|click[- ]?through rate|\brate\b/.test(lq)){
-        showCard('Ranking pages by click-through rate is on the Click-throughs tab','The Ask bar lists pages by citations or by clicks. The Cited vs clicked pages table on Usage › Click-throughs ranks them by click-through rate and lists pages cited often but never clicked.',['most cited pages','top clicked pages']);
+        showCard('Ranking pages by click-through rate is under Pages, in Click-throughs','The Ask bar lists pages by citations or by clicks. The Cited vs clicked pages table under Usage › Pages › Click-throughs ranks them by click-through rate and lists pages cited often but never clicked.',['most cited pages','top clicked pages']);
         const el=$('ask-answer');el.querySelector('.ask-know-body').insertAdjacentHTML('beforeend',' <button class="ask-action" data-act="sub" data-arg="clicks">Open Click-throughs</button>');lastIntent=null;return;}
       if(tn.entity==='category'&&(/\b(grow(ing|n|th)?|fastest|rose|rise|rising|increas\w*|fell|fall(ing)?|declin\w*|drop(ped)?|change[ds]?)\b/.test(lq)||/\b(vs\.?|versus|compared (to|with))\b/.test(lq))){
         const lm=(DATA.merged.filter(d=>d.queries>0).slice(-1)[0]||{}).date||'',m1=lm?MONFULL[+lm.slice(5,7)-1]:'October',m0=lm?MONFULL[(+lm.slice(5,7)+10)%12]:'September';
         showCard('Ranking topics by change isn’t available yet','Topic lists rank by volume or by a rate for one period. To see which topics moved, compare two periods:',['top topics in '+m0,'top topics in '+m1,'housing questions by month']);lastIntent=null;return;}
       if(tn.entity==='category'&&/click/.test(lq)){
-        showCard('Click-throughs by topic are on the Click-throughs tab','Usage › Click-throughs has a chart of click-throughs per 100 cited answers for each topic.',['click-through rate','top clicked pages']);
+        showCard('Click-throughs by topic are under Pages, in Click-throughs','Usage › Pages › Click-throughs has a chart of click-throughs per 100 cited answers for each topic.',['click-through rate','top clicked pages']);
         const el=$('ask-answer');el.querySelector('.ask-know-body').insertAdjacentHTML('beforeend',' <button class="ask-action" data-act="sub" data-arg="clicks">Open Click-throughs</button>');lastIntent=null;return;}
       const fq=parseFilter(lq);if(fq)addNotice(`This list covers every source: lists can’t yet be filtered to ${fq.label}.`);
       if(parseHours(lq))addNotice('This list covers all hours: lists can’t be narrowed to hours of the day.');

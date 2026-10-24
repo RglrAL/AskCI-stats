@@ -191,10 +191,12 @@ dated by the fixed wording, 4 candidate chip changes, launches and observed chan
 
 - **Stack**: Chart.js 4.4.1 and PapaParse 5.4.1 from cdnjs, lucide 1.49.0 from unpkg (pinned), DM Sans and DM Mono
   from Google Fonts. No build step, no framework, no server calls other than fetching the data files.
-- **Groups and sub-views** (`TAB_GROUPS`): Overview; Cost (Summary, Services, Models); Usage (Volume, Quality,
-  Before / after, Reach, Conversations, Categories, Click-throughs, Pages, Answer wording, What people ask); Scenario
-  planner. A sub-view opens from a link as `#tab=<sub id>` (for example `#tab=asked`); range and theme also travel
-  in the hash.
+- **Groups and sub-views** (`TAB_GROUPS`): Overview; Cost (Summary, Services, Models); Usage (Quality, Questions,
+  Pages, Conversations, Answer wording, Volume); Scenario planner. Three Usage views are merged (brief §78): Quality
+  holds Before / after, Questions holds What people ask and Categories, Pages holds Click-throughs and Reach, each
+  former view a part with its own section and anchor (`PARTS`, `PART_DEF`). A sub-view opens from a link as
+  `#tab=<sub id>` (for example `#tab=asked`); the four folded ids (`impact`, `categories`, `clicks`, `reach`) still
+  open their view and scroll to the part (`SUB_ALIAS`); range and theme also travel in the hash.
 - **CONFIG** (near line 2054): version 2026.10.23-1, the resource-group filter, the meter classification (fixed /
   variable / unclassified, reported never silently bucketed), and two null fields the labelling fills:
   `intent_measured` and `outcome_rules_measured`.
