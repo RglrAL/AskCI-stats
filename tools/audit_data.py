@@ -14,7 +14,7 @@ Usage:
 
 Exit status 1 when any check fails. WARN lines are things to look at, not failures.
 """
-import subprocess, csv, glob, os, sys, json, re, collections as C
+import subprocess, csv, glob, os, sys, json, re, io, collections as C
 from datetime import datetime, date
 
 REPO = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -516,6 +516,37 @@ if SIT:
     pm = C.Counter()
     for r in PERS: pm[r['Month']] += I(r['Answers'])
     check('answer personalisation: the four cells sum to the month\'s typed cited answers', all(pm[m] == cited_m[m] for m in pm), str([(m, pm[m], cited_m[m]) for m in pm if pm[m] != cited_m[m]][:3]))
+# floors on every row that names a class (brief §76, audit finding 2): the totals are the only rows exempt
+if SIT: check('question situation: every row naming a county, band, year or shape has 5+ turns, (all) rows included', all(I(r['Turns']) >= 5 or r['Flag'] in ('(any situation)', '(no situation)') for r in SIT),
+              str([(r['Month'], r['Category'], r['Flag']) for r in SIT if I(r['Turns']) < 5 and r['Flag'] not in ('(any situation)', '(no situation)')][:3]))
+if ORG: check('answer signposts: every row naming an organisation has 5+ turns, (all) rows included', all(I(r['Turns']) >= 5 or r['Org'] in ('(any)', '(external)', '(none)') for r in ORG),
+              str([(r['Month'], r['Org'], r['Category']) for r in ORG if I(r['Turns']) < 5 and r['Org'] not in ('(any)', '(external)', '(none)')][:3]))
+# the privacy sweep (brief §76, audit findings 1 and 3): the deploy itself checks that no tracked data or text file carries a
+# text column, a long free-text cell outside the known prose columns, or an identifier pattern, and that costs.csv carries
+# role labels and not resource names. Reports file and rule only, never a value.
+try: _tracked = subprocess.run(['git', 'ls-files'], capture_output=True, text=True, cwd=REPO).stdout.split('\n')
+except Exception: _tracked = []
+_tracked = [f for f in _tracked if f.endswith(('.csv', '.json', '.md')) and not f.startswith('brief/')]
+_LONG_OK = {'evidence', 'detail', 'title', 'pattern', 'keywords', '_comment', 'note', 'expected_effect', 'URL', 'url', 'Citations', 'Meter', 'ResourceId'}
+_ID_RX = {'pps': re.compile(r'\b\d{7}[A-Za-z]{1,2}\b'), 'email': re.compile(r'[\w.+-]+@[\w-]+\.[a-z]{2,}'), 'iban': re.compile(r'\bIE\d{2}[A-Z]{4}\d{14}\b'),
+          'mobile': re.compile(r'\b(?:\+353\s?|0)8[3-9]\s?\d{3}\s?\d{4}\b'), 'resource name': re.compile(r'askci-?prod-?[a-z0-9]{6,}|whl536qf')}
+_hits = []
+for _f in _tracked:
+    try:
+        with open(f'{REPO}/{_f}', encoding='utf-8', errors='ignore') as fh: _txt = fh.read()
+    except OSError: continue
+    if _f.endswith('.csv'):
+        _rows = list(csv.reader(io.StringIO(_txt))); _hdr = _rows[0] if _rows else []
+        if any(h.strip() in ('User Query', 'Assistant Response') for h in _hdr): _hits.append((_f, 'text column header'))
+        for _r in _rows[1:]:
+            _long = [(_hdr[i] if i < len(_hdr) else str(i)) for i, c in enumerate(_r) if len(c) > 400 and (_hdr[i] if i < len(_hdr) else '') not in _LONG_OK]
+            if _long: _hits.append((_f, 'long cell in ' + _long[0])); break
+    for _n, _rx in _ID_RX.items():
+        if _rx.search(_txt): _hits.append((_f, _n))
+check('privacy sweep: no tracked csv/json/md carries a text column, a long free-text cell outside the known prose columns, an identifier pattern or a production resource name', not _hits, str(sorted(set(_hits))[:6]))
+_CO = rd('costs.csv')
+check('costs.csv: every ResourceId ends in a role label (service- / admin- / shared-), never a resource name', bool(_CO) and all(re.match(r'^(service|admin|shared)-', (r.get('ResourceId') or '').rstrip('/').rsplit('/', 1)[-1]) for r in _CO if r.get('ResourceId')),
+      str(C.Counter((r.get('ResourceId') or '').rstrip('/').rsplit('/', 1)[-1][:12] for r in _CO if r.get('ResourceId') and not re.match(r'^(service|admin|shared)-', (r.get('ResourceId') or '').rstrip('/').rsplit('/', 1)[-1])).most_common(3)))
 GAPSF = rd('content-gaps.csv')
 try: _rc = _j.load(open(f'{REPO}/register-config.json', encoding='utf-8')); _kinds = set(_rc.get('teams', {}))
 except (OSError, ValueError): _kinds = set()

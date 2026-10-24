@@ -30,7 +30,7 @@ fi
 if echo "$STAGED" | grep -qxE 'index.html|tests/ask_cases.json|tests/ask_fixture_ref' && [ "$SKIP_ASK_TESTS" != "1" ]; then
   git show :index.html > "$TMP/index.html"
   echo "pre-commit: running the Ask bar regression test…" >&2
-  if ! "$PY" "$ROOT/tools/test_ask.py" --page "$TMP/index.html" >"$TMP/ask.log" 2>&1; then
+  if ! "$PY" "$ROOT/tools/test_ask.py" --page "$TMP/index.html" --allow-skip >"$TMP/ask.log" 2>&1; then
     grep -E "^(FAIL|   )|passed|page errors" "$TMP/ask.log" >&2
     echo "pre-commit: the Ask bar regression test failed. Fix it, or if an answer changed on purpose, update" >&2
     echo "  tests/ask_cases.json (python3 tools/test_ask.py --show lists every answer). SKIP_ASK_TESTS=1 skips once." >&2

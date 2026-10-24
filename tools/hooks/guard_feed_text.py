@@ -43,6 +43,10 @@ def main():
         if TEXT_PATHS.search(cmd):
             if ALLOWED_BASH.match(cmd) or re.match(r"^\s*head\s+-(?:n\s*)?1\s+\S+(?:\s*\|\s*(?:tr|nl|cut|wc|sort|uniq|cat)\b[^|;&]*)*\s*$", cmd): sys.exit(0)   # a header line only
             deny("this command would print feed text. Allowed: python3 tools/<pipeline tool>.py, ls, wc, du, head -1 on those paths.")
+        # a glob, a shell variable or a command substitution next to the private folders could name a feed without
+        # spelling it (brief §76, audit finding 4): denied unless the command is an allowed pipeline form
+        if re.search(r"exports/|ask review/|site-text", cmd) and re.search(r"[*?]|\$[{(A-Za-z_]|`", cmd) and not ALLOWED_BASH.match(cmd) and not re.match(r"^\s*ls\b[^|;&]*$", cmd):
+            deny("a glob, variable or substitution under exports/ or ask review/ could name a feed; spell the file, or use a pipeline tool.")
         # a script outside tools/ that reads the feeds itself
         for m in SCRIPT.finditer(cmd):
             path = os.path.expandvars(m.group(1).strip("'\""))

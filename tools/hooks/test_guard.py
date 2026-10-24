@@ -34,6 +34,12 @@ CASES = [
     ("deny", "Read", {"file_path": REPO + "/exports/labelling-2026-10-23/labels.csv"}),
     ("allow", "Bash", {"command": "python3 tools/collect_aggregates.py exports/askci-export-x"}),
     ("allow", "Bash", {"command": "python3 tools/audit_data.py exports/askci-export-x"}),
+    ("deny", "Bash", {"command": "cat exports/*/*.cs?"}),
+    ("deny", "Bash", {"command": "f=exports/qa-feed_1.csv; cat $f"}),
+    ("deny", "Bash", {"command": "cat $(ls exports/askci-export-x/*.csv | head -1)"}),
+    ("deny", "Bash", {"command": "cat exports/askci-export-x/${NAME}.csv"}),
+    ("allow", "Bash", {"command": "ls exports/askci-export-*/"}),
+    ("allow", "Bash", {"command": "python3 tools/make_usage.py exports/askci-export-x/qa-feed-redacted_*.csv --out-dir exports/askci-export-x > exports/askci-export-x/generate.txt 2>&1"}),
 ]
 
 

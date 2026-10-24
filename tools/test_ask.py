@@ -184,12 +184,16 @@ def main():
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("-k", help="only cases whose question contains this text")
     ap.add_argument("--show", action="store_true", help="print every answer")
+    ap.add_argument("--allow-skip", action="store_true", help="pass (exit 0) when no Chrome is installed; without it a missing browser fails the run")
     ap.add_argument("--record", action="store_true", help="fill empty expectations from the current answers")
     ap.add_argument("--page", default=os.path.join(REPO, "index.html"), help="the page to test (default: index.html; the pre-commit hook passes the staged copy)")
     a = ap.parse_args()
     browser = chrome()
     if not browser:
-        print("test_ask: no Chrome or Chromium found; skipped"); return 0
+        # a green run that ran nothing misleads (brief §76, audit finding 13): without Chrome the test fails unless the
+        # caller says the skip is deliberate (the pre-commit hook does; the deploy workflow has Chrome and does not)
+        if "--allow-skip" in sys.argv: print("test_ask: no Chrome or Chromium found; skipped (--allow-skip)"); return 0
+        print("test_ask: no Chrome or Chromium found; FAILED (pass --allow-skip to skip deliberately)"); return 1
     with open(CASES, encoding="utf-8") as fh:
         allc = json.load(fh)
     cases = [c for c in allc if not a.k or a.k.lower() in c["q"].lower()]

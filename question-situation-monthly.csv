@@ -2,38 +2,21 @@ Month,Category,Flag,Turns,Cited,NotFound,Clarification,Error,OutOfScope,Greeting
 2026-01,(all),(any situation),892,837,25,1,22,5,1,1,17
 2026-01,(all),(no situation),3972,3525,156,20,117,114,16,24,167
 2026-01,(all),age:16-24,23,21,0,0,1,0,1,0,1
-2026-01,(all),age:25-44,2,2,0,0,0,0,0,0,0
 2026-01,(all),age:45-65,9,9,0,0,0,0,0,0,1
 2026-01,(all),age:66+,24,24,0,0,0,0,0,0,0
 2026-01,(all),county:cork,6,4,1,0,0,1,0,0,0
 2026-01,(all),county:dublin,14,10,0,0,2,2,0,0,1
-2026-01,(all),county:galway,3,2,1,0,0,0,0,0,0
-2026-01,(all),county:kerry,4,2,0,0,2,0,0,0,0
-2026-01,(all),county:leitrim,1,0,0,0,0,1,0,0,0
-2026-01,(all),county:limerick,3,2,0,0,0,1,0,0,0
-2026-01,(all),county:meath,1,1,0,0,0,0,0,0,0
-2026-01,(all),county:sligo,2,2,0,0,0,0,0,0,0
-2026-01,(all),county:waterford,3,3,0,0,0,0,0,0,0
-2026-01,(all),county:westmeath,1,0,1,0,0,0,0,0,0
-2026-01,(all),county:wexford,2,1,1,0,0,0,0,0,0
-2026-01,(all),county:wicklow,4,4,0,0,0,0,0,0,0
 2026-01,(all),household:alone,48,45,1,0,2,0,0,0,0
 2026-01,(all),household:children,115,110,3,0,2,0,0,0,2
 2026-01,(all),household:partner,137,131,4,0,2,0,0,0,2
 2026-01,(all),payment_on,235,233,0,0,2,0,0,0,3
 2026-01,(all),shape:multi,19,17,0,0,2,0,0,0,0
-2026-01,(all),shape:url,1,0,0,0,0,1,0,0,0
 2026-01,(all),work:retired,15,15,0,0,0,0,0,0,0
 2026-01,(all),work:self-employed,61,58,1,0,2,0,0,0,1
 2026-01,(all),work:student,8,7,1,0,0,0,0,0,0
 2026-01,(all),work:unemployed,38,35,1,0,2,0,0,0,0
 2026-01,(all),work:working,230,213,10,1,5,0,0,1,7
-2026-01,(all),year:2016,1,0,1,0,0,0,0,0,0
-2026-01,(all),year:2019,2,2,0,0,0,0,0,0,0
-2026-01,(all),year:2020,1,1,0,0,0,0,0,0,0
-2026-01,(all),year:2021,4,4,0,0,0,0,0,0,0
 2026-01,(all),year:2022,8,8,0,0,0,0,0,0,0
-2026-01,(all),year:2023,2,2,0,0,0,0,0,0,0
 2026-01,(all),year:2024,7,7,0,0,0,0,0,0,0
 2026-01,(all),year:2025,32,31,1,0,0,0,0,0,0
 2026-01,(all),year:2026,44,37,0,0,0,7,0,0,1
@@ -46,7 +29,9 @@ Month,Category,Flag,Turns,Cited,NotFound,Clarification,Error,OutOfScope,Greeting
 2026-01,birth-family-relationships,(no situation),113,108,1,1,3,0,0,0,4
 2026-01,birth-family-relationships,household:children,7,5,0,0,2,0,0,0,0
 2026-01,birth-family-relationships,household:partner,24,21,2,0,1,0,0,0,0
+2026-01,consumer,(any situation),2,1,0,0,0,1,0,0,0
 2026-01,consumer,(no situation),50,49,1,0,0,0,0,0,2
+2026-01,death,(any situation),2,2,0,0,0,0,0,0,0
 2026-01,death,(no situation),54,51,1,0,1,0,0,1,3
 2026-01,education,(any situation),13,12,1,0,0,0,0,0,1
 2026-01,education,(no situation),83,71,6,0,2,2,0,2,5
@@ -60,6 +45,7 @@ Month,Category,Flag,Turns,Cited,NotFound,Clarification,Error,OutOfScope,Greeting
 2026-01,employment,work:working,97,84,9,1,2,0,0,1,2
 2026-01,employment,year:2025,5,5,0,0,0,0,0,0,0
 2026-01,employment,year:2026,6,5,0,0,0,1,0,0,0
+2026-01,environment,(any situation),2,2,0,0,0,0,0,0,0
 2026-01,environment,(no situation),20,20,0,0,0,0,0,0,1
 2026-01,government-in-ireland,(any situation),5,5,0,0,0,0,0,0,0
 2026-01,government-in-ireland,(no situation),39,33,3,0,1,1,0,1,4
@@ -113,19 +99,10 @@ Month,Category,Flag,Turns,Cited,NotFound,Clarification,Error,OutOfScope,Greeting
 2026-02,(all),(any situation),685,661,17,0,0,0,0,7,23
 2026-02,(all),(no situation),3081,2832,145,17,8,52,17,10,122
 2026-02,(all),age:16-24,13,13,0,0,0,0,0,0,1
-2026-02,(all),age:25-44,3,3,0,0,0,0,0,0,0
 2026-02,(all),age:45-65,16,16,0,0,0,0,0,0,1
 2026-02,(all),age:66+,11,11,0,0,0,0,0,0,0
-2026-02,(all),county:cavan,1,1,0,0,0,0,0,0,0
-2026-02,(all),county:clare,1,1,0,0,0,0,0,0,1
-2026-02,(all),county:cork,4,4,0,0,0,0,0,0,0
 2026-02,(all),county:dublin,18,13,2,0,0,0,0,3,1
 2026-02,(all),county:galway,5,4,1,0,0,0,0,0,0
-2026-02,(all),county:kerry,1,1,0,0,0,0,0,0,0
-2026-02,(all),county:limerick,1,1,0,0,0,0,0,0,0
-2026-02,(all),county:longford,2,2,0,0,0,0,0,0,0
-2026-02,(all),county:mayo,1,0,1,0,0,0,0,0,0
-2026-02,(all),county:westmeath,1,0,0,0,0,0,0,1,0
 2026-02,(all),household:alone,49,49,0,0,0,0,0,0,0
 2026-02,(all),household:children,96,95,1,0,0,0,0,0,4
 2026-02,(all),household:partner,91,88,2,0,0,0,0,1,4
@@ -136,26 +113,20 @@ Month,Category,Flag,Turns,Cited,NotFound,Clarification,Error,OutOfScope,Greeting
 2026-02,(all),work:student,7,7,0,0,0,0,0,0,0
 2026-02,(all),work:unemployed,24,23,1,0,0,0,0,0,0
 2026-02,(all),work:working,198,188,8,0,0,0,0,2,7
-2026-02,(all),year:2011,1,1,0,0,0,0,0,0,0
-2026-02,(all),year:2013,1,1,0,0,0,0,0,0,0
-2026-02,(all),year:2015,1,1,0,0,0,0,0,0,1
-2026-02,(all),year:2016,1,0,1,0,0,0,0,0,0
-2026-02,(all),year:2018,2,2,0,0,0,0,0,0,1
-2026-02,(all),year:2019,1,1,0,0,0,0,0,0,1
-2026-02,(all),year:2020,1,1,0,0,0,0,0,0,0
-2026-02,(all),year:2021,1,1,0,0,0,0,0,0,0
-2026-02,(all),year:2022,4,3,1,0,0,0,0,0,1
 2026-02,(all),year:2024,6,5,1,0,0,0,0,0,0
 2026-02,(all),year:2025,10,9,0,0,0,1,0,0,0
 2026-02,(all),year:2026,22,20,0,0,0,2,0,0,1
-2026-02,(all),year:2027,4,4,0,0,0,0,0,0,0
+2026-02,(none),(any situation),2,0,1,0,0,0,0,1,0
 2026-02,(none),(no situation),140,1,63,14,2,40,17,3,0
+2026-02,about,(any situation),3,2,0,0,0,0,0,1,0
 2026-02,about,(no situation),31,27,1,0,0,2,0,1,2
 2026-02,birth-family-relationships,(any situation),19,18,1,0,0,0,0,0,2
 2026-02,birth-family-relationships,(no situation),88,87,1,0,0,0,0,0,6
 2026-02,birth-family-relationships,household:children,11,11,0,0,0,0,0,0,2
 2026-02,birth-family-relationships,household:partner,5,5,0,0,0,0,0,0,0
+2026-02,consumer,(any situation),1,1,0,0,0,0,0,0,0
 2026-02,consumer,(no situation),46,44,2,0,0,0,0,0,1
+2026-02,death,(any situation),3,3,0,0,0,0,0,0,0
 2026-02,death,(no situation),36,32,4,0,0,0,0,0,1
 2026-02,education,(any situation),14,13,0,0,0,0,0,1,0
 2026-02,education,(no situation),71,69,2,0,0,0,0,0,3
@@ -164,6 +135,7 @@ Month,Category,Flag,Turns,Cited,NotFound,Clarification,Error,OutOfScope,Greeting
 2026-02,employment,(any situation),87,77,8,0,0,0,0,2,2
 2026-02,employment,(no situation),274,263,8,0,2,0,0,1,15
 2026-02,employment,work:working,70,60,8,0,0,0,0,2,2
+2026-02,environment,(any situation),2,1,1,0,0,0,0,0,0
 2026-02,environment,(no situation),15,15,0,0,0,0,0,0,0
 2026-02,government-in-ireland,(no situation),16,15,0,1,0,0,0,0,2
 2026-02,health,(any situation),15,14,0,0,0,0,0,1,0
@@ -171,6 +143,7 @@ Month,Category,Flag,Turns,Cited,NotFound,Clarification,Error,OutOfScope,Greeting
 2026-02,housing,(any situation),24,22,1,0,0,0,0,1,1
 2026-02,housing,(no situation),314,297,13,1,0,0,0,3,14
 2026-02,housing,year:2026,5,5,0,0,0,0,0,0,1
+2026-02,justice,(any situation),1,1,0,0,0,0,0,0,0
 2026-02,justice,(no situation),50,39,10,0,1,0,0,0,3
 2026-02,money-and-tax,(any situation),58,58,0,0,0,0,0,0,5
 2026-02,money-and-tax,(no situation),259,248,9,0,0,2,0,0,10
@@ -210,43 +183,26 @@ Month,Category,Flag,Turns,Cited,NotFound,Clarification,Error,OutOfScope,Greeting
 2026-03,(all),age:25-44,6,6,0,0,0,0,0,0,1
 2026-03,(all),age:45-65,13,13,0,0,0,0,0,0,0
 2026-03,(all),age:66+,13,11,1,1,0,0,0,0,1
-2026-03,(all),county:clare,1,0,1,0,0,0,0,0,0
 2026-03,(all),county:cork,6,6,0,0,0,0,0,0,1
 2026-03,(all),county:dublin,14,12,1,0,0,1,0,0,0
 2026-03,(all),county:galway,6,4,2,0,0,0,0,0,0
-2026-03,(all),county:kildare,4,2,0,2,0,0,0,0,0
-2026-03,(all),county:limerick,1,1,0,0,0,0,0,0,0
-2026-03,(all),county:monaghan,1,1,0,0,0,0,0,0,0
-2026-03,(all),county:roscommon,2,1,1,0,0,0,0,0,0
-2026-03,(all),county:sligo,1,1,0,0,0,0,0,0,0
-2026-03,(all),county:wexford,1,1,0,0,0,0,0,0,0
-2026-03,(all),county:wicklow,1,1,0,0,0,0,0,0,0
 2026-03,(all),household:alone,38,35,2,1,0,0,0,0,2
 2026-03,(all),household:children,76,68,5,1,1,0,0,1,2
 2026-03,(all),household:partner,102,93,6,0,0,2,0,1,5
 2026-03,(all),payment_on,211,204,3,1,3,0,0,0,6
-2026-03,(all),shape:letter,2,1,1,0,0,0,0,0,0
 2026-03,(all),shape:multi,42,36,2,0,0,3,0,1,3
-2026-03,(all),shape:url,2,2,0,0,0,0,0,0,0
 2026-03,(all),work:retired,13,11,2,0,0,0,0,0,0
 2026-03,(all),work:self-employed,58,53,2,1,1,0,0,1,0
 2026-03,(all),work:student,12,11,0,0,0,1,0,0,0
 2026-03,(all),work:unemployed,39,35,1,1,1,0,0,1,1
 2026-03,(all),work:working,195,180,11,2,2,0,0,0,7
-2026-03,(all),year:2010,1,0,0,1,0,0,0,0,0
-2026-03,(all),year:2012,2,2,0,0,0,0,0,0,0
-2026-03,(all),year:2018,1,1,0,0,0,0,0,0,0
-2026-03,(all),year:2020,2,2,0,0,0,0,0,0,0
 2026-03,(all),year:2021,5,5,0,0,0,0,0,0,0
-2026-03,(all),year:2022,4,2,2,0,0,0,0,0,0
-2026-03,(all),year:2023,1,1,0,0,0,0,0,0,0
 2026-03,(all),year:2024,7,7,0,0,0,0,0,0,1
 2026-03,(all),year:2025,20,18,2,0,0,0,0,0,1
 2026-03,(all),year:2026,44,41,1,1,0,1,0,0,0
-2026-03,(all),year:2027,3,3,0,0,0,0,0,0,0
-2026-03,(all),year:2028,3,3,0,0,0,0,0,0,0
 2026-03,(none),(any situation),6,0,2,3,0,1,0,0,0
 2026-03,(none),(no situation),235,0,94,64,7,35,27,8,0
+2026-03,about,(any situation),1,1,0,0,0,0,0,0,0
 2026-03,about,(no situation),43,38,0,2,1,1,0,1,5
 2026-03,birth-family-relationships,(any situation),24,21,3,0,0,0,0,0,1
 2026-03,birth-family-relationships,(no situation),85,77,4,1,1,2,0,0,3
@@ -266,6 +222,7 @@ Month,Category,Flag,Turns,Cited,NotFound,Clarification,Error,OutOfScope,Greeting
 2026-03,employment,work:self-employed,14,9,2,1,1,0,0,1,0
 2026-03,employment,work:working,67,54,9,2,2,0,0,0,2
 2026-03,environment,(no situation),17,17,0,0,0,0,0,0,0
+2026-03,government-in-ireland,(any situation),1,1,0,0,0,0,0,0,0
 2026-03,government-in-ireland,(no situation),32,27,3,0,0,2,0,0,1
 2026-03,health,(any situation),13,13,0,0,0,0,0,0,0
 2026-03,health,(no situation),207,183,12,3,2,1,0,6,6
@@ -274,6 +231,7 @@ Month,Category,Flag,Turns,Cited,NotFound,Clarification,Error,OutOfScope,Greeting
 2026-03,housing,household:children,5,4,1,0,0,0,0,0,0
 2026-03,housing,shape:multi,6,4,1,0,0,0,0,1,1
 2026-03,housing,year:2026,8,7,0,1,0,0,0,0,0
+2026-03,justice,(any situation),4,3,0,0,0,1,0,0,1
 2026-03,justice,(no situation),58,47,9,0,0,1,0,1,3
 2026-03,money-and-tax,(any situation),56,55,1,0,0,0,0,0,4
 2026-03,money-and-tax,(no situation),272,254,6,8,1,2,0,1,15
@@ -314,55 +272,34 @@ Month,Category,Flag,Turns,Cited,NotFound,Clarification,Error,OutOfScope,Greeting
 2026-04,(all),(any situation),664,609,23,9,12,3,0,8,19
 2026-04,(all),(no situation),3370,2842,244,144,65,33,21,21,112
 2026-04,(all),age:16-24,20,19,0,0,0,0,0,1,1
-2026-04,(all),age:25-44,2,2,0,0,0,0,0,0,0
 2026-04,(all),age:45-65,10,10,0,0,0,0,0,0,0
 2026-04,(all),age:66+,13,10,2,1,0,0,0,0,0
-2026-04,(all),county:carlow,1,1,0,0,0,0,0,0,0
-2026-04,(all),county:clare,1,1,0,0,0,0,0,0,0
-2026-04,(all),county:cork,2,2,0,0,0,0,0,0,1
-2026-04,(all),county:donegal,4,4,0,0,0,0,0,0,0
 2026-04,(all),county:dublin,15,11,2,0,0,0,0,2,0
 2026-04,(all),county:galway,5,4,0,0,1,0,0,0,0
-2026-04,(all),county:kerry,2,2,0,0,0,0,0,0,0
-2026-04,(all),county:kildare,1,0,1,0,0,0,0,0,0
-2026-04,(all),county:leitrim,2,2,0,0,0,0,0,0,0
-2026-04,(all),county:limerick,1,0,0,0,1,0,0,0,0
-2026-04,(all),county:longford,3,3,0,0,0,0,0,0,1
-2026-04,(all),county:louth,1,1,0,0,0,0,0,0,0
-2026-04,(all),county:meath,2,2,0,0,0,0,0,0,0
-2026-04,(all),county:sligo,1,0,1,0,0,0,0,0,0
-2026-04,(all),county:waterford,1,1,0,0,0,0,0,0,0
-2026-04,(all),county:wicklow,1,1,0,0,0,0,0,0,0
 2026-04,(all),household:alone,24,22,0,1,0,1,0,0,0
 2026-04,(all),household:children,86,78,3,2,1,1,0,1,6
 2026-04,(all),household:partner,83,73,5,1,2,2,0,0,3
 2026-04,(all),payment_on,171,165,1,1,3,0,0,1,3
-2026-04,(all),shape:letter,3,1,1,0,1,0,0,0,0
 2026-04,(all),shape:multi,44,42,1,0,0,0,0,1,4
-2026-04,(all),shape:url,2,2,0,0,0,0,0,0,0
 2026-04,(all),work:retired,10,10,0,0,0,0,0,0,0
 2026-04,(all),work:self-employed,52,48,1,3,0,0,0,0,0
 2026-04,(all),work:student,16,15,0,1,0,0,0,0,0
 2026-04,(all),work:unemployed,53,45,2,1,3,0,0,2,1
 2026-04,(all),work:working,192,177,8,0,6,0,0,1,5
-2026-04,(all),year:2010,1,0,1,0,0,0,0,0,0
-2026-04,(all),year:2012,1,1,0,0,0,0,0,0,0
-2026-04,(all),year:2019,2,1,1,0,0,0,0,0,0
-2026-04,(all),year:2020,4,4,0,0,0,0,0,0,0
-2026-04,(all),year:2021,4,4,0,0,0,0,0,0,0
-2026-04,(all),year:2022,4,3,0,1,0,0,0,0,0
 2026-04,(all),year:2023,12,12,0,0,0,0,0,0,1
 2026-04,(all),year:2024,5,5,0,0,0,0,0,0,0
 2026-04,(all),year:2025,7,6,0,0,1,0,0,0,0
 2026-04,(all),year:2026,31,27,2,1,1,0,0,0,1
-2026-04,(all),year:2027,1,1,0,0,0,0,0,0,0
-2026-04,(all),year:2028,1,1,0,0,0,0,0,0,0
+2026-04,(none),(any situation),2,0,1,1,0,0,0,0,0
 2026-04,(none),(no situation),237,0,94,76,17,25,20,5,0
+2026-04,about,(any situation),1,1,0,0,0,0,0,0,0
 2026-04,about,(no situation),61,56,2,1,0,1,0,1,8
 2026-04,birth-family-relationships,(any situation),17,15,1,0,0,1,0,0,1
 2026-04,birth-family-relationships,(no situation),100,94,2,2,1,1,0,0,6
 2026-04,birth-family-relationships,household:children,6,6,0,0,0,0,0,0,1
+2026-04,consumer,(any situation),1,0,1,0,0,0,0,0,0
 2026-04,consumer,(no situation),53,39,7,2,5,0,0,0,2
+2026-04,death,(any situation),2,2,0,0,0,0,0,0,0
 2026-04,death,(no situation),33,28,4,1,0,0,0,0,0
 2026-04,education,(any situation),21,19,0,1,1,0,0,0,0
 2026-04,education,(no situation),93,82,7,2,1,1,0,0,1
@@ -374,6 +311,7 @@ Month,Category,Flag,Turns,Cited,NotFound,Clarification,Error,OutOfScope,Greeting
 2026-04,employment,work:unemployed,5,4,0,0,1,0,0,0,0
 2026-04,employment,work:working,46,40,2,0,3,0,0,1,2
 2026-04,environment,(no situation),16,15,1,0,0,0,0,0,1
+2026-04,government-in-ireland,(any situation),1,0,1,0,0,0,0,0,0
 2026-04,government-in-ireland,(no situation),28,22,4,0,1,1,0,0,1
 2026-04,health,(any situation),9,6,3,0,0,0,0,0,1
 2026-04,health,(no situation),131,115,7,6,1,0,0,2,4
@@ -418,53 +356,28 @@ Month,Category,Flag,Turns,Cited,NotFound,Clarification,Error,OutOfScope,Greeting
 2026-05,(all),age:25-44,27,23,1,1,2,0,0,0,0
 2026-05,(all),age:45-65,29,25,3,0,1,0,0,0,0
 2026-05,(all),age:66+,70,53,12,0,1,0,0,4,0
-2026-05,(all),county:carlow,1,1,0,0,0,0,0,0,0
-2026-05,(all),county:cavan,4,3,1,0,0,0,0,0,0
 2026-05,(all),county:clare,5,3,1,1,0,0,0,0,0
 2026-05,(all),county:cork,19,15,4,0,0,0,0,0,0
 2026-05,(all),county:donegal,5,3,1,0,0,0,0,1,0
 2026-05,(all),county:dublin,77,64,8,1,2,0,0,2,5
 2026-05,(all),county:galway,17,10,5,1,1,0,0,0,1
-2026-05,(all),county:kerry,1,1,0,0,0,0,0,0,0
 2026-05,(all),county:kildare,5,4,1,0,0,0,0,0,0
-2026-05,(all),county:kilkenny,2,0,2,0,0,0,0,0,0
-2026-05,(all),county:leitrim,1,1,0,0,0,0,0,0,0
 2026-05,(all),county:limerick,7,7,0,0,0,0,0,0,1
 2026-05,(all),county:longford,6,6,0,0,0,0,0,0,0
-2026-05,(all),county:louth,1,0,1,0,0,0,0,0,0
-2026-05,(all),county:mayo,4,4,0,0,0,0,0,0,0
-2026-05,(all),county:meath,4,3,0,1,0,0,0,0,1
-2026-05,(all),county:monaghan,3,3,0,0,0,0,0,0,0
-2026-05,(all),county:offaly,1,0,0,0,0,0,0,1,0
-2026-05,(all),county:roscommon,1,0,1,0,0,0,0,0,0
 2026-05,(all),county:sligo,8,4,3,0,1,0,0,0,0
-2026-05,(all),county:tipperary,1,0,1,0,0,0,0,0,0
-2026-05,(all),county:waterford,1,1,0,0,0,0,0,0,0
-2026-05,(all),county:westmeath,1,1,0,0,0,0,0,0,0
 2026-05,(all),county:wexford,7,6,0,0,1,0,0,0,0
-2026-05,(all),county:wicklow,3,3,0,0,0,0,0,0,0
 2026-05,(all),household:alone,95,87,6,0,1,0,0,1,4
 2026-05,(all),household:children,335,286,25,5,11,0,0,8,9
 2026-05,(all),household:partner,350,311,18,9,9,1,0,2,16
 2026-05,(all),payment_on,514,478,6,8,16,1,0,5,8
-2026-05,(all),shape:letter,4,2,1,0,1,0,0,0,0
 2026-05,(all),shape:multi,126,113,12,0,1,0,0,0,6
-2026-05,(all),shape:url,2,1,0,0,0,0,0,1,0
 2026-05,(all),work:retired,50,40,4,3,2,0,0,1,1
 2026-05,(all),work:self-employed,81,72,5,1,3,0,0,0,1
 2026-05,(all),work:student,25,23,1,0,1,0,0,0,1
 2026-05,(all),work:unemployed,166,153,3,4,5,0,0,1,6
 2026-05,(all),work:working,564,488,38,10,22,0,0,6,7
-2026-05,(all),year:2010,1,1,0,0,0,0,0,0,0
-2026-05,(all),year:2011,1,1,0,0,0,0,0,0,0
-2026-05,(all),year:2012,1,1,0,0,0,0,0,0,0
-2026-05,(all),year:2013,3,2,1,0,0,0,0,0,0
-2026-05,(all),year:2014,1,0,1,0,0,0,0,0,0
 2026-05,(all),year:2015,7,6,1,0,0,0,0,0,0
-2026-05,(all),year:2016,3,1,2,0,0,0,0,0,0
-2026-05,(all),year:2018,4,3,0,1,0,0,0,0,0
 2026-05,(all),year:2019,11,7,3,0,0,1,0,0,1
-2026-05,(all),year:2020,4,4,0,0,0,0,0,0,1
 2026-05,(all),year:2021,12,8,3,0,1,0,0,0,0
 2026-05,(all),year:2022,23,19,1,1,2,0,0,0,0
 2026-05,(all),year:2023,15,11,3,1,0,0,0,0,1
@@ -472,8 +385,6 @@ Month,Category,Flag,Turns,Cited,NotFound,Clarification,Error,OutOfScope,Greeting
 2026-05,(all),year:2025,46,38,4,2,1,0,0,1,0
 2026-05,(all),year:2026,127,109,8,2,6,1,0,1,3
 2026-05,(all),year:2027,7,6,0,0,0,0,0,1,0
-2026-05,(all),year:2028,1,1,0,0,0,0,0,0,0
-2026-05,(all),year:2029,4,4,0,0,0,0,0,0,0
 2026-05,(none),(any situation),45,0,24,11,7,1,0,2,0
 2026-05,(none),(no situation),988,0,298,303,86,78,184,39,0
 2026-05,(none),county:dublin,6,0,3,1,1,0,0,1,0
@@ -492,6 +403,7 @@ Month,Category,Flag,Turns,Cited,NotFound,Clarification,Error,OutOfScope,Greeting
 2026-05,birth-family-relationships,work:working,6,5,0,0,0,0,0,1,1
 2026-05,consumer,(any situation),6,5,0,1,0,0,0,0,0
 2026-05,consumer,(no situation),134,113,16,3,1,0,0,1,5
+2026-05,death,(any situation),2,2,0,0,0,0,0,0,0
 2026-05,death,(no situation),50,39,9,1,1,0,0,0,0
 2026-05,education,(any situation),37,29,6,0,2,0,0,0,2
 2026-05,education,(no situation),186,147,24,8,5,1,0,1,8
@@ -510,6 +422,7 @@ Month,Category,Flag,Turns,Cited,NotFound,Clarification,Error,OutOfScope,Greeting
 2026-05,employment,work:working,180,143,26,4,6,0,0,1,2
 2026-05,employment,year:2025,7,5,2,0,0,0,0,0,0
 2026-05,employment,year:2026,8,4,2,1,1,0,0,0,0
+2026-05,environment,(any situation),4,3,1,0,0,0,0,0,0
 2026-05,environment,(no situation),34,31,2,0,0,0,0,1,1
 2026-05,government-in-ireland,(any situation),6,4,1,1,0,0,0,0,0
 2026-05,government-in-ireland,(no situation),73,61,6,2,2,1,0,1,2
@@ -598,7 +511,6 @@ Month,Category,Flag,Turns,Cited,NotFound,Clarification,Error,OutOfScope,Greeting
 2026-06,(all),age:25-44,25,21,3,0,0,0,0,1,1
 2026-06,(all),age:45-65,85,72,8,2,3,0,0,0,2
 2026-06,(all),age:66+,135,116,12,5,1,0,0,1,5
-2026-06,(all),county:carlow,4,2,1,0,0,0,0,1,0
 2026-06,(all),county:cavan,9,5,3,0,0,0,0,1,0
 2026-06,(all),county:clare,12,8,4,0,0,0,0,0,1
 2026-06,(all),county:cork,41,31,5,2,2,0,0,1,1
@@ -608,20 +520,11 @@ Month,Category,Flag,Turns,Cited,NotFound,Clarification,Error,OutOfScope,Greeting
 2026-06,(all),county:kerry,6,6,0,0,0,0,0,0,0
 2026-06,(all),county:kildare,10,6,3,1,0,0,0,0,0
 2026-06,(all),county:kilkenny,5,3,1,0,1,0,0,0,0
-2026-06,(all),county:laois,3,3,0,0,0,0,0,0,0
-2026-06,(all),county:leitrim,2,0,2,0,0,0,0,0,0
 2026-06,(all),county:limerick,10,9,0,1,0,0,0,0,0
-2026-06,(all),county:longford,3,2,1,0,0,0,0,0,0
-2026-06,(all),county:louth,3,3,0,0,0,0,0,0,1
 2026-06,(all),county:mayo,5,1,4,0,0,0,0,0,0
 2026-06,(all),county:meath,6,5,0,1,0,0,0,0,1
-2026-06,(all),county:monaghan,1,1,0,0,0,0,0,0,0
-2026-06,(all),county:offaly,2,2,0,0,0,0,0,0,0
-2026-06,(all),county:roscommon,1,0,1,0,0,0,0,0,0
 2026-06,(all),county:sligo,11,10,1,0,0,0,0,0,0
-2026-06,(all),county:tipperary,2,1,0,1,0,0,0,0,0
 2026-06,(all),county:waterford,8,6,0,0,0,0,0,2,1
-2026-06,(all),county:westmeath,4,3,1,0,0,0,0,0,0
 2026-06,(all),county:wexford,6,4,2,0,0,0,0,0,0
 2026-06,(all),county:wicklow,8,6,2,0,0,0,0,0,0
 2026-06,(all),household:alone,175,153,10,8,2,0,0,2,5
@@ -636,17 +539,12 @@ Month,Category,Flag,Turns,Cited,NotFound,Clarification,Error,OutOfScope,Greeting
 2026-06,(all),work:student,52,47,5,0,0,0,0,0,0
 2026-06,(all),work:unemployed,207,182,14,8,1,0,0,2,7
 2026-06,(all),work:working,788,688,60,13,15,1,0,11,26
-2026-06,(all),year:2010,2,2,0,0,0,0,0,0,1
-2026-06,(all),year:2011,2,2,0,0,0,0,0,0,0
 2026-06,(all),year:2012,7,5,2,0,0,0,0,0,0
 2026-06,(all),year:2013,9,9,0,0,0,0,0,0,1
-2026-06,(all),year:2014,4,4,0,0,0,0,0,0,0
 2026-06,(all),year:2015,5,4,1,0,0,0,0,0,0
-2026-06,(all),year:2016,3,2,1,0,0,0,0,0,0
 2026-06,(all),year:2017,6,6,0,0,0,0,0,0,0
 2026-06,(all),year:2018,5,4,0,1,0,0,0,0,0
 2026-06,(all),year:2019,10,9,1,0,0,0,0,0,1
-2026-06,(all),year:2020,4,3,0,1,0,0,0,0,0
 2026-06,(all),year:2021,8,8,0,0,0,0,0,0,0
 2026-06,(all),year:2022,22,19,0,2,0,0,0,1,1
 2026-06,(all),year:2023,13,10,1,1,1,0,0,0,0
@@ -662,6 +560,7 @@ Month,Category,Flag,Turns,Cited,NotFound,Clarification,Error,OutOfScope,Greeting
 2026-06,(none),household:children,6,0,3,3,0,0,0,0,0
 2026-06,(none),household:partner,13,0,3,10,0,0,0,0,0
 2026-06,(none),work:unemployed,7,0,3,4,0,0,0,0,0
+2026-06,about,(any situation),3,2,0,0,0,0,0,1,0
 2026-06,about,(no situation),165,137,18,5,0,1,2,2,16
 2026-06,birth-family-relationships,(any situation),109,91,13,3,2,0,0,0,2
 2026-06,birth-family-relationships,(no situation),372,326,31,9,2,1,0,3,17
@@ -812,30 +711,18 @@ Month,Category,Flag,Turns,Cited,NotFound,Clarification,Error,OutOfScope,Greeting
 2026-07,(all),age:25-44,28,25,2,1,0,0,0,0,5
 2026-07,(all),age:45-65,56,52,0,1,2,1,0,0,9
 2026-07,(all),age:66+,107,102,2,1,0,1,1,0,19
-2026-07,(all),county:carlow,2,1,1,0,0,0,0,0,0
-2026-07,(all),county:cavan,2,2,0,0,0,0,0,0,0
-2026-07,(all),county:clare,4,3,0,1,0,0,0,0,0
 2026-07,(all),county:cork,37,32,3,2,0,0,0,0,10
 2026-07,(all),county:donegal,7,4,3,0,0,0,0,0,1
 2026-07,(all),county:dublin,108,92,11,0,4,1,0,0,25
 2026-07,(all),county:galway,15,13,0,2,0,0,0,0,4
 2026-07,(all),county:kerry,5,5,0,0,0,0,0,0,2
-2026-07,(all),county:kildare,3,3,0,0,0,0,0,0,2
 2026-07,(all),county:kilkenny,5,4,1,0,0,0,0,0,1
-2026-07,(all),county:leitrim,1,1,0,0,0,0,0,0,1
 2026-07,(all),county:limerick,9,7,0,1,0,1,0,0,4
-2026-07,(all),county:longford,2,2,0,0,0,0,0,0,0
-2026-07,(all),county:mayo,3,2,1,0,0,0,0,0,0
 2026-07,(all),county:meath,8,8,0,0,0,0,0,0,3
-2026-07,(all),county:monaghan,2,1,0,1,0,0,0,0,1
 2026-07,(all),county:offaly,5,5,0,0,0,0,0,0,4
-2026-07,(all),county:roscommon,4,2,0,2,0,0,0,0,1
 2026-07,(all),county:sligo,5,4,0,0,0,0,0,1,2
-2026-07,(all),county:tipperary,4,3,0,0,1,0,0,0,1
 2026-07,(all),county:waterford,7,6,1,0,0,0,0,0,0
-2026-07,(all),county:westmeath,3,2,1,0,0,0,0,0,0
 2026-07,(all),county:wexford,12,8,4,0,0,0,0,0,2
-2026-07,(all),county:wicklow,4,4,0,0,0,0,0,0,1
 2026-07,(all),household:alone,148,128,5,11,4,0,0,0,26
 2026-07,(all),household:children,433,397,18,15,1,1,0,1,97
 2026-07,(all),household:partner,461,426,13,16,5,1,0,0,81
@@ -851,7 +738,6 @@ Month,Category,Flag,Turns,Cited,NotFound,Clarification,Error,OutOfScope,Greeting
 2026-07,(all),year:2010,7,6,0,1,0,0,0,0,0
 2026-07,(all),year:2011,7,6,0,0,0,1,0,0,1
 2026-07,(all),year:2012,5,4,1,0,0,0,0,0,0
-2026-07,(all),year:2013,1,1,0,0,0,0,0,0,0
 2026-07,(all),year:2014,6,5,1,0,0,0,0,0,2
 2026-07,(all),year:2015,8,7,1,0,0,0,0,0,2
 2026-07,(all),year:2016,8,7,1,0,0,0,0,0,4
@@ -865,7 +751,6 @@ Month,Category,Flag,Turns,Cited,NotFound,Clarification,Error,OutOfScope,Greeting
 2026-07,(all),year:2025,49,45,2,0,2,0,0,0,5
 2026-07,(all),year:2026,121,110,4,6,0,0,0,1,25
 2026-07,(all),year:2027,32,31,1,0,0,0,0,0,5
-2026-07,(all),year:2028,3,3,0,0,0,0,0,0,1
 2026-07,(all),year:2029,6,6,0,0,0,0,0,0,1
 2026-07,(none),(any situation),43,0,11,23,4,4,0,1,0
 2026-07,(none),(no situation),1059,0,166,461,49,123,237,23,0
@@ -957,6 +842,7 @@ Month,Category,Flag,Turns,Cited,NotFound,Clarification,Error,OutOfScope,Greeting
 2026-07,moving-country,year:2021,15,14,1,0,0,0,0,0,3
 2026-07,moving-country,year:2022,7,7,0,0,0,0,0,0,1
 2026-07,moving-country,year:2026,12,12,0,0,0,0,0,0,5
+2026-07,my-situation,(no situation),2,2,0,0,0,0,0,0,1
 2026-07,returning-to-ireland,(any situation),105,103,1,1,0,0,0,0,22
 2026-07,returning-to-ireland,(no situation),406,402,3,1,0,0,0,0,64
 2026-07,returning-to-ireland,age:66+,6,6,0,0,0,0,0,0,2
@@ -1006,29 +892,18 @@ Month,Category,Flag,Turns,Cited,NotFound,Clarification,Error,OutOfScope,Greeting
 2026-08,(all),age:25-44,29,26,1,0,1,1,0,0,4
 2026-08,(all),age:45-65,80,75,0,1,4,0,0,0,12
 2026-08,(all),age:66+,136,125,2,8,1,0,0,0,9
-2026-08,(all),county:carlow,2,1,1,0,0,0,0,0,1
-2026-08,(all),county:cavan,4,3,1,0,0,0,0,0,2
-2026-08,(all),county:clare,2,2,0,0,0,0,0,0,1
 2026-08,(all),county:cork,27,26,0,1,0,0,0,0,3
 2026-08,(all),county:donegal,21,20,0,1,0,0,0,0,4
 2026-08,(all),county:dublin,110,97,6,5,1,1,0,0,23
 2026-08,(all),county:galway,22,19,2,0,1,0,0,0,4
 2026-08,(all),county:kerry,10,10,0,0,0,0,0,0,3
-2026-08,(all),county:kildare,3,3,0,0,0,0,0,0,2
-2026-08,(all),county:kilkenny,2,2,0,0,0,0,0,0,2
-2026-08,(all),county:laois,1,1,0,0,0,0,0,0,1
 2026-08,(all),county:limerick,22,20,1,1,0,0,0,0,3
-2026-08,(all),county:longford,3,3,0,0,0,0,0,0,0
-2026-08,(all),county:louth,3,3,0,0,0,0,0,0,1
 2026-08,(all),county:mayo,7,7,0,0,0,0,0,0,6
 2026-08,(all),county:meath,8,8,0,0,0,0,0,0,5
-2026-08,(all),county:monaghan,3,3,0,0,0,0,0,0,1
-2026-08,(all),county:offaly,3,3,0,0,0,0,0,0,2
 2026-08,(all),county:roscommon,5,3,2,0,0,0,0,0,3
 2026-08,(all),county:sligo,8,8,0,0,0,0,0,0,3
 2026-08,(all),county:tipperary,6,6,0,0,0,0,0,0,3
 2026-08,(all),county:waterford,11,8,2,0,0,1,0,0,3
-2026-08,(all),county:westmeath,1,1,0,0,0,0,0,0,0
 2026-08,(all),county:wexford,7,7,0,0,0,0,0,0,1
 2026-08,(all),county:wicklow,6,5,1,0,0,0,0,0,2
 2026-08,(all),household:alone,170,163,5,2,0,0,0,0,32
@@ -1043,11 +918,7 @@ Month,Category,Flag,Turns,Cited,NotFound,Clarification,Error,OutOfScope,Greeting
 2026-08,(all),work:student,31,29,0,1,1,0,0,0,6
 2026-08,(all),work:unemployed,154,149,2,2,1,0,0,0,27
 2026-08,(all),work:working,620,572,18,17,13,0,0,0,96
-2026-08,(all),year:2010,3,3,0,0,0,0,0,0,1
-2026-08,(all),year:2011,2,2,0,0,0,0,0,0,0
 2026-08,(all),year:2012,5,5,0,0,0,0,0,0,0
-2026-08,(all),year:2013,1,1,0,0,0,0,0,0,0
-2026-08,(all),year:2014,4,2,2,0,0,0,0,0,1
 2026-08,(all),year:2015,6,6,0,0,0,0,0,0,2
 2026-08,(all),year:2016,5,5,0,0,0,0,0,0,0
 2026-08,(all),year:2017,8,8,0,0,0,0,0,0,1
@@ -1062,7 +933,6 @@ Month,Category,Flag,Turns,Cited,NotFound,Clarification,Error,OutOfScope,Greeting
 2026-08,(all),year:2026,140,126,5,6,2,1,0,0,24
 2026-08,(all),year:2027,46,40,0,3,2,1,0,0,17
 2026-08,(all),year:2028,9,8,1,0,0,0,0,0,4
-2026-08,(all),year:2029,1,1,0,0,0,0,0,0,1
 2026-08,(none),(any situation),40,0,10,23,4,2,1,0,0
 2026-08,(none),(no situation),1137,0,135,532,56,147,253,14,0
 2026-08,(none),age:66+,6,0,0,5,1,0,0,0,0
@@ -1175,6 +1045,8 @@ Month,Category,Flag,Turns,Cited,NotFound,Clarification,Error,OutOfScope,Greeting
 2026-08,moving-country,year:2023,5,5,0,0,0,0,0,0,1
 2026-08,moving-country,year:2025,5,5,0,0,0,0,0,0,2
 2026-08,moving-country,year:2026,11,10,1,0,0,0,0,0,1
+2026-08,my-situation,(any situation),2,2,0,0,0,0,0,0,0
+2026-08,my-situation,(no situation),3,3,0,0,0,0,0,0,0
 2026-08,returning-to-ireland,(any situation),136,135,1,0,0,0,0,0,19
 2026-08,returning-to-ireland,(no situation),449,445,2,2,0,0,0,0,59
 2026-08,returning-to-ireland,age:66+,9,9,0,0,0,0,0,0,1
@@ -1225,49 +1097,29 @@ Month,Category,Flag,Turns,Cited,NotFound,Clarification,Error,OutOfScope,Greeting
 2026-09,(all),age:45-65,95,79,6,8,1,1,0,0,19
 2026-09,(all),age:66+,204,181,7,13,3,0,0,0,41
 2026-09,(all),county:carlow,8,5,3,0,0,0,0,0,4
-2026-09,(all),county:cavan,4,4,0,0,0,0,0,0,1
-2026-09,(all),county:clare,4,3,0,1,0,0,0,0,1
 2026-09,(all),county:cork,33,24,4,1,1,3,0,0,12
 2026-09,(all),county:donegal,12,11,1,0,0,0,0,0,3
 2026-09,(all),county:dublin,119,98,15,4,2,0,0,0,39
 2026-09,(all),county:galway,19,15,1,3,0,0,0,0,8
 2026-09,(all),county:kerry,7,5,0,2,0,0,0,0,2
-2026-09,(all),county:kildare,3,1,2,0,0,0,0,0,0
 2026-09,(all),county:kilkenny,6,4,1,1,0,0,0,0,3
-2026-09,(all),county:leitrim,3,2,1,0,0,0,0,0,0
 2026-09,(all),county:limerick,18,17,0,1,0,0,0,0,6
-2026-09,(all),county:longford,2,1,1,0,0,0,0,0,1
-2026-09,(all),county:louth,3,2,1,0,0,0,0,0,0
-2026-09,(all),county:mayo,4,4,0,0,0,0,0,0,3
-2026-09,(all),county:meath,3,2,1,0,0,0,0,0,1
-2026-09,(all),county:monaghan,1,0,1,0,0,0,0,0,0
-2026-09,(all),county:offaly,3,2,1,0,0,0,0,0,2
 2026-09,(all),county:sligo,12,9,3,0,0,0,0,0,4
-2026-09,(all),county:tipperary,4,4,0,0,0,0,0,0,0
 2026-09,(all),county:waterford,6,5,1,0,0,0,0,0,2
-2026-09,(all),county:westmeath,2,2,0,0,0,0,0,0,1
 2026-09,(all),county:wexford,8,5,0,1,0,2,0,0,3
 2026-09,(all),county:wicklow,7,5,1,1,0,0,0,0,2
 2026-09,(all),household:alone,260,223,19,16,1,1,0,0,67
 2026-09,(all),household:children,562,484,41,29,6,2,0,0,156
 2026-09,(all),household:partner,543,473,37,24,6,2,1,0,129
 2026-09,(all),payment_on,876,789,54,26,6,1,0,0,224
-2026-09,(all),shape:letter,4,4,0,0,0,0,0,0,0
 2026-09,(all),shape:multi,179,161,11,2,1,4,0,0,61
-2026-09,(all),shape:url,2,1,1,0,0,0,0,0,0
 2026-09,(all),work:retired,117,103,7,6,1,0,0,0,25
 2026-09,(all),work:self-employed,129,115,8,6,0,0,0,0,23
 2026-09,(all),work:student,60,55,1,4,0,0,0,0,18
 2026-09,(all),work:unemployed,217,192,16,7,1,1,0,0,48
 2026-09,(all),work:working,767,672,52,28,14,1,0,0,161
-2026-09,(all),year:2010,3,3,0,0,0,0,0,0,1
-2026-09,(all),year:2011,4,2,0,2,0,0,0,0,1
-2026-09,(all),year:2012,3,2,1,0,0,0,0,0,0
-2026-09,(all),year:2013,2,2,0,0,0,0,0,0,1
 2026-09,(all),year:2014,8,6,1,0,0,0,1,0,2
 2026-09,(all),year:2015,6,5,1,0,0,0,0,0,0
-2026-09,(all),year:2016,2,2,0,0,0,0,0,0,0
-2026-09,(all),year:2017,3,2,1,0,0,0,0,0,1
 2026-09,(all),year:2018,8,8,0,0,0,0,0,0,3
 2026-09,(all),year:2019,7,7,0,0,0,0,0,0,2
 2026-09,(all),year:2020,15,13,1,1,0,0,0,0,3
@@ -1278,8 +1130,6 @@ Month,Category,Flag,Turns,Cited,NotFound,Clarification,Error,OutOfScope,Greeting
 2026-09,(all),year:2025,50,42,3,5,0,0,0,0,16
 2026-09,(all),year:2026,157,133,15,7,1,1,0,0,34
 2026-09,(all),year:2027,55,38,13,3,0,1,0,0,14
-2026-09,(all),year:2028,2,2,0,0,0,0,0,0,1
-2026-09,(all),year:2029,3,2,0,1,0,0,0,0,1
 2026-09,(none),(any situation),83,0,27,46,3,7,0,0,0
 2026-09,(none),(no situation),1679,2,250,846,61,240,266,14,0
 2026-09,(none),age:66+,7,0,0,6,1,0,0,0,0
@@ -1405,6 +1255,7 @@ Month,Category,Flag,Turns,Cited,NotFound,Clarification,Error,OutOfScope,Greeting
 2026-09,moving-country,year:2025,13,12,1,0,0,0,0,0,6
 2026-09,moving-country,year:2026,13,12,1,0,0,0,0,0,5
 2026-09,moving-country,year:2027,8,8,0,0,0,0,0,0,2
+2026-09,my-situation,(no situation),1,1,0,0,0,0,0,0,0
 2026-09,returning-to-ireland,(any situation),75,73,2,0,0,0,0,0,15
 2026-09,returning-to-ireland,(no situation),202,197,3,1,1,0,0,0,47
 2026-09,returning-to-ireland,age:66+,7,7,0,0,0,0,0,0,0
@@ -1452,49 +1303,29 @@ Month,Category,Flag,Turns,Cited,NotFound,Clarification,Error,OutOfScope,Greeting
 2026-10,(all),age:25-44,20,17,2,1,0,0,0,0,6
 2026-10,(all),age:45-65,100,80,11,7,0,2,0,0,29
 2026-10,(all),age:66+,201,176,10,12,1,2,0,0,58
-2026-10,(all),county:carlow,3,3,0,0,0,0,0,0,3
-2026-10,(all),county:cavan,3,2,1,0,0,0,0,0,0
-2026-10,(all),county:clare,4,3,0,1,0,0,0,0,1
 2026-10,(all),county:cork,32,13,14,4,0,1,0,0,7
 2026-10,(all),county:donegal,9,7,1,1,0,0,0,0,5
 2026-10,(all),county:dublin,83,56,14,10,0,3,0,0,28
 2026-10,(all),county:galway,18,15,3,0,0,0,0,0,8
 2026-10,(all),county:kerry,6,4,2,0,0,0,0,0,3
-2026-10,(all),county:kildare,3,3,0,0,0,0,0,0,2
-2026-10,(all),county:kilkenny,1,0,0,0,0,1,0,0,0
-2026-10,(all),county:laois,3,3,0,0,0,0,0,0,2
-2026-10,(all),county:leitrim,1,1,0,0,0,0,0,0,0
 2026-10,(all),county:limerick,11,6,5,0,0,0,0,0,5
-2026-10,(all),county:longford,1,1,0,0,0,0,0,0,1
 2026-10,(all),county:mayo,9,6,1,1,0,1,0,0,2
 2026-10,(all),county:meath,7,6,0,0,0,1,0,0,3
-2026-10,(all),county:offaly,1,0,0,1,0,0,0,0,0
-2026-10,(all),county:roscommon,3,3,0,0,0,0,0,0,3
 2026-10,(all),county:sligo,8,6,2,0,0,0,0,0,2
 2026-10,(all),county:tipperary,5,4,1,0,0,0,0,0,2
 2026-10,(all),county:waterford,5,3,0,2,0,0,0,0,1
-2026-10,(all),county:westmeath,1,1,0,0,0,0,0,0,1
-2026-10,(all),county:wexford,3,1,2,0,0,0,0,0,1
-2026-10,(all),county:wicklow,4,2,1,1,0,0,0,0,2
 2026-10,(all),household:alone,347,291,38,17,0,1,0,0,106
 2026-10,(all),household:children,481,396,50,29,1,5,0,0,156
 2026-10,(all),household:partner,533,448,50,28,3,4,0,0,183
 2026-10,(all),payment_on,834,714,91,23,4,2,0,0,282
 2026-10,(all),shape:letter,10,6,2,0,1,1,0,0,1
 2026-10,(all),shape:multi,142,117,20,1,1,2,0,1,68
-2026-10,(all),shape:url,4,1,1,1,0,1,0,0,1
 2026-10,(all),work:retired,131,102,17,10,1,1,0,0,47
 2026-10,(all),work:self-employed,131,110,14,6,1,0,0,0,47
 2026-10,(all),work:student,52,43,5,4,0,0,0,0,12
 2026-10,(all),work:unemployed,197,169,15,12,1,0,0,0,63
 2026-10,(all),work:working,703,596,66,33,4,4,0,0,208
-2026-10,(all),year:2010,3,1,1,0,0,1,0,0,0
-2026-10,(all),year:2011,4,3,0,1,0,0,0,0,1
-2026-10,(all),year:2012,2,2,0,0,0,0,0,0,1
-2026-10,(all),year:2013,1,1,0,0,0,0,0,0,1
-2026-10,(all),year:2014,4,3,1,0,0,0,0,0,1
 2026-10,(all),year:2015,8,5,2,1,0,0,0,0,2
-2026-10,(all),year:2016,3,2,1,0,0,0,0,0,1
 2026-10,(all),year:2017,8,7,0,1,0,0,0,0,2
 2026-10,(all),year:2018,7,4,3,0,0,0,0,0,1
 2026-10,(all),year:2019,12,7,4,1,0,0,0,0,2
@@ -1619,6 +1450,7 @@ Month,Category,Flag,Turns,Cited,NotFound,Clarification,Error,OutOfScope,Greeting
 2026-10,moving-country,year:2022,6,6,0,0,0,0,0,0,3
 2026-10,moving-country,year:2026,10,8,2,0,0,0,0,0,7
 2026-10,moving-country,year:2027,6,6,0,0,0,0,0,0,4
+2026-10,my-situation,(no situation),4,4,0,0,0,0,0,0,3
 2026-10,returning-to-ireland,(any situation),48,46,2,0,0,0,0,0,22
 2026-10,returning-to-ireland,(no situation),206,201,4,0,1,0,0,0,70
 2026-10,returning-to-ireland,household:children,13,13,0,0,0,0,0,0,3

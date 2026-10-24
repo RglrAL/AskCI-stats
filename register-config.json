@@ -1,5 +1,5 @@
 {
-  "_comment": "The content-gap register's settings (brief §73), read by tools/make_register.py, the Pages tab and the Ask bar alike. min_asks_month: a page enters the retrieval list when typed questions named it this often in a month; min_answers: a page enters the content list when this many answers cited it in the period; statuses: the fixed list the status file may use; owners: who the evidence and status files belong to. stale_before: a cited page last changed before this date is stale. retrieval_not_found / retrieval_reached: a named page enters the retrieval list when its not-found share is at least the first, or when the page or a sibling in its category was cited in under the second of the questions naming it. kinds missing-page and signpost (brief §75) are topic rows with no URL: a subject with no page, or one the site will never carry where the right answer is an organisation; their evidence comes from register-themes.json until the topic layer computes it. topic_min_turns / topic_not_found / topic_partial (brief §75): a lexicon topic with that many typed questions in the period enters as missing-page at that not-found share, or as detail at that partial share.",
+  "_comment": "The content-gap register's settings (brief §73), read by tools/make_register.py, the Pages tab and the Ask bar alike. min_asks_month: a page enters the retrieval list when typed questions named it this often in a month; min_answers: a page enters the content list when this many answers cited it in the period; statuses: the fixed list the status file may use; owners: who the evidence and status files belong to. stale_before: a cited page last changed before this date is stale. retrieval_not_found / retrieval_reached: a named page enters the retrieval list when its not-found share is at least the first, or when the page or a sibling in its category was cited in under the second of the questions naming it. kinds missing-page and signpost (brief §75) are topic rows with no URL: a subject with no page, or one the site will never carry where the right answer is an organisation; their evidence comes from register-themes.json until the topic layer computes it. topic_min_turns / topic_not_found / topic_partial (brief §75): a lexicon topic with that many typed questions in the period enters as missing-page at that not-found share, or as detail at that partial share. page_partial: a cited page enters the detail list when this share of its answers (and 1.5x the typical share) said something was missing.",
   "min_asks_month": 30,
   "min_answers": 100,
   "months": 2,
@@ -12,8 +12,8 @@
     "won't fix"
   ],
   "owners": {
-    "evidence": "Alan O'Connor",
-    "status": "Alan O'Connor (until a content-side name is given)"
+    "evidence": "the analyst (dashboard owner)",
+    "status": "the analyst until a content-side owner is named"
   },
   "teams": {
     "retrieval": "AskCI team",
@@ -29,5 +29,6 @@
   "retrieval_reached": 0.6,
   "topic_min_turns": 100,
   "topic_not_found": 0.1,
-  "topic_partial": 0.25
+  "topic_partial": 0.25,
+  "page_partial": 0.3
 }

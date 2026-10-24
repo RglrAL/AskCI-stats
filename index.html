@@ -2124,6 +2124,11 @@ const CONFIG={
   ],
   // Resource name (last segment of ResourceId) → scope. Unmapped resources are "unassigned".
   scope:[
+    // costs.csv carries role labels, not resource names (tools/redact_costs.py, brief §76): the label's prefix is its scope
+    {match:/^service-/i,                             scope:'service'},
+    {match:/^admin-/i,                               scope:'admin'},
+    {match:/^shared-/i,                              scope:'shared'},
+    // the original name patterns, kept so the Ask bar's frozen test data and an unredacted upload still classify
     {match:/^srch-askci-prod/i,                      scope:'service'},
     {match:/^oai-askci-prod/i,                       scope:'service'},
     {match:/^askci-(backend|background|frontend)-prod$/i, scope:'service'},
@@ -2177,15 +2182,20 @@ const CONFIG={
   // pre-launch test traffic produced no tagged clicks, so it counts from the public launch.
   click_tracking_from:{app:'2026-03-10',embed:'2026-05-11'},
   // Outcome classes come from text rules (tools/redact_feed.py). After the 14 Sep model change the cited
-  // share stepped from about 93% to 82% while "partial" doubled, which fits a change in the model's wording
-  // as well as worse answers. Until a hand-labelled sample settles it, outcome figures from this date carry
-  // a note. Set to null once the rules are checked against the new model.
+  // share stepped from about 93% to 82%, which fits a change in the model's wording as well as worse answers.
+  // "Partial" had already quadrupled on 1 Jul, when the deciding phrase moved from "does not provide" to
+  // "could not find" with that day's wording change (brief §76): the partial series measures the model's
+  // phrasing of a gap as much as the gap. Until a hand-labelled sample settles both, outcome figures from
+  // this date carry a note. Set to null once the rules are checked against the new model.
   outcome_rules_unvalidated_from:'2026-09-14',
   intent_measured:null,       // {measured, n, agreement} from tools/score_labels.py once the labelling sheet is scored (brief §69); null = not yet
   // Set from tools/score_labels.py's last line once a hand-labelled sample is scored (brief §48, Phase B step 0).
   // When set, the data-quality strip shows the measured agreement instead of "unvalidated", and clear
   // outcome_rules_unvalidated_from if the agreement after the model change is acceptable.
   outcome_rules_measured:null,
+  // {date, derivation_version, category_agreement, topic_word_overlap, figure_agreement, figure_false_unmatched, …} from
+  // tools/score_labels.py (brief §75): until set, the topic and figures cards say "not yet reader-checked"
+  derivation_measured:null,
   latency_target_p90_ms:20000, // provisional p90 target (admin-app spec open question 13); drawn as a dashed line
   // Phone-service hours, used only for the "outside phone-service hours" share on the Usage pane.
   phone_service:{days:[1,2,3,4,5],from:9,to:20,label:'Mon–Fri 09:00–20:00',source:'Citizens Information Phone Service published hours, confirmed 23 Oct 2026'},
@@ -3269,7 +3279,7 @@ function eraCardHTML(){
         <thead><tr style="border-bottom:2px solid var(--b2)">${th('Era','left')}${th('Turns')}${th('Cited')}${th('Not found')}${th('Clarifi-<br>cation')}${th('Partial,<br>of cited')}${th('Cited, not<br>partial')}${th('Words /<br>cited')}${th('Pages /<br>cited')}${th('Response<br>p50')}${th('Generation<br>p / turn')}${th('Dislikes /<br>1,000 cited')}${th('Clicks /<br>100 cited')}${th('Turns /<br>conv.')}${th('Reached<br>cited')}${hasIntent?th('Personal<br>situations')+th('Not what<br>was needed'):''}</tr></thead>
         <tbody>${rows}</tbody></table>
       ${notes?`<ul class="wd-flags" style="margin-top:10px">${notes}</ul>`:''}
-      <div style="font-size:.63rem;color:var(--dim);margin-top:10px;font-family:'DM Mono',monospace">Descriptive only. Rates are of scored turns (partial of cited answers); response time is the turn-weighted mean of daily medians; generation cost a turn is over settled join days; click-throughs need GA4 on 7+ days of the era. An era that holds a launch or a chip change carries that change inside it. Eras are model eras: the prompts are assumed constant${PROMPTS?` and are unverified since the ${fmtDate(PROMPTS.snapshot)} snapshot`:''}.${hasIntent?' Personal situations = share of typed questions; not what was needed = typed questions whose outcome is not the one their intent expects, both by rule from the question.':''} Outcome labels from 14 Sep 2026 are unvalidated until the hand-labelled sample.</div>
+      <div style="font-size:.63rem;color:var(--dim);margin-top:10px;font-family:'DM Mono',monospace">Descriptive only. Rates are of scored turns (partial of cited answers); response time is the turn-weighted mean of daily medians; generation cost a turn is over settled join days; click-throughs need GA4 on 7+ days of the era. An era that holds a launch or a chip change carries that change inside it. Eras are model eras: the each era differs in model and in wording together, since the fixed sentences changed on every model-change date (brief §75)${PROMPTS?` and are unverified since the ${fmtDate(PROMPTS.snapshot)} snapshot`:''}.${hasIntent?' Personal situations = share of typed questions; not what was needed = typed questions whose outcome is not the one their intent expects, both by rule from the question.':''} Outcome labels from 14 Sep 2026 are unvalidated until the hand-labelled sample.</div>
     </div>`;
 }
 
@@ -4929,6 +4939,20 @@ function renderWording(D,S){
       <div class="share-foot">A step in a month with no model event, and not in the weeks after one, is the trace of a prompt change; ${num(withModel)} of ${num(nCh)} change months hold a model-change date, so those deployments changed the prompt as well as the model. Configuration, not citizen text: the sentences are the bot's own, listed in <code>answer-templates.json</code>.</div>
     </div>`;
   }
+  // partials by deciding phrase (brief §76, audit finding 11): the phrase that fires inside a cited answer moved from
+  // "does not provide" to "could not find" on 1 July, and the partial count quadrupled with it; the series is shown by phrase
+  let phraseCard='';
+  if(hasRules){
+    const monsP=[...new Set(fr.map(d=>d.date.slice(0,7)))].sort();
+    const PM={};monsP.forEach(m=>{PM[m]={};});
+    Object.entries(ORULES).forEach(([d,x])=>{const m=d.slice(0,7);if(!PM[m]||d<from||d>to)return;Object.entries(x).forEach(([k,n])=>{if(k.startsWith('cited.partial.'))PM[m][k.slice(14)]=(PM[m][k.slice(14)]||0)+n;});});
+    const tot=Object.values(PM).reduce((a,o)=>{Object.entries(o).forEach(([k,n])=>{a[k]=(a[k]||0)+n;});return a;},{});
+    const topP=Object.keys(tot).sort((a,b)=>tot[b]-tot[a]).slice(0,4);
+    const rowsP=monsP.map(m=>{const o=PM[m],t=Object.values(o).reduce((a,n)=>a+n,0);const c=fr.filter(d=>d.date.slice(0,7)===m).reduce((s,d)=>s+(d.cited||0),0);return `<tr style="border-bottom:1px solid var(--b2)">${td(fmtMonth(m),{left:true})}${td(num(t))}${td(c?(t/c*100).toFixed(1)+'%':'—')}${topP.map(k=>td(t?((o[k]||0)/t*100).toFixed(0)+'%':'—')).join('')}</tr>`;}).join('');
+    phraseCard=`<div class="card"><div class="card-title">Partial answers, by the phrase that decided them<span class="card-title-note">a cited answer is partial when one of these phrases appears in it · ${spanLabel(from,to)}</span></div>
+      <div class="tbl-wrap"><table style="width:100%;border-collapse:collapse"><thead><tr style="border-bottom:1px solid var(--b2)">${th('Month',true)}${th('Partials')}${th('Of cited')}${topP.map(k=>th(ruleLabel('cited.partial.'+k))).join('')}</tr></thead><tbody>${rowsP}</tbody></table></div>
+      <div class="share-foot">The partial series is as much a measure of how the model phrases a gap as of the gap: until June most partials fired on "does not provide", a phrase ordinary sentences also use; from 1 July, when the fixed no-results sentence was retired, "could not find" inside a cited answer took over and the count quadrupled. The labelling sheet's partial rows, by phrase, say which of these are real gaps.</div></div>`;
+  }
   // where the answers send people (brief §75): organisations named, overall and in the answers that found nothing
   let orgCard='';
   if(hasOrgs){
@@ -4957,6 +4981,7 @@ function renderWording(D,S){
   }
   el.innerHTML=`
     ${tmplCard}
+    ${phraseCard}
     ${orgCard}
     <div class="reach-note"><i data-lucide="info" class="i-sm"></i><span><b>Which phrase decided each outcome.</b> The outcome rules read each answer for set phrases; this shows which phrase fired, and how the answers are written. A shift on a date with a model change is that model’s wording. A shift with no model change in the billing points to a prompt or configuration change: the data can show <i>that</i> the wording changed, not <i>what</i> changed. It cannot say whether a label is right; that needs the hand-labelled sample.${CONFIG.outcome_rules_unvalidated_from&&!CONFIG.outcome_rules_measured?` Outcome figures from ${fmtDate(CONFIG.outcome_rules_unvalidated_from)} are unvalidated.`:''}</span></div>
     ${chartBox('wd-mix',300,'Deciding phrases, per 1,000 turns','weekly · the seven most common over all the data, besides a plain cited answer · hollow bar = part week')}
@@ -6084,6 +6109,7 @@ const INTENT_ORDER=['eligibility','definition','apply','statement','rate','timin
 function unexpectedOf(r,e){return e==='cited'?(r.NotFound+r.Uncited+(r.NamedClarification||0)):e==='redirect'?r.Cited:0;}
 // The caveat every intent figure carries (brief §69): the rules version, and the reader agreement from the labelling or
 // "not yet measured". CONFIG.intent_measured is filled from score_labels.py when the sample is scored.
+function derivCaveat(k){const m=CONFIG.derivation_measured;if(!m)return 'not yet reader-checked';if(k==='figures'&&m.figure_n)return `reader agreement ${Math.round(m.figure_agreement*100)}% on ${m.figure_n} checkable answers; the bound's false alarms ${m.figure_false_unmatched!=null?Math.round(m.figure_false_unmatched*100)+'%':'—'} (${m.date})`;if(m.category_n)return `category agreement ${Math.round(m.category_agreement*100)}% on ${m.category_n} labelled questions (${m.date})`;return 'not yet reader-checked';}   // brief §75: the labelling sheet's reading of the topic layer and the figures check
 function intentCaveat(){const m=CONFIG.intent_measured;return `by rule from the question${LEXICON?' ('+escH(LEXICON.version)+')':''} · reader agreement ${m&&m.n?`${Math.round(m.agreement*100)}% on ${m.n} labelled questions`:'not yet measured'}`;}
 const INTENT_LABEL={status:'Own claim or application',contact:'Contact or office',documents:'Documents needed',apply:'How do I …',rate:'Rate or amount',eligibility:'Can I … (eligibility)',timing:'Timing',definition:'What is …',statement:'A situation, no question',other:'Other'};
 function renderAsked(D,S){
@@ -6205,7 +6231,7 @@ function renderAsked(D,S){
       ${tbl2(th('Kind',true)+th('Page or topic',true)+th('Asks')+th('Owner',true),gapRows)}
       ${(()=>{if(!hasOrgs)return'';const ag={};months.forEach(m=>(ORGSM[m]||[]).forEach(r=>{if(r.cat!==ASKED_CAT)return;const a=ag[r.org]||(ag[r.org]={Turns:0,NotFound:0,Partial:0});a.Turns+=r.Turns;a.NotFound+=r.NotFound;a.Partial+=r.Partial;}));const any=ag['(any)']||{Turns:0,NotFound:0},none=ag['(none)']||{Turns:0,NotFound:0},ext=ag['(external)']||{Turns:0,NotFound:0};const allA=any.Turns+none.Turns,nfA=any.NotFound+none.NotFound;const top=Object.entries(ag).filter(([o])=>!o.startsWith('(')).sort((a,b)=>b[1].Turns-a[1].Turns).slice(0,8);if(!top.length)return'';
         return `<div class="card-title" style="font-size:.8rem;margin-top:12px">Where ${lab} answers send people<span class="card-title-note">${allA?(ext.Turns/allA*100).toFixed(1):'—'}% of ${lab} answers name an outside body · ${nfA?(ext.NotFound/nfA*100).toFixed(1):'—'}% of its not-found answers do</span></div>`+tbl2(th('Organisation',true)+th('Answers')+th('In not found')+th('In partial'),top.map(([o,a])=>tr(td(escH(o),{left:true})+td(num(a.Turns))+td(num(a.NotFound))+td(num(a.Partial)))).join(''));})()}
-      <div class="share-foot">Topic buckets are generic keywords chosen by the analyst (brief §75), each matching 20+ questions, not yet reader-checked; a question's topic is its longest matching keyword. Only class names and counts reach this page.</div>
+      <div class="share-foot">Topic buckets are generic keywords chosen by the analyst (brief §75), each matching 20+ questions, ${derivCaveat('topics')}; a question's topic is its longest matching keyword. Only class names and counts reach this page.</div>
     </div>`;
   }
   el.innerHTML=`
@@ -6403,7 +6429,7 @@ function contentLists(months,fr,td,th){
           <div class="tbl-wrap"><table style="width:100%;border-collapse:collapse"><thead><tr style="border-bottom:1px solid var(--b2)">${thF('Page',true)}${thF('Answers')}${thF('Figures')}${thF('Matched')}${thF('Unmatched')}${thF('Unverifiable')}</tr></thead><tbody>${prow||'<tr>'+tdF('No page has 50 checkable figures in range',{left:true})+'</tr>'}</tbody></table></div></div>
         <div><div class="card-title" style="font-size:.8rem">By month</div>
           <div class="tbl-wrap"><table style="width:100%;border-collapse:collapse"><thead><tr style="border-bottom:1px solid var(--b2)">${thF('Month',true)}${thF('Answers with a figure')}${thF('Share')}${thF('Matched')}${thF('Unmatched')}${thF('Unverifiable')}</tr></thead><tbody>${mrow}</tbody></table></div>
-          <div class="share-foot">A figure is matched when its number appears on a snapshot of a cited page taken at that page's last change, and only when that change predates the answer; otherwise the page has changed since and the figure is unverifiable. Unmatched fires on three things that are not errors as well as on errors: a figure from a second source, a rounding, a weekly rate the page gives annually. It is an upper bound until the labelling sheet's figure-match column calibrates it, and the word "accuracy" is not used for it. Snapshots are dated from today; the back history can only be checked against pages that have not changed since.</div></div>
+          <div class="share-foot">A figure is matched when its number appears on a snapshot of a cited page taken at that page's last change, and only when that change predates the answer; otherwise the page has changed since and the figure is unverifiable. Unmatched fires on three things that are not errors as well as on errors: a figure from a second source, a rounding, a weekly rate the page gives annually. It is an upper bound until the labelling sheet's figure-match column calibrates it (${derivCaveat('figures')}), and the word "accuracy" is not used for it. "Matched" is loose in the other direction: a year matches any year on the page and an amount any bare number, so the matched share overstates too. Snapshots are dated from today; the back history can only be checked against pages that have not changed since.</div></div>
       </div></div>`;
   }
   // 4c. the content-gap register (brief §73): evidence rows with their status, by owner
@@ -8209,6 +8235,7 @@ function renderDqStrip(){
     U.outcomeRules&&CONFIG.outcome_rules_measured?(()=>{const m=CONFIG.outcome_rules_measured,a=m.agreement_after!=null?m.agreement_after:m.agreement_before;
       return item('outcome rules',`${U.outcomeRules} · agreement ${a!=null?(a*100).toFixed(0)+'%':'—'} on ${m.n} hand-labelled answers, ${fmtDate(m.measured)}`,{amber:!!CONFIG.outcome_rules_unvalidated_from,title:`Checked by people against a blind, stratified sample (tools/score_labels.py), rules ${m.rules}: agreement before ${m.agreement_before!=null?(m.agreement_before*100).toFixed(0)+'%':'—'}, after ${m.agreement_after!=null?(m.agreement_after*100).toFixed(0)+'%':'—'}`+(m.notfound_answered_after!=null?`; ${(m.notfound_answered_after*100).toFixed(0)}% of rule “not found” answers after the change were judged to answer the question`:'')});})():
     U.outcomeRules?item('outcome rules',U.outcomeRules+(CONFIG.outcome_rules_unvalidated_from?` · unvalidated from ${fmtDate(CONFIG.outcome_rules_unvalidated_from)}`:''),{amber:!!CONFIG.outcome_rules_unvalidated_from,title:'rule-set version written by tools/redact_feed.py; a change replays from the raw feed'+(CONFIG.outcome_rules_unvalidated_from?'. Not yet checked against the model in use from '+fmtDate(CONFIG.outcome_rules_unvalidated_from):'')}):'',
+    TMPL_META&&TMPL_META._version?item('derivation',TMPL_META._version+(CONFIG.derivation_measured&&CONFIG.derivation_measured.category_n?` · category agreement ${Math.round(CONFIG.derivation_measured.category_agreement*100)}% on ${CONFIG.derivation_measured.category_n}`:' · not yet reader-checked'),{amber:!(CONFIG.derivation_measured&&CONFIG.derivation_measured.category_n),title:'One derivation version (brief §75) bundles the lexicon\'s topic layer, the fixed-wording templates, the organisations list, the figures check and the situation classes; the labelling sheet measures it (CONFIG.derivation_measured).'}):null,
     hasIntent?item('what people ask',`rules ${LEXICON?LEXICON.version:'—'} · ${CONFIG.intent_measured&&CONFIG.intent_measured.n?'agreement '+Math.round(CONFIG.intent_measured.agreement*100)+'% on '+CONFIG.intent_measured.n:'agreement not yet measured'}`,{amber:!(CONFIG.intent_measured&&CONFIG.intent_measured.n),title:'Intent and the scheme named are set by rule on the question in redact_feed.py (question-lexicon.json). The agreement figure comes from the hand-labelled sample (tools/score_labels.py).'}):'',
     PROMPTS?item('prompts',`snapshot ${fmtDate(PROMPTS.snapshot)} · ${PROMPTS.verified_current?'confirmed current':'unverified since'}`,{amber:!PROMPTS.verified_current,title:`The outcome rules (${U.outcomeRules||'—'}) were checked against the system prompts exported on ${fmtDate(PROMPTS.snapshot)}: ${PROMPTS.prompts} prompts, set fingerprint ${String(PROMPTS.set_sha256).slice(0,12)}. Prompts can change without a deploy and leave no trace in billing or the feed; whether any changed since is ${PROMPTS.verified_current?'confirmed: none':'unknown'}.`}):'',
     (U.columns&&Object.values(U.columns).some(Boolean))||hasHours?item('usage detail',['outcomes','types','sources','latency','voice'].filter(k=>U.columns&&U.columns[k]).concat(hasHours?['hours']:[]).join(' · ')||'—',{title:'optional columns found in usage.csv, plus usage-hours.csv'}):'',

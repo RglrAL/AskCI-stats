@@ -1,8 +1,9 @@
 # macOS
 .DS_Store
 
-# QA feed exports hold citizens' questions — never commit them
+# QA feed exports hold citizens' questions — never commit them; nor a backend log's parsed turns
 qa-feed*.csv
+*.turns.csv
 
 # Built droplet app (rebuild with: osacompile -o "tools/AskCI Feed Export.app" tools/feed_droplet.applescript)
 *.app/

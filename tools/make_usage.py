@@ -630,7 +630,8 @@ def orgs_rows(orgs, min_turns=5):
     turn's category ("(all)" = every category): answers and their outcomes. Category rows under min_turns left out;
     "(all)" rows always kept (brief §75)."""
     cols = ["Month", "Org", "Category", "Turns"] + OUT7 + ["Partial"]
-    return cols, [[m, o, c, e["Turns"]] + [e[k] for k in OUT7_SRC] + [e["o:partial"]] for (m, o, c), e in sorted(orgs.items()) if c == "(all)" or e["Turns"] >= min_turns]
+    # the floor applies to every row naming an organisation, "(all)" rows included; the three pseudo-rows are exempt (brief §76)
+    return cols, [[m, o, c, e["Turns"]] + [e[k] for k in OUT7_SRC] + [e["o:partial"]] for (m, o, c), e in sorted(orgs.items()) if o in ("(any)", "(external)", "(none)") or e["Turns"] >= min_turns]
 
 
 def _given(row, k):
@@ -645,7 +646,9 @@ def sit_rows(sit, min_turns=5):
     year:<value>, shape:<letter|multi|url>, (any situation), (no situation)): turns, outcomes, partial. Flags are never
     crossed with each other; category rows under min_turns left out (brief §75)."""
     cols = ["Month", "Category", "Flag", "Turns"] + OUT7 + ["Partial"]
-    return cols, [[m, c, f, e["Turns"]] + [e[k] for k in OUT7_SRC] + [e["o:partial"]] for (m, c, f), e in sorted(sit.items()) if c == "(all)" or e["Turns"] >= min_turns]
+    # the floor applies to every row that names a class (a county, a band, a year, a shape), "(all)" rows included; only
+    # the two totals are exempt (brief §76, audit finding 2)
+    return cols, [[m, c, f, e["Turns"]] + [e[k] for k in OUT7_SRC] + [e["o:partial"]] for (m, c, f), e in sorted(sit.items()) if f in ("(any situation)", "(no situation)") or e["Turns"] >= min_turns]
 
 
 def asks_rows(asks):

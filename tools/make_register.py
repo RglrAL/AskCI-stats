@@ -52,7 +52,7 @@ def main():
     for u, a in A.items():
         if a["ans"] < cfg["min_answers"]: continue
         share = a["p"] / a["ans"]
-        if share < max(0.3, typ * 1.5): continue
+        if share < max(cfg.get("page_partial", 0.3), typ * 1.5): continue   # the page-detail floor lives in register-config.json (brief §76)
         byi = sorted(((e["p"], i, e["ans"]) for i, e in AI[u].items() if e["ans"] >= 5), reverse=True)
         top = byi[0][1] if byi else ""
         rows.append({"kind": "detail", "page": u, "category": u.split("/en/")[-1].split("/")[0] if "/en/" in u else "", "intent": top, "evidence": f"{a['p']} of {a['ans']} answers citing it said something was missing ({share:.0%}; typical {typ:.0%})" + (f"; most on {top} questions ({byi[0][0]} of {byi[0][2]})" if byi else ""),
