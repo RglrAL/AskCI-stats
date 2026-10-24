@@ -1901,3 +1901,15 @@ rules. All fixed in one pass, with the audit at 157 checks:
   a manifest and one versions file; a data-protection note in the repo. Declined: splitting the page into
   concatenated source files (a build step by another name). The second audit's closing line stands: no new
   derivation layer until the sheet is scored.
+
+**Day-level intervals in the change report (24 Oct 2026, late).** Every rate in `change_report.py` now carries two
+intervals: the Newcombe interval on pooled turns, and a day-level one in which the days inside each window are
+resampled with replacement (2,000 draws, fixed seed) and the window rate recomputed from the resampled days' pooled
+counts, so the day, not the turn, is the unit. "Moved" now needs both intervals to exclude zero. Calibration: on
+10 August, a date with no event, every outcome rate's day-level interval contains zero (cited +0.0, −0.7 to +0.7);
+on 9 March it excludes it (cited −5.1, −6.4 to −4.0); on 14 September likewise (cited −11.0, −12.0 to −10.0; not
+found +5.6, +5.0 to +6.2; partial of cited +12.5, +11.5 to +13.6). The two agree within a tenth of a point on the
+outcome rates, because 28-day windows hold 15,000–23,000 scored turns; they part on quantities that move by the day,
+where the day-level interval is three times as wide (the pop-up share of turns on 9 March: +20.3 points, turn
+interval +19.1 to +21.4, day interval +13.3 to +26.9). The September verdicts stand on both. Reports regenerate at
+deploy.

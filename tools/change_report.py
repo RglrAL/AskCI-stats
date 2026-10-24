@@ -70,6 +70,27 @@ def newcombe(k1, n1, k2, n2):
     return d, d - ((p1 - l1) ** 2 + (u2 - p2) ** 2) ** 0.5, d + ((u1 - p1) ** 2 + (p2 - l2) ** 2) ** 0.5
 
 
+def day_bootstrap(kb, nb, ka, na, reps=2000, seed=2026):
+    """The difference p_after - p_before with a 95% interval that treats the DAY, not the turn, as the unit (brief §76):
+    days are resampled with replacement inside each window, the window rate recomputed from the resampled days' pooled
+    counts, and the 2.5th and 97.5th percentiles of the difference taken. Turns within a day are not independent
+    (conversations run over turns, a day's model and traffic are shared), so the Newcombe interval on pooled turns is
+    narrower than the data warrant; this one is the honest width. kb, nb, ka, na are per-day lists."""
+    import random
+    if len(kb) < 7 or len(ka) < 7 or not sum(nb) or not sum(na):
+        return None
+    rnd = random.Random(seed); diffs = []
+    ib = list(range(len(kb))); ia = list(range(len(ka)))
+    for _ in range(reps):
+        sb = [rnd.choice(ib) for _ in ib]; sa = [rnd.choice(ia) for _ in ia]
+        n1 = sum(nb[i] for i in sb); n2 = sum(na[i] for i in sa)
+        if not n1 or not n2: continue
+        diffs.append(sum(ka[i] for i in sa) / n2 - sum(kb[i] for i in sb) / n1)
+    if len(diffs) < reps // 2: return None
+    diffs.sort(); d = sum(ka) / sum(na) - sum(kb) / sum(nb)
+    return d, diffs[int(0.025 * len(diffs))], diffs[int(0.975 * len(diffs)) - 1]
+
+
 def pct(x, dp=1):
     return "—" if x is None else f"{x * 100:.{dp}f}%"
 
@@ -181,6 +202,7 @@ def report(ds, days, skip, EV, D):
         return f"# Change report: {d0:%-d %B %Y}\n\nNot enough days in usage.csv on both sides ({len(have(B))} before, {len(have(A))} after).\n"
     rows = list(U.values())
     S = {w: sum_rows(rows, WinD(w)) for w in (B, A)}
+    DAYS = {w: [sum_rows([r], WinD(w)) for r in rows if WinD(w).has(r["Date"])] for w in (B, A)}   # per-day sums, for the day-level interval
     out = []; P = out.append
     moved_primary, moved_guard, notes = [], [], []
 
@@ -200,19 +222,25 @@ def report(ds, days, skip, EV, D):
     else:
         P("**Other events inside the windows:** none on record.")
     P("")
-    P("Descriptive only: differences are shown with their intervals, not attributed. A measure has *moved* when its interval excludes zero and the change is at least 1 point (rates) or 10% (means).\n")
+    P("Two intervals on every rate: one on pooled turns (Newcombe), one with the day as the unit (days resampled within each window, brief §76), which is wider where days cluster. ")
+    P("Descriptive only: differences are shown with their intervals, not attributed. A measure has *moved* when both intervals exclude zero and the change is at least 1 point (rates) or 10% (means).\n")
 
     # ── helpers ─────────────────────────────────────────────────────────────
     def rate_row(label, num, den, scale=100, unit=" pts", dp=1, per=None, guard=False, fmt=None):
         k1, n1, k2, n2 = S[B][num] if isinstance(num, str) else num(S[B]), S[B][den] if isinstance(den, str) else den(S[B]), \
                          S[A][num] if isinstance(num, str) else num(S[A]), S[A][den] if isinstance(den, str) else den(S[A])
         if n1 < MIN_N or n2 < MIN_N:
-            return f"| {label} | {int(n1):,} | — | {int(n2):,} | — | — | under {MIN_N} |"
+            return f"| {label} | {int(n1):,} | — | {int(n2):,} | — | — | — | under {MIN_N} |"
         t = newcombe(k1, n1, k2, n2); d, lo, hi = t
-        moved = (lo > 0 or hi < 0) and abs(d) * scale >= (MOVE_PTS if scale == 100 else MOVE_PTS * 10)
+        # the day-level interval (brief §76): the same difference, days resampled; "moved" needs both intervals to exclude zero
+        acc = lambda s, x: s[x] if isinstance(x, str) else x(s)
+        td = day_bootstrap([acc(s, num) for s in DAYS[B]], [acc(s, den) for s in DAYS[B]], [acc(s, num) for s in DAYS[A]], [acc(s, den) for s in DAYS[A]])
+        day_ok = td is None or td[1] > 0 or td[2] < 0
+        moved = (lo > 0 or hi < 0) and day_ok and abs(d) * scale >= (MOVE_PTS if scale == 100 else MOVE_PTS * 10)
         f = fmt or (lambda v: f"{v * scale:.{dp}f}" + ("%" if scale == 100 else ""))
         (moved_guard if guard else moved_primary).append((label, d * scale, unit)) if moved else None
-        return f"| {label} | {int(n1):,} | {f(k1 / n1)} | {int(n2):,} | {f(k2 / n2)} | {pts(t, scale, unit, dp)} | {'**moved**' if moved else 'steady'} |"
+        verdict = "**moved**" if moved else ("steady (turn interval excludes zero; day interval does not)" if (lo > 0 or hi < 0) and not day_ok and abs(d) * scale >= (MOVE_PTS if scale == 100 else MOVE_PTS * 10) else "steady")
+        return f"| {label} | {int(n1):,} | {f(k1 / n1)} | {int(n2):,} | {f(k2 / n2)} | {pts(t, scale, unit, dp)} | {pts(td, scale, unit, dp) if td else '—'} | {verdict} |"
 
     def mean_row(label, num, den, fmt, guard=True, invert=False):
         n1, n2 = (den(S[B]) if callable(den) else S[B][den]), (den(S[A]) if callable(den) else S[A][den])
@@ -227,8 +255,8 @@ def report(ds, days, skip, EV, D):
 
     # ── 1. primary outcomes ─────────────────────────────────────────────────
     P("## 1. Outcomes (scored turns)\n")
-    P("| Rate | Before n | Before | After n | After | Change (95%) | |")
-    P("|---|---|---|---|---|---|---|")
+    P("| Rate | Before n | Before | After n | After | Change (95%, turns) | Change (95%, days) | |")
+    P("|---|---|---|---|---|---|---|---|")
     P(rate_row("Cited answer", "Cited", "Scored"))
     P(rate_row("Not found", "NotFound", "Scored"))
     P(rate_row("Clarification", "Clarification", "Scored"))
@@ -259,8 +287,8 @@ def report(ds, days, skip, EV, D):
     P(mean_row("Turns a day", "Questions", "_days", lambda v: f"{v:,.0f}"))
     P(mean_row("Conversations a day", "Sessions", "_days", lambda v: f"{v:,.0f}"))
     P("")
-    P("| Share of turns | Before n | Before | After n | After | Change (95%) | |")
-    P("|---|---|---|---|---|---|---|")
+    P("| Share of turns | Before n | Before | After n | After | Change (95%, turns) | Change (95%, days) | |")
+    P("|---|---|---|---|---|---|---|---|")
     P(rate_row("Modal (pop-up) turns", "ModalTurns", "Questions", guard=True))
     P(rate_row("Starter prompt, of first turns", "StarterPromptFirstTurns", lambda s: s["StarterPromptFirstTurns"] + s["OrganicFirstTurns"], guard=True))
     P(rate_row("Typed follow-ups", "UserFollowup", "Questions", guard=True))
@@ -285,8 +313,8 @@ def report(ds, days, skip, EV, D):
     else:
         P("| Generation cost a turn | — | — | — | no settled billing days on both sides |")
     P("")
-    P("| Share of turns | Before n | Before | After n | After | Change (95%) | |")
-    P("|---|---|---|---|---|---|---|")
+    P("| Share of turns | Before n | Before | After n | After | Change (95%, turns) | Change (95%, days) | |")
+    P("|---|---|---|---|---|---|---|---|")
     hold, moved_guard[:] = moved_guard[:], []
     P(rate_row("Error", "Error", "Questions", guard=True, dp=2))
     P(rate_row("Over 30 s, of timed turns", "LatOver30s", lambda s: s["LatUnder10s"] + s["Lat10to20s"] + s["Lat20to30s"] + s["LatOver30s"], guard=True))
