@@ -93,7 +93,12 @@ them.
 | 7 | `audit_data.py DIR` (recount) or `--files-only` | repo files, optionally the redacted feeds | pass/fail: 153 checks files-only, more with the recount | — |
 | 8 | `make_register.py`, `make_findings.py`, `change_report.py --events`, `incidents.py`, `make_facts.py` | published files | `content-gaps.csv`, `reports/*` | — |
 | 9 | `test_ask.py` | `index.html` + data at `tests/ask_fixture_ref` | pass/fail, 311 cases | — |
-| 10 | commit, push | | the deploy workflow repeats 7, 8 (files-only) and 9, stamps the page with the page and data commits, publishes | |
+| 10 | `refresh.py` writes `VERSIONS.json` | the tools' constants, the recount's result, the aggregates | the manifest: every version string, the recount date and counts, a hash and row count per aggregate file | — |
+| 11 | commit, push | | the deploy workflow repeats 7, 8 (files-only) and 9, checks the committed aggregates against the manifest's hashes, stamps the page with the page and data commits, publishes | |
+
+**`tools/refresh.py FEEDS`** runs steps 1 to 10 in order and stops at the first failure, keeping the tools' output in
+the review folder's `refresh.log` and printing each step's last line (counts and versions). It is the normal way to
+refresh; the single commands remain for repairs.
 
 Also local, not part of a refresh: `make_label_sample.py` and `score_labels.py` (the labelling sheet and its scoring,
 section 9), `answer_templates.py --discover` and `--org-counts` (finding fixed sentences and counting organisations,
@@ -210,6 +215,7 @@ dated by the fixed wording, 4 candidate chip changes, launches and observed chan
 | Data audit with the feed recount | `tools/audit_data.py DIR`, local | more checks; run before each refresh is committed |
 | Ask bar regression | `tools/test_ask.py`, headless Chrome, data frozen at `tests/ask_fixture_ref` (54dc360); fails without a browser unless `--allow-skip` | 311 pass |
 | Feed-text guard | `tools/hooks/test_guard.py` | 34 cases |
+| Refresh manifest | `VERSIONS.json`, written by `tools/refresh.py`; the audit checks its versions against the files and its aggregate hashes against the committed files | one per refresh |
 | Pre-commit | `tools/hooks/pre-commit` (`git config core.hooksPath tools/hooks`): canary, costs redaction, Ask bar test on the staged page | |
 | Deploy | `.github/workflows/publish.yml`: redact costs, audit, test, stamp, fact sheet, change reports, incidents, findings, register, Pages | every step green at `e17abd1` |
 

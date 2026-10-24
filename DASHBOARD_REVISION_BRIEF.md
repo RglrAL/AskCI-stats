@@ -1913,3 +1913,17 @@ outcome rates, because 28-day windows hold 15,000–23,000 scored turns; they pa
 where the day-level interval is three times as wide (the pop-up share of turns on 9 March: +20.3 points, turn
 interval +19.1 to +21.4, day interval +13.3 to +26.9). The September verdicts stand on both. Reports regenerate at
 deploy.
+
+**The refresh runner and the manifest (24 Oct 2026, late).** `tools/refresh.py FEEDS` runs the refresh in order
+and stops at the first failure: snapshots, the lexicon's 20-match check, each redaction, the templates file, the
+aggregates, the two raw-feed tools, collection, the audit with the feed recount, the register, the findings, the
+change reports, the incidents, the fact sheet, the Ask bar test, and finally **`VERSIONS.json`**: every version
+string in force (rules, style, safety, intent, lexicon, derivation, page config), the recount's date and counts,
+the test result, and a hash and row count of each aggregate file as committed. The deploy's files-only audit checks
+the manifest's versions against the files and its hashes against the committed aggregates, so the published
+aggregates are provably the ones the recount passed; the page's strip shows the recount date and count (the "audit
+mode" labelling the first audit asked for). The tools' output goes to `refresh.log` in the review folder; the runner
+prints each step's last line, counts only. `--from-audit` resumes after the aggregates; `--skip-fetch` and
+`--skip-test` exist for repairs. First full run, 24 October: every step passed, the recount at 179 checks, the Ask
+bar at 311, and the redaction and aggregates reproduced the committed files byte for byte (collect: 0 changed),
+which is the reproducibility the audits could not test from outside.

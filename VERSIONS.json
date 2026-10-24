@@ -1,0 +1,156 @@
+{
+ "_comment": "Written by tools/refresh.py at the end of a data refresh (brief §76): the version strings in force, the feed recount's result, and a hash of each aggregate file as committed, which the deploy audit checks so that the published aggregates are the ones the recount passed.",
+ "generated": "2026-10-24",
+ "commit_before_refresh": "febe2a2",
+ "review_folder": "exports/askci-export-2026-10-24-topics",
+ "feeds": [
+  "qa-feed_20260929_113454.csv",
+  "qa-feed_20260929_113634.csv",
+  "qa-feed_20261008_163019.csv",
+  "qa-feed_20261023_135700.csv"
+ ],
+ "versions": {
+  "outcome_rules": "2026.10.23-2",
+  "style": "2026.10.23-2",
+  "safety": "2026.10.24-1",
+  "intent": "2026.10.24-2",
+  "lexicon": "2026.10.24-6",
+  "derivation": "2026.10.24-7",
+  "page_config": "2026.10.23-1"
+ },
+ "audit": {
+  "mode": "feed recount",
+  "date": "2026-10-24",
+  "passed": 179,
+  "failed": 0
+ },
+ "tests": {
+  "ask_bar": "311 of 311 passed"
+ },
+ "aggregates": {
+  "answer-figures-monthly.csv": {
+   "sha256": "4af677e09283c2b4",
+   "rows": 2784
+  },
+  "answer-personalisation-monthly.csv": {
+   "sha256": "5086b552ad7e1d9f",
+   "rows": 40
+  },
+  "answer-signposts-monthly.csv": {
+   "sha256": "416662ce9bae5ebf",
+   "rows": 2593
+  },
+  "answer-style-daily.csv": {
+   "sha256": "f3062f21f7208b97",
+   "rows": 1730
+  },
+  "answer-templates-daily.csv": {
+   "sha256": "2571b92a5119fb73",
+   "rows": 3097
+  },
+  "asked-pages-monthly.csv": {
+   "sha256": "6716f55b16de8085",
+   "rows": 891
+  },
+  "asked-pages-weekly.csv": {
+   "sha256": "77a372a005f2fd94",
+   "rows": 2166
+  },
+  "categories-daily.csv": {
+   "sha256": "401e0c6250d2f3e5",
+   "rows": 4289
+  },
+  "categories.csv": {
+   "sha256": "7f1a4c530d475241",
+   "rows": 166
+  },
+  "category-outcomes-daily.csv": {
+   "sha256": "23257fa42aa6a184",
+   "rows": 4476
+  },
+  "citations-intent-monthly.csv": {
+   "sha256": "43f2c217c2c4ab87",
+   "rows": 8287
+  },
+  "citations-monthly.csv": {
+   "sha256": "494b339c77abb6f4",
+   "rows": 10206
+  },
+  "clarification-asks-monthly.csv": {
+   "sha256": "346aaf066e5e5b4c",
+   "rows": 119
+  },
+  "conversations-daily.csv": {
+   "sha256": "9dfc35fbaee731f0",
+   "rows": 295
+  },
+  "intent-journeys-monthly.csv": {
+   "sha256": "b9a0a1ab76ad26ad",
+   "rows": 984
+  },
+  "journeys-monthly.csv": {
+   "sha256": "85bf96b697acfdc1",
+   "rows": 1731
+  },
+  "latency-buckets-daily.csv": {
+   "sha256": "cbaa4d4854997f7d",
+   "rows": 3481
+  },
+  "outcome-rules-daily.csv": {
+   "sha256": "54679e7233ecca08",
+   "rows": 3415
+  },
+  "pages-cited.csv": {
+   "sha256": "cdb2e654f62bc098",
+   "rows": 2061
+  },
+  "question-categories-monthly.csv": {
+   "sha256": "aefeb20336261d15",
+   "rows": 493
+  },
+  "question-intent-category-monthly.csv": {
+   "sha256": "61cc567f1437446e",
+   "rows": 1166
+  },
+  "question-intent-daily.csv": {
+   "sha256": "bec41074dc2ff245",
+   "rows": 5399
+  },
+  "question-situation-monthly.csv": {
+   "sha256": "9794d0c9d56918c1",
+   "rows": 1491
+  },
+  "question-topics-daily.csv": {
+   "sha256": "be6389f8b647ab37",
+   "rows": 1837
+  },
+  "question-topics-monthly.csv": {
+   "sha256": "a7111e84f85af0e4",
+   "rows": 979
+  },
+  "safety-daily.csv": {
+   "sha256": "75efcccf6b18f742",
+   "rows": 173
+  },
+  "script-outcomes-daily.csv": {
+   "sha256": "bf7b65c407d7b322",
+   "rows": 547
+  },
+  "setback-intents-monthly.csv": {
+   "sha256": "214ff8034c81b39e",
+   "rows": 179
+  },
+  "starter-prompts-monthly.csv": {
+   "sha256": "b64bf7c28da6c11a",
+   "rows": 45
+  },
+  "usage-hours.csv": {
+   "sha256": "01750ec7c42d5f2e",
+   "rows": 5758
+  },
+  "usage.csv": {
+   "sha256": "bb5d056ffb50f5e7",
+   "rows": 295
+  }
+ }
+}

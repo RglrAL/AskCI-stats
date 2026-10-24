@@ -547,6 +547,29 @@ check('privacy sweep: no tracked csv/json/md carries a text column, a long free-
 _CO = rd('costs.csv')
 check('costs.csv: every ResourceId ends in a role label (service- / admin- / shared-), never a resource name', bool(_CO) and all(re.match(r'^(service|admin|shared)-', (r.get('ResourceId') or '').rstrip('/').rsplit('/', 1)[-1]) for r in _CO if r.get('ResourceId')),
       str(C.Counter((r.get('ResourceId') or '').rstrip('/').rsplit('/', 1)[-1][:12] for r in _CO if r.get('ResourceId') and not re.match(r'^(service|admin|shared)-', (r.get('ResourceId') or '').rstrip('/').rsplit('/', 1)[-1])).most_common(3)))
+# VERSIONS.json (brief §76): the manifest the analyst's refresh wrote; its versions must match the files in force and its
+# aggregate hashes must match the committed files, so the published aggregates are the ones the feed recount passed.
+# Checked in files-only mode (the deploy); during a refresh the recount runs before the manifest is rewritten, so there
+# the check would only compare against the previous refresh.
+if not FILES_ONLY: print('  (VERSIONS.json is checked in --files-only mode; this recount is what the next manifest records)')
+try:
+    if not FILES_ONLY: raise StopIteration
+    _V = _j.load(open(f'{REPO}/VERSIONS.json', encoding='utf-8'))
+    import hashlib as _hl
+    _rules_now = next((r.get('OutcomeRules') for r in reversed(rd('usage.csv')) if r.get('OutcomeRules')), '')
+    _hash_bad = []
+    for _name, _m in (_V.get('aggregates') or {}).items():
+        try:
+            with open(f'{REPO}/{_name}', 'rb') as fh: _h = _hl.sha256(fh.read()).hexdigest()[:16]
+        except OSError: _h = 'missing'
+        if _h != _m.get('sha256'): _hash_bad.append(_name)
+    check('VERSIONS.json: versions agree with the files (rules, lexicon, derivation) and the recount had no failures',
+          _V['versions'].get('outcome_rules') == _rules_now and _V['versions'].get('lexicon') == _lx.get('version') and _V['versions'].get('derivation') == _lx.get('derivation_version') and _V['audit'].get('failed') == 0,
+          f"manifest rules {_V['versions'].get('outcome_rules')} vs {_rules_now}; lexicon {_V['versions'].get('lexicon')} vs {_lx.get('version')}; derivation {_V['versions'].get('derivation')} vs {_lx.get('derivation_version')}; failed {_V['audit'].get('failed')}")
+    check('VERSIONS.json: every aggregate file is the one the feed recount passed (hashes match)', not _hash_bad, str(_hash_bad[:5]))
+except StopIteration: pass
+except (OSError, ValueError, KeyError) as e:
+    check('VERSIONS.json: present and readable (written by tools/refresh.py)', False, str(e)[:80])
 GAPSF = rd('content-gaps.csv')
 try: _rc = _j.load(open(f'{REPO}/register-config.json', encoding='utf-8')); _kinds = set(_rc.get('teams', {}))
 except (OSError, ValueError): _kinds = set()

@@ -17,7 +17,7 @@ denied too, as are `python3 -c` and heredoc programs that mention them.
 import json, os, re, sys
 
 TEXT_PATHS = re.compile(r"qa-feed[^\s'\"]*\.csv|\.turns\.csv|ask review/[^\s'\"]*(Logs|Monitoring|\.txt)|labelling-[^\s'\"]*|User Query|Assistant Response", re.I)
-PIPELINE = r"(?:redact_feed|make_usage|cache_coverage|make_lexicon|next_step|make_label_sample|score_labels|change_report|incidents|log_parser|check_rules_vs_prompts|audit_data|collect_aggregates|answer_templates)\.py"
+PIPELINE = r"(?:redact_feed|make_usage|cache_coverage|make_lexicon|next_step|make_label_sample|score_labels|change_report|incidents|log_parser|check_rules_vs_prompts|audit_data|collect_aggregates|answer_templates|refresh|fetch_pages)\.py"
 ALLOWED_BASH = re.compile(r"^\s*(?:(?:cd\s+\S+|mkdir\s+-p\s+\S+)\s*&&\s*)*(?:[A-Z_]+=\S+\s+)*(?:python3\s+(?:-I\s+)?(?:\S*/)?tools/" + PIPELINE + r"\b|ls\b|wc\b|du\b|mkdir\b|head\s+-(?:n\s*)?1\b)[^|;&]*(?:\s*(?:>|2>)\s*\S+)*\s*$")
 SCRIPT = re.compile(r"(\S+\.py)\b")
 
