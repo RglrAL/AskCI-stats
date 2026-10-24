@@ -1,0 +1,77 @@
+{
+ "_comment": "Topic rows for the content-gap register (brief §75): subjects with no page behind them, from the housing pass of 24 Oct 2026 (a local read, logged as an exception in §75). Each row: kind missing-page or signpost, category, topic, the not-found count that raised it, the period, reader_checked. make_register.py copies these rows into content-gaps.csv until the lexicon's topic layer computes them from question-topics-monthly.csv, when a row here is replaced by the computed one of the same topic.",
+ "rows": [
+  {
+   "kind": "missing-page",
+   "category": "housing",
+   "topic": "Local authority tenancy life",
+   "asks": 92,
+   "evidence": "differential rent, adding a household member, succession, buying the house, transfers between councils, what the means test counts, refusing an offer, repairs, under-occupancy: 92 of 675 typed questions naming the apply page ended not found (13.6%), most about living in the tenancy rather than applying",
+   "period": "2026-01..2026-10",
+   "reader_checked": false
+  },
+  {
+   "kind": "missing-page",
+   "category": "housing",
+   "topic": "Approved housing bodies and cost rental",
+   "asks": 38,
+   "evidence": "AHB tenancies, cost-rental waits and proof of income, housing-association complaints: part of the 129 social-housing not-found answers that named no page",
+   "period": "2026-01..2026-10",
+   "reader_checked": false
+  },
+  {
+   "kind": "missing-page",
+   "category": "housing",
+   "topic": "Apartment management companies",
+   "asks": 30,
+   "evidence": "owners' management companies, fees and levies, block repairs and insurance: a cluster in the not-found residue with no page on the site",
+   "period": "2026-01..2026-10",
+   "reader_checked": false
+  },
+  {
+   "kind": "missing-page",
+   "category": "housing",
+   "topic": "Neighbours, boundaries and nuisance",
+   "asks": 73,
+   "evidence": "73 of 386 questions on boundary walls, hedges, trees, CCTV, noise, smoke and runoff ended not found (18.9%); the justice section's neighbour-disputes page is rarely cited",
+   "period": "2026-01..2026-10",
+   "reader_checked": false
+  },
+  {
+   "kind": "detail",
+   "category": "housing",
+   "topic": "Grants for specific works",
+   "asks": 48,
+   "evidence": "wet rooms, roofs, flooring, furnishing, boilers, and people over the income limit: 48 grant questions naming no page ended not found",
+   "period": "2026-01..2026-10",
+   "reader_checked": false
+  },
+  {
+   "kind": "detail",
+   "category": "housing",
+   "topic": "Private tenancy edge cases",
+   "asks": 106,
+   "evidence": "rent-a-room increases, a lease that has ended, inspections and cameras, belongings left behind, agent fees, evicting a family member: 106 landlord-and-tenant questions naming no page ended not found",
+   "period": "2026-01..2026-10",
+   "reader_checked": false
+  },
+  {
+   "kind": "signpost",
+   "category": "housing",
+   "topic": "Market facts: rents, prices, assessment costs",
+   "asks": 25,
+   "evidence": "average rents and house prices, BER assessment costs, management-fee norms: the site will never carry them; the right answer is an organisation or a 'not what this service does' line",
+   "period": "2026-01..2026-10",
+   "reader_checked": false
+  },
+  {
+   "kind": "signpost",
+   "category": "housing",
+   "topic": "Co-ownership and partners' rights to a home",
+   "asks": 48,
+   "evidence": "siblings' and partners' rights to a shared or inherited home: legal advice, so the right answer is FLAC, Legal Aid or a solicitor; 48 inheritance-and-transfer questions naming no page ended not found",
+   "period": "2026-01..2026-10",
+   "reader_checked": false
+  }
+ ]
+}

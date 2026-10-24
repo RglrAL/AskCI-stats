@@ -1,6 +1,6 @@
 {
  "_comment": "Scheme names a question can be matched on (brief §66): the site's English information page slugs as phrases, plus aliases, minus generic slugs and ordinary-phrase titles. redact_feed.py tags each question with the longest phrase it contains, as the page address and category. hub = other pages sit beneath it, so a citation of any of them counts as a hit (brief §71). Public data: the site's own addresses. INTENTS carries the outcome the design expects per intent.",
- "version": "2026.10.24-3",
+ "version": "2026.10.24-4",
  "min_chars": 6,
  "intents": {
   "status": "cited",
@@ -13,6 +13,225 @@
   "definition": "cited",
   "statement": "cited",
   "other": null
+ },
+ "derivation_version": "2026.10.24-1",
+ "topics": {
+  "housing": {
+   "Renting: landlord and tenant": {
+    "keywords": [
+     "notice of termination",
+     "residential tenancies",
+     "deposit back",
+     "my deposit",
+     "landlords",
+     "eviction",
+     "landlord",
+     "evicted",
+     "tenancy",
+     "tenants",
+     "tenant",
+     "evict",
+     "lease",
+     "rtb"
+    ],
+    "general": false
+   },
+   "Rent increases and rent pressure zones": {
+    "keywords": [
+     "rent increase"
+    ],
+    "general": false
+   },
+   "HAP, Rent Supplement and RAS": {
+    "keywords": [
+     "housing assistance payment",
+     "rent supplement",
+     "hap"
+    ],
+    "general": false
+   },
+   "Rent tax credit": {
+    "keywords": [
+     "rent tax credit"
+    ],
+    "general": false
+   },
+   "Social and council housing": {
+    "keywords": [
+     "local authority housing",
+     "approved housing body",
+     "housing waiting list",
+     "housing application",
+     "affordable housing",
+     "differential rent",
+     "council housing",
+     "social housing",
+     "council house",
+     "housing body",
+     "housing list",
+     "cost rental"
+    ],
+    "general": false
+   },
+   "Homelessness and emergency accommodation": {
+    "keywords": [
+     "emergency accommodation",
+     "homelessness",
+     "homeless",
+     "hostel"
+    ],
+    "general": false
+   },
+   "Buying a home": {
+    "keywords": [
+     "local authority home loan",
+     "first home scheme",
+     "first time buyers",
+     "first time buyer",
+     "buying a house",
+     "buy a house",
+     "help to buy",
+     "new build",
+     "mortgage"
+    ],
+    "general": false
+   },
+   "Mortgage arrears and repossession": {
+    "keywords": [
+     "mortgage interest"
+    ],
+    "general": false
+   },
+   "Home grants and energy upgrades": {
+    "keywords": [
+     "vacant property refurbishment",
+     "housing aid for older people",
+     "housing adaptation grant",
+     "vacant property grant",
+     "mobility aids grant",
+     "adaptation grant",
+     "home improvement",
+     "energy upgrades",
+     "vacant property",
+     "energy upgrade",
+     "better energy",
+     "solar panels",
+     "warmer homes",
+     "solar panel",
+     "insulation",
+     "heat pump",
+     "derelict",
+     "seai"
+    ],
+    "general": false
+   },
+   "Planning permission and building": {
+    "keywords": [
+     "planning permission",
+     "modular home",
+     "mobile home",
+     "septic tank",
+     "ber rating",
+     "extension"
+    ],
+    "general": false
+   },
+   "Property taxes": {
+    "keywords": [
+     "local property tax",
+     "property tax",
+     "stamp duty",
+     "lpt"
+    ],
+    "general": false
+   },
+   "Rent-a-room and lodgers": {
+    "keywords": [
+     "rent a room scheme",
+     "rent out a room",
+     "renting a room",
+     "rent a room",
+     "licensee"
+    ],
+    "general": false
+   },
+   "Accommodation for refugees and protection applicants": {
+    "keywords": [
+     "ipas",
+     "arp"
+    ],
+    "general": false
+   },
+   "Inheriting, selling or transferring a home": {
+    "keywords": [
+     "sell the house"
+    ],
+    "general": false
+   },
+   "Separation and the family home": {
+    "keywords": [
+     "family home"
+    ],
+    "general": false
+   },
+   "Neighbours, boundaries and nuisance": {
+    "keywords": [
+     "right of way",
+     "neighbours",
+     "neighbour",
+     "boundary",
+     "hedge"
+    ],
+    "general": false
+   },
+   "Renting: repairs, standards and overcrowding": {
+    "keywords": [
+     "repairs",
+     "repair"
+    ],
+    "general": false
+   },
+   "Student and short-term accommodation": {
+    "keywords": [
+     "student accommodation",
+     "holiday home",
+     "airbnb"
+    ],
+    "general": false
+   },
+   "Apartment management companies": {
+    "keywords": [
+     "management company"
+    ],
+    "general": false
+   },
+   "Housing, general": {
+    "keywords": [
+     "accommodation",
+     "apartments",
+     "home owner",
+     "properties",
+     "apartment",
+     "new house",
+     "our house",
+     "the house",
+     "house we",
+     "my house",
+     "new home",
+     "our home",
+     "property",
+     "a house",
+     "house i",
+     "housing",
+     "my home",
+     "renting",
+     "rented",
+     "rents",
+     "rent"
+    ],
+    "general": true
+   }
+  }
  },
  "phrases": {
   "how to make an observation on a strategic infrastructure development with an bord plean la": {

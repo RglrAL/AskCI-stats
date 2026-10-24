@@ -18,7 +18,7 @@ from datetime import datetime
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 REPO = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-LEXICON_VERSION = "2026.10.24-3"
+LEXICON_VERSION = "2026.10.24-4"
 MIN_CHARS = 6            # a phrase shorter than this never matches on its own ("tax" would match everything)
 CI = "https://www.citizensinformation.ie/en/"
 # What people call things → the page slug (or full path) it means. Checked against the unmatched report.
@@ -118,8 +118,85 @@ def build():
                        "generic slugs and ordinary-phrase titles. redact_feed.py tags each question with the longest phrase it contains, as the page address and category. "
                        "hub = other pages sit beneath it, so a citation of any of them counts as a hit (brief §71). Public data: the site's own addresses. INTENTS carries the outcome the design expects per intent.",
            "version": LEXICON_VERSION, "min_chars": MIN_CHARS, "intents": INTENTS,
+           "derivation_version": DERIVATION_VERSION, "topics": topics_out(),
            "phrases": {p: e for p, e in sorted(entries.items(), key=lambda kv: (-len(kv[0]), kv[0]))}}
     return out
+
+
+# Topic layer (brief §75): generic keyword buckets per category. A topic's keywords are ordinary words and short phrases,
+# never a phrase lifted from a distinctive question; `--topic-counts FEEDS` prints how many questions each keyword
+# matches (counts only) and the build refuses a keyword under TOPIC_MIN_MATCHES, so nothing rare and identifying can
+# enter this public file. A question's topic is the matching keyword that is longest; a topic marked general applies
+# only when no other does. DERIVATION_VERSION bundles this key with redact_feed.py's response rules and template list.
+DERIVATION_VERSION = "2026.10.24-1"
+TOPIC_MIN_MATCHES = 20
+TOPICS = {
+    "housing": {
+        "Renting: landlord and tenant": ["landlord", "landlords", "tenant", "tenants", "tenancy", "evict", "evicted", "eviction", "notice of termination", "rtb", "residential tenancies", "lease", "my deposit", "deposit back"],
+        "Rent increases and rent pressure zones": ["rent increase"],
+        "HAP, Rent Supplement and RAS": ["hap", "housing assistance payment", "rent supplement"],
+        "Rent tax credit": ["rent tax credit"],
+        "Social and council housing": ["social housing", "council house", "council housing", "housing list", "housing waiting list", "local authority housing", "housing application", "cost rental", "affordable housing", "differential rent", "approved housing body", "housing body"],
+        "Homelessness and emergency accommodation": ["homeless", "homelessness", "emergency accommodation", "hostel"],
+        "Buying a home": ["help to buy", "first home scheme", "first time buyer", "first time buyers", "mortgage", "local authority home loan", "buying a house", "buy a house", "new build"],
+        "Mortgage arrears and repossession": ["mortgage interest"],
+        "Home grants and energy upgrades": ["housing adaptation grant", "adaptation grant", "mobility aids grant", "housing aid for older people", "vacant property grant", "vacant property refurbishment", "vacant property", "derelict", "seai", "insulation", "solar panels", "solar panel", "warmer homes", "heat pump", "better energy", "energy upgrade", "energy upgrades", "home improvement"],
+        "Planning permission and building": ["planning permission", "extension", "modular home", "septic tank", "ber rating", "mobile home"],
+        "Property taxes": ["local property tax", "lpt", "property tax", "stamp duty"],
+        "Rent-a-room and lodgers": ["rent a room", "rent a room scheme", "licensee", "renting a room", "rent out a room"],
+        "Accommodation for refugees and protection applicants": ["arp", "ipas"],
+        "Inheriting, selling or transferring a home": ["sell the house"],
+        "Separation and the family home": ["family home"],
+        "Neighbours, boundaries and nuisance": ["neighbour", "neighbours", "boundary", "hedge", "right of way"],
+        "Renting: repairs, standards and overcrowding": ["repairs", "repair"],
+        "Student and short-term accommodation": ["student accommodation", "airbnb", "holiday home"],
+        "Apartment management companies": ["management company"],
+        "Housing, general": {"general": True, "keywords": ["housing", "accommodation", "apartment", "apartments", "renting", "rented", "rent", "rents", "property", "properties", "home owner", "my house", "our house", "a house", "the house", "my home", "our home", "new home", "new house", "house i", "house we"]},
+    },
+}
+
+
+def topics_out():
+    """TOPICS as written to the lexicon: {category: {topic: {"keywords": [...], "general": bool}}}, keywords normalised."""
+    out = {}
+    for cat, tops in TOPICS.items():
+        out[cat] = {}
+        for name, spec in tops.items():
+            kws = spec["keywords"] if isinstance(spec, dict) else spec
+            out[cat][name] = {"keywords": sorted({norm(k) for k in kws}, key=lambda k: (-len(k), k)), "general": bool(isinstance(spec, dict) and spec.get("general"))}
+    return out
+
+
+def topic_counts(feeds, since, fail_under):
+    """local: how many questions each topic keyword matches (counts only; no text is printed). Returns the keywords
+    under fail_under, which is the check the build runs before the lexicon is written."""
+    kws = {(c, t, k) for c, tops in topics_out().items() for t, spec in tops.items() for k in spec["keywords"]}
+    rx = {key: re.compile(r"\b" + re.escape(key[2]) + r"\b") for key in kws}
+    seen = set(); n = 0; counts = C.Counter(); topic_q = C.Counter()
+    for f in feeds:
+        with open(f, encoding="utf-8-sig", newline="") as fh:
+            for row in csv.DictReader(fh):
+                k = (row.get("Conversation ID"), row.get("Turn #"))
+                if k in seen: continue
+                seen.add(k)
+                if since:
+                    try: d = datetime.strptime((row.get("Timestamp") or "").strip(), TS).date().isoformat()
+                    except ValueError: continue
+                    if d < since: continue
+                q = norm(row.get("User Query") or "")
+                if len(q) < 4: continue
+                n += 1; hit = set()
+                for key, r in rx.items():
+                    if r.search(q): counts[key] += 1; hit.add(key[:2])
+                for t in hit: topic_q[t] += 1
+    for (c, t), tq in sorted(topic_q.items()): print(f"{c} / {t}: {tq:,} questions")
+    print(f"\nkeywords by matches ({n:,} questions read):")
+    low = []
+    for key in sorted(kws, key=lambda k: (counts[k], k)):
+        v = counts[key]; flag = "  LOW" if v < fail_under else ""
+        print(f"   {v:6}  {key[0]} / {key[1]} / {key[2]}{flag}")
+        if v < fail_under: low.append(key)
+    return low
 
 
 def unmatched(feeds, lex, since, top):
@@ -150,11 +227,17 @@ def unmatched(feeds, lex, since, top):
 def main():
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("--unmatched", nargs="*", metavar="FEED"); ap.add_argument("--since"); ap.add_argument("--top", type=int, default=40)
+    ap.add_argument("--topic-counts", nargs="*", metavar="FEED", help="local: questions matched per topic keyword (counts only); the build refuses keywords under TOPIC_MIN_MATCHES")
     a = ap.parse_args()
+    if a.topic_counts:
+        low = topic_counts(a.topic_counts, a.since, TOPIC_MIN_MATCHES)
+        if low: sys.exit(f"{len(low)} topic keyword(s) match fewer than {TOPIC_MIN_MATCHES} questions; remove them before writing the lexicon")
+        print(f"every topic keyword matches {TOPIC_MIN_MATCHES}+ questions")
     lex = build()
     p = os.path.join(REPO, "question-lexicon.json")
     json.dump(lex, open(p, "w", encoding="utf-8"), indent=1, ensure_ascii=False); open(p, "a").write("\n")
-    print(f"wrote question-lexicon.json: {len(lex['phrases'])} phrases ({sum(1 for e in lex['phrases'].values() if e['source'] == 'alias')} aliases), version {LEXICON_VERSION}")
+    print(f"wrote question-lexicon.json: {len(lex['phrases'])} phrases ({sum(1 for e in lex['phrases'].values() if e['source'] == 'alias')} aliases), version {LEXICON_VERSION}; "
+          f"{sum(len(t) for t in lex['topics'].values())} topics in {len(lex['topics'])} categories, derivation {DERIVATION_VERSION}")
     if a.unmatched: unmatched(a.unmatched, lex, a.since, a.top)
 
 

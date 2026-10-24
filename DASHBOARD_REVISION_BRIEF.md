@@ -1452,3 +1452,124 @@ Agreed after one round. Three of the signals already exist on the dashboard; wha
 - **For the analyst (unknown), 7 rows.** 838 typed not-found answers in the two months named no scheme the lexicon knows, 49% of all typed not-found; and 444 named a social-welfare scheme but the answer cited no page, 102 moving-country, 75 employment, 60 housing. The subjects need the themes step: a local read, names and counts published.
 
 **What the register changes.** The signals existed on three tabs; now each gap has a kind, an owner and a number, and the two owners see separate lists. Every row is "raised, no owner" today, which is the state the status file exists to change: the first monthly review is where a content-side name goes on it. The October rows, with the Budget pages, arrive when October closes.
+
+## 75. Plan of record: derivation from question and answer text, the topic layer, and a logged exception (24 Oct 2026)
+
+**Exception, logged.** On 24 October the housing pass below was produced by the analyst's Claude Code session reading
+citizens' question text: about 900 question lines from the raw feeds (a not-found residue of 273 and six theme samples)
+were printed into tool output and so read by a cloud model, to name the themes. §73 said the themes step needed
+governance sign-off before it ran; it ran without it. Nothing a citizen wrote entered a tracked file, the brief, the
+dashboard or any message to the user; what was published is theme names and counts. Decision: the design stays "the
+analyst and the analyst's tools on this machine"; a model session is not the machine. This run is the one exception.
+From here the rule is mechanical: **`tools/hooks/guard_feed_text.py`**, installed by `.claude/settings.json` as a
+PreToolUse hook, denies any Read, Grep or Bash call in a session that would print feed text (anything under `exports/`,
+the backend logs, any feed or redacted feed, any labelling sheet), and allows only the pipeline tools in `tools/` to
+open those files, since they print counts. `tools/hooks/test_guard.py` holds its 20 cases. Topic buckets are built from
+generic keywords the analyst chooses, with tooling that shows match counts per keyword and never the matching text. The
+labelling sheet stays the analyst's to fill; the session scores it and never reads it. If the AskCI side later treats
+the model provider as a processor under agreement, that is a governance ask recorded here; until it is answered the
+exception route is the design.
+
+**Why the plan exists.** The housing pass (first evidence, below) showed that a third of housing questions name no page
+the lexicon knows, so they have no category and nothing says what they are about; and that the answer text, which the
+redaction reduces to style counts, carries figures, scheme names, clarification asks and fixed wording that are all
+safe as counts and all unused. The response text is less sensitive than the question but not clean: a good answer
+restates the person's situation, a clarification repeats the question, and the model echoes what was typed. It stays
+under the same rule: text read on this machine by tools, counts out.
+
+**Question derivation, four layers**
+1. **Topic layer in the lexicon.** Keyword buckets per category under a `topics` key, each a generic label and a list
+   of generic words (rent, eviction, deposit), never a phrase lifted from a distinctive question. A check before commit
+   (in `make_lexicon.py`) requires every keyword to match at least 20 questions in the local feeds, so nothing rare
+   and identifying can enter a public file. `redact_feed.py` adds **Query Topic**; a question that names no page but
+   matches a topic takes its category from the topic, and **Category Source** records page / topic / none. The "none"
+   count is the published residue. This is the themes step of §73 by a safer route: generic labels, counts out.
+2. **Situation entities.** What a clarification asks for: county or local authority, age band, household (children,
+   partner, alone), work status, payment already on. Published as presence flags plus the county name, nothing finer.
+   Allowed crossings, fixed now: county × category × month; each other flag × category × month; never flag × flag,
+   never flag × county. Clarification-asked-for × situation-given is allowed because both sides are classes.
+3. **Year asked about.** The year flag becomes the year value, so "asking about a past year" is countable per page.
+4. **Shape.** Length band; more than one question in a turn; a pasted letter or URL. Pasted letters are the highest-PII
+   turns in the feed and the generator may echo them: counted, fed to the safety row, and excluded from every phrase
+   extraction on the response side.
+
+**Response derivation, four layers, templates first**
+1. **Fixed wording.** The bot's own formulas for not found, greeting, out of scope and safety: configuration, like the
+   chips, so the phrase set is publishable and a change in it is the prompt-change signal the 14 September reading is
+   waiting on. An afternoon; built first.
+2. **Figures quoted.** Euro amounts, percentages, years, checked against every cited page's current text (public, fetched
+   locally), forms normalised (€232 / 232, weekly / annual). Three results, matched / unmatched / unverifiable (the
+   page's LastMod is after the answer date), by page and month. Dated local snapshots of page text at each LastMod
+   start now, so later checks are against the page as it was. The word "accuracy" appears nowhere until the labelling
+   sheet's figure-match column has calibrated it.
+3. **Schemes and organisations in the answer.** The lexicon runs on the answer; "named but not cited" is where uncited
+   claims show. A small organisations list (Intreo, RTB, Threshold, MABS, Revenue, HSE, a Citizens Information centre,
+   a phone line) gives signposting by body.
+4. **What the clarification asked for.** The same classes as question layer 2, so "asked for something already given"
+   is one line. Later, with no new data: personalisation markers in answers ("in your case") against the situation
+   entities in the question, the mirror measure.
+
+**One version.** A single `derivation_version` bundles the lexicon's topics key, the response rules and the template
+list, with a changelog line per bump, as the outcome rules work. The existing rules, style, safety and intent versions
+stay as they are; the new work does not add four more.
+
+**Published files, all counts.** Topics by month and category with outcomes and partials; situation flags under the
+crossings above; figures by page and month in three columns; signposts by organisation; clarification asks by class;
+template counts by day. Rows naming a county or topic need five or more.
+
+**Where it lands.** A category picker on What people ask: volume and share, intent mix, pages named, topics with their
+not-found and partial rates, the residue, and that category's register rows; the same view for every category. Ask bar
+entities for topics and for "what can't be answered in <category>". The register gains the kinds this pass needed:
+**missing-page** (no page exists for the subject), **signpost** (the site will never carry it; the right answer is an
+organisation), and later **figure** (a page whose answers quote figures it does not carry); rows of the first two carry
+no URL, the topic name and its count as evidence. Two housing cuts exist today (the published category files use the
+page cited or named; the pass below adds vocabulary) and two numbers for one thing is not acceptable: the category
+view and the register use the broad cut, the definition states its three tests, and once Category Source exists the
+published category files and the Ask bar carry the same cut.
+
+**Signposting as a prompt recommendation.** For a third of the housing not-found questions the right answer is
+Threshold, the RTB, MABS or a centre, not a page. A theme-aware signpost in the no-results path is a small prompt
+change, and the organisations list measures whether it happened; for those topics the expected outcome moves from
+"cited" to "signposted", which stops them inflating the unexpected-outcome tile. Added to §72.
+
+**Order.** Housing topic layer first, end to end, so the chain is visible: lexicon → redaction → aggregate → audit →
+tests → category view. Then templates, then the organisations list, then figures with snapshots. Then social welfare,
+employment, money and tax, moving country and health, which with housing cover most questions. Register kinds and the
+housing rows go in now, flagged not reader-checked; the buckets and clusters go on the labelling sheet before they are
+named on a tab.
+
+**First evidence: housing, January–22 October 2026** (typed questions; chips and suggested follow-ups excluded; a
+question is housing if the answer cited a housing page, or the question named one, or housing vocabulary matched).
+- 13,319 questions, 12.9% of all typed, steady at 12–14% every month. Cited 88.3% (partial 16.4%), not found 7.3%,
+  clarification 3.2%. The not-found rate tracks the all-questions rate month by month (13.0% vs 9.2% in May and
+  13.2% vs 9.8% in June are the only months it runs clearly higher); partials run above the all-questions rate and the
+  gap widened from July (19.7% vs 15.4%), before the September model change, which points at an answer-format or
+  content cause rather than the generator: a line for the 14 September reading.
+- Intent: eligibility 26.7%, other 24.3%, statement 15.1%, definition 12.5%, apply 12.2%, rate 5.9%. The most-named page
+  is applying for local authority housing (675), then HAP (505), planning permission (157), rent supplement (156),
+  home renovation grants (151).
+- Themes (keyword buckets, not reader-checked), asked / not found: landlord and tenant rights 1,572 / 8.5%; grants
+  1,435 / 4.9%; social and council housing 1,018 / 12.7%; HAP, rent supplement, RAS 939 / 6.5%; buying a home 707 /
+  6.5%; inheriting, selling or transferring a home 605 / 9.8%; planning 415 / 9.9%; neighbours and boundaries 386 /
+  18.9%; rent-a-room 377 / 7.4%; homelessness 369 / 4.1%; separation and the family home 235 / 10.6%; mould, repairs and
+  standards in rented homes 82 / 28.0%.
+- Not found: 978. A third named a page the site has (applying for local authority housing 92 of 675, 13.6%; HAP 38 of
+  505; the social housing hub 16 of 87, 18.4%; tenants' rights 8 of 43). Two thirds named nothing the lexicon knows.
+  Eight clusters, by register kind: **missing page**: local authority tenancy life (differential rent, adding a
+  household member, succession, buying the house, transfers, what the means test counts, refusing an offer, repairs,
+  under-occupancy); approved housing bodies and cost rental; apartment living (owners' management companies, fees,
+  levies, block repairs); neighbour disputes as a housing-side subject. **Missing detail**: grants for specific works
+  (wet rooms, roofs, flooring, furnishing, over the income limit); private tenancy edge cases (rent-a-room increases,
+  a lease that has ended, inspections and cameras, belongings left behind, agent fees, evicting a family member).
+  **Signpost**: market facts the site will never carry (average rents and prices, BER costs, management-fee norms);
+  co-ownership and partners' rights, which is legal advice. **Noise**, about 270: household benefits misread as
+  housing, workplace property, belongings, prompt-injection attempts.
+
+**Built the same day (first leg: housing, end to end).**
+- **Guard.** `tools/hooks/guard_feed_text.py` + `.claude/settings.json` (PreToolUse on Bash, Read, Grep, Glob); `tools/hooks/test_guard.py`, 28 cases. The pipeline tools stay runnable; everything that would print feed text is refused. `tools/collect_aggregates.py DIR` copies a review folder's aggregate CSVs into the repo root without touching a feed.
+- **Topic layer.** `make_lexicon.py` carries `TOPICS` (housing, 22 topics as written), `TOPIC_MIN_MATCHES = 20` and `--topic-counts FEEDS`, which prints matches per keyword and refuses to write the lexicon while any keyword is under 20. The first run removed 205 of the keywords written from the housing pass and two whole topics (older people and the family home; building defects); three topics are left thin (inheriting or transferring a home 5 questions, mortgage arrears 7, apartment management companies 7). That is the rule working as intended: a specific phrase is also an identifying one, and what the layer loses in specificity it keeps in safety. 20 topics, lexicon 2026.10.24-4, `derivation_version` 2026.10.24-1 in the lexicon and in `redact_feed.py` (checked equal at run time). New redacted columns: Derivation Version, Query Topic, Category Source (page / topic / blank).
+- **Aggregates** (`make_usage.py`): `question-topics-monthly.csv` (month, category, topic; rows under 5 left out), `question-categories-monthly.csv` (month, category, source: cited / page / topic, plus the `(none)` residue row), `question-intent-category-monthly.csv` (month, category, intent; rows under 5 left out). Every other file identical. Audit: schema and sums for the three, topic ↔ category agreement with the lexicon, the two-per-turn bound, the register's kinds (161 checks with the feed recount, 140 files-only, all pass).
+- **Register.** `register-config.json` gains kinds `missing-page` and `signpost` (and `detail` named explicitly); `register-themes.json` seeds the housing topic rows (4 missing-page, 2 detail, 2 signpost, each flagged not reader-checked) and `make_register.py` copies them in until the topic layer computes them. 26 rows now.
+- **Dashboard.** Usage › What people ask gains "One category, from the question": a category picker; the category's typed questions and share, not-found, partial and clarification; the definition with the three tests and their counts; topics with not-found, partial and clarification rates; the intent mix; the months; and the register rows for that category. Ask bar: "topics in housing", "what can't be answered in housing", "unanswered topics in employment" (entity `topic`, by questions or by not-found answers). A sub-view opens from a link as `#tab=<sub id>` (`#tab=asked`).
+- **Housing on the broad cut, January–22 October:** 10,544 typed questions, 10.0% of 105,110; cited a housing page 2,888, named a housing page 3,561, topic only 4,095. Not found 6.4%, partial 18.4% of cited, clarification 3.1%. Site-wide residue, no page cited, none named, no topic: 13,187 typed questions (12.5%), 3,840 of them not found. Largest topics: housing in general 3,123; landlord and tenant 1,400 (8.1% not found); social and council housing 978 (13.3%); grants and energy upgrades 863 (3.2%); HAP, Rent Supplement and RAS 722; buying a home 606; planning 375 (10.7%); neighbours 307 (17.9%). The broad-cut figure is lower than the pass's 13,319 because the pruned vocabulary is narrower; the pass's number is superseded.
+- **Next legs, in order:** the fixed-wording templates on the response side; the organisations list; figures with page snapshots; then social welfare, employment, money and tax, moving country and health topic tables; the labelling sheet gains topic and figure-match columns.

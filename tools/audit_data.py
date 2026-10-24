@@ -55,6 +55,10 @@ SCHEMA = {
     'intent-journeys-monthly.csv': 'Month From To Turns',
     'citations-intent-monthly.csv': 'Month URL Intent Answers Partial',
     'asked-pages-weekly.csv': 'Week URL Asked CitedIt NotFound Partial',
+    'question-topics-monthly.csv': 'Month Category Topic Turns Cited NotFound Clarification Error OutOfScope Greeting Uncited Partial',
+    'question-categories-monthly.csv': 'Month Category Source Turns Cited NotFound Clarification Error OutOfScope Greeting Uncited Partial',
+    'question-intent-category-monthly.csv': 'Month Category Intent Turns Cited NotFound Clarification Error OutOfScope Greeting Uncited Partial',
+    'content-gaps.csv': 'kind page category intent evidence asks rate priority team period rules_version lexicon_version built',
     'setback-intents-monthly.csv': 'Month Setback Intent Turns Ended SameIntentNext OtherIntentNext',
     'repeat-questions-monthly.csv': 'Month Turns FirstTurns StarterFirstTurns DistinctFirstTurnTexts TextsAskedTwicePlus FirstTurnsOnRepeatedTexts Top10 Top25 Top50 Top100 Top250 SuggestedClicks DistinctSuggestedTexts SuggestedTop25',
     'journeys-monthly.csv': 'From To Conversations',
@@ -422,6 +426,38 @@ check('asked pages weekly: CitedIt + NotFound <= Asked and Partial <= Asked - No
 awm = C.Counter(); apm = C.Counter()
 for r in AW: awm[(r['Week'][:7], r['URL'])] += I(r['Asked'])
 check('asked pages weekly: a page in the weekly file was named 30+ times in some month', all(any(I(x['Asked']) >= 30 for x in AP if x['URL'] == u) for u in {r['URL'] for r in AW}))
+# the topic layer (brief §75): three monthly files from the broad category cut, and the register's topic rows
+OUT7 = ('Cited', 'NotFound', 'Clarification', 'Error', 'OutOfScope', 'Greeting', 'Uncited')
+QTM = rd('question-topics-monthly.csv'); QCM = rd('question-categories-monthly.csv'); QIC = rd('question-intent-category-monthly.csv')
+LEXT = {}
+try:
+    import json as _j
+    _lx = _j.load(open(f'{REPO}/question-lexicon.json', encoding='utf-8')); LEXT = {t: c for c, tops in (_lx.get('topics') or {}).items() for t in tops}
+    check('lexicon: derivation_version present and every topic has 1+ keywords of 3+ characters', bool(_lx.get('derivation_version'))
+          and all(spec.get('keywords') and all(len(k) >= 3 for k in spec['keywords']) for tops in (_lx.get('topics') or {}).values() for spec in tops.values()))
+except (OSError, ValueError): check('lexicon: readable', False)
+for name, F, extra in (('question topics monthly', QTM, lambda r: r['Topic'] in LEXT and LEXT[r['Topic']] == r['Category'] and I(r['Turns']) >= 5),
+                       ('question categories monthly', QCM, lambda r: r['Source'] in ('cited', 'page', 'topic', 'none') and (r['Source'] == 'none') == (r['Category'] == '(none)')),
+                       ('question intent by category', QIC, lambda r: I(r['Turns']) >= 5)):
+    check(f'{name}: outcomes sum to Turns, Partial <= Cited, and the row rule holds', all(sum(I(r[k]) for k in OUT7) == I(r['Turns']) and I(r['Partial']) <= I(r['Cited']) and extra(r) for r in F),
+          str([(r['Month'], r.get('Category'), r.get('Topic') or r.get('Source') or r.get('Intent')) for r in F if not (sum(I(r[k]) for k in OUT7) == I(r['Turns']) and I(r['Partial']) <= I(r['Cited']) and extra(r))][:3]))
+if QCM:
+    qcm = C.Counter(); qim = C.Counter()
+    for r in QCM: qcm[r['Month']] += I(r['Turns'])
+    for r in QI:
+        if r['Chip'] == '0': qim[r['Date'][:7]] += I(r['Turns'])
+    # a turn is in one category per source but may be in two categories (the answer's and the question's), so the
+    # bound is two typed turns per typed turn; the residue plus the cited-only rows cannot exceed the typed turns
+    check('question categories monthly: per month, turns <= 2 x typed turns, and none + cited rows <= typed turns', all(qcm[m] <= 2 * qim[m] for m in qcm)
+          and all(sum(I(r['Turns']) for r in QCM if r['Month'] == m and r['Source'] in ('none', 'cited')) <= qim[m] for m in qcm), str([(m, qcm[m], qim[m]) for m in qcm if qcm[m] > 2 * qim[m]][:3]))
+    check('question topics monthly: a topic\'s turns in a month <= the topic-or-page turns of its category that month',
+          all(I(r['Turns']) <= sum(I(x['Turns']) for x in QCM if x['Month'] == r['Month'] and x['Category'] == r['Category']) for r in QTM))
+GAPSF = rd('content-gaps.csv')
+try: _rc = _j.load(open(f'{REPO}/register-config.json', encoding='utf-8')); _kinds = set(_rc.get('teams', {}))
+except (OSError, ValueError): _kinds = set()
+check('content gaps: every kind has a team in register-config.json; missing-page and signpost rows carry a topic (not a URL), a category and asks > 0',
+      all(r['kind'] in _kinds for r in GAPSF) and all(r['page'] and not r['page'].startswith('http') and r['category'] and I(r['asks']) > 0 for r in GAPSF if r['kind'] in ('missing-page', 'signpost')),
+      str([(r['kind'], r['page'][:40]) for r in GAPSF if r['kind'] not in _kinds][:3]))
 IJ = rd('intent-journeys-monthly.csv'); SBI = rd('setback-intents-monthly.csv')
 ends = C.Counter(r['Month'] for r in IJ for _ in range(I(r['Turns'])) if r['To'] == 'END'); cvm = C.Counter()
 for d, r in CV.items(): cvm[d[:7]] += I(r['Mature'])

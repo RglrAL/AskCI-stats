@@ -1,0 +1,18 @@
+{
+  "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "Bash|Read|Grep|Glob",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python3 \"$CLAUDE_PROJECT_DIR/tools/hooks/guard_feed_text.py\"",
+            "timeout": 10,
+            "onFailure": "block",
+            "statusMessage": "feed-text guard"
+          }
+        ]
+      }
+    ]
+  }
+}

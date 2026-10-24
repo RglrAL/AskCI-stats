@@ -87,6 +87,14 @@ def main():
     for r in QT: byc[r["Category"]] += I(r["NotFound"])
     for c, n in byc.most_common(6):
         rows.append({"kind": "unknown", "page": "", "category": c, "intent": "", "evidence": f"{n} not-found answers whose question named a {c} scheme but whose answer cited no page", "asks": n, "rate": 1.0, "priority": n, "team": cfg["teams"]["unknown"]})
+    # topic rows (brief §75): subjects with no page behind them, seeded from register-themes.json until the topic layer
+    # computes them; kinds missing-page and signpost carry no URL, the topic name sits in the page column
+    try: themes = json.load(open(os.path.join(REPO, "register-themes.json"), encoding="utf-8")).get("rows", [])
+    except (OSError, ValueError): themes = []
+    for t in themes:
+        rows.append({"kind": t["kind"], "page": t["topic"], "category": t.get("category", ""), "intent": "",
+                     "evidence": t["evidence"] + ("" if t.get("reader_checked") else "; themes not yet reader-checked") + f" [{t.get('period', '')}]",
+                     "asks": I(t.get("asks")), "rate": 1.0, "priority": I(t.get("asks")), "team": cfg["teams"].get(t["kind"], cfg["teams"].get("content", ""))})
     rows.sort(key=lambda r: (-r["priority"], r["kind"]))
     cols = ["kind", "page", "category", "intent", "evidence", "asks", "rate", "priority", "team", "period", "rules_version", "lexicon_version", "built"]
     with open(os.path.join(REPO, "content-gaps.csv"), "w", newline="", encoding="utf-8") as fh:

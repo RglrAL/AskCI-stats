@@ -60,6 +60,13 @@ Outputs (all daily counts; nothing per-turn and no text crosses into the dashboa
   asked-pages-monthly.csv   Month, URL, Category, Asked, CitedSame, CitedSameCategory, CitedOther, NotFound, Clarification,
                             Other, CitedUnderHub, Hub: the page a typed question named and what the answer did; pages
                             asked under 5 times a month left out (brief §66, §71)
+  question-topics-monthly.csv      Month, Category, Topic, Turns, outcomes, Partial: the lexicon's topic layer on typed
+                                   questions; rows under 5 turns left out (brief §75)
+  question-categories-monthly.csv  Month, Category, Source, Turns, outcomes, Partial: typed questions by category and by
+                                   how the turn entered it (cited / page / topic; "(none)" / none is the residue); the sum
+                                   over sources is the broad cut (brief §75)
+  question-intent-category-monthly.csv  Month, Category, Intent, Turns, outcomes, Partial: typed questions, broad cut;
+                                   rows under 5 turns left out (brief §75)
   question-topics-daily.csv Date, Category, Turns, outcomes, Partial: the category the question named, for turns whose
                             answer carried no topic (brief §66)
   citations-intent-monthly.csv Month, URL, Intent, Answers, Partial: the question's intent per cited page, typed questions
@@ -120,9 +127,11 @@ from datetime import datetime, date, timedelta
 REPO = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 try:   # hub pages from the lexicon (brief §71): a citation of a page beneath a named hub counts as a hit
     import json as _json
-    HUBS = {e["path"] for e in _json.load(open(os.path.join(REPO, "question-lexicon.json"), encoding="utf-8"))["phrases"].values() if e.get("hub") and e.get("url")}
+    _lex = _json.load(open(os.path.join(REPO, "question-lexicon.json"), encoding="utf-8"))
+    HUBS = {e["path"] for e in _lex["phrases"].values() if e.get("hub") and e.get("url")}
+    TOPIC_CAT = {t: c for c, tops in (_lex.get("topics") or {}).items() for t in tops}   # topic -> its category (brief §75)
 except (OSError, ValueError, KeyError):
-    HUBS = set()
+    HUBS = set(); TOPIC_CAT = {}
 
 TS_FORMAT = "%b %d, %Y %H:%M"   # e.g. "Jun 06, 2026 19:50"
 MONTHS = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"]
@@ -202,6 +211,9 @@ def aggregate(files, skip_days=frozenset()):
     qtopic = defaultdict(lambda: defaultdict(int))   # (date, question category) -> turns whose answer carried no topic (brief §66)
     cint = defaultdict(lambda: defaultdict(int))     # (month, cited page, question intent) -> answers, partial (brief §73)
     askw = defaultdict(lambda: defaultdict(int))     # (week, page named by a typed question) -> asked, cited it, not found, partial (brief §73)
+    qtop = defaultdict(lambda: defaultdict(int))     # (month, category, topic) -> typed turns, outcomes, partial (brief §75)
+    qcat = defaultdict(lambda: defaultdict(int))     # (month, category, source) -> typed turns, outcomes, partial: the broad cut (brief §75)
+    qic = defaultdict(lambda: defaultdict(int))      # (month, category, intent) -> typed turns, outcomes, partial (brief §75)
     seen = set(); dupes = 0   # exports taken on different days overlap on their boundary day
     for f in files:
         with open(f, encoding="utf-8-sig", newline="") as fh:
@@ -365,13 +377,30 @@ def aggregate(files, skip_days=frozenset()):
                         if o_rec == "Not found": e5["s:notfound"] += 1
                         if (row.get("Partial") or "").strip().lower() == "yes": e5["s:partial"] += 1
                     qp = (row.get("Query Page") or "").strip(); qc = (row.get("Query Category") or "").strip()
-                    if qc:
+                    src = (row.get("Category Source") or "").strip()
+                    named = qc and src != "topic"   # "named a scheme" keeps its meaning: a page or section the lexicon knows, not a topic (brief §75)
+                    if named:
                         e5["WithTopic"] += 1
                         if o_rec == "Cited answer": e5["n:cited"] += 1
                         if o_rec == "Not found": e5["n:notfound"] += 1
                         if o_rec == "Clarification": e5["n:clarification"] += 1
-                    if qc:
-                        pass
+                    if chip == 0:   # the broad category cut and the topic layer (brief §75): typed questions only
+                        mo = d.strftime("%Y-%m"); qt = (row.get("Query Topic") or "").strip()
+                        # a turn is in a category when the answer cited it (source cited), the question named a page in it
+                        # (page) or the question's topic gives it (topic); the question side names the source when both agree
+                        cats7 = {}
+                        if own: cats7[own] = "cited"
+                        if qc: cats7[qc] = src or "page"
+                        if not cats7: cats7["(none)"] = "none"   # the residue: no page cited, none named, no topic
+                        for c7, s7 in cats7.items():
+                            for e7 in (qcat[(mo, c7, s7)], qic[(mo, c7, qi)]):
+                                e7["Turns"] += 1
+                                if o_rec: e7["o:" + o_rec] += 1
+                                if is_partial: e7["o:partial"] += 1
+                        if qt:
+                            e9 = qtop[(mo, TOPIC_CAT.get(qt, qc), qt)]; e9["Turns"] += 1
+                            if o_rec: e9["o:" + o_rec] += 1
+                            if is_partial: e9["o:partial"] += 1
                     if chip == 0 and o_rec == "Cited answer":   # the question's intent per cited page (brief §73): which kind of question the page's partials come from
                         for nu in nus:
                             x7 = cint[(d.strftime("%Y-%m"), nu, qi)]; x7["answers"] += 1
@@ -393,7 +422,7 @@ def aggregate(files, skip_days=frozenset()):
                         elif o_rec == "Not found": a5["NotFound"] += 1
                         elif o_rec == "Clarification": a5["Clarification"] += 1
                         else: a5["Other"] += 1
-                    if qc and not own:   # the answer carried no topic; the question did
+                    if named and not own:   # the answer carried no topic; the question named a scheme
                         e6 = qtopic[(d, qc)]; e6["Turns"] += 1
                         if o_rec: e6["o:" + o_rec] += 1
                         if (row.get("Partial") or "").strip().lower() == "yes": e6["o:partial"] += 1
@@ -426,7 +455,7 @@ def aggregate(files, skip_days=frozenset()):
                         cat_dropped += sum(1 for x in slugs if x is None)
                         toks = [x for x in slugs if x]
                     for s in set(toks): cats[d][s] += 1
-    return D, sess, lat, hours, hour_sess, cats, bad, has_voice, dupes, cat_dropped, has_outcome, rules, has_starter, has_script, recs, (cites_m, cites_x, pages), latb, rulesd, (style, safety, intent, asked, qtopic, cint, askw)
+    return D, sess, lat, hours, hour_sess, cats, bad, has_voice, dupes, cat_dropped, has_outcome, rules, has_starter, has_script, recs, (cites_m, cites_x, pages), latb, rulesd, (style, safety, intent, asked, qtopic, cint, askw, qtop, qcat, qic)
 
 
 STYLE_COLS = ["Lines", "Hedges", "Apologies", "Signposts", "Questions", "Links", "Openers", "Invitations", "Absolutes", "Emphasis", "Nested", "External", "Freshness", "Signoff"]
@@ -474,6 +503,30 @@ def cint_rows(cint, min_answers=5):
     the page and how many also said something was missing. Rows under min_answers left out (brief §73)."""
     cols = ["Month", "URL", "Intent", "Answers", "Partial"]
     return cols, [[m, u, i, e["answers"], e["partial"]] for (m, u, i), e in sorted(cint.items()) if e["answers"] >= min_answers]
+
+
+def _monthly_rows(coll, key_names, min_turns):
+    cols = ["Month"] + key_names + ["Turns"] + OUT7 + ["Partial"]
+    return cols, [[m, *ks, e["Turns"]] + [e[k] for k in OUT7_SRC] + [e["o:partial"]] for (m, *ks), e in sorted(coll.items()) if e["Turns"] >= min_turns]
+
+
+def qtop_rows(qtop, min_turns=5):
+    """question-topics-monthly.csv: per month, category and topic from the lexicon's topic layer (typed questions):
+    turns, outcomes, partial. Rows under min_turns left out (brief §75)."""
+    return _monthly_rows(qtop, ["Category", "Topic"], min_turns)
+
+
+def qcat_rows(qcat):
+    """question-categories-monthly.csv: per month and category, by how the turn entered the category (Source: cited =
+    the answer cited a page in it; page = the question named a page in it; topic = the question's topic gives it), typed
+    questions: turns, outcomes, partial. The sum over sources is the broad cut the category view uses (brief §75)."""
+    return _monthly_rows(qcat, ["Category", "Source"], 1)
+
+
+def qic_rows(qic, min_turns=5):
+    """question-intent-category-monthly.csv: per month, category (broad cut) and intent, typed questions: turns, outcomes,
+    partial. Rows under min_turns left out (brief §75)."""
+    return _monthly_rows(qic, ["Category", "Intent"], min_turns)
 
 
 def askw_rows(askw, asked, min_month=30):
@@ -858,7 +911,7 @@ def main():
     # An export taken on day X contains only part of day X; skip those rows unless asked to keep them.
     export_days = {datetime.strptime(m.group(1), "%Y%m%d").date() for m in (re.search(r"(\d{8})_\d{6}", os.path.basename(f)) for f in a.files) if m}
     skip = frozenset() if (a.keep_partial or not export_days) else frozenset({max(export_days)})  # only the newest export's own day is partial
-    D, sess, lat, hours, hour_sess, cats, bad, has_voice, dupes, cat_dropped, has_outcome, rules, has_starter, has_script, recs, (cites_m, cites_x, pages), latb, rulesd, (style, safety, intent, asked, qtopic, cint, askw) = aggregate(a.files, skip)
+    D, sess, lat, hours, hour_sess, cats, bad, has_voice, dupes, cat_dropped, has_outcome, rules, has_starter, has_script, recs, (cites_m, cites_x, pages), latb, rulesd, (style, safety, intent, asked, qtopic, cint, askw, qtop, qcat, qic) = aggregate(a.files, skip)
     rules = ", ".join(sorted(r for r in rules if r))
     if skip and any(True for _ in skip): print(f"note: export day(s) {', '.join(str(x) for x in sorted(skip))} skipped as partial (--keep-partial to keep)")
     cd, co, jm, sp, cstats = conversation_pass(recs)
@@ -901,6 +954,10 @@ def main():
             write(os.path.join(a.out_dir, "question-topics-daily.csv"), *qtopic_rows(qtopic))
             write(os.path.join(a.out_dir, "citations-intent-monthly.csv"), *cint_rows(cint))
             write(os.path.join(a.out_dir, "asked-pages-weekly.csv"), *askw_rows(askw, asked))
+            if qcat:   # the topic layer (brief §75): present once the redaction carries Category Source
+                write(os.path.join(a.out_dir, "question-topics-monthly.csv"), *qtop_rows(qtop))
+                write(os.path.join(a.out_dir, "question-categories-monthly.csv"), *qcat_rows(qcat))
+                write(os.path.join(a.out_dir, "question-intent-category-monthly.csv"), *qic_rows(qic))
             if cstats.get("ij"): write(os.path.join(a.out_dir, "intent-journeys-monthly.csv"), *intent_journey_rows(cstats["ij"]))
             if cstats.get("sb"): write(os.path.join(a.out_dir, "setback-intents-monthly.csv"), *setback_intent_rows(cstats["sb"]))
     elif a.out:

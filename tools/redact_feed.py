@@ -125,6 +125,10 @@ THEMES = [("creative", re.compile(r"\b(?:write|tell|compose|make up|sing)\b.{0,3
 # dropped; what leaves is the class name, the flags, the matched page address and its category. INTENT_VERSION covers
 # the rules below; the lexicon carries its own version.
 INTENT_VERSION = "2026.10.24-2"
+# One derivation version (brief §75) bundles the lexicon's topic layer, the response rules and the template list; it is
+# checked against the lexicon's derivation_version at run time. Changelog, one line per bump:
+#   2026.10.24-1  topic layer (housing, 20 topics), Query Topic and Category Source columns
+DERIVATION_VERSION = "2026.10.24-1"
 INTENT_RULES = [   # in precedence order: the first that matches wins
     ("status", re.compile(r"\b(?:my (?:claim|application|appeal|payment|case|form|request|renewal)\b.{0,40}\b(?:status|approved|decision|delayed|late|not (?:been )?(?:paid|received|processed)|still waiting|how long more|when will (?:i|it))|why (?:haven'?t|hasn'?t|have i not|has my|did my|was my)|(?:where|what) is my (?:payment|money|claim|application)|has my (?:claim|application|payment)|track my|check (?:the )?status|(?:i|we) (?:applied|submitted|sent).{0,30}\b(?:weeks?|months?|days?) ago|my (?:\w+ ){0,2}(?:claim|application|appeal|payment|renewal|form)\b.{0,80}\b(?:ago|still|yet|waiting|heard|no (?:reply|response|update|word)))\b", re.I)),
     ("contact", re.compile(r"\b(?:phone number|contact (?:number|details)|email address|opening hours|open(?:ing)? (?:times?|hours)|where is (?:the|my)? ?(?:nearest|local)|nearest (?:office|centre|center|intreo|cic)|(?:intreo|citizens information) (?:office|centre|center)|how (?:do|can) i (?:contact|reach|ring|call|phone|talk to|speak to)|address (?:of|for) the|who (?:do|can|should) i (?:contact|ring|call|talk to|speak to)|helpline)\b", re.I)),
@@ -155,10 +159,34 @@ def lexicon():
         try:
             j = json.load(open(p, encoding="utf-8"))
             ph = j["phrases"]; keys = sorted(ph, key=lambda k: (-len(k), k))
-            _LEX = {"version": j.get("version", ""), "phrases": ph, "rx": re.compile(r"\b(" + "|".join(re.escape(k) for k in keys) + r")\b")}
+            # topic layer (brief §75): per topic one regex of its generic keywords; the longest matching keyword wins
+            # across topics, and a topic marked general is tried only when no other matched
+            topics = []
+            for cat, tops in (j.get("topics") or {}).items():
+                for name, spec in tops.items():
+                    kws = sorted(spec.get("keywords") or [], key=lambda k: (-len(k), k))
+                    if kws: topics.append((cat, name, bool(spec.get("general")), re.compile(r"\b(" + "|".join(re.escape(k) for k in kws) + r")\b")))
+            _LEX = {"version": j.get("version", ""), "derivation": j.get("derivation_version", ""), "phrases": ph, "topics": topics,
+                    "rx": re.compile(r"\b(" + "|".join(re.escape(k) for k in keys) + r")\b")}
         except (OSError, ValueError, KeyError):
-            _LEX = {"version": "", "phrases": {}, "rx": None}
+            _LEX = {"version": "", "derivation": "", "phrases": {}, "topics": [], "rx": None}
     return _LEX
+
+
+def question_topic(q):
+    """(topic, its category) from the lexicon's topic layer, or ('', ''): the topic whose keyword match is longest;
+    general topics only when no specific one matched."""
+    L = lexicon()
+    if not L["topics"]: return "", ""
+    nq = norm_words(q).replace("'", "")
+    best = None
+    for general in (False, True):
+        for cat, name, g, rx in L["topics"]:
+            if g != general: continue
+            for m in rx.finditer(nq):
+                if best is None or len(m.group(1)) > best[0]: best = (len(m.group(1)), name, cat)
+        if best: return best[1], best[2]
+    return "", ""
 
 
 def norm_words(q):
@@ -278,7 +306,8 @@ def redact(src, dst):
         r = csv.DictReader(fi)
         keep = [c for c in r.fieldnames if c not in DROP] + ["Outcome", "Partial", "Outcome Rules", "Starter Prompt", "Query Script", "Response Words",
                                                           "Outcome Rule", "Style Version"] + list(STYLE) + ["Answer Signoff", "Safety Version"] + list(SAFETY) + ["Query Theme",
-                                                          "Intent Version", "Query Intent", "Query Form", "Query Page", "Query Category", "Query Schemes"]
+                                                          "Intent Version", "Query Intent", "Query Form", "Query Page", "Query Category", "Query Schemes",
+                                                          "Derivation Version", "Query Topic", "Category Source"]
         dropped = [c for c in r.fieldnames if c in DROP]
         w = csv.DictWriter(fo, fieldnames=keep, extrasaction="ignore")
         w.writeheader()
@@ -300,6 +329,12 @@ def redact(src, dst):
             row["Intent Version"] = INTENT_VERSION + "+" + lexicon()["version"]
             row["Query Intent"], row["Query Form"] = intent_of(q)
             row["Query Page"], row["Query Category"], row["Query Schemes"] = topic_of(q)
+            # topic layer (brief §75): a question naming no page takes its category from its topic; Category Source says which
+            row["Derivation Version"] = DERIVATION_VERSION
+            row["Query Topic"], tcat = question_topic(q)
+            if row["Query Category"]: row["Category Source"] = "page"
+            elif tcat: row["Query Category"], row["Category Source"] = tcat, "topic"
+            else: row["Category Source"] = ""
             if row["Starter Prompt"]: counts["(starter prompt)"] = counts.get("(starter prompt)", 0) + 1
             w.writerow(row)
             n += 1
@@ -312,6 +347,8 @@ def main():
     ap.add_argument("--out-dir", help="directory for the redacted files (default: beside each input)")
     ap.add_argument("--force", action="store_true", help="overwrite an existing output file")
     a = ap.parse_args()
+    if lexicon()["derivation"] and lexicon()["derivation"] != DERIVATION_VERSION:
+        sys.exit(f"derivation version mismatch: redact_feed.py {DERIVATION_VERSION}, question-lexicon.json {lexicon()['derivation']}; bump both together (brief §75)")
     for f in a.files:
         dst = out_name(f, a.out_dir)
         if os.path.abspath(dst) == os.path.abspath(f):
