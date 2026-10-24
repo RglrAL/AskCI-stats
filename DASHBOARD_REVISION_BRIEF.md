@@ -1332,3 +1332,18 @@ Agreed after one round of proposal and critique. The same design as the safety f
 **What it is for.** If a production extract around a change date ever appears, the parser gives, within the hour, the per-turn retrieval scores and the stage that declined, which is the one thing the feed cannot. The request stands on the parked list for when contact with the team resumes: an extract of the turns from one week before and one week after 14 September.
 
 With this, the plan of record in §53 is complete apart from step 0, the labelling hour, which now carries four columns (what kind, answered, detail on page, what asked and scheme page) and is the only step that gives ground truth.
+
+## 69. Plan of record: the question data across the dashboard (24 Oct 2026)
+
+Agreed after one round. The intent and the asked-about page are two dimensions every existing view can be cut by; they are spread across the views that exist rather than kept on their own tab. Order:
+1. **Overview:** a tile for answers that were not what the question needed ("unexpected outcomes": not found on a rate question, a cited answer on a status question), beside the cited rate, never instead of it; a candidate in What changed.
+2. **Ask bar:** the intent dimension in the registry, and "what do people ask about" answered: intent mix plus top asked-about pages, every answer ending with the one caveat line (derived by rule from the question; reader agreement measured on N items, or not yet measured).
+3. **Pages:** the four-quadrant list: named, cited and clicked (working); named but cited elsewhere (retrieval); cited but never named (AskCI surfacing content); named and not found (content or index gap).
+4. **Categories:** the question-derived topic beside the answer-derived one with its source marked, and agreement (asked about X, cited X; same category; different category), so failure rates by topic stop being lower bounds.
+5. **Conversations:** intent sequences (a new monthly transitions file), and after-a-setback by intent.
+6. **Chips, day panel, eras, change report:** each chip's intent and the intents no chip covers; intent mix in the day panel; intent mix and personal-situation share per era; mix adjustment on intent in the change report.
+7. **Volume** splits into Volume and Quality before the intent table lands there.
+
+Not built from the feed, because the feed cannot carry them: the retrieval-empty against generator-declined split by intent (needs the log extract) and click-through rate by intent (GA4 is by day, not by turn). The golden set is Phase D and is tagged by intent when it exists.
+
+Two rules throughout: every intent figure carries its rules version and the labelling agreement, as outcome figures do; and the question-derived topic is labelled as such wherever it stands in for the answer-derived one. Nothing from the classes goes on a headline tile without the agreement score beside it.
