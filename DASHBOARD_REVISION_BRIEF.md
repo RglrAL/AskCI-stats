@@ -1634,3 +1634,44 @@ has fallen since, 49% in July, 43% in September, 37% in October; among not-found
 jumped from about 9% to 24% in July, when the fixed no-results sentence and the guidance line were retired, and has
 drifted back to 19% in October. Both are wording effects (§75 second leg) rather than content effects, and both are
 now measured monthly, so the recommendation has a before.
+
+**Fourth leg: figures quoted in answers (24 Oct 2026).** `tools/fetch_pages.py` keeps a dated local snapshot of every
+cited page's text under `exports/site-text/<hash>__<LastMod>.txt` (1,893 pages on the first run; a page is fetched
+again only when its sitemap LastMod moves, and the old file stays, so later checks read the page as it was). In
+`redact_feed.py`, every euro amount, percentage and year in an answer is a figure; forms are normalised (€232 / 232 /
+€232.00 / 232 euro); each figure is **matched** when its number appears on a usable snapshot of a page the answer
+cites (one whose LastMod is on or before the answer's date), **unverifiable** when a cited page changed after the answer
+or has no snapshot or nothing was cited, and **unmatched** when every cited page was checkable and none carries it.
+Four Answer Figures columns; `make_usage.py` writes **`answer-figures-monthly.csv`** by month and cited page (an
+answer's result counts for every page it cites; "(all)" and "(uncited)" rows; page rows under 5 answers left out).
+Derivation 2026.10.24-4. The audit checks that matched + unmatched + unverifiable = figures and the bounds. Usage ›
+Pages gains **Figures quoted in answers**: the share of answers with a figure, matched, unmatched (of checkable) and
+unverifiable, the pages whose answers quote figures the page does not carry (100+ figures, 50+ checkable), and the
+months. Unmatched is an upper bound: it fires on a figure from a second source, a rounding and a weekly rate the page
+gives annually as well as on an error, and the word "accuracy" is not used for it until the labelling sheet's
+figure-match column has calibrated it. Because snapshots start today, the back history is checkable only against pages
+that have not changed since the answer; the Budget pages, changed in October, make most of their 2026 answers
+unverifiable by construction, which is the honest result.
+A by-product of the first snapshot run: 186 of the 1,893 pages the answers have ever cited now return 404 (removed or
+moved since). The answers that cited them are almost all from January and February (122 and 123 citations), falling
+to single figures from April and two in September, so the index was cleaned after the March deployment and this is
+not a live problem; the figures from those early months are unverifiable against the pages that have gone, which the
+three-way result records rather than hides.
+**First figures, January–22 October.** 47,343 answers (35% of all) quote a figure, 142,801 figures in all, three per
+such answer. 48.1% matched a usable snapshot of a cited page; 49.7% were unverifiable, which is the snapshot's youth
+and not the answers' fault (78% unverifiable in January, 29% in October, falling as the pages' last changes move
+behind the answers); of the figures that could be checked, **4.3% matched no cited page**, 2.7% in October, the
+upper bound on quoted-figure error. The pages where the unmatched share is highest, with 100+ figures and 50+
+checkable, are the employment-permit pages (work permits 27–40% of checkable figures unmatched across the months,
+green-card permits 26–50%, the permits overview 30–34%), then invalidity pension (26%) and residence rights of
+non-EEA nationals (22%). Salary thresholds and rates, in other words: the answers quote numbers the cited page does
+not carry, which is either a second source, an older figure or a wrong one, and is the first list for the labelling
+sheet's figure-match column. `make_findings.py` item 13 carries the unmatched share of checkable figures for the last
+full month, baseline September 4.1%. 1,707 pages are snapshotted; 186 cited pages now return 404 (above); 25 of the
+first run's connection failures were refetched. Snapshots are refreshed by `python3 tools/fetch_pages.py` before each
+data refresh, and the derivation is 2026.10.24-4.
+Over the whole period the card's page list reads: tax residence and domicile (36.6% of 116 checkable figures
+unmatched), the employment-permits overview (34.4%), retiring to Ireland as a returning emigrant (31.0%), green-card
+permits (30.9%), work permits (29.3% of 1,316), coming to work in Ireland (27.0%), then invalidity pension (20.1% of
+1,216). Tax rules, permit salary thresholds and payment rates: the three places a figure from memory or from a second
+page is most likely to differ from the cited one.

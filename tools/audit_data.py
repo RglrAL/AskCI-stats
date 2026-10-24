@@ -61,6 +61,7 @@ SCHEMA = {
     'content-gaps.csv': 'kind page category intent evidence asks rate priority team period rules_version lexicon_version built',
     'answer-templates-daily.csv': 'Date Template Turns Cited NotFound Clarification Error OutOfScope Greeting Uncited Partial',
     'answer-signposts-monthly.csv': 'Month Org Category Turns Cited NotFound Clarification Error OutOfScope Greeting Uncited Partial',
+    'answer-figures-monthly.csv': 'Month URL Answers Partial Figures Matched Unmatched Unverifiable',
     'setback-intents-monthly.csv': 'Month Setback Intent Turns Ended SameIntentNext OtherIntentNext',
     'repeat-questions-monthly.csv': 'Month Turns FirstTurns StarterFirstTurns DistinctFirstTurnTexts TextsAskedTwicePlus FirstTurnsOnRepeatedTexts Top10 Top25 Top50 Top100 Top250 SuggestedClicks DistinctSuggestedTexts SuggestedTop25',
     'journeys-monthly.csv': 'From To Conversations',
@@ -479,6 +480,13 @@ if ORG:
           all(r['Org'] in _oids and sum(I(r[k]) for k in OUT7) == I(r['Turns']) for r in ORG) and all(catsum[k] <= n for k, n in allrow.items())
           and all(anyrow.get(m, 0) + none.get(m, 0) == qpm[m] for m in anyrow) and all(ext.get(m, 0) <= anyrow.get(m, 0) for m in anyrow),
           str([(m, anyrow.get(m, 0) + none.get(m, 0), qpm[m]) for m in anyrow if anyrow.get(m, 0) + none.get(m, 0) != qpm[m]][:3]))
+FIG = rd('answer-figures-monthly.csv')
+if FIG:
+    fall = {r['Month']: r for r in FIG if r['URL'] == '(all)'}
+    check('answer figures: Matched + Unmatched + Unverifiable = Figures, Partial <= Answers, Figures >= Answers, page rows <= the (all) row, Answers <= the month\'s turns',
+          all(I(r['Matched']) + I(r['Unmatched']) + I(r['Unverifiable']) == I(r['Figures']) and I(r['Partial']) <= I(r['Answers']) and I(r['Figures']) >= I(r['Answers']) for r in FIG)
+          and all(I(r['Answers']) <= I(fall[r['Month']]['Answers']) for r in FIG if r['Month'] in fall) and all(I(r['Answers']) <= sum(I(U[d]['Questions']) for d in U if d[:7] == m) for m, r in fall.items()),
+          str([(r['Month'], r['URL'][-40:]) for r in FIG if I(r['Matched']) + I(r['Unmatched']) + I(r['Unverifiable']) != I(r['Figures'])][:3]))
 GAPSF = rd('content-gaps.csv')
 try: _rc = _j.load(open(f'{REPO}/register-config.json', encoding='utf-8')); _kinds = set(_rc.get('teams', {}))
 except (OSError, ValueError): _kinds = set()

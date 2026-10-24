@@ -38,6 +38,7 @@ Usage:
     python3 tools/redact_feed.py qa-feed_*.csv --out-dir ~/feeds   # several files, output elsewhere
 """
 import argparse, csv, json, os, sys
+from datetime import datetime
 
 import re
 
@@ -130,7 +131,79 @@ INTENT_VERSION = "2026.10.24-2"
 #   2026.10.24-1  topic layer (housing, 20 topics), Query Topic and Category Source columns
 #   2026.10.24-2  fixed-wording templates (TEMPLATES below), Answer Templates column
 #   2026.10.24-3  organisations the answer signposts to (ORGS below), Answer Orgs column
-DERIVATION_VERSION = "2026.10.24-3"
+#   2026.10.24-4  figures quoted in the answer checked against dated snapshots of the cited pages, four Answer Figures columns
+DERIVATION_VERSION = "2026.10.24-4"
+
+# Figures quoted (brief §75, response layer 2): euro amounts, percentages and years in the answer, checked against the
+# text of every page the answer cites as that page was when the answer was given (tools/fetch_pages.py keeps a snapshot
+# per page and LastMod under exports/site-text). Three results per figure: matched (the number appears on a usable
+# snapshot of a cited page), unverifiable (a cited page's LastMod is after the answer date, so the page has changed since,
+# or there is no snapshot, or the answer cites nothing), unmatched (every cited page was checkable and none carries it).
+# Forms are normalised (€232 / 232 / €232.00 / 232 euro). An upper bound on error until the labelling sheet's
+# figure-match column calibrates it; the word "accuracy" is not used.
+FIG_EURO = re.compile(r"€\s?(\d[\d,]*(?:\.\d+)?)|(\d[\d,]*(?:\.\d+)?)\s?(?:euro|eur)\b", re.I)
+FIG_PCT = re.compile(r"(\d+(?:\.\d+)?)\s?%")
+FIG_YEAR = re.compile(r"\b(20[12]\d)\b")
+FIG_BARE = re.compile(r"(?<![\d.])(\d[\d,]*(?:\.\d+)?)(?![\d.])")
+FIG_URL = re.compile(r"https?://[^\s<>\"')\]]+")
+SNAP_DIR = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "exports", "site-text")
+_SNAPS = {}
+
+
+def canon_num(s):
+    s = s.replace(",", "")
+    if "." in s: s = s.rstrip("0").rstrip(".")
+    return s.lstrip("0") or "0"
+
+
+def figures_of(text, bare=False):
+    """{(kind, canonical number)} for euro (e), percent (p) and year (y) figures; with bare=True also every plain number (n)."""
+    t = (text or "").replace("€", "€")
+    out = {("e", canon_num(a or b)) for a, b in FIG_EURO.findall(t)}
+    out |= {("p", canon_num(x)) for x in FIG_PCT.findall(t)}
+    out |= {("y", x) for x in FIG_YEAR.findall(t)}
+    if bare: out |= {("n", canon_num(x)) for x in FIG_BARE.findall(t)}
+    return out
+
+
+def _snap_key(u):
+    import hashlib
+    m = re.match(r"^(https?)://([^/?#]+)([^?#]*)", u.strip().rstrip(".,;)"), re.I)
+    if not m: return None
+    host = m.group(2).lower(); host = "www.citizensinformation.ie" if host == "citizensinformation.ie" else host
+    return hashlib.sha1(f"https://{host}{m.group(3).rstrip('/') or '/'}".encode()).hexdigest()[:16]
+
+
+def _snapshots(key):
+    """[(lastmod, figure set)] for a page, oldest first; loaded once per key."""
+    if key not in _SNAPS:
+        lst = []
+        try:
+            for f in sorted(os.listdir(SNAP_DIR)):
+                if f.startswith(key + "__") and f.endswith(".txt"):
+                    lm = f[len(key) + 2:-4]
+                    with open(os.path.join(SNAP_DIR, f), encoding="utf-8") as fh: lst.append((lm, figures_of(fh.read(), bare=True)))
+        except OSError: pass
+        _SNAPS[key] = lst
+    return _SNAPS[key]
+
+
+def check_figures(answer, citations, day):
+    """(figures, matched, unmatched, unverifiable) for one answer on one day (ISO date)."""
+    figs = figures_of(answer)
+    if not figs: return 0, 0, 0, 0
+    pages = {k for k in (_snap_key(u) for u in FIG_URL.findall(citations or "")) if k}
+    snaps = []; unverifiable = not pages
+    for k in pages:
+        usable = [s for lm, s in _snapshots(k) if lm != "unknown" and lm <= day]
+        if usable: snaps.append(usable[-1])
+        else: unverifiable = True
+    m = u = v = 0
+    for f in figs:
+        if any(f in s or ("n", f[1]) in s for s in snaps): m += 1
+        elif unverifiable: v += 1
+        else: u += 1
+    return len(figs), m, u, v
 
 # Organisations an answer can signpost to (brief §75, response layer 3): public bodies, helplines and the service's own
 # channels, matched by name in the answer text. The ids and counts are published; the measure is whether a not-found or
@@ -398,7 +471,8 @@ def redact(src, dst):
         keep = [c for c in r.fieldnames if c not in DROP] + ["Outcome", "Partial", "Outcome Rules", "Starter Prompt", "Query Script", "Response Words",
                                                           "Outcome Rule", "Style Version"] + list(STYLE) + ["Answer Signoff", "Safety Version"] + list(SAFETY) + ["Query Theme",
                                                           "Intent Version", "Query Intent", "Query Form", "Query Page", "Query Category", "Query Schemes",
-                                                          "Derivation Version", "Query Topic", "Category Source", "Answer Templates", "Answer Orgs"]
+                                                          "Derivation Version", "Query Topic", "Category Source", "Answer Templates", "Answer Orgs",
+                                                          "Answer Figures", "Answer Figures Matched", "Answer Figures Unmatched", "Answer Figures Unverifiable"]
         dropped = [c for c in r.fieldnames if c in DROP]
         w = csv.DictWriter(fo, fieldnames=keep, extrasaction="ignore")
         w.writeheader()
@@ -424,6 +498,9 @@ def redact(src, dst):
             row["Derivation Version"] = DERIVATION_VERSION
             row["Answer Templates"] = answer_templates(row.get("Assistant Response"))
             row["Answer Orgs"] = answer_orgs(row.get("Assistant Response"))
+            try: day = datetime.strptime((row.get("Timestamp") or "").strip(), "%b %d, %Y %H:%M").date().isoformat()
+            except ValueError: day = "9999-12-31"
+            row["Answer Figures"], row["Answer Figures Matched"], row["Answer Figures Unmatched"], row["Answer Figures Unverifiable"] = check_figures(row.get("Assistant Response"), row.get("Citations"), day)
             row["Query Topic"], tcat = question_topic(q)
             if row["Query Category"]: row["Category Source"] = "page"
             elif tcat: row["Query Category"], row["Category Source"] = tcat, "topic"

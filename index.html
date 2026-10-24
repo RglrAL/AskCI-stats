@@ -2750,6 +2750,7 @@ async function loadHoursFile(){
 let SCRIPTOUT={},hasScriptOut=false;
 let OTMPL={},TMPL_META={},hasTmpl=false;   // the bot's fixed wording per day and the template list (brief §75)
 let ORGSM={},ORG_META={},hasOrgs=false;   // organisations the answers signpost to, per month and category (brief §75)
+let FIGM={},hasFigs=false;   // figures quoted in answers, checked against dated page snapshots, per month and cited page (brief §75)
 let ORULES={},OSTYLE={},ONEXT={},hasRules=false;   // outcome rule ids, the wording fingerprint and what people do next (brief §53)
 let PAGESC={},hasPagesC=false,REPEATS={},hasRepeats=false,SAFETY={},hasSafety=false,QINTENT={},ASKED={},QTOPIC={},hasIntent=false,LEXICON=null,IJOUR={},SETBI={},GAPS=[],GAPSTAT={},REGCFG=null,QCATM={},QTOPM={},QICM={},hasTopics=false,ASKED_CAT='housing';   // the topic layer (brief §75)
 let CONV={},CATOUT={},CITES={},JOURNEYS={},STARTERS={},LATB={},CATDAY={},hasCatDay=false,hasConv=false,hasCatOut=false,hasCites=false,hasJourneys=false,hasStarters=false,hasLatB=false;
@@ -2797,6 +2798,7 @@ async function loadConversationFiles(){
   try{(await loadCSV('answer-style-daily.csv')).forEach(r=>{const d=parseDate(r['Date']);if(!d)return;const o={};Object.entries(r).forEach(([k,v])=>{if(k!=='Date'&&k!=='Outcome')o[k]=nInt(v);});(OSTYLE[d]||(OSTYLE[d]={}))[String(r['Outcome']||'').trim()]=o;});}catch(e){}
   try{(await loadCSV('answer-templates-daily.csv')).forEach(r=>{const d=parseDate(r['Date']);if(!d)return;const o={};Object.entries(r).forEach(([k,v])=>{if(k!=='Date'&&k!=='Template')o[k]=nInt(v);});(OTMPL[d]||(OTMPL[d]={}))[String(r['Template']||'').trim()]=o;});hasTmpl=Object.keys(OTMPL).length>0;}catch(e){}
   try{const j=await(await fetch('answer-templates.json',{cache:'no-store'})).json();(j.templates||[]).forEach(t=>{TMPL_META[t.id]={family:t.family,pattern:t.pattern};});TMPL_META._version=j.derivation_version||'';(j.organisations||[]).forEach(o=>{ORG_META[o.id]={family:o.family,pattern:o.pattern};});}catch(e){}
+  try{(await loadCSV('answer-figures-monthly.csv')).forEach(r=>{const m=String(r['Month']||'').trim();if(!/^\d{4}-\d{2}$/.test(m))return;(FIGM[m]||(FIGM[m]=[])).push({url:String(r['URL']||'').trim(),answers:nInt(r['Answers']),partial:nInt(r['Partial']),figures:nInt(r['Figures']),matched:nInt(r['Matched']),unmatched:nInt(r['Unmatched']),unverifiable:nInt(r['Unverifiable'])});});hasFigs=Object.keys(FIGM).length>0;}catch(e){}
   try{(await loadCSV('answer-signposts-monthly.csv')).forEach(r=>{const m=String(r['Month']||'').trim();if(!/^\d{4}-\d{2}$/.test(m))return;const o={org:String(r['Org']||'').trim(),cat:String(r['Category']||'').trim()};Object.entries(r).forEach(([k,v])=>{if(!['Month','Org','Category'].includes(k))o[k]=nInt(v);});(ORGSM[m]||(ORGSM[m]=[])).push(o);});hasOrgs=Object.keys(ORGSM).length>0;}catch(e){}
   // answer-next-daily.csv (tools/next_step.py, on the raw feed): ONEXT[date][class] = counts of what came after each answer
   try{(await loadCSV('answer-next-daily.csv')).forEach(r=>{const d=parseDate(r['Date']);if(!d)return;const o={};Object.entries(r).forEach(([k,v])=>{if(k!=='Date'&&k!=='Class')o[k]=nInt(v);});(ONEXT[d]||(ONEXT[d]={}))[String(r['Class']||'').trim()]=o;});}catch(e){}
@@ -6330,6 +6332,33 @@ function contentLists(months,fr,td,th){
       ${quad('Named, and not found','a content or index gap on a page people ask for by name',srt(Q.gap,x=>x[1].nf/x[1].n),['Page','Named','Not found','Cited it'],([u,o])=>[link(u),num(o.n),rateText(o.nf,o.n),rateText(o.same,o.n)],C.red)}
       ${quad('Cited, never named','AskCI brings these to people who did not ask for them, or for any page in the same section, by name',srt(Q.surfaced,x=>x[1].n),['Page','Citations','Read on the site'],([u,o])=>[link(u),num(o.n),hasClicks?num(clicked(u)):'—'],C.acc)}
     </div>`;
+  }
+  // 4b. figures quoted in answers (brief §75): euro amounts, percentages and years, checked against a dated snapshot of each
+  // cited page; matched / unmatched / unverifiable, by month and by page. An upper bound on error until the labelling calibrates it.
+  if(hasFigs){
+    const frF=filterRange(DATA.merged),fmons=monthsIn(frF),ansAll=frF.reduce((s,d)=>s+(d.queries||0),0);   // contentLists() has no D; the page's data is global
+    const agg={};fmons.forEach(m=>(FIGM[m]||[]).forEach(r=>{const a=agg[r.url]||(agg[r.url]={answers:0,partial:0,figures:0,matched:0,unmatched:0,unverifiable:0});Object.keys(a).forEach(k=>{a[k]+=r[k]||0;});}));
+    const A=agg['(all)']||{answers:0,figures:0,matched:0,unmatched:0,unverifiable:0};
+    const pcF=(k,n)=>n?(k/n*100).toFixed(1)+'%':'—';
+    const tdF=(v,o={})=>`<td style="text-align:${o.left?'left':'right'};padding:7px 10px;font-family:${o.left?'inherit':"'DM Mono',monospace"};font-size:.78rem">${v}</td>`;
+    const thF=(t,left)=>`<th style="text-align:${left?'left':'right'};padding:7px 10px;font-size:.6rem;color:var(--muted);text-transform:uppercase;letter-spacing:.08em;white-space:nowrap">${t}</th>`;
+    const pages=Object.entries(agg).filter(([u,a])=>!u.startsWith('(')&&a.figures>=100&&a.matched+a.unmatched>=50).sort((x,y)=>y[1].unmatched/(y[1].matched+y[1].unmatched)-x[1].unmatched/(x[1].matched+x[1].unmatched)).slice(0,15);
+    const prow=pages.map(([u,a])=>`<tr style="border-bottom:1px solid var(--b2)">${tdF(`<a href="${u}" target="_blank" rel="noopener" title="${u}" style="color:${C.acc};text-decoration:none">${ciPageTitle(u)}</a>`,{left:true})}${tdF(num(a.answers))}${tdF(num(a.figures))}${tdF(pcF(a.matched,a.figures))}${tdF(pcF(a.unmatched,a.matched+a.unmatched))}${tdF(pcF(a.unverifiable,a.figures))}</tr>`).join('');
+    const mrow=fmons.map(m=>{const r=(FIGM[m]||[]).find(x=>x.url==='(all)')||{answers:0,figures:0,matched:0,unmatched:0,unverifiable:0};const q=frF.filter(d=>d.date.slice(0,7)===m).reduce((s,d)=>s+(d.queries||0),0);return `<tr style="border-bottom:1px solid var(--b2)">${tdF(fmtMonth(m),{left:true})}${tdF(num(r.answers))}${tdF(pcF(r.answers,q))}${tdF(pcF(r.matched,r.figures))}${tdF(pcF(r.unmatched,r.matched+r.unmatched))}${tdF(pcF(r.unverifiable,r.figures))}</tr>`;}).join('');
+    h+=`<div class="card"><div class="card-title">Figures quoted in answers<span class="card-title-note">euro amounts, percentages and years, checked against a dated snapshot of each cited page · ${spanLabel(frF[0].date,frF[frF.length-1].date)}</span></div>
+      <div class="grid4" style="margin-bottom:12px">
+        ${uxTile(pcF(A.answers,ansAll),'Answers quoting a figure',`${num(A.answers)} of ${num(ansAll)} answers · ${A.answers?(A.figures/A.answers).toFixed(1):'—'} figures each`,C.acc)}
+        ${uxTile(pcF(A.matched,A.figures),'Matched on a cited page',`${num(A.matched)} figures found on the page as it was`,C.green)}
+        ${uxTile(pcF(A.unmatched,A.matched+A.unmatched),'Unmatched, of checkable figures',`${num(A.unmatched)} figures on no checkable cited page · an upper bound on error`,C.amber)}
+        ${uxTile(pcF(A.unverifiable,A.figures),'Unverifiable',`${num(A.unverifiable)} figures: the page changed after the answer, or nothing was cited`,C.dim)}
+      </div>
+      <div class="grid2">
+        <div><div class="card-title" style="font-size:.8rem">Pages whose answers quote figures the page does not carry<span class="card-title-note">100+ figures, 50+ checkable · highest unmatched share first</span></div>
+          <div class="tbl-wrap"><table style="width:100%;border-collapse:collapse"><thead><tr style="border-bottom:1px solid var(--b2)">${thF('Page',true)}${thF('Answers')}${thF('Figures')}${thF('Matched')}${thF('Unmatched')}${thF('Unverifiable')}</tr></thead><tbody>${prow||'<tr>'+tdF('No page has 50 checkable figures in range',{left:true})+'</tr>'}</tbody></table></div></div>
+        <div><div class="card-title" style="font-size:.8rem">By month</div>
+          <div class="tbl-wrap"><table style="width:100%;border-collapse:collapse"><thead><tr style="border-bottom:1px solid var(--b2)">${thF('Month',true)}${thF('Answers with a figure')}${thF('Share')}${thF('Matched')}${thF('Unmatched')}${thF('Unverifiable')}</tr></thead><tbody>${mrow}</tbody></table></div>
+          <div class="share-foot">A figure is matched when its number appears on a snapshot of a cited page taken at that page's last change, and only when that change predates the answer; otherwise the page has changed since and the figure is unverifiable. Unmatched fires on three things that are not errors as well as on errors: a figure from a second source, a rounding, a weekly rate the page gives annually. It is an upper bound until the labelling sheet's figure-match column calibrates it, and the word "accuracy" is not used for it. Snapshots are dated from today; the back history can only be checked against pages that have not changed since.</div></div>
+      </div></div>`;
   }
   // 4c. the content-gap register (brief §73): evidence rows with their status, by owner
   if(GAPS.length){

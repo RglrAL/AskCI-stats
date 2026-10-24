@@ -60,6 +60,8 @@ Outputs (all daily counts; nothing per-turn and no text crosses into the dashboa
   asked-pages-monthly.csv   Month, URL, Category, Asked, CitedSame, CitedSameCategory, CitedOther, NotFound, Clarification,
                             Other, CitedUnderHub, Hub: the page a typed question named and what the answer did; pages
                             asked under 5 times a month left out (brief §66, §71)
+  answer-figures-monthly.csv       Month, URL, Answers, Partial, Figures, Matched, Unmatched, Unverifiable: figures quoted
+                                   in answers checked against dated snapshots of the cited pages; (all) and (uncited) rows (brief §75)
   answer-signposts-monthly.csv     Month, Org, Category, Turns, outcomes, Partial: organisations the answer names
                                    (redact_feed.py ORGS; (any) / (external) / (none)), by the turn's category and (all) (brief §75)
   answer-templates-daily.csv       Date, Template, Turns, outcomes, Partial: the bot's fixed-wording templates
@@ -211,6 +213,7 @@ def aggregate(files, skip_days=frozenset()):
     style = defaultdict(lambda: defaultdict(int))    # (date, outcome) -> wording fingerprint sums
     tmpl = defaultdict(lambda: defaultdict(int))     # (date, template id or "(none)") -> answers, outcomes (brief §75)
     orgs = defaultdict(lambda: defaultdict(int))     # (month, org id | (any) | (external) | (none), category | (all)) -> answers, outcomes (brief §75)
+    figs = defaultdict(lambda: defaultdict(int))     # (month, cited page | (all)) -> answers with figures, figures matched / unmatched / unverifiable (brief §75)
     safety = defaultdict(lambda: defaultdict(int))   # (date, flag) -> turns and their outcomes (brief §65)
     intent = defaultdict(lambda: defaultdict(int))   # (date, intent, chip) -> turns, outcomes, form flags (brief §66)
     asked = defaultdict(lambda: defaultdict(int))    # (month, page asked about) -> what the answer did (brief §66)
@@ -360,6 +363,11 @@ def aggregate(files, skip_days=frozenset()):
                         cites_m[(d.strftime("%Y-%m"), nu)] += 1
                         if nu not in nus: nus.append(nu)
                 is_partial = (row.get("Partial") or "").strip().lower() == "yes"
+                if "Answer Figures" in row and str(row.get("Answer Figures") or "").isdigit() and int(row["Answer Figures"]):   # figures quoted (brief §75)
+                    fm, fu, fv = (int(row.get(k) or 0) for k in ("Answer Figures Matched", "Answer Figures Unmatched", "Answer Figures Unverifiable"))
+                    for key in (nus or ["(uncited)"]) + ["(all)"]:   # an answer's result is attributed to every page it cites
+                        x9 = figs[(d.strftime("%Y-%m"), key)]; x9["answers"] += 1; x9["figures"] += int(row["Answer Figures"]); x9["matched"] += fm; x9["unmatched"] += fu; x9["unverifiable"] += fv
+                        if is_partial: x9["partial"] += 1
                 for nu in nus:   # once per answer and page
                     x = cites_x[(d.strftime("%Y-%m"), nu)]; x["answers"] += 1
                     if is_partial: x["partial"] += 1
@@ -474,7 +482,7 @@ def aggregate(files, skip_days=frozenset()):
                         cat_dropped += sum(1 for x in slugs if x is None)
                         toks = [x for x in slugs if x]
                     for s in set(toks): cats[d][s] += 1
-    return D, sess, lat, hours, hour_sess, cats, bad, has_voice, dupes, cat_dropped, has_outcome, rules, has_starter, has_script, recs, (cites_m, cites_x, pages), latb, rulesd, (style, safety, intent, asked, qtopic, cint, askw, qtop, qcat, qic, tmpl, orgs)
+    return D, sess, lat, hours, hour_sess, cats, bad, has_voice, dupes, cat_dropped, has_outcome, rules, has_starter, has_script, recs, (cites_m, cites_x, pages), latb, rulesd, (style, safety, intent, asked, qtopic, cint, askw, qtop, qcat, qic, tmpl, orgs, figs)
 
 
 STYLE_COLS = ["Lines", "Hedges", "Apologies", "Signposts", "Questions", "Links", "Openers", "Invitations", "Absolutes", "Emphasis", "Nested", "External", "Freshness", "Signoff"]
@@ -591,6 +599,15 @@ def orgs_rows(orgs, min_turns=5):
     "(all)" rows always kept (brief §75)."""
     cols = ["Month", "Org", "Category", "Turns"] + OUT7 + ["Partial"]
     return cols, [[m, o, c, e["Turns"]] + [e[k] for k in OUT7_SRC] + [e["o:partial"]] for (m, o, c), e in sorted(orgs.items()) if c == "(all)" or e["Turns"] >= min_turns]
+
+
+def figs_rows(figs, min_answers=5):
+    """answer-figures-monthly.csv: per month and cited page ("(all)" = every answer, "(uncited)" = answers citing nothing):
+    answers carrying a euro, percent or year figure, the figures, and how many matched a dated snapshot of a cited
+    page, were unmatched on checkable pages, or were unverifiable (page changed since, no snapshot, nothing cited).
+    An answer's result counts for every page it cites. Page rows under min_answers left out (brief §75)."""
+    cols = ["Month", "URL", "Answers", "Partial", "Figures", "Matched", "Unmatched", "Unverifiable"]
+    return cols, [[m, u, e["answers"], e["partial"], e["figures"], e["matched"], e["unmatched"], e["unverifiable"]] for (m, u), e in sorted(figs.items()) if u.startswith("(") or e["answers"] >= min_answers]
 
 
 def style_rows(style):
@@ -947,7 +964,7 @@ def main():
     # An export taken on day X contains only part of day X; skip those rows unless asked to keep them.
     export_days = {datetime.strptime(m.group(1), "%Y%m%d").date() for m in (re.search(r"(\d{8})_\d{6}", os.path.basename(f)) for f in a.files) if m}
     skip = frozenset() if (a.keep_partial or not export_days) else frozenset({max(export_days)})  # only the newest export's own day is partial
-    D, sess, lat, hours, hour_sess, cats, bad, has_voice, dupes, cat_dropped, has_outcome, rules, has_starter, has_script, recs, (cites_m, cites_x, pages), latb, rulesd, (style, safety, intent, asked, qtopic, cint, askw, qtop, qcat, qic, tmpl, orgs) = aggregate(a.files, skip)
+    D, sess, lat, hours, hour_sess, cats, bad, has_voice, dupes, cat_dropped, has_outcome, rules, has_starter, has_script, recs, (cites_m, cites_x, pages), latb, rulesd, (style, safety, intent, asked, qtopic, cint, askw, qtop, qcat, qic, tmpl, orgs, figs) = aggregate(a.files, skip)
     rules = ", ".join(sorted(r for r in rules if r))
     if skip and any(True for _ in skip): print(f"note: export day(s) {', '.join(str(x) for x in sorted(skip))} skipped as partial (--keep-partial to keep)")
     cd, co, jm, sp, cstats = conversation_pass(recs)
@@ -985,6 +1002,7 @@ def main():
             write(os.path.join(a.out_dir, "answer-style-daily.csv"), *style_rows(style))
             if tmpl: write(os.path.join(a.out_dir, "answer-templates-daily.csv"), *tmpl_rows(tmpl))
             if orgs: write(os.path.join(a.out_dir, "answer-signposts-monthly.csv"), *orgs_rows(orgs))
+            if figs: write(os.path.join(a.out_dir, "answer-figures-monthly.csv"), *figs_rows(figs))
         if safety: write(os.path.join(a.out_dir, "safety-daily.csv"), *safety_rows(safety))
         if intent:
             write(os.path.join(a.out_dir, "question-intent-daily.csv"), *intent_rows(intent))

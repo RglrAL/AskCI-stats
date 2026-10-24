@@ -19,7 +19,7 @@ I = lambda x: int(float(x or 0))
 RECORDED = "24 Oct 2026"
 # The figures §72 recorded, so the report can say whether each has moved. Dated on purpose: they are the record.
 BASE = {"chip_empty": 8.2, "typed_first_empty": 0.99, "unexpected": 11.9, "sit_nf": 14.1, "other_nf": 9.2, "whatis_named_clar": 14.8, "whatis_unnamed_clar": 33.9,
-        "named_hit": 54.8, "named_nf": 6.9, "old_share": 28.3, "crisis_per_k": 0.59, "crisis_cited": 76, "about_partial": 52, "intent_named": 77.0, "ext_nf": 21.2}
+        "named_hit": 54.8, "named_nf": 6.9, "old_share": 28.3, "crisis_per_k": 0.59, "crisis_cited": 76, "about_partial": 52, "intent_named": 77.0, "ext_nf": 21.2, "fig_unmatched": 4.1}
 
 
 def rd(p):
@@ -131,6 +131,10 @@ def main():
         a_, e_, n_ = g("(any)"), g("(external)"), g("(none)")
         nf_all = (I(a_["NotFound"]) if a_ else 0) + (I(n_["NotFound"]) if n_ else 0); ext = I(e_["NotFound"]) / nf_all * 100 if e_ and nf_all else None
         base = BASE.get("ext_nf")
+        FG = next((r for r in rd("answer-figures-monthly.csv") if r["Month"] == last_full and r["URL"] == "(all)"), None)
+        if FG:
+            chk = I(FG["Matched"]) + I(FG["Unmatched"]); um = I(FG["Unmatched"]) / chk * 100 if chk else None; bf = BASE.get("fig_unmatched")
+            P(f"| 13 | Figures quoted that no cited page carries ({last_full}) | {pct(um)} of {chk:,} checkable figures; {pct(I(FG['Unverifiable']) / I(FG['Figures']) * 100 if I(FG['Figures']) else None, 0)} unverifiable | {pct(bf) if bf is not None else '—'} | {status(um, bf) if bf is not None else 'baseline'} | §75: an upper bound on quoted-figure error until the labelling calibrates it; employment-permit and rate pages lead |")
         P(f"| 12 | Not-found answers naming an outside body ({last_full}) | {pct(ext)} of {nf_all:,}; {pct(I(a_['NotFound']) / nf_all * 100 if a_ and nf_all else None, 0)} name Citizens Information's own channels | {pct(base) if base is not None else '—'} | {status(ext, base, lower_is_better=False) if base is not None else 'baseline'} | §75: the no-results wording points at the service's own centre and phone line; a theme-aware signpost is the recommendation, this column its measure |")
     P("\n## Conclusions on record (read, not measured)\n")
     for s in ["**14 September 2026 was a model change** (§57): it matches the calibrated signature of one on every count, at twice the size of March's; the mix of what was asked accounts for none of it (§71).",
