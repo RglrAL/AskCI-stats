@@ -1696,3 +1696,17 @@ Moving country: citizenship is large and well served (2,181, 3.9%); residence pe
 (10.6%) are not. Health: GP, hospital and waiting lists 11.1% not found, pregnancy and children 10.1%, the medical card
 3.1%. These are the rows the register will compute once the topic layer feeds it; the seeded housing rows stand until
 then.
+
+**The register now computes its topic rows (24 Oct 2026).** `make_register.py` reads `question-topics-monthly.csv`
+for the register period: a lexicon topic (never a category's general bucket) with `topic_min_turns` (100) typed
+questions enters as **missing-page** when its not-found share is `topic_not_found` (10%) or more, or as **detail** when
+the partial share of its cited answers is at least `topic_partial` (25%) and one and a half times the period's typical
+partial share, so a site-wide rise in partials does not fill the register. A computed row replaces a seeded row of the
+same category and topic; the other seeded housing rows and the two signpost rows (which no count can infer) stand. For
+August–September the computation adds one row, residence permissions and stamps (266 typed questions, 16% not found),
+and the relative partial rule, tried first as a flat 25%, removed eleven rows that were September's general rise
+rather than a topic's problem. The October rows, with the Budget and cost-of-living topics (11–14% not found, 26–31%
+partial over the year), arrive when October closes. Topic rows carry "not yet reader-checked" until the labelling
+sheet's topic column says otherwise. Ten of the sixteen categories have no topic table yet (travel and recreation,
+family and relationships, education, justice, consumer, death, returning to Ireland, government, environment, about);
+their questions enter by page and citation only, and the next four by size are an afternoon each.

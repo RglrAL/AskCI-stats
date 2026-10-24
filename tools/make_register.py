@@ -87,10 +87,30 @@ def main():
     for r in QT: byc[r["Category"]] += I(r["NotFound"])
     for c, n in byc.most_common(6):
         rows.append({"kind": "unknown", "page": "", "category": c, "intent": "", "evidence": f"{n} not-found answers whose question named a {c} scheme but whose answer cited no page", "asks": n, "rate": 1.0, "priority": n, "team": cfg["teams"]["unknown"]})
-    # topic rows (brief §75): subjects with no page behind them, seeded from register-themes.json until the topic layer
-    # computes them; kinds missing-page and signpost carry no URL, the topic name sits in the page column
+    # topic rows computed from the topic layer (brief §75): a topic (not a category's general bucket) with topic_min_turns+
+    # typed questions in the period enters as missing-page when its not-found share is topic_not_found+, or as detail when
+    # the partial share of its cited answers is topic_partial+ (and not already missing-page). The topic name sits in the
+    # page column; a computed row replaces a seeded row of the same category and topic
+    QT = [r for r in rd("question-topics-monthly.csv") if r["Month"] in full]; T = C.defaultdict(C.Counter)
+    for r in QT:
+        t = T[(r["Category"], r["Topic"])]; t["n"] += I(r["Turns"]); t["nf"] += I(r["NotFound"]); t["c"] += I(r["Cited"]); t["p"] += I(r["Partial"])
+    general = {(c, name) for c, tops in (lex.get("topics") or {}).items() for name, spec in tops.items() if spec.get("general")}
+    typ_t = sum(t["p"] for t in T.values()) / max(sum(t["c"] for t in T.values()), 1)   # the period's typical partial share, so a site-wide rise does not fill the register
+    computed = set()
+    for (c, name), t in sorted(T.items()):
+        if (c, name) in general or t["n"] < cfg.get("topic_min_turns", 100): continue
+        nf = t["nf"] / t["n"]; part = t["p"] / max(t["c"], 1)
+        if nf >= cfg.get("topic_not_found", 0.1):
+            rows.append({"kind": "missing-page", "page": name, "category": c, "intent": "", "evidence": f"{t['n']} typed questions on this topic in the period; {nf:.0%} not found, {part:.0%} of cited answers said something was missing (topic layer, lexicon {lexv}; not yet reader-checked)",
+                         "asks": t["n"], "rate": round(nf, 3), "priority": round(t["n"] * nf), "team": cfg["teams"]["missing-page"]}); computed.add((c, name))
+        elif part >= max(cfg.get("topic_partial", 0.25), typ_t * 1.5):
+            rows.append({"kind": "detail", "page": name, "category": c, "intent": "", "evidence": f"{t['n']} typed questions on this topic in the period; {part:.0%} of cited answers said something was missing, {nf:.0%} not found (topic layer, lexicon {lexv}; not yet reader-checked)",
+                         "asks": t["n"], "rate": round(part, 3), "priority": round(t["n"] * part), "team": cfg["teams"]["content"]}); computed.add((c, name))
+    # seeded topic rows (register-themes.json): subjects from the housing read that the topic layer does not yet compute,
+    # and the signpost rows, which no count can infer; a seeded row is dropped once a computed row of the same topic exists
     try: themes = json.load(open(os.path.join(REPO, "register-themes.json"), encoding="utf-8")).get("rows", [])
     except (OSError, ValueError): themes = []
+    themes = [t for t in themes if (t.get("category", ""), t["topic"]) not in computed]
     for t in themes:
         rows.append({"kind": t["kind"], "page": t["topic"], "category": t.get("category", ""), "intent": "",
                      "evidence": t["evidence"] + ("" if t.get("reader_checked") else "; themes not yet reader-checked") + f" [{t.get('period', '')}]",
