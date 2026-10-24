@@ -424,7 +424,7 @@ def report(ds, days, skip, EV, D):
         def qagg(w):
             o = C.defaultdict(C.Counter)
             for r in QI:
-                if r["Chip"] == "1" or not w.has(date.fromisoformat(r["Date"])): continue
+                if r["Chip"] != "0" or not w.has(date.fromisoformat(r["Date"])): continue   # typed questions only: starter prompts (1) and model-written suggested follow-ups (2) are left out
                 e = o[r["Intent"]]
                 for k in ("Turns", "Cited", "NotFound", "Clarification", "Partial", "Situation", "SituationCited", "SituationNotFound", "SituationPartial"): e[k] += I(r.get(k))
             return o

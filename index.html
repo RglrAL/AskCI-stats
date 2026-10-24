@@ -2770,8 +2770,8 @@ async function loadConversationFiles(){
   try{(await loadCSV('safety-daily.csv')).forEach(r=>{const d=parseDate(r['Date']);if(!d)return;const o={};Object.entries(r).forEach(([k,v])=>{if(k!=='Date'&&k!=='Flag')o[k]=nInt(v);});(SAFETY[d]||(SAFETY[d]={}))[String(r['Flag']||'').trim()]=o;});}catch(e){}
   hasSafety=Object.keys(SAFETY).length>0;
   // what people ask (brief §66): intent and form from the question, the page it named, and the topic for answers that carried none
-  try{(await loadCSV('question-intent-daily.csv')).forEach(r=>{const d=parseDate(r['Date']);if(!d)return;const o={};Object.entries(r).forEach(([k,v])=>{if(k!=='Date'&&k!=='Intent'&&k!=='Chip')o[k]=nInt(v);});(QINTENT[d]||(QINTENT[d]=[])).push({intent:String(r['Intent']||'other').trim(),chip:nInt(r['Chip'])===1,...o});});}catch(e){}
-  try{(await loadCSV('asked-pages-monthly.csv')).forEach(r=>{const m=String(r['Month']||'').trim();if(!/^\d{4}-\d{2}$/.test(m))return;(ASKED[m]||(ASKED[m]=[])).push({url:r['URL'],cat:r['Category']||'',n:nInt(r['Asked']),same:nInt(r['CitedSame']),sameCat:nInt(r['CitedSameCategory']),other:nInt(r['CitedOther']),nf:nInt(r['NotFound']),cl:nInt(r['Clarification']),oth:nInt(r['Other'])});});}catch(e){}
+  try{(await loadCSV('question-intent-daily.csv')).forEach(r=>{const d=parseDate(r['Date']);if(!d)return;const o={};Object.entries(r).forEach(([k,v])=>{if(k!=='Date'&&k!=='Intent'&&k!=='Chip')o[k]=nInt(v);});(QINTENT[d]||(QINTENT[d]=[])).push({intent:String(r['Intent']||'other').trim(),chip:nInt(r['Chip']),...o});});}catch(e){}   // chip: 0 typed, 1 starter prompt, 2 model-written suggested follow-up (never counted as typed)
+  try{(await loadCSV('asked-pages-monthly.csv')).forEach(r=>{const m=String(r['Month']||'').trim();if(!/^\d{4}-\d{2}$/.test(m))return;(ASKED[m]||(ASKED[m]=[])).push({url:r['URL'],cat:r['Category']||'',n:nInt(r['Asked']),same:nInt(r['CitedSame'])+nInt(r['CitedUnderHub']),hub:nInt(r['CitedUnderHub']),isHub:nInt(r['Hub'])===1,sameCat:nInt(r['CitedSameCategory']),other:nInt(r['CitedOther']),nf:nInt(r['NotFound']),cl:nInt(r['Clarification']),oth:nInt(r['Other'])});});}catch(e){}   // same = cited that page, or a page beneath it when it is a hub
   try{(await loadCSV('question-topics-daily.csv')).forEach(r=>{const d=parseDate(r['Date']);if(!d)return;const o={};Object.entries(r).forEach(([k,v])=>{if(k!=='Date'&&k!=='Category')o[k]=nInt(v);});(QTOPIC[d]||(QTOPIC[d]={}))[String(r['Category']||'').trim()]=o;});}catch(e){}
   try{const r=await fetch('question-lexicon.json?v='+Date.now());if(r.ok){const j=await r.json();if(j&&j.intents)LEXICON={version:j.version,intents:j.intents,phrases:Object.keys(j.phrases||{}).length};}}catch(e){}
   // intent journeys and what follows a setback, by the question's intent (brief §69)
@@ -3013,7 +3013,7 @@ function perTurnStats(rows){
   // expects for the question's intent (lexicon.intents): a not-found, clarification or uncited answer where a cited
   // answer is expected; a cited answer where a redirect is expected. Turns with no named intent ('other') are left out.
   let unexN=0,unexD=0;
-  if(typeof QINTENT!=='undefined'&&LEXICON&&LEXICON.intents)rows.forEach(d=>(QINTENT[d.date]||[]).forEach(r=>{if(r.chip)return;const e=LEXICON.intents[r.intent];if(!e)return;unexD+=r.Turns;unexN+=e==='cited'?(r.NotFound+r.Clarification+r.Uncited):e==='redirect'?r.Cited:0;}));
+  if(typeof QINTENT!=='undefined'&&LEXICON&&LEXICON.intents)rows.forEach(d=>(QINTENT[d.date]||[]).forEach(r=>{if(r.chip)return;const e=LEXICON.intents[r.intent];if(!e)return;unexD+=r.Turns;unexN+=unexpectedOf(r,e);}));
   return{days,from,to,turns,convs,gen,tot,variable:vr,fixed:fx,unclassified:un,valid,
     udays,ufrom,uto,uturns,uconvs,uvalid,uspan:udays?spanLabel(ufrom,uto,true):'no usage days',
     reachedCited:cv.length?rate(cvR,cvMat):null,
@@ -5619,7 +5619,7 @@ function appendCategoryDetail(D){
       const agRows=Object.entries(AG).filter(([c])=>!CAT_EXCLUDE.has(c)).sort((x,y)=>y[1].n-x[1].n);const T=Object.values(AG).reduce((a,o)=>({n:a.n+o.n,same:a.same+o.same,sameCat:a.sameCat+o.sameCat,other:a.other+o.other,nf:a.nf+o.nf,cl:a.cl+o.cl}),{n:0,same:0,sameCat:0,other:0,nf:0,cl:0});
       const agLine=(l,o,bold)=>`<tr style="border-bottom:1px solid var(--b2)${bold?';font-weight:600':''}">${td(l,bold?'':C.acc,false)}${td(num(o.n))}${td(rateText(o.same,o.n),C.green)}${td(rateText(o.sameCat,o.n),C.acc)}${td(rateText(o.other,o.n),C.amber)}${td(rateText(o.nf,o.n),C.red)}${td(rateText(o.cl,o.n))}</tr>`;
       h+=`<div class="card"><div class="card-title">Where the question named a page: what the answer cited<span class="card-title-note">by the category of the page named · months overlapping the range (${months.map(fmtMonth).join(', ')}) · pages named 5+ times a month</span></div>
-        <div class="tbl-wrap"><table style="width:100%;border-collapse:collapse;min-width:760px"><thead><tr style="border-bottom:1px solid var(--b2)">${th('Category named',false)}${th('Questions')}${th('Cited that page')}${th('Same category, other page')}${th('Other category')}${th('Not found')}${th('Clarification')}</tr></thead>
+        <div class="tbl-wrap"><table style="width:100%;border-collapse:collapse;min-width:760px"><thead><tr style="border-bottom:1px solid var(--b2)">${th('Category named',false)}${th('Questions')}${th('Cited that page (or beneath a hub)')}${th('Same category, other page')}${th('Other category')}${th('Not found')}${th('Clarification')}</tr></thead>
         <tbody>${agRows.map(([c,o])=>agLine(catLabel(CAT_ALIAS[c]||c),o,false)).join('')}${agLine('All',T,true)}</tbody></table></div>
         <div class="share-foot">The nearest thing to a retrieval hit rate the feed can give. “Same category, other page” is often the right page under another name (a section page named, a specific page cited). A category with a low same-page share and a high not-found share is a retrieval or chunking question, not a content one: the content exists and was named.</div></div>`;
     }
@@ -6001,6 +6001,10 @@ function intentJourneyCards(months,cohort){
 // a count from the redaction step; no question text reaches the page. "Unexpected" = an outcome the design does not
 // expect for that intent (lexicon.intents): a not-found on a rate question is unexpected, on a status question it is not.
 const INTENT_ORDER=['eligibility','rate','apply','definition','timing','documents','contact','status','other'];
+// Unexpected outcomes for one intent row (brief §71): where a cited answer is expected, a not-found or uncited answer
+// always is unexpected, and a clarification only when the question named a scheme (a clarification on "what is the
+// benefit?" is the designed outcome); where a redirect is expected, a cited answer is.
+function unexpectedOf(r,e){return e==='cited'?(r.NotFound+r.Uncited+(r.NamedClarification||0)):e==='redirect'?r.Cited:0;}
 // The caveat every intent figure carries (brief §69): the rules version, and the reader agreement from the labelling or
 // "not yet measured". CONFIG.intent_measured is filled from score_labels.py when the sample is scored.
 function intentCaveat(){const m=CONFIG.intent_measured;return `by rule from the question${LEXICON?' ('+escH(LEXICON.version)+')':''} · reader agreement ${m&&m.n?`${Math.round(m.agreement*100)}% on ${m.n} labelled questions`:'not yet measured'}`;}
@@ -6010,17 +6014,19 @@ function renderAsked(D,S){
   const fr=filterRange(D.merged).filter(d=>QINTENT[d.date]);
   if(!fr.length){el.innerHTML=emptyState('help-circle','No question data in range','Needs <code>question-intent-daily.csv</code> from <code>make_usage.py</code> on feeds redacted from 24 Oct 2026.');renderIcons();return;}
   const from=fr[0].date,to=fr[fr.length-1].date,W=comparisonWindow(from,to);
-  const agg=(a,b,chip)=>{const o={};Object.entries(QINTENT).forEach(([d,rows])=>{if(d<a||d>b)return;rows.forEach(r=>{if(chip!=null&&r.chip!==chip)return;const t=o[r.intent]||(o[r.intent]={});Object.entries(r).forEach(([k,v])=>{if(typeof v==='number')t[k]=(t[k]||0)+v;});});});return o;};
-  const A=agg(from,to,false),B=agg(W.from,W.to,false),AC=agg(from,to,true);
+  const agg=(a,b,typed)=>{const o={};Object.entries(QINTENT).forEach(([d,rows])=>{if(d<a||d>b)return;rows.forEach(r=>{if(typed&&r.chip!==0)return;if(!typed&&r.chip===0)return;const t=o[r.intent]||(o[r.intent]={});Object.entries(r).forEach(([k,v])=>{if(typeof v==='number'&&k!=='chip')t[k]=(t[k]||0)+v;});});});return o;};
+  const first=D.merged.length?D.merged[0].date:from,hasPrev=W.from>=first;
+  const A=agg(from,to,true),B=hasPrev?agg(W.from,W.to,true):{},AC=agg(from,to,false);
   const tot=o=>Object.values(o).reduce((s,x)=>s+(x.Turns||0),0),ta=tot(A),tb=tot(B);
   const exp=i=>(LEXICON&&LEXICON.intents&&LEXICON.intents[i])||null;
-  const unexpected=(x,i)=>{const e=exp(i);if(!e||!x||!x.Turns)return null;return e==='cited'?(x.NotFound+x.Clarification+x.Uncited)/x.Turns:e==='redirect'?x.Cited/x.Turns:null;};
+  const unexpected=(x,i)=>{const e=exp(i);if(!e||!x||!x.Turns)return null;return unexpectedOf(x,e)/x.Turns;};
   const td=(v,o={})=>`<td style="text-align:${o.left?'left':'right'};padding:7px 10px;font-family:${o.left?'inherit':"'DM Mono',monospace"};font-size:.78rem;${o.style||''}">${v}</td>`;
   const th=(t,left)=>`<th style="text-align:${left?'left':'right'};padding:7px 10px;font-size:.6rem;color:var(--muted);text-transform:uppercase;letter-spacing:.08em;white-space:nowrap">${t}</th>`;
   const pc=(k,n)=>n?(k/n*100).toFixed(1)+'%':'—';
   const chg=(a,b)=>a==null||b==null?'':` <span style="color:var(--muted)">(${a>=b?'+':'−'}${Math.abs((a-b)*100).toFixed(1)} pts)</span>`;
   const rows=INTENT_ORDER.filter(i=>A[i]).map(i=>{const x=A[i],y=B[i]||{};const ux=unexpected(x,i),uy=unexpected(y,i);
     return`<tr style="border-bottom:1px solid var(--b2)">${td(`<b>${INTENT_LABEL[i]}</b> <span style="color:var(--muted);font-size:.68rem">expects ${exp(i)||'—'}</span>`,{left:true})}${td(num(x.Turns))}${td(pc(x.Turns,ta))}${td(pc(x.Cited,x.Turns)+chg(x.Cited/x.Turns,y.Turns?y.Cited/y.Turns:null))}${td(pc(x.Cited-x.Partial,x.Turns))}${td(pc(x.NotFound,x.Turns)+chg(x.NotFound/x.Turns,y.Turns?y.NotFound/y.Turns:null))}${td(pc(x.Clarification,x.Turns))}${td(ux==null?'—':(ux*100).toFixed(1)+'%'+chg(ux,uy),{style:'font-weight:600;color:'+(ux!=null&&uy!=null&&ux>uy+0.01?'var(--red)':'var(--text)')})}${td(pc(x.Situation,x.Turns))}${td(pc(x.WithTopic,x.Turns))}</tr>`;}).join('');
+  const named=sumk(A,'WithTopic');
   // the form flags, over all typed turns
   const sumk=(o,k)=>Object.values(o).reduce((s,x)=>s+(x[k]||0),0);
   const sit=sumk(A,'Situation'),sitC=sumk(A,'SituationCited'),sitN=sumk(A,'SituationNotFound'),sitB=sumk(B,'Situation'),sitBC=sumk(B,'SituationCited'),sitBN=sumk(B,'SituationNotFound');
@@ -6034,24 +6040,24 @@ function renderAsked(D,S){
   // asked-about pages, months in range
   const months=monthsIn(fr),ap={};months.forEach(m=>(ASKED[m]||[]).forEach(r=>{const o=ap[r.url]||(ap[r.url]={cat:r.cat,n:0,same:0,sameCat:0,other:0,nf:0,cl:0,oth:0});['n','same','sameCat','other','nf','cl','oth'].forEach(k=>{o[k]+=r[k];});}));
   const apRows=Object.entries(ap),apN=apRows.reduce((s,[,o])=>s+o.n,0);
-  const cell=(k,n)=>k>0&&k<5?'<span style="color:var(--dim)">&lt;5</span>':num(k)+(n?` <span style="color:var(--muted)">${Math.round(k/n*100)}%</span>`:'');
-  const pageRow=([u,o])=>`<tr style="border-bottom:1px solid var(--b2)">${td(`<a href="${u}" target="_blank" rel="noopener" title="${u}" style="color:${C.acc};text-decoration:none">${ciPageTitle(u)}</a> <span style="color:var(--muted)">· ${o.cat}</span>`,{left:true})}${td(num(o.n))}${td(cell(o.same,o.n))}${td(cell(o.sameCat,o.n))}${td(cell(o.other,o.n))}${td(cell(o.nf,o.n),{style:o.n&&o.nf/o.n>=0.15?'color:var(--red);font-weight:600':''})}${td(cell(o.cl,o.n))}</tr>`;
+  const cell=(k,n)=>num(k)+(n?` <span style="color:var(--muted)">${rateOK(k,n).ok?Math.round(k/n*100)+'%':'—'}</span>`:'');
+  const pageRow=([u,o])=>`<tr style="border-bottom:1px solid var(--b2)">${td(`<a href="${u}" target="_blank" rel="noopener" title="${u}" style="color:${C.acc};text-decoration:none">${ciPageTitle(u)}</a> <span style="color:var(--muted)">· ${o.cat}${o.isHub?' · hub':''}</span>`,{left:true})}${td(num(o.n))}${td(cell(o.same,o.n))}${td(cell(o.sameCat,o.n))}${td(cell(o.other,o.n))}${td(cell(o.nf,o.n),{style:o.n&&o.nf/o.n>=0.15?'color:var(--red);font-weight:600':''})}${td(cell(o.cl,o.n))}</tr>`;
   const byNf=apRows.filter(([,o])=>o.n>=30).sort((x,y)=>y[1].nf/y[1].n-x[1].nf/x[1].n).slice(0,12),byMiss=apRows.filter(([,o])=>o.n>=30).sort((x,y)=>x[1].same/x[1].n-y[1].same/y[1].n).slice(0,12);
   const tot2=k=>apRows.reduce((s,[,o])=>s+o[k],0);
   el.innerHTML=`
-    <div class="reach-note"><i data-lucide="info" class="i-sm"></i><span><b>What people ask, from the question itself.</b> An intent by rule (what the question asks for), form flags (a year, an amount, a yes/no form, a personal situation), and the scheme the question names, matched against the site's page list. Set in the redaction step; only class names and counts reach this page. Rules${LEXICON?` ${escH(LEXICON.version)}, ${num(LEXICON.phrases)} scheme phrases`:''}; the classes are checked against a reader in the hand-labelled sample before any claim rests on them.</span></div>
+    <div class="reach-note"><i data-lucide="info" class="i-sm"></i><span><b>What people ask, from the question itself.</b> An intent by rule (what the question asks for), form flags (a year, an amount, a yes/no form, a personal situation), and the scheme the question names, matched against the site's page list. Set in the redaction step; only class names and counts reach this page. <b>${intentCaveat()}.</b> The acceptance target was four in five typed questions in a named intent; ${pc(ta-other,ta)} are, so "Other" is read as a class in its own right until the labelled sample says what it holds.</span></div>
     <div class="grid4" style="margin-bottom:14px">
       ${uxTile(pc(ta-other,ta),'Typed questions with a named intent',`${num(ta-other)} of ${num(ta)} typed turns, ${spanLabel(from,to)}`,C.acc)}
       ${uxTile(pc(sit,ta),'Personal situations',`long, first person, several conditions · ${sit?pc(sitN,sit):'—'} not found${sitB?' (was '+pc(sitBN,sitB)+')':''}`,C.purple)}
-      ${uxTile(pc(sumk(A,'WithTopic'),ta),'Questions naming a scheme',`matched to a page or section of the site`,C.teal)}
-      ${uxTile(unk.a.nf?pc(unk.a.nf-unk.a.rec,unk.a.nf):'—','Not-found answers with no topic at all',`after the question-derived topic · ${unk.a.nf?num(unk.a.rec)+' of '+num(unk.a.nf)+' recovered':''}${unk.b.nf?' · was '+pc(unk.b.nf-unk.b.rec,unk.b.nf):''}`,C.amber)}
+      ${uxTile(pc(named,ta),'Questions naming a scheme',`${num(named)} typed questions matched to a page or section of the site`,C.teal)}
+      ${uxTile(unk.a.nf?num(unk.a.nf-unk.a.rec):'—','Not-found answers still with no topic',`of ${num(unk.a.nf)} that carried none from the answer; the question names a scheme for ${num(unk.a.rec)}${unk.b.nf?' · was '+num(unk.b.nf-unk.b.rec)+' of '+num(unk.b.nf):''}`,C.amber)}
     </div>
-    <div class="card" style="overflow-x:auto"><div class="card-title">Outcomes by what was asked<span class="card-title-note">typed questions · ${spanLabel(from,to)} · in brackets the change in points against ${escH(W.rule)} (${spanLabel(W.from,W.to)}) · unexpected = an outcome the design does not expect for that intent</span></div>
+    <div class="card" style="overflow-x:auto"><div class="card-title">Outcomes by what was asked<span class="card-title-note">typed questions · ${spanLabel(from,to)}${hasPrev?` · in brackets the change in points against ${escH(W.rule)} (${spanLabel(W.from,W.to)})`:' · no preceding window in the data to compare with'} · unexpected = an outcome the design does not expect for that intent</span></div>
       <table style="width:100%;border-collapse:collapse;min-width:1000px"><thead><tr style="border-bottom:1px solid var(--b2)">${th('Intent',true)}${th('Turns')}${th('Share')}${th('Cited')}${th('Cited, not partial')}${th('Not found')}${th('Clarification')}${th('Unexpected')}${th('Personal situation')}${th('Names a scheme')}</tr></thead><tbody>${rows}</tbody></table>
-      <div class="share-foot">A status question is about the person's own claim, which AskCI cannot see, so a redirect (not found or out of scope) is the expected outcome there and a cited answer is the unexpected one. For every other intent a cited answer is expected. Chips are left out of this table (their intent is fixed); ${num(tot(AC))} chip turns in range.</div></div>
+      <div class="share-foot">A cited answer is the expected outcome for every intent, including a question about the person's own claim, where the right answer explains how to check it. Unexpected = a not-found or uncited answer, or a clarification on a question that named a scheme; a clarification on "what is the benefit?" with no scheme named is the designed outcome and is not counted. Typed questions only: starter prompts and the model's own suggested follow-ups (${num(tot(AC))} turns in range) are left out, since a suggested follow-up is written to the prompt's pattern and carries an intent by construction. ${intentCaveat()}.</div></div>
     <div class="grid2">
       <div class="card"><div class="card-title">Topics of failed answers, from the question<span class="card-title-note">answers that carried no topic, by the category the question named · ${spanLabel(from,to)}</span></div>
-        <div class="tbl-wrap"><table style="width:100%;border-collapse:collapse"><thead><tr style="border-bottom:1px solid var(--b2)">${th('Category',true)}${th('Turns')}${th('Not found')}${th('Rate')}${th('Clarification')}</tr></thead><tbody>${topicRows||'<tr><td colspan="5" style="padding:10px;color:var(--muted)">none</td></tr>'}</tbody></table></div>
+        <div class="tbl-wrap"><table style="width:100%;border-collapse:collapse"><thead><tr style="border-bottom:1px solid var(--b2)">${th('Category',true)}${th('Turns')}${th('Not found')}${th('Not-found share')}${th('Clarification')}</tr></thead><tbody>${topicRows||'<tr><td colspan="5" style="padding:10px;color:var(--muted)">none</td></tr>'}</tbody></table></div>
         <div class="share-foot">These turns are "unknown" in the topic tables because the answer cited no page. The question says what they were about.</div></div>
       <div class="card"><div class="card-title">Where the question named a page<span class="card-title-note">${num(apN)} asks about ${num(apRows.length)} pages, months ${months.map(fmtMonth).join(', ')} · pages asked 5+ times a month</span></div>
         <div class="grid2" style="margin-bottom:0">
@@ -6062,9 +6068,9 @@ function renderAsked(D,S){
         </div></div>
     </div>
     <div class="card"><div class="card-title">Pages people name and are not answered from<span class="card-title-note">asked 30+ times in the months in range · highest not-found share first · cells under 5 shown as &lt;5</span></div>
-      <div class="tbl-wrap"><table style="width:100%;border-collapse:collapse"><thead><tr style="border-bottom:1px solid var(--b2)">${th('Page named',true)}${th('Asked')}${th('Cited it')}${th('Same category')}${th('Other category')}${th('Not found')}${th('Clarification')}</tr></thead><tbody>${byNf.map(pageRow).join('')}</tbody></table></div>
-      <div class="share-foot">A page people name that retrieval does not return is a chunking or indexing list, not a content list: the content exists.</div></div>
-    <div class="card"><div class="card-title">Pages people name that the answer rarely cites<span class="card-title-note">asked 30+ times · lowest same-page share first · a section-level match (a category or hub) is expected to score low here</span></div>
+      <div class="tbl-wrap"><table style="width:100%;border-collapse:collapse"><thead><tr style="border-bottom:1px solid var(--b2)">${th('Page named',true)}${th('Asked')}${th('Cited it (or beneath it)')}${th('Same category')}${th('Other category')}${th('Not found')}${th('Clarification')}</tr></thead><tbody>${byNf.map(pageRow).join('')}</tbody></table></div>
+      <div class="share-foot">A page people name that retrieval does not return is a chunking or indexing list, not a content list: the content exists. Counts are of questions, not people; a rate shows a dash under the small-sample rule.</div></div>
+    <div class="card"><div class="card-title">Pages people name that the answer rarely cites<span class="card-title-note">asked 30+ times · lowest same-page share first · "cited it" counts a page beneath a named hub as a hit</span></div>
       <div class="tbl-wrap"><table style="width:100%;border-collapse:collapse"><thead><tr style="border-bottom:1px solid var(--b2)">${th('Page named',true)}${th('Asked')}${th('Cited it')}${th('Same category')}${th('Other category')}${th('Not found')}${th('Clarification')}</tr></thead><tbody>${byMiss.map(pageRow).join('')}</tbody></table></div></div>`;
   renderIcons();
 }

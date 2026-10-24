@@ -49,8 +49,8 @@ SCHEMA = {
     'citations-monthly.csv': 'Month URL Citations Answers Partial Dislikes',
     'pages-cited.csv': 'URL FirstCited LastCited Citations Answers Partial Dislikes LastMod FirstCitedAfterLastMod AnswersAfterLastMod',
     'safety-daily.csv': 'Date Flag Turns Cited NotFound Clarification Error OutOfScope Greeting Uncited',
-    'question-intent-daily.csv': 'Date Intent Chip Turns Cited NotFound Clarification Error OutOfScope Greeting Uncited Partial Year Euro YesNo Situation WithTopic SituationCited SituationNotFound SituationPartial',
-    'asked-pages-monthly.csv': 'Month URL Category Asked CitedSame CitedSameCategory CitedOther NotFound Clarification Other',
+    'question-intent-daily.csv': 'Date Intent Chip Turns Cited NotFound Clarification Error OutOfScope Greeting Uncited Partial Year Euro YesNo Situation WithTopic SituationCited SituationNotFound SituationPartial NamedCited NamedNotFound NamedClarification',
+    'asked-pages-monthly.csv': 'Month URL Category Asked CitedSame CitedSameCategory CitedOther NotFound Clarification Other CitedUnderHub Hub',
     'question-topics-daily.csv': 'Date Category Turns Cited NotFound Clarification Error OutOfScope Greeting Uncited Partial',
     'intent-journeys-monthly.csv': 'Month From To Turns',
     'setback-intents-monthly.csv': 'Month Setback Intent Turns Ended SameIntentNext OtherIntentNext',
@@ -403,9 +403,10 @@ QI = rd('question-intent-daily.csv'); qit = C.Counter()
 for r in QI: qit[r['Date']] += I(r['Turns'])
 check('question intent: turns per day = usage.Questions', all(qit[d] == I(U[d]['Questions']) for d in days), str([(d, qit[d], U[d]['Questions']) for d in days if qit[d] != I(U[d]['Questions'])][:3]))
 check('question intent: outcomes sum to Turns, flags and WithTopic within Turns', all(sum(I(r[k]) for k in ('Cited', 'NotFound', 'Clarification', 'Error', 'OutOfScope', 'Greeting', 'Uncited')) == I(r['Turns'])
-      and all(I(r[k]) <= I(r['Turns']) for k in ('Partial', 'Year', 'Euro', 'YesNo', 'Situation', 'WithTopic')) and I(r['SituationCited']) + I(r['SituationNotFound']) <= I(r['Situation']) for r in QI))
+      and all(I(r[k]) <= I(r['Turns']) for k in ('Partial', 'Year', 'Euro', 'YesNo', 'Situation', 'WithTopic')) and I(r['SituationCited']) + I(r['SituationNotFound']) <= I(r['Situation'])
+      and I(r['NamedCited']) + I(r['NamedNotFound']) + I(r['NamedClarification']) <= I(r['WithTopic']) and r['Chip'] in ('0', '1', '2') for r in QI))
 AP = rd('asked-pages-monthly.csv')
-check('asked pages: the six outcome columns sum to Asked, and Asked >= 5 on every row', all(sum(I(r[k]) for k in ('CitedSame', 'CitedSameCategory', 'CitedOther', 'NotFound', 'Clarification', 'Other')) == I(r['Asked']) and I(r['Asked']) >= 5 for r in AP))
+check('asked pages: the seven outcome columns sum to Asked, and Asked >= 5 on every row', all(sum(I(r[k]) for k in ('CitedSame', 'CitedUnderHub', 'CitedSameCategory', 'CitedOther', 'NotFound', 'Clarification', 'Other')) == I(r['Asked']) and I(r['Asked']) >= 5 for r in AP))
 QT = rd('question-topics-daily.csv'); qtt = C.Counter()
 for r in QT: qtt[r['Date']] += I(r['Turns'])
 # (category-outcomes recovers a topic for some of these turns from other turns in the conversation, so its 'unknown'

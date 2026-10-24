@@ -18,7 +18,7 @@ from datetime import datetime
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 REPO = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-LEXICON_VERSION = "2026.10.24-1"
+LEXICON_VERSION = "2026.10.24-2"
 MIN_CHARS = 6            # a phrase shorter than this never matches on its own ("tax" would match everything)
 CI = "https://www.citizensinformation.ie/en/"
 # What people call things → the page slug (or full path) it means. Checked against the unmatched report.
@@ -72,9 +72,14 @@ ALIASES = {
 STOP = {"overview", "introduction", "rights", "housing", "employment", "health", "education", "consumer", "justice", "death", "environment",
         "money", "tax", "benefits", "payments", "services", "support", "supports", "schemes", "grants", "forms", "contact", "about", "help",
         "general", "other", "information", "resources", "rules", "rates", "apply", "applying", "how to apply", "eligibility", "appeals",
-        "your rights", "getting help", "useful contacts", "organisations", "categories", "home", "news", "glossary", "faq", "search"}
+        "your rights", "getting help", "useful contacts", "organisations", "categories", "home", "news", "glossary", "faq", "search",
+        # titles that are also ordinary phrases (brief §71): a question using the words is not naming the page
+        "cost of living", "insurance", "dismissal", "signing on", "accommodation", "legislation", "mental health", "complaints", "appeals",
+        "retirement", "redundancy", "divorce", "separation", "wills", "probate", "citizenship"}
 # Intents and the outcome the design expects (brief §66): status → redirect (a not-found or out-of-scope is correct), the rest → cited
-INTENTS = {"status": "redirect", "contact": "cited", "documents": "cited", "apply": "cited", "rate": "cited", "eligibility": "cited",
+# status → cited: AskCI explaining how to check a claim is the right outcome (brief §71, reversing §66). Clarification is
+# the expected outcome for a "what is" question that names no scheme; the dashboard applies that second dimension.
+INTENTS = {"status": "cited", "contact": "cited", "documents": "cited", "apply": "cited", "rate": "cited", "eligibility": "cited",
            "timing": "cited", "definition": "cited", "other": None}
 TS = "%b %d, %Y %H:%M"
 
@@ -95,9 +100,10 @@ def build():
             cat = path.split("/")[0]; slug = path.split("/")[-1]; phrase = norm(slug)
             pages[path] = (u, cat, phrase)
     entries = {}
+    hubs = {path for path in pages if any(o != path and o.startswith(path + "/") for o in pages)}   # pages with pages beneath them
     for path, (u, cat, phrase) in pages.items():
         if len(phrase) < MIN_CHARS or phrase in STOP or phrase.split()[-1] in ("overview", "introduction"): continue
-        if phrase not in entries or len(path) < len(entries[phrase]["path"]): entries[phrase] = {"path": path, "url": u, "category": cat, "source": "slug"}
+        if phrase not in entries or len(path) < len(entries[phrase]["path"]): entries[phrase] = {"path": path, "url": u, "category": cat, "source": "slug", "hub": path in hubs}
     for alias, path in ALIASES.items():
         a = norm(alias)
         if path is None:
@@ -107,10 +113,10 @@ def build():
             entries[a] = {"path": path.rstrip("/"), "url": None, "category": cat, "source": "alias"}; continue
         u = CI + path
         if path not in pages: print(f"note: alias '{alias}' points at a path not on the page list ({path}); kept, category {cat}", file=sys.stderr)
-        entries[a] = {"path": path, "url": u, "category": cat, "source": "alias"}
+        entries[a] = {"path": path, "url": u, "category": cat, "source": "alias", "hub": path in hubs}
     out = {"_comment": "Scheme names a question can be matched on (brief §66): the site's English information page slugs as phrases, plus aliases, minus "
-                       "generic slugs. redact_feed.py tags each question with the longest phrase it contains, as the page address and category. "
-                       "Public data: the site's own addresses. INTENTS carries the outcome the design expects per intent.",
+                       "generic slugs and ordinary-phrase titles. redact_feed.py tags each question with the longest phrase it contains, as the page address and category. "
+                       "hub = other pages sit beneath it, so a citation of any of them counts as a hit (brief §71). Public data: the site's own addresses. INTENTS carries the outcome the design expects per intent.",
            "version": LEXICON_VERSION, "min_chars": MIN_CHARS, "intents": INTENTS,
            "phrases": {p: e for p, e in sorted(entries.items(), key=lambda kv: (-len(kv[0]), kv[0]))}}
     return out

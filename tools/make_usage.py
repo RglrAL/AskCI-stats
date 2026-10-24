@@ -54,11 +54,12 @@ Outputs (all daily counts; nothing per-turn and no text crosses into the dashboa
                             with Outcome Rule, brief §53)
   pages-cited.csv           URL, FirstCited, LastCited, Citations, Answers, Partial, Dislikes, LastMod,
                             FirstCitedAfterLastMod, AnswersAfterLastMod (one row per cited page, all data; brief §62)
-  question-intent-daily.csv Date, Intent, Chip, Turns, outcomes, Partial, Year, Euro, YesNo, Situation, WithTopic,
-                            SituationCited, SituationNotFound, SituationPartial (brief §66)
+  question-intent-daily.csv Date, Intent, Chip (0 typed, 1 starter prompt, 2 suggested follow-up), Turns, outcomes, Partial,
+                            Year, Euro, YesNo, Situation, WithTopic, SituationCited, SituationNotFound, SituationPartial,
+                            NamedCited, NamedNotFound, NamedClarification (brief §66, §71)
   asked-pages-monthly.csv   Month, URL, Category, Asked, CitedSame, CitedSameCategory, CitedOther, NotFound, Clarification,
-                            Other: the page a question named and what the answer did; pages asked under 5 times a month
-                            left out (brief §66)
+                            Other, CitedUnderHub, Hub: the page a typed question named and what the answer did; pages
+                            asked under 5 times a month left out (brief §66, §71)
   question-topics-daily.csv Date, Category, Turns, outcomes, Partial: the category the question named, for turns whose
                             answer carried no topic (brief §66)
   intent-journeys-monthly.csv  Month, From, To, Turns: consecutive turns' intents in mature conversations, END after the
@@ -114,6 +115,11 @@ from collections import defaultdict
 from datetime import datetime, date
 
 REPO = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+try:   # hub pages from the lexicon (brief §71): a citation of a page beneath a named hub counts as a hit
+    import json as _json
+    HUBS = {e["path"] for e in _json.load(open(os.path.join(REPO, "question-lexicon.json"), encoding="utf-8"))["phrases"].values() if e.get("hub") and e.get("url")}
+except (OSError, ValueError, KeyError):
+    HUBS = set()
 
 TS_FORMAT = "%b %d, %Y %H:%M"   # e.g. "Jun 06, 2026 19:50"
 MONTHS = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"]
@@ -342,7 +348,9 @@ def aggregate(files, skip_days=frozenset()):
                 # what people ask (brief §66): intent and form from the question, the page it names, and what the answer did
                 if (row.get("Intent Version") or "").strip():
                     qi = (row.get("Query Intent") or "other").strip() or "other"; qf = set((row.get("Query Form") or "").split(";")) - {""}
-                    chip = 1 if (row.get("Starter Prompt") or "").strip() else 0
+                    # 0 = typed by the person, 1 = a starter prompt, 2 = a model-written suggested follow-up (its text follows the
+                    # prompt's own pattern, so it carries an intent by construction and is never counted as typed; brief §71)
+                    chip = 1 if (row.get("Starter Prompt") or "").strip() else 2 if (row.get("Question Type") or "").strip() == "suggested_followup" else 0
                     e5 = intent[(d, qi, chip)]; e5["Turns"] += 1
                     if o_rec: e5["o:" + o_rec] += 1
                     if (row.get("Partial") or "").strip().lower() == "yes": e5["o:partial"] += 1
@@ -352,12 +360,17 @@ def aggregate(files, skip_days=frozenset()):
                         if o_rec == "Not found": e5["s:notfound"] += 1
                         if (row.get("Partial") or "").strip().lower() == "yes": e5["s:partial"] += 1
                     qp = (row.get("Query Page") or "").strip(); qc = (row.get("Query Category") or "").strip()
-                    if qc: e5["WithTopic"] += 1
-                    if qp:
+                    if qc:
+                        e5["WithTopic"] += 1
+                        if o_rec == "Cited answer": e5["n:cited"] += 1
+                        if o_rec == "Not found": e5["n:notfound"] += 1
+                        if o_rec == "Clarification": e5["n:clarification"] += 1
+                    if qp and chip == 0:   # pages people name: typed questions only
                         a5 = asked[(d.strftime("%Y-%m"), qp)]; a5["Asked"] += 1; a5["_cat"] = qc
-                        qpn = norm_url(qp)
+                        qpn = norm_url(qp); hubp = qpn.split("/en/", 1)[1] if "/en/" in qpn else ""
                         if o_rec == "Cited answer":
                             if qpn in nus: a5["CitedSame"] += 1
+                            elif hubp and hubp in HUBS and any(("/en/" + hubp + "/") in u for u in nus): a5["CitedUnderHub"] += 1
                             elif any(url_slug(u) == qc for u in nus): a5["CitedSameCategory"] += 1
                             else: a5["CitedOther"] += 1
                         elif o_rec == "Not found": a5["NotFound"] += 1
@@ -410,8 +423,8 @@ OUT7_SRC = ["o:Cited answer", "o:Not found", "o:Clarification", "o:Error", "o:Ou
 def intent_rows(intent):
     """question-intent-daily.csv: per day, intent and whether the turn was a chip: turns, outcomes, partial, the form
     flags (a year, a euro amount, a yes/no form, a personal situation) and turns whose question named a scheme (§66)."""
-    cols = ["Date", "Intent", "Chip", "Turns"] + OUT7 + ["Partial", "Year", "Euro", "YesNo", "Situation", "WithTopic", "SituationCited", "SituationNotFound", "SituationPartial"]
-    return cols, [[d.isoformat(), i, c, e["Turns"]] + [e[k] for k in OUT7_SRC] + [e["o:partial"], e["f:year"], e["f:euro"], e["f:yesno"], e["f:situation"], e["WithTopic"], e["s:cited"], e["s:notfound"], e["s:partial"]]
+    cols = ["Date", "Intent", "Chip", "Turns"] + OUT7 + ["Partial", "Year", "Euro", "YesNo", "Situation", "WithTopic", "SituationCited", "SituationNotFound", "SituationPartial", "NamedCited", "NamedNotFound", "NamedClarification"]
+    return cols, [[d.isoformat(), i, c, e["Turns"]] + [e[k] for k in OUT7_SRC] + [e["o:partial"], e["f:year"], e["f:euro"], e["f:yesno"], e["f:situation"], e["WithTopic"], e["s:cited"], e["s:notfound"], e["s:partial"], e["n:cited"], e["n:notfound"], e["n:clarification"]]
                   for (d, i, c), e in sorted(intent.items())]
 
 
@@ -419,8 +432,8 @@ def asked_rows(asked, min_asked=5):
     """asked-pages-monthly.csv: per month and page the question named: how often, and what the answer did: cited that
     page, cited another page in the same category, cited a different category, not found, clarification, other.
     Pages named fewer than min_asked times in a month are left out (small-sample rule, brief §66)."""
-    cols = ["Month", "URL", "Category", "Asked", "CitedSame", "CitedSameCategory", "CitedOther", "NotFound", "Clarification", "Other"]
-    rows = [[m, u, e["_cat"], e["Asked"], e["CitedSame"], e["CitedSameCategory"], e["CitedOther"], e["NotFound"], e["Clarification"], e["Other"]]
+    cols = ["Month", "URL", "Category", "Asked", "CitedSame", "CitedSameCategory", "CitedOther", "NotFound", "Clarification", "Other", "CitedUnderHub", "Hub"]
+    rows = [[m, u, e["_cat"], e["Asked"], e["CitedSame"], e["CitedSameCategory"], e["CitedOther"], e["NotFound"], e["Clarification"], e["Other"], e["CitedUnderHub"], 1 if (u.split("/en/", 1)[1] if "/en/" in u else "") in HUBS else 0]
             for (m, u), e in asked.items() if e["Asked"] >= min_asked]
     return cols, sorted(rows, key=lambda r: (r[0], -r[3], r[1]))
 
