@@ -1766,3 +1766,97 @@ wills 10.2%. Death: the after-a-death payments topic (439) runs at 10.0% not fou
 category is the finding: people asking how to contact Citizens Information, where the nearest centre is or when it
 is open are not found 14.4% of the time, and questions about languages and accessibility 13.7%; the service answers
 questions about the State better than questions about itself.
+
+## 76. Recommendations, consolidated after §75 (24 Oct 2026, evening)
+
+§72 stands as the record at midday on 24 October. The seven legs of §75 added measures and moved some conclusions.
+This is the current list, in the same three groups, with each item's figure, its measure on the page, and its
+confidence: **measured** (a count from the published files), **inferred**, or **waiting on the labelling**. Items
+carried from §72 keep their number in brackets.
+
+**For the system owners**
+
+1. **[1] The chip request path returns an empty answer to one click in twelve, all year.** Unchanged, still the
+   first thing to report. Findings item 1. (§64; measured.)
+2. **Every deployment so far changed the prompt as well as the model, and 14 September changed the out-of-scope and
+   no-results wording the same day it changed the model.** The fixed sentences step in March, July and September and
+   never otherwise. The September reading in §67 and §71 holds, with this added: part of what moved on 14 September is
+   wording, and the labelling is what separates the two. Usage › Answer wording, Fixed wording; three candidate
+   `prompt` events to confirm. (§75 second leg; measured.)
+3. **The no-results answer sends people to Citizens Information's own channels and almost nowhere else.** 97% of
+   not-found answers signpost; 15.6% name an outside body; the RTB appears in 12 not-found answers all year, MABS in 6.
+   A theme-aware signpost (a tenancy question to the RTB and Threshold, a money question to MABS, a neighbour dispute
+   to the justice pages and a centre) is a small prompt change. Findings item 12, baseline 21.2% (September).
+   (§75 third leg; measured.)
+4. **[2, 3] The answering model's threshold and the classifier's clarifications** are as §72 read them, with one
+   correction from layer 2: the clarification step is scheme disambiguation (6,715 of 6,728 clarifications ask which
+   scheme), it asks for a circumstance the question already gave in 2% of cases, concentrated in household and work,
+   and giving a detail halves the chance of being asked back. So the classifier is not re-asking; the "what is …"
+   clarification rise of §71 is a threshold on scheme ambiguity. (§71, §75 sixth leg; inferred.)
+5. **[6] The two requests for when contact resumes** stand: the prompt set as now deployed, and a log extract one week
+   either side of 14 September. The templates give the dates to ask about. (§60, §68, §75.)
+
+**For the content team**
+
+6. **[7, 9, 10] The register** now carries 29 rows for August–September across six kinds, with owners and a status
+   file: 3 retrieval, 4 detail, 6 stale, 7 missing-page (4 from the housing read, 3 computed: residence permissions
+   and stamps 15.8% not found, contacting Citizens Information 18.7%, crime and the Gardaí 10.2%), 2 signpost, 7
+   unknown. Usage › Pages. The October rows add the Budget and cost-of-living topics. (§73, §74, §75; measured, topic
+   rows not yet reader-checked.)
+7. **People asking how to contact Citizens Information are not found 14.4% of the time** (347 questions, "about"
+   topic table); languages and accessibility 13.7%. The cheapest row in the register: two lines on the about page.
+   (§75 seventh leg; measured.)
+8. **Figures quoted that the cited page does not carry: 4.3% of checkable figures, 2.7% in October**, an upper bound
+   that fires on roundings and second sources as well as errors; highest on tax residence, the employment-permit
+   pages, retiring to Ireland and invalidity pension. Findings item 13, baseline 4.1% (September). Not called
+   accuracy until the sheet's figure-match column says what the bound contains. (§75 fourth leg; measured, waiting on
+   the labelling.)
+9. **[8] The AskCI "about" page** is still asked for entitlements; the register's detail row stands. (§62; measured.)
+10. **Justice is the weakest category** (going to court 10.6% not found, criminal records and vetting 12.6%, the
+    general bucket 14.6%), and money and tax covers least the two things people ask about in the moment (cost of
+    living 13.8% not found, 30.5% partial; the Budget 11.2%, 26.3%). Usage › What people ask, the category picker.
+    (§75 fifth and seventh legs; measured.)
+
+**For whoever owns the chips**
+
+11. **[5, 11]** Unchanged. (§63, §70; measured.)
+
+**A question, not a recommendation**
+
+12. **[12]** Crisis language: unchanged count; the organisations list now measures whether a crisis line is named
+    (Samaritans, Pieta or 50808 appear in 84 answers all year). (§65, §75; measured, small numbers.)
+
+**For the dashboard itself**
+
+13. **[13] The labelling hour, with the sheet regenerated** to carry category, topic and figure-match columns and
+    strata for the §75 layers; `score_labels.py` prints the category agreement, the topic overlap and the figures
+    calibration beside the outcome and intent figures, as `CONFIG.derivation_measured`. Until it is scored: every
+    topic row, the figures bound and the agreement caveat stay as they are. (§61, §66, §75.)
+14. **[14, 15]** Unchanged: 77% of typed questions in a named intent against 80%; "not what the question needed"
+    11.9%. (§71.)
+15. **The residue**, typed questions no test places in a category, is 9,600 (9.1%), from 13,187 this morning; what is
+    left is noise, greetings, and subjects the site does not have. It is the number to watch as the topic tables
+    grow, not to drive to zero. (§75; measured.)
+16. **The exception of 24 October** is logged in §75 and closed by the guard; the governance ask (the model provider
+    as a processor under agreement, or not) is open and belongs to the AskCI side. (§75.)
+
+**What is settled and what is not, revised.** Settled, from counts: the chip defect; the content rows in the
+register; the chips; the crisis count; that every deployment changed the prompt; where the not-found answers send
+people; that the clarification step disambiguates schemes and rarely re-asks. Inferred, consistent across the steps:
+14 September was a model change in the answering model's threshold, hardest on personal cases, now known to have
+come with a wording change on the same day. Not settled until the labelling: what the 14 September "not found"
+answers actually are, whether the topic labels are right, and what the figures bound contains.
+
+**The labelling sheet, regenerated (24 Oct 2026, evening).** A new labelling folder under `exports/`, dated 24
+October: 122 answers, a second sheet of 24. `make_label_sample.py` keeps the outcome strata of §61 (per period: 12
+cited, 8 partial, 8 not found, 6 clarification; 10 HAP starter turns) and adds the §75 strata from the after period,
+typed turns only: 8 answers whose quoted figures all matched a cited page and 8 with one unmatched (populations 2,636
+and 237), 8 questions giving a personal detail (3,934), the 4 pasted letters there were, and one question per category
+placed by its topic alone (16 of 4,408). Three new columns for the labeller: **category** (one of the sixteen),
+**topic** (the subject in the reader's own words) and **figure_match** (yes / no / partly / can't tell, checked on the
+cited pages, with a rounding or an annualised rate counting as on the page). `key.csv` carries the rule's topic and
+category, the figures result and the situation flags for every row, and stays shut until the labels are in.
+`score_labels.py` adds three readings: category agreement (split by page-named and topic-placed rows), a loose
+topic-word overlap, and the figures calibration (agreement, the bound's false alarms, the rule's misses), printed as
+`CONFIG.derivation_measured` beside the outcome and intent entries. The folder of 23 October is superseded and can be
+deleted. The analyst fills the sheet; the session scores it and never reads it.

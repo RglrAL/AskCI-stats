@@ -37,6 +37,9 @@ from datetime import datetime, date
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from redact_feed import classify, URL_RE, OUTCOME_RULES_VERSION, normalise_query, intent_of, topic_of, INTENT_VERSION, lexicon   # the rules being measured, exactly as they run
+from redact_feed import question_topic, check_figures, situation_of, DERIVATION_VERSION, STARTER_PROMPTS   # the §75 layers, measured by the same sheet
+CATEGORIES = ["social-welfare", "employment", "housing", "moving-country", "money-and-tax", "travel-and-recreation", "health", "birth-family-relationships",
+              "education", "justice", "consumer", "returning-to-ireland", "about", "death", "government-in-ireland", "environment"]
 
 REPO = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 TS = "%b %d, %Y %H:%M"
@@ -67,6 +70,8 @@ def main():
     ap.add_argument("--seed", type=int, default=2026)
     ap.add_argument("--starter", default="what are the housing assistance payment (hap) limits", help="a starter prompt to sample as its own stratum from the after period ('' for none)")
     ap.add_argument("--starter-n", type=int, default=20)
+    ap.add_argument("--extra", default="figmatched=8,figunmatched=8,situation=8,letter=4,topic=16",
+                    help="brief §75 strata, from the after period, typed turns: answers whose quoted figures all matched a cited page / had one unmatched; questions giving a personal detail; pasted letters; one question per category placed by its topic alone (topic=N caps the total)")
     ap.add_argument("--out", default=None)
     a = ap.parse_args()
     periods = {"before": span(a.before), "after": span(a.after)}
@@ -74,6 +79,8 @@ def main():
 
     seen, pool = set(), {p: {s: [] for s in per} for p in periods}
     starter = normalise_query(a.starter) if a.starter else None; spool = []
+    extra = {k: int(v) for k, v in (x.split("=") for x in a.extra.split(","))} if a.extra else {}
+    xpool = {"figmatched": [], "figunmatched": [], "situation": [], "letter": [], "topic": {c: [] for c in CATEGORIES}}
     for f in a.feeds:
         with open(f, encoding="utf-8-sig", newline="") as fh:
             r = csv.DictReader(fh)
@@ -96,6 +103,18 @@ def main():
                     spool.append((d, row, s or o)); continue   # the fixed question is its own stratum, never double-counted
                 if s in per:
                     pool[p][s].append((d, row))
+                # the §75 strata: typed turns in the after period, by what the derivation says about them
+                if extra and p == "after" and (row.get("Question Type") or "").strip() in ("new_topic", "user_followup") and not (
+                        (row.get("Turn #") or "").strip() == "1" and normalise_query(row.get("User Query")) in STARTER_PROMPTS):
+                    q = row.get("User Query") or ""; ans = row.get("Assistant Response") or ""
+                    qp, qc, _ = topic_of(q); tname, tcat = question_topic(q)
+                    f = check_figures(ans, row.get("Citations"), d.isoformat()) if ("€" in ans or "%" in ans) else (0, 0, 0, 0)
+                    if f[0] and f[3] == 0:
+                        xpool["figunmatched" if f[2] else "figmatched"].append((d, row, s or o))
+                    sit = situation_of(q, qc == "social-welfare")
+                    if any(sit[:5]): xpool["situation"].append((d, row, s or o))
+                    if "letter" in sit[6]: xpool["letter"].append((d, row, s or o))
+                    if tname and not qc and tcat in xpool["topic"]: xpool["topic"][tcat].append((d, row, s or o))
 
     rnd = random.Random(a.seed)
     items, key = [], []
@@ -110,12 +129,32 @@ def main():
     for d, row, s in spick:
         items.append(row)
         key.append({"period": "after", "rule_outcome": s, "date": d.isoformat(), "stratum_population": len(spool), "stratum_sample": len(spick), "stratum": "starter"})
+    # the §75 strata; an item already drawn is not drawn twice
+    drawn = {(r.get("Conversation ID"), (r.get("Turn #") or "").strip()) for r in items}
+    xcounts = {}
+    for name in ("figmatched", "figunmatched", "situation", "letter"):
+        got = [x for x in xpool[name] if (x[1].get("Conversation ID"), (x[1].get("Turn #") or "").strip()) not in drawn]
+        pick = rnd.sample(got, min(extra.get(name, 0), len(got))); xcounts[name] = len(xpool[name])
+        for d, row, s in pick:
+            items.append(row); drawn.add((row.get("Conversation ID"), (row.get("Turn #") or "").strip()))
+            key.append({"period": "after", "rule_outcome": s, "date": d.isoformat(), "stratum_population": len(xpool[name]), "stratum_sample": len(pick), "stratum": name})
+    tpop = sum(len(v) for v in xpool["topic"].values()); tpick = 0
+    for c in CATEGORIES:   # one per category, up to the cap
+        if tpick >= extra.get("topic", 0): break
+        got = [x for x in xpool["topic"][c] if (x[1].get("Conversation ID"), (x[1].get("Turn #") or "").strip()) not in drawn]
+        if not got: continue
+        d, row, s = rnd.choice(got); tpick += 1
+        items.append(row); drawn.add((row.get("Conversation ID"), (row.get("Turn #") or "").strip()))
+        key.append({"period": "after", "rule_outcome": s, "date": d.isoformat(), "stratum_population": tpop, "stratum_sample": 0, "stratum": "topic"})
+    for k in key:
+        if k["stratum"] == "topic": k["stratum_sample"] = tpick
+    xcounts["topic"] = tpop
     order = list(range(len(items)))
     rnd.shuffle(order)
 
     out = a.out or os.path.join(REPO, "exports", f"labelling-{date.today().isoformat()}")
     os.makedirs(out, exist_ok=True)
-    cols = ["item", "question", "answer", "cited_pages", "what_kind", "answered", "detail_on_page", "what_asked", "scheme_page", "notes"]
+    cols = ["item", "question", "answer", "cited_pages", "what_kind", "answered", "detail_on_page", "what_asked", "scheme_page", "category", "topic", "figure_match", "notes"]
 
     def sheet(path, idx):
         with open(path, "w", newline="", encoding="utf-8") as fh:
@@ -123,17 +162,21 @@ def main():
             for i in idx:
                 row = items[i]
                 w.writerow([f"A{i + 1:03d}", (row.get("User Query") or "").strip(), (row.get("Assistant Response") or "").strip(),
-                            "\n".join(URL_RE.findall(row.get("Citations") or "")), "", "", "", "", "", ""])
+                            "\n".join(URL_RE.findall(row.get("Citations") or "")), "", "", "", "", "", "", "", "", ""])
 
     sheet(os.path.join(out, "label_sheet.csv"), order)
     second = rnd.sample(order, min(a.double, len(order)))
     rnd.shuffle(second)
     sheet(os.path.join(out, "label_sheet_second.csv"), second)
     with open(os.path.join(out, "key.csv"), "w", newline="", encoding="utf-8") as fh:
-        w = csv.writer(fh); w.writerow(["item", "period", "rule_outcome", "date", "stratum_population", "stratum_sample", "rules_version", "stratum", "rule_intent", "rule_form", "rule_page", "rule_category", "intent_version"])
+        w = csv.writer(fh); w.writerow(["item", "period", "rule_outcome", "date", "stratum_population", "stratum_sample", "rules_version", "stratum", "rule_intent", "rule_form", "rule_page", "rule_category", "intent_version",
+                                        "rule_topic", "rule_topic_category", "derivation_version", "fig_total", "fig_matched", "fig_unmatched", "fig_unverifiable", "sit_county", "sit_age", "sit_household", "sit_work", "sit_payment", "sit_shape"])
         for i, k in enumerate(key):
-            qi, qf = intent_of(items[i].get("User Query")); qp, qc, _ = topic_of(items[i].get("User Query"))
-            w.writerow([f"A{i + 1:03d}", k["period"], k["rule_outcome"], k["date"], k["stratum_population"], k["stratum_sample"], OUTCOME_RULES_VERSION, k["stratum"], qi, qf, qp, qc, INTENT_VERSION + "+" + lexicon()["version"]])
+            q = items[i].get("User Query"); ans = items[i].get("Assistant Response") or ""
+            qi, qf = intent_of(q); qp, qc, _ = topic_of(q); tn, tc = question_topic(q)
+            fg = check_figures(ans, items[i].get("Citations"), k["date"]); sit = situation_of(q, qc == "social-welfare")
+            w.writerow([f"A{i + 1:03d}", k["period"], k["rule_outcome"], k["date"], k["stratum_population"], k["stratum_sample"], OUTCOME_RULES_VERSION, k["stratum"], qi, qf, qp, qc, INTENT_VERSION + "+" + lexicon()["version"],
+                        tn, tc, DERIVATION_VERSION, *fg, sit[0], sit[1], sit[2], sit[3], sit[4], sit[6]])
     with open(os.path.join(out, "README.txt"), "w", encoding="utf-8") as fh:
         fh.write(f"""AskCI answer labelling ({len(items)} answers; a second sheet of {len(second)} for a second labeller)
 
@@ -158,6 +201,16 @@ For each row of label_sheet.csv, read the question and the answer, then fill in:
                    Pick the one the person most wants answered; a personal story with "can I get" is eligibility.
   scheme_page      the citizensinformation.ie page the question is about, if it names a scheme or subject: paste the
                    address of the page you would send them to (search the site), or leave blank if it names none.
+  category         which part of citizensinformation.ie the question belongs to, one of:
+                   {', '.join(CATEGORIES)}
+                   (about = a question about the service itself). Leave blank only if none fits at all.
+  topic            in a few words of your own, what the question is about: the subject, not the wording
+                   (e.g. "HAP limits", "passport renewal", "council rent review", "which visa for a spouse").
+  figure_match     only when the answer quotes a euro amount, a percentage or a year: open the cited page(s) and say
+                   whether every figure the answer quotes is on them.
+                   yes (all of them) / no (at least one figure is on no cited page) / partly (some are, some are not) /
+                   can't tell. Leave blank when the answer quotes no figure. A rounded figure or a weekly rate the page
+                   gives annually counts as on the page.
   notes            anything worth saying (optional)
 
 Judge the answer as a member of the public would read it. "can't tell" is a fine answer: use it rather than guess.
@@ -171,9 +224,11 @@ of rates on the cited page counts as the detail being there.
 When done: python3 tools/score_labels.py {os.path.relpath(out, REPO)}
 """)
     counts = {p: {s: len(pool[p][s]) for s in per} for p in periods}
-    print(f"wrote {len(items)} items to {out} (second labeller: {len(second)}); rules {OUTCOME_RULES_VERSION}")
+    print(f"wrote {len(items)} items to {out} (second labeller: {len(second)}); rules {OUTCOME_RULES_VERSION}, derivation {DERIVATION_VERSION}")
     for p in periods:
         print(f"  {p} {periods[p][0]}..{periods[p][1]}: population " + ", ".join(f"{s} {counts[p][s]}" for s in per))
+    if extra:
+        print("  §75 strata (after period, typed): population " + ", ".join(f"{k} {v}" for k, v in xcounts.items()) + f"; drawn " + ", ".join(f"{k} {sum(1 for x in key if x['stratum'] == k)}" for k in xcounts))
 
 
 if __name__ == "__main__":

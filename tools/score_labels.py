@@ -27,6 +27,9 @@ KIND = {"answered with a source": "cited", "answered but says something is missi
 CLASSES = ["cited", "partial", "notfound", "clarification"]
 INTENTS = {"status", "contact", "documents", "apply", "rate", "eligibility", "timing", "definition", "other"}
 COLS = CLASSES + ["oos", "uncited", "other", "cant"]
+CATEGORIES = {"social-welfare", "employment", "housing", "moving-country", "money-and-tax", "travel-and-recreation", "health", "birth-family-relationships",
+              "education", "justice", "consumer", "returning-to-ireland", "about", "death", "government-in-ireland", "environment"}
+STOP = {"the", "and", "for", "with", "from", "about", "what", "how", "when", "where", "which", "does", "this", "that", "their", "they", "them", "into", "onto", "over"}
 
 
 def norm(v, allowed):
@@ -40,7 +43,9 @@ def read_sheet(path):
     with open(path, encoding="utf-8-sig", newline="") as fh:
         return {r["item"]: (norm(r.get("what_kind"), KIND), norm(r.get("answered"), {"yes", "partly", "no", "can't tell"}),
                             norm(r.get("detail_on_page"), {"yes", "no", "can't tell"}), norm(r.get("what_asked"), INTENTS),
-                            (r.get("scheme_page") or "").strip().lower().rstrip("/")) for r in csv.DictReader(fh)}
+                            (r.get("scheme_page") or "").strip().lower().rstrip("/"),
+                            norm(r.get("category"), CATEGORIES), (r.get("topic") or "").strip().lower(),   # brief §75: the topic layer and the figures check, read against the same sheet
+                            norm(r.get("figure_match"), {"yes", "no", "partly", "can't tell"})) for r in csv.DictReader(fh)}
 
 
 def wilson(k, n, z=1.96):
@@ -73,7 +78,7 @@ def main():
     with open(os.path.join(d, "key.csv"), encoding="utf-8-sig", newline="") as fh:
         key = {r["item"]: r for r in csv.DictReader(fh)}
     lab = read_sheet(os.path.join(d, "label_sheet.csv"))
-    bad = [i for i, (k, a, dp, wa, sp) in lab.items() if k.startswith("?") or a.startswith("?") or dp.startswith("?") or wa.startswith("?")]
+    bad = [i for i, v in lab.items() if any(v[j].startswith("?") for j in (0, 1, 2, 3, 5, 7))]
     if bad:
         sys.exit(f"{len(bad)} rows have a value that isn't one of the allowed ones (see README.txt), e.g. {bad[:5]}")
     done = {i: v for i, v in lab.items() if v[0]}
@@ -153,6 +158,37 @@ def main():
              **{f"agreement_{p}": summary[p]["agreement"] for p in ("before", "after") if p in summary},
              **({"notfound_answered_after": summary["after"]["notfound_answered"]} if "after" in summary else {})}
     print("CONFIG.outcome_rules_measured = " + json.dumps(entry))
+    # brief §75: the topic layer's category, the topic label, and the figures check, each against the reader
+    der = {}
+    cat_rows = [i for i in key if i in lab and lab[i][5] and (key[i].get("rule_category") or key[i].get("rule_topic_category"))]
+    if cat_rows:
+        agree = sum(lab[i][5] == (key[i].get("rule_category") or key[i].get("rule_topic_category")) for i in cat_rows)
+        by_src = C.defaultdict(lambda: [0, 0])
+        for i in cat_rows:
+            src = "page" if key[i].get("rule_category") else "topic"; by_src[src][1] += 1; by_src[src][0] += lab[i][5] == (key[i].get("rule_category") or key[i].get("rule_topic_category"))
+        print(f"== category (brief §75): reader agrees with the rule's category on {agree / len(cat_rows):.0%} of {len(cat_rows)}{rng(agree, len(cat_rows))} · " + "; ".join(f"by {s} {a}/{n}" for s, (a, n) in by_src.items()))
+        der["category_agreement"] = round(agree / len(cat_rows), 3); der["category_n"] = len(cat_rows)
+    top_rows = [i for i in key if i in lab and lab[i][6] and key[i].get("rule_topic")]
+    if top_rows:
+        def overlap(i):
+            words = {w for w in lab[i][6].replace(",", " ").split() if len(w) >= 4 and w not in STOP}
+            return any(w in key[i]["rule_topic"].lower() for w in words)
+        ov = sum(overlap(i) for i in top_rows)
+        print(f"== topic label (brief §75): a word of the reader's own description appears in the rule's topic name on {ov / len(top_rows):.0%} of {len(top_rows)}{rng(ov, len(top_rows))} (a loose test; the category test above is the firm one)")
+        der["topic_word_overlap"] = round(ov / len(top_rows), 3); der["topic_n"] = len(top_rows)
+    fig_rows = [i for i in key if i in lab and lab[i][7] in ("yes", "no", "partly") and int(key[i].get("fig_total") or 0) and int(key[i].get("fig_unverifiable") or 0) == 0]
+    if fig_rows:
+        rule_all = lambda i: int(key[i]["fig_unmatched"]) == 0
+        agree = sum((lab[i][7] == "yes") == rule_all(i) for i in fig_rows)
+        false_unm = [i for i in fig_rows if not rule_all(i)]; fu = sum(lab[i][7] == "yes" for i in false_unm)
+        missed = [i for i in fig_rows if rule_all(i)]; ms = sum(lab[i][7] in ("no", "partly") for i in missed)
+        print(f"== figures (brief §75): reader and rule agree on whether every quoted figure is on a cited page for {agree / len(fig_rows):.0%} of {len(fig_rows)} checkable answers{rng(agree, len(fig_rows))}")
+        print(f"   of answers the rule calls unmatched, the reader found every figure on the page in {fu} of {len(false_unm)} (the upper bound's false alarms); of answers the rule calls matched, the reader found a figure missing in {ms} of {len(missed)}")
+        der["figure_agreement"] = round(agree / len(fig_rows), 3); der["figure_n"] = len(fig_rows)
+        der["figure_false_unmatched"] = round(fu / len(false_unm), 3) if false_unm else None; der["figure_missed"] = round(ms / len(missed), 3) if missed else None
+    if der:
+        der["date"] = date.today().isoformat(); der["derivation_version"] = next((key[i].get("derivation_version") for i in key if key[i].get("derivation_version")), "")
+        print("CONFIG.derivation_measured = " + json.dumps(der))
 
 
 if __name__ == "__main__":
