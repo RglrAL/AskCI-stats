@@ -6026,9 +6026,9 @@ function renderAsked(D,S){
   const chg=(a,b)=>a==null||b==null?'':` <span style="color:var(--muted)">(${a>=b?'+':'−'}${Math.abs((a-b)*100).toFixed(1)} pts)</span>`;
   const rows=INTENT_ORDER.filter(i=>A[i]).map(i=>{const x=A[i],y=B[i]||{};const ux=unexpected(x,i),uy=unexpected(y,i);
     return`<tr style="border-bottom:1px solid var(--b2)">${td(`<b>${INTENT_LABEL[i]}</b> <span style="color:var(--muted);font-size:.68rem">expects ${exp(i)||'—'}</span>`,{left:true})}${td(num(x.Turns))}${td(pc(x.Turns,ta))}${td(pc(x.Cited,x.Turns)+chg(x.Cited/x.Turns,y.Turns?y.Cited/y.Turns:null))}${td(pc(x.Cited-x.Partial,x.Turns))}${td(pc(x.NotFound,x.Turns)+chg(x.NotFound/x.Turns,y.Turns?y.NotFound/y.Turns:null))}${td(pc(x.Clarification,x.Turns))}${td(ux==null?'—':(ux*100).toFixed(1)+'%'+chg(ux,uy),{style:'font-weight:600;color:'+(ux!=null&&uy!=null&&ux>uy+0.01?'var(--red)':'var(--text)')})}${td(pc(x.Situation,x.Turns))}${td(pc(x.WithTopic,x.Turns))}</tr>`;}).join('');
-  const named=sumk(A,'WithTopic');
   // the form flags, over all typed turns
   const sumk=(o,k)=>Object.values(o).reduce((s,x)=>s+(x[k]||0),0);
+  const named=sumk(A,'WithTopic');
   const sit=sumk(A,'Situation'),sitC=sumk(A,'SituationCited'),sitN=sumk(A,'SituationNotFound'),sitB=sumk(B,'Situation'),sitBC=sumk(B,'SituationCited'),sitBN=sumk(B,'SituationNotFound');
   const other=A.other?A.other.Turns:0;
   // the share of failed answers with a topic
