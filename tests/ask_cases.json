@@ -2822,5 +2822,37 @@
   "expect": [
    "typed questions · eligibility questions"
   ]
+ },
+ {
+  "q": "topics in housing",
+  "group": "asked",
+  "expect": [
+   "10 subjects by typed questions",
+   "Housing, general"
+  ]
+ },
+ {
+  "q": "what can't be answered in housing",
+  "group": "asked",
+  "expect": [
+   "10 subjects by not-found answers",
+   "Housing"
+  ]
+ },
+ {
+  "q": "unanswered topics in housing last month",
+  "group": "asked",
+  "expect": [
+   "10 subjects by not-found answers",
+   "Sep'26"
+  ]
+ },
+ {
+  "q": "topics not answered in housing",
+  "group": "asked",
+  "expect": [
+   "10 subjects by not-found answers",
+   "Housing, general"
+  ]
  }
 ]

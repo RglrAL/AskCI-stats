@@ -9599,7 +9599,7 @@ init();
       const at=it.act?' data-act="'+it.act[0]+'" data-arg="'+escA(it.act[1])+'"':'';
       return '<button class="ask-topn-row"'+at+(it.title?' title="'+escA(it.title)+'"':'')+'><span class="ask-topn-rank">'+(i+1)+'</span><span class="ask-topn-lbl">'+esc(it.label)+(it.extra?'<span style="color:var(--dim)">'+esc(it.extra)+'</span>':'')+'</span><span class="ask-topn-bar"><span style="width:'+pct.toFixed(1)+'%"></span></span><span class="ask-topn-val">'+fmt(it.v)+'</span></button>';
     }).join('');
-    const ent={service:'services',model:'models',day:'days',week:'weeks',month:'months',category:'categories',page:'pages',clickpage:'clicked pages',prompt:'starter prompts',journey:'journeys',asked:'kinds of question',askedpage:'pages people named'}[intent.entity];
+    const ent={service:'services',model:'models',day:'days',week:'weeks',month:'months',category:'categories',page:'pages',clickpage:'clicked pages',prompt:'starter prompts',journey:'journeys',asked:'kinds of question',askedpage:'pages people named',topic:'subjects'}[intent.entity];
     const caveat=(intent.entity==='asked'||intent.entity==='askedpage'||intent.entity==='topic')&&typeof intentCaveat==='function'?'<div class="ask-card-sub" style="margin-top:var(--sp-2)">'+intentCaveat()+'</div>':'';
     const by=res.by||(intent.metric==='questions'?'turns':(intent.metric==='llm'?'generation cost':'spend'));
     const where=intent.period.kind==='all'?'overall':'in '+intent.period.label;
@@ -10564,7 +10564,7 @@ init();
       const cmp=parseGrowth(q)||parseCompare(q);
       if(cmp&&cmp.periodA)return {text:'Compares: <b>'+esc(cmp.metric.label)+'</b> · '+esc(cmp.periodA.label)+' and '+esc(cmp.periodB.label)+fx};
       const tn=parseTopN(q);
-      if(tn)return {text:'Ranks: <b>'+esc(tn.entity==='category'?'topics':tn.entity+'s')+'</b> · '+esc(tn.period?tn.period.label:'')+fx};
+      if(tn)return {text:'Ranks: <b>'+esc(tn.entity==='category'?'topics':tn.entity==='topic'?'subjects within a topic':tn.entity+'s')+'</b> · '+esc(tn.period?tn.period.label:'')+fx};
       let left=residue(q),tail='';
       // the word still being typed: if it starts a known word, read the question without it rather than warn
       const lastW=(q.match(/[a-z]+$/)||[''])[0];

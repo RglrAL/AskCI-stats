@@ -37,7 +37,8 @@ DATA_FILES = ["usage.csv", "usage-hours.csv", "conversations-daily.csv", "catego
               "categories.csv", "citations-monthly.csv", "journeys-monthly.csv", "starter-prompts-monthly.csv",
               "latency-buckets-daily.csv", "costs.csv", "events.json", "site-pages.csv", "ga4/session-and-users.csv",
               "ga4/searches-and-sessions.csv", "ga4/categories-and-views.csv", "ga4/clicks-daily.csv", "ga4/clicks-pages-daily.csv",
-              "script-outcomes-daily.csv", "outcome-rules-daily.csv", "answer-style-daily.csv", "answer-next-daily.csv", "prompts.json", "pages-cited.csv", "repeat-questions-monthly.csv", "safety-daily.csv", "question-intent-daily.csv", "asked-pages-monthly.csv", "question-topics-daily.csv", "question-lexicon.json", "intent-journeys-monthly.csv", "setback-intents-monthly.csv", "citations-intent-monthly.csv", "asked-pages-weekly.csv", "content-gaps.csv", "content-gaps-status.csv", "register-config.json"]
+              "script-outcomes-daily.csv", "outcome-rules-daily.csv", "answer-style-daily.csv", "answer-next-daily.csv", "prompts.json", "pages-cited.csv", "repeat-questions-monthly.csv", "safety-daily.csv", "question-intent-daily.csv", "asked-pages-monthly.csv", "question-topics-daily.csv", "question-lexicon.json", "intent-journeys-monthly.csv", "setback-intents-monthly.csv", "citations-intent-monthly.csv", "asked-pages-weekly.csv", "content-gaps.csv", "content-gaps-status.csv", "register-config.json",
+              "question-topics-monthly.csv", "question-categories-monthly.csv", "question-intent-category-monthly.csv", "register-themes.json"]
 CHROMES = ["/Applications/Google Chrome.app/Contents/MacOS/Google Chrome", "/Applications/Chromium.app/Contents/MacOS/Chromium",
            "google-chrome", "chromium", "chromium-browser"]
 WAIT_MS = 250   # per question; the Ask bar renders synchronously, so this is ample
