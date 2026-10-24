@@ -70,6 +70,10 @@ jobs:
       - name: Findings
         run: python3 tools/make_findings.py
 
+      # The content-gap register's evidence rows, rebuilt from the published files; the status file is never touched.
+      - name: Content-gap register
+        run: python3 tools/make_register.py
+
       - uses: actions/configure-pages@v5
       - uses: actions/upload-pages-artifact@v3
         with:

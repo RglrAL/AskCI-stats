@@ -2197,8 +2197,8 @@ const METER_TYPE_COL={'input':'#58a6ff','cached input':'#3fb950','output':'#f851
 // (events can sit next to each other in any order): unsimulated ΔE ≥ 19 in both themes, colour-blind ΔE 6.9
 // dark / 13 light, the dark figure legal only because every event line carries a text label. A shade per theme.
 // chips (no events yet) takes the palette's violet. Checked with the dataviz skill's validate_palette.js.
-const EVENT_KIND_COL={model:'#3987e5',prompt:'#2bb3c0',launch:'#d55181','observed change':'#008300',other:'#c98500',chips:'#9085e9'};
-const EVENT_KIND_COL_LIGHT={model:'#2a78d6',prompt:'#13889a',launch:'#e87ba4','observed change':'#008300',other:'#eda100',chips:'#4a3aa7'};
+const EVENT_KIND_COL={model:'#3987e5',prompt:'#2bb3c0',launch:'#d55181','observed change':'#008300',other:'#c98500',chips:'#9085e9',content:'#2f9e6e'};
+const EVENT_KIND_COL_LIGHT={model:'#2a78d6',prompt:'#13889a',launch:'#e87ba4','observed change':'#008300',other:'#eda100',chips:'#4a3aa7',content:'#1f7a52'};
 
 // ═══ CLASSIFIERS ═══════════════════════════════════════════════════
 function classifyMeter(m){if(CONFIG.meters.fixed.includes(m))return'fixed';if(CONFIG.meters.variable.includes(m))return'variable';return'unclassified'}
@@ -2749,7 +2749,7 @@ async function loadHoursFile(){
 // script-outcomes-daily.csv: SCRIPTOUT[date][script] = {t, s, c, nf, cl} (turns, scored, cited, not found, clarification)
 let SCRIPTOUT={},hasScriptOut=false;
 let ORULES={},OSTYLE={},ONEXT={},hasRules=false;   // outcome rule ids, the wording fingerprint and what people do next (brief §53)
-let PAGESC={},hasPagesC=false,REPEATS={},hasRepeats=false,SAFETY={},hasSafety=false,QINTENT={},ASKED={},QTOPIC={},hasIntent=false,LEXICON=null,IJOUR={},SETBI={};
+let PAGESC={},hasPagesC=false,REPEATS={},hasRepeats=false,SAFETY={},hasSafety=false,QINTENT={},ASKED={},QTOPIC={},hasIntent=false,LEXICON=null,IJOUR={},SETBI={},GAPS=[],GAPSTAT={},REGCFG=null;
 let CONV={},CATOUT={},CITES={},JOURNEYS={},STARTERS={},LATB={},CATDAY={},hasCatDay=false,hasConv=false,hasCatOut=false,hasCites=false,hasJourneys=false,hasStarters=false,hasLatB=false;
 async function loadConversationFiles(){
   try{(await loadCSV('script-outcomes-daily.csv')).forEach(r=>{const d=parseDate(r['Date']);if(!d)return;(SCRIPTOUT[d]||(SCRIPTOUT[d]={}))[r['Script']]={t:nInt(r['Turns']),s:nInt(r['Scored']),c:nInt(r['Cited']),nf:nInt(r['NotFound']),cl:nInt(r['Clarification'])};});}catch(e){}
@@ -2778,6 +2778,10 @@ async function loadConversationFiles(){
   try{(await loadCSV('intent-journeys-monthly.csv')).forEach(r=>{const m=String(r['Month']||'').trim();if(!/^\d{4}-\d{2}$/.test(m))return;(IJOUR[m]||(IJOUR[m]=[])).push({from:String(r['From']||'other'),to:String(r['To']||'other'),n:nInt(r['Turns'])});});}catch(e){}
   try{(await loadCSV('setback-intents-monthly.csv')).forEach(r=>{const m=String(r['Month']||'').trim();if(!/^\d{4}-\d{2}$/.test(m))return;(SETBI[m]||(SETBI[m]=[])).push({sb:r['Setback'],intent:String(r['Intent']||'other'),n:nInt(r['Turns']),ended:nInt(r['Ended']),same:nInt(r['SameIntentNext']),other:nInt(r['OtherIntentNext'])});});}catch(e){}
   hasIntent=Object.keys(QINTENT).length>0;
+  // the content-gap register (brief §73): evidence rows rebuilt by tools/make_register.py, a status file people edit, one config
+  try{GAPS=(await loadCSV('content-gaps.csv')).filter(r=>r['kind']).map(r=>({kind:r['kind'],page:r['page']||'',cat:r['category']||'',intent:r['intent']||'',evidence:r['evidence']||'',asks:nInt(r['asks']),rate:parseFloat(r['rate'])||0,priority:nInt(r['priority']),team:r['team']||'',period:r['period']||'',rules:r['rules_version']||'',lex:r['lexicon_version']||'',built:r['built']||''}));}catch(e){}
+  try{(await loadCSV('content-gaps-status.csv')).forEach(r=>{if(!r['kind']||r['kind']==='_comment')return;GAPSTAT[r['kind']+'|'+(r['page']||'')]={owner:r['owner']||'',status:r['status']||'',raised:r['raised']||'',expected:r['expected_effect']||'',changed:r['changed']||'',closed:r['closed']||'',note:r['note']||''};});}catch(e){}
+  try{const r=await fetch('register-config.json?v='+Date.now());if(r.ok)REGCFG=await r.json();}catch(e){}
   try{(await loadCSV('categories-daily.csv')).forEach(r=>{const d=parseDate(r['Date']);if(!d)return;(CATDAY[d]||(CATDAY[d]={}))[String(r['Category']||'').trim()]=nInt(r['Citations']);});}catch(e){}
   hasCatDay=Object.keys(CATDAY).length>0;
   try{(await loadCSV('latency-buckets-daily.csv')).forEach(r=>{const d=parseDate(r['Date']);if(!d)return;const k=r['Kind'],b=r['Bucket'];const o=LATB[d]||(LATB[d]={});(o[k]||(o[k]={}))[b]={t:nInt(r['Turns']),sum:nInt(r['LatencySumMs'])};});}catch(e){}
@@ -6211,6 +6215,16 @@ function contentLists(months,fr,td,th){
       ${quad('Named, and not found','a content or index gap on a page people ask for by name',srt(Q.gap,x=>x[1].nf/x[1].n),['Page','Named','Not found','Cited it'],([u,o])=>[link(u),num(o.n),rateText(o.nf,o.n),rateText(o.same,o.n)],C.red)}
       ${quad('Cited, never named','AskCI brings these to people who did not ask for them, or for any page in the same section, by name',srt(Q.surfaced,x=>x[1].n),['Page','Citations','Read on the site'],([u,o])=>[link(u),num(o.n),hasClicks?num(clicked(u)):'—'],C.acc)}
     </div>`;
+  }
+  // 4c. the content-gap register (brief §73): evidence rows with their status, by owner
+  if(GAPS.length){
+    const st=g=>GAPSTAT[g.kind+'|'+g.page]||{};const counts={};GAPS.forEach(g=>{const x=st(g).status||'raised';counts[x]=(counts[x]||0)+1;});
+    const KIND={detail:'Detail missing on a found page',retrieval:'Named, not returned',stale:'Stale page',unknown:'No scheme named'};
+    const row=g=>{const x=st(g);return`<tr style="border-bottom:1px solid var(--b2)">${td(g.page?link(g.page):`<b>${escH(g.cat)}</b>`,{left:true})}${td(KIND[g.kind]||g.kind,{left:true,style:'font-size:.7rem'})}${td(g.intent||'—',{left:true,style:'font-size:.7rem;color:var(--muted)'})}${td(num(g.priority))}${td(escH(g.evidence),{left:true,style:'font-size:.7rem;white-space:normal'})}${td(x.status?escH(x.status)+(x.owner?' · '+escH(x.owner):''):'<span style="color:var(--amber)">raised, no owner</span>',{left:true,style:'font-size:.7rem'})}</tr>`;};
+    const teams=[...new Set(GAPS.map(g=>g.team))];
+    h+=`<div class="card"><div class="card-title">Content-gap register<span class="card-title-note">${num(GAPS.length)} gaps over ${escH(GAPS[0].period)} · rebuilt ${fmtDate(GAPS[0].built)} · rules ${escH(GAPS[0].rules)}, lexicon ${escH(GAPS[0].lex)}${REGCFG?` · thresholds ${REGCFG.min_asks_month} asks a month (retrieval), ${REGCFG.min_answers} answers (content)`:''} · status: ${Object.entries(counts).map(([k,v])=>`${escH(k)} ${v}`).join(', ')}</span></div>
+      ${teams.map(t=>`<div style="font-size:.6rem;color:var(--muted);text-transform:uppercase;letter-spacing:.08em;margin:12px 0 6px">${escH(t)} · ${num(GAPS.filter(g=>g.team===t).length)}</div><div class="tbl-wrap"><table style="width:100%;border-collapse:collapse"><thead><tr style="border-bottom:1px solid var(--b2)">${['Page or topic','Kind','Intent','Priority','Evidence','Status · owner'].map((h2,i)=>th(h2,i!==3)).join('')}</tr></thead><tbody>${GAPS.filter(g=>g.team===t).sort((a,b)=>b.priority-a.priority).slice(0,8).map(row).join('')}</tbody></table></div>`).join('')}
+      <div class="share-foot">A register, not a list: the evidence rows are rebuilt each month from the published files (${REGCFG?'the last '+REGCFG.months+' full months':'the last two full months'}) and carry their rules and lexicon versions; the status and owner come from the status file the information team keeps. Priority = asks × the rate that raised the row. A named page that is not returned goes to the AskCI team as a chunking or index item; a partial on a found page, or a stale page, goes to the content team; a not-found with no scheme named waits for the themes step. Closure is a content event on the page, measured on the same cut that raised the row.</div></div>`;
   }
   // 5. index lag: pages changed on the site and when AskCI first cited the changed page
   if(hasPagesC){

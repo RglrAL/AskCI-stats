@@ -53,6 +53,8 @@ SCHEMA = {
     'asked-pages-monthly.csv': 'Month URL Category Asked CitedSame CitedSameCategory CitedOther NotFound Clarification Other CitedUnderHub Hub',
     'question-topics-daily.csv': 'Date Category Turns Cited NotFound Clarification Error OutOfScope Greeting Uncited Partial',
     'intent-journeys-monthly.csv': 'Month From To Turns',
+    'citations-intent-monthly.csv': 'Month URL Intent Answers Partial',
+    'asked-pages-weekly.csv': 'Week URL Asked CitedIt NotFound Partial',
     'setback-intents-monthly.csv': 'Month Setback Intent Turns Ended SameIntentNext OtherIntentNext',
     'repeat-questions-monthly.csv': 'Month Turns FirstTurns StarterFirstTurns DistinctFirstTurnTexts TextsAskedTwicePlus FirstTurnsOnRepeatedTexts Top10 Top25 Top50 Top100 Top250 SuggestedClicks DistinctSuggestedTexts SuggestedTop25',
     'journeys-monthly.csv': 'From To Conversations',
@@ -414,6 +416,12 @@ for r in QT: qtt[r['Date']] += I(r['Turns'])
 check('question topics: per day no more turns than usage.Questions, outcomes sum to Turns', all(qtt[d] <= I(U[d]['Questions']) for d in qtt if d in U)
       and all(sum(I(r[k]) for k in ('Cited', 'NotFound', 'Clarification', 'Error', 'OutOfScope', 'Greeting', 'Uncited')) == I(r['Turns']) for r in QT))
 
+CI2 = rd('citations-intent-monthly.csv'); AW = rd('asked-pages-weekly.csv')
+check('citations by intent: Partial <= Answers, Answers >= 5 on every row', all(I(r['Partial']) <= I(r['Answers']) and I(r['Answers']) >= 5 for r in CI2))
+check('asked pages weekly: CitedIt + NotFound <= Asked and Partial <= Asked - NotFound on every row (partial counts every cited answer, not only hits)', all(I(r['CitedIt']) + I(r['NotFound']) <= I(r['Asked']) and I(r['Partial']) <= I(r['Asked']) - I(r['NotFound']) for r in AW))
+awm = C.Counter(); apm = C.Counter()
+for r in AW: awm[(r['Week'][:7], r['URL'])] += I(r['Asked'])
+check('asked pages weekly: a page in the weekly file was named 30+ times in some month', all(any(I(x['Asked']) >= 30 for x in AP if x['URL'] == u) for u in {r['URL'] for r in AW}))
 IJ = rd('intent-journeys-monthly.csv'); SBI = rd('setback-intents-monthly.csv')
 ends = C.Counter(r['Month'] for r in IJ for _ in range(I(r['Turns'])) if r['To'] == 'END'); cvm = C.Counter()
 for d, r in CV.items(): cvm[d[:7]] += I(r['Mature'])
@@ -449,7 +457,8 @@ check('prompt canary: no tracked file carries a system-prompt copy', not _leak, 
 
 # ── 10. events.json ──────────────────────────────────────────────────────────
 E = json.load(open(REPO + '/events.json'))['events']
-check('events.json: valid statuses and kinds', all(e['status'] in ('confirmed', 'candidate', 'rejected') and e['kind'] in ('model', 'prompt', 'launch', 'chips', 'observed change', 'other') for e in E))
+check('events.json: content events carry a page', all(bool(e.get('page')) for e in E if e.get('kind') == 'content'))
+check('events.json: valid statuses and kinds', all(e['status'] in ('confirmed', 'candidate', 'rejected') and e['kind'] in ('model', 'prompt', 'launch', 'chips', 'content', 'observed change', 'other') for e in E))
 launch = [e for e in E if e['kind'] == 'launch' and e['status'] == 'confirmed']
 print('confirmed launch events:', [(e['start'], e['title']) for e in launch])
 

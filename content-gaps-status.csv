@@ -1,0 +1,2 @@
+kind,page,owner,status,raised,expected_effect,changed,closed,note
+_comment,,Alan O'Connor (until a content-side name is given),,,"one row per gap, keyed by kind and page as in content-gaps.csv; status one of raised / with owner / changed / measured / closed / won't fix; write the expected effect when the row is raised",,,evidence file: Alan O'Connor

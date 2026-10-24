@@ -1,0 +1,27 @@
+{
+  "_comment": "The content-gap register's settings (brief §73), read by tools/make_register.py, the Pages tab and the Ask bar alike. min_asks_month: a page enters the retrieval list when typed questions named it this often in a month; min_answers: a page enters the content list when this many answers cited it in the period; statuses: the fixed list the status file may use; owners: who the evidence and status files belong to. stale_before: a cited page last changed before this date is stale. retrieval_not_found / retrieval_reached: a named page enters the retrieval list when its not-found share is at least the first, or when the page or a sibling in its category was cited in under the second of the questions naming it.",
+  "min_asks_month": 30,
+  "min_answers": 100,
+  "months": 2,
+  "statuses": [
+    "raised",
+    "with owner",
+    "changed",
+    "measured",
+    "closed",
+    "won't fix"
+  ],
+  "owners": {
+    "evidence": "Alan O'Connor",
+    "status": "Alan O'Connor (until a content-side name is given)"
+  },
+  "teams": {
+    "retrieval": "AskCI team",
+    "content": "content team",
+    "stale": "content team",
+    "unknown": "analyst: themes step"
+  },
+  "stale_before": "2025-01-01",
+  "retrieval_not_found": 0.1,
+  "retrieval_reached": 0.6
+}

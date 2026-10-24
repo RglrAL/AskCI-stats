@@ -62,6 +62,9 @@ Outputs (all daily counts; nothing per-turn and no text crosses into the dashboa
                             asked under 5 times a month left out (brief §66, §71)
   question-topics-daily.csv Date, Category, Turns, outcomes, Partial: the category the question named, for turns whose
                             answer carried no topic (brief §66)
+  citations-intent-monthly.csv Month, URL, Intent, Answers, Partial: the question's intent per cited page, typed questions
+                            (brief §73); rows under 5 answers left out
+  asked-pages-weekly.csv    Week, URL, Asked, CitedIt, NotFound, Partial: pages named 30+ times in a month, by week (§73)
   intent-journeys-monthly.csv  Month, From, To, Turns: consecutive turns' intents in mature conversations, END after the
                             last (brief §69)
   setback-intents-monthly.csv  Month, Setback (NF | Clar), Intent, Turns, Ended, SameIntentNext, OtherIntentNext (brief §69)
@@ -112,7 +115,7 @@ Usage:
 """
 import argparse, csv, os, re, sys
 from collections import defaultdict
-from datetime import datetime, date
+from datetime import datetime, date, timedelta
 
 REPO = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 try:   # hub pages from the lexicon (brief §71): a citation of a page beneath a named hub counts as a hit
@@ -197,6 +200,8 @@ def aggregate(files, skip_days=frozenset()):
     intent = defaultdict(lambda: defaultdict(int))   # (date, intent, chip) -> turns, outcomes, form flags (brief §66)
     asked = defaultdict(lambda: defaultdict(int))    # (month, page asked about) -> what the answer did (brief §66)
     qtopic = defaultdict(lambda: defaultdict(int))   # (date, question category) -> turns whose answer carried no topic (brief §66)
+    cint = defaultdict(lambda: defaultdict(int))     # (month, cited page, question intent) -> answers, partial (brief §73)
+    askw = defaultdict(lambda: defaultdict(int))     # (week, page named by a typed question) -> asked, cited it, not found, partial (brief §73)
     seen = set(); dupes = 0   # exports taken on different days overlap on their boundary day
     for f in files:
         with open(f, encoding="utf-8-sig", newline="") as fh:
@@ -365,9 +370,21 @@ def aggregate(files, skip_days=frozenset()):
                         if o_rec == "Cited answer": e5["n:cited"] += 1
                         if o_rec == "Not found": e5["n:notfound"] += 1
                         if o_rec == "Clarification": e5["n:clarification"] += 1
+                    if qc:
+                        pass
+                    if chip == 0 and o_rec == "Cited answer":   # the question's intent per cited page (brief §73): which kind of question the page's partials come from
+                        for nu in nus:
+                            x7 = cint[(d.strftime("%Y-%m"), nu, qi)]; x7["answers"] += 1
+                            if is_partial: x7["partial"] += 1
                     if qp and chip == 0:   # pages people name: typed questions only
                         a5 = asked[(d.strftime("%Y-%m"), qp)]; a5["Asked"] += 1; a5["_cat"] = qc
                         qpn = norm_url(qp); hubp = qpn.split("/en/", 1)[1] if "/en/" in qpn else ""
+                        wk = (d - timedelta(days=d.weekday())).isoformat(); w7 = askw[(wk, qp)]; w7["asked"] += 1
+                        if o_rec == "Cited answer":
+                            hit7 = qpn in nus or (hubp and hubp in HUBS and any(("/en/" + hubp + "/") in u for u in nus))
+                            if hit7: w7["hit"] += 1
+                            if is_partial: w7["partial"] += 1
+                        elif o_rec == "Not found": w7["notfound"] += 1
                         if o_rec == "Cited answer":
                             if qpn in nus: a5["CitedSame"] += 1
                             elif hubp and hubp in HUBS and any(("/en/" + hubp + "/") in u for u in nus): a5["CitedUnderHub"] += 1
@@ -409,7 +426,7 @@ def aggregate(files, skip_days=frozenset()):
                         cat_dropped += sum(1 for x in slugs if x is None)
                         toks = [x for x in slugs if x]
                     for s in set(toks): cats[d][s] += 1
-    return D, sess, lat, hours, hour_sess, cats, bad, has_voice, dupes, cat_dropped, has_outcome, rules, has_starter, has_script, recs, (cites_m, cites_x, pages), latb, rulesd, (style, safety, intent, asked, qtopic)
+    return D, sess, lat, hours, hour_sess, cats, bad, has_voice, dupes, cat_dropped, has_outcome, rules, has_starter, has_script, recs, (cites_m, cites_x, pages), latb, rulesd, (style, safety, intent, asked, qtopic, cint, askw)
 
 
 STYLE_COLS = ["Lines", "Hedges", "Apologies", "Signposts", "Questions", "Links", "Openers", "Invitations", "Absolutes", "Emphasis", "Nested", "External", "Freshness", "Signoff"]
@@ -450,6 +467,21 @@ def setback_intent_rows(sb):
     intent (brief §69)."""
     return ["Month", "Setback", "Intent", "Turns", "Ended", "SameIntentNext", "OtherIntentNext"], \
            [[m, p, i, e["turns"], e["ended"], e["same"], e["other"]] for (m, p, i), e in sorted(sb.items())]
+
+
+def cint_rows(cint, min_answers=5):
+    """citations-intent-monthly.csv: per month, cited page and the question's intent (typed questions): answers citing
+    the page and how many also said something was missing. Rows under min_answers left out (brief §73)."""
+    cols = ["Month", "URL", "Intent", "Answers", "Partial"]
+    return cols, [[m, u, i, e["answers"], e["partial"]] for (m, u, i), e in sorted(cint.items()) if e["answers"] >= min_answers]
+
+
+def askw_rows(askw, asked, min_month=30):
+    """asked-pages-weekly.csv: per ISO week (Monday) and page, for pages named 30+ times in some month by typed
+    questions: asked, answers that cited it (or a page beneath a named hub), not found, and partial (brief §73)."""
+    keep = {u for (m, u), e in asked.items() if e["Asked"] >= min_month}
+    cols = ["Week", "URL", "Asked", "CitedIt", "NotFound", "Partial"]
+    return cols, [[w, u, e["asked"], e["hit"], e["notfound"], e["partial"]] for (w, u), e in sorted(askw.items()) if u in keep]
 
 
 def qtopic_rows(qtopic):
@@ -826,7 +858,7 @@ def main():
     # An export taken on day X contains only part of day X; skip those rows unless asked to keep them.
     export_days = {datetime.strptime(m.group(1), "%Y%m%d").date() for m in (re.search(r"(\d{8})_\d{6}", os.path.basename(f)) for f in a.files) if m}
     skip = frozenset() if (a.keep_partial or not export_days) else frozenset({max(export_days)})  # only the newest export's own day is partial
-    D, sess, lat, hours, hour_sess, cats, bad, has_voice, dupes, cat_dropped, has_outcome, rules, has_starter, has_script, recs, (cites_m, cites_x, pages), latb, rulesd, (style, safety, intent, asked, qtopic) = aggregate(a.files, skip)
+    D, sess, lat, hours, hour_sess, cats, bad, has_voice, dupes, cat_dropped, has_outcome, rules, has_starter, has_script, recs, (cites_m, cites_x, pages), latb, rulesd, (style, safety, intent, asked, qtopic, cint, askw) = aggregate(a.files, skip)
     rules = ", ".join(sorted(r for r in rules if r))
     if skip and any(True for _ in skip): print(f"note: export day(s) {', '.join(str(x) for x in sorted(skip))} skipped as partial (--keep-partial to keep)")
     cd, co, jm, sp, cstats = conversation_pass(recs)
@@ -867,6 +899,8 @@ def main():
             write(os.path.join(a.out_dir, "question-intent-daily.csv"), *intent_rows(intent))
             write(os.path.join(a.out_dir, "asked-pages-monthly.csv"), *asked_rows(asked))
             write(os.path.join(a.out_dir, "question-topics-daily.csv"), *qtopic_rows(qtopic))
+            write(os.path.join(a.out_dir, "citations-intent-monthly.csv"), *cint_rows(cint))
+            write(os.path.join(a.out_dir, "asked-pages-weekly.csv"), *askw_rows(askw, asked))
             if cstats.get("ij"): write(os.path.join(a.out_dir, "intent-journeys-monthly.csv"), *intent_journey_rows(cstats["ij"]))
             if cstats.get("sb"): write(os.path.join(a.out_dir, "setback-intents-monthly.csv"), *setback_intent_rows(cstats["sb"]))
     elif a.out:

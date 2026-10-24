@@ -4,10 +4,11 @@
 #
 #   tools/feed_export.sh OUT_DIR qa-feed_a.csv [qa-feed_b.csv ...]
 #
-# Writes into OUT_DIR: qa-feed-redacted_*.csv, the eighteen aggregate CSVs make_usage.py produces
+# Writes into OUT_DIR: qa-feed-redacted_*.csv, the twenty-two aggregate CSVs make_usage.py produces
 # (usage.csv, usage-hours.csv, categories*.csv, conversations, citations, pages cited, journeys,
 # starter prompts, latency buckets, outcome rules, answer style, safety, question intents, asked
-# pages, question topics), compare.txt and summary.txt. Never touches the dashboard folder;
+# pages monthly and weekly, question topics, intent journeys, setback intents, citations by intent),
+# compare.txt and summary.txt. Never touches the dashboard folder;
 # copying the aggregates in is a separate, deliberate step.
 set -e
 REPO="$(cd "$(dirname "$0")/.." && pwd)"
