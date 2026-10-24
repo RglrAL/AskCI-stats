@@ -1384,3 +1384,39 @@ Not built, as §69 said: the retrieval-empty against generator-declined split by
 **What the three say together.** The three stages moved separately at the change: the classifier asks for clarification more (cut 2), retrieval is unchanged (cut 3), and the answering model declines retrieved evidence more, hardest on questions that describe a person (cut 1 and the personal-situation difference of §67, which holds at +5.2 points with the follow-ups removed). The model-era readings of §57 to §67 stand; this is the first place the mini and the generator are told apart from the feed alone.
 
 **One finding about March, for the record:** the statement class fell from 1,413 to 328 typed questions across the 9 March change, which is a change in what people typed, not in the model: the pre-launch web box prefixed its suggested questions with "I want to know …", and those arrived as statements. The intent-mix adjustment in the change report absorbs it.
+
+## 72. Findings and recommendations, consolidated (24 Oct 2026)
+
+The record of what the data says the AskCI team should do, gathered from §54–§71. Each item carries its evidence section, the figure on 24 October as `tools/make_findings.py` computed it, and a confidence line: **measured** (a count from the published files), **inferred** (a reading of several measures), or **waiting on the labelling** (an outcome or intent class not yet checked against a reader). The same tool runs at every deploy and publishes `reports/findings.md`, every measurable item recomputed beside the figure here with a status, so this section stays the dated record and the report stays current. The dashboard page shows figures and claims no causes; the causes are here.
+
+**For the system owners**
+
+1. **The chip request path returns an empty answer to about one click in twelve, and has all year.** September: 8.2% of 740 chip clicks, against 0.99% of typed first questions; every month since January between 4% and 14%, on every chip, both surfaces, every hour. The same text typed by hand is answered. (§63, §64; measured.)
+2. **The answering model applies the relevance-check instruction more readily since 14 September, hardest on questions that describe a person.** Not found on personal situations 14.1% against 9.2% on other typed questions in the last 28 days; the difference in differences across the change is +5.2 points (+3.0 to +7.5) and nothing like it appears at the March change. Retrieval cited the page people named as often as before (54.8%), so the decline is the model's, not a miss. The instruction was in the prompt before the change. Prompt-side options for the team: a softer relevance rule for personal cases, or an instruction to answer the general case and say so. (§57, §60, §67, §71; inferred; the labelling says whether the declines were right.)
+3. **The pre-search classifier asks "what is …" questions to clarify three times as often, whether or not a scheme is named** (14.8% named, 33.9% not, in the last 28 days; 4.4% and 20.5% before the change). A separate change in the smaller model's threshold. (§71; inferred.)
+4. **Questions about a person's own claim get a cited answer** explaining how to check it, which is the right outcome; no change needed, recorded because §66 first read it the other way. (§71; measured, small numbers.)
+5. **The model offers "yes" and "yes please" as follow-up chips** against its own format rule; two of the most clicked. (§63; measured.)
+6. **Two requests for when contact resumes:** the prompt set as it is now, with where brief mode is used, to close the "unverified since 28 August" caveat; and a log extract one week either side of 14 September, which the local parser turns into counts within the hour. (§60, §68.)
+
+**For the content team**
+
+7. **The past-year Budget pages are asked for current figures:** Budget 2024 at 60% and Budget 2023 at 52% of answers saying something is missing. Route current-rate questions to the current page or mark the old ones historical. (§62; measured.)
+8. **The AskCI "about" page is asked things it does not say,** 52% of 195 answers in two months, and nobody clicks through. (§62; measured.)
+9. **Citations to pages last changed before 2026 are 28% of citations to dated pages,** Budget 2022 and 2022-dated employment and health pages among them. A rates page from 2022 is a content question; a procedure page may be fine. (§62; measured.)
+10. **Pages people name and are not answered from** (September, named 30+ times): divorce decrees 16% not found, jobseeker's benefit 15%, income tax 15%, driving licence 14%, applying for local authority housing 11%. The content exists and was named: a chunking list for whoever owns the index. (§67, §71; measured.)
+
+**For whoever owns the chips**
+
+11. The chips cover the large kinds of question (how do I, what is, can I, how much); what is left uncovered is small (timing 3%, contact 1%). The three retired chips are still typed in by hand 30–40 times a month. (§63, §70; measured.)
+
+**A question, not a recommendation**
+
+12. **About two turns a week carry crisis language, and 76% get an ordinary information page.** The pattern also catches medical uses of "overdose". Whether AskCI should signpost a crisis line is for the service to decide; the count is now on the record. (§65; measured, small numbers.)
+
+**For the dashboard itself**
+
+13. **The labelling hour.** 120 answers, four columns; until it is scored, every outcome figure since 14 September and every intent figure is an inference, and the page says so wherever one appears. (§61, §66.)
+14. **The acceptance points still short:** 77% of typed questions in a named intent against 80%; reader agreement not measured. (§71.)
+15. **Answers not what the question needed** is 11.9% of typed questions with a named intent in the last 28 days, the quality figure weighted by what the person wanted. It belongs beside the cited rate, not instead of it, until item 13 is done. (§69, §71; waiting on the labelling.)
+
+**What is settled and what is not.** Settled, from counts: the chip defect, the content pages, the chips, the crisis count. Inferred, and consistent across six independent steps: 14 September was a model change in the answering model's threshold, hardest on personal cases, with a separate change in the classifier; retrieval, the rewriting step, the question mix and the pages are not it. Not settled: whether any individual label is right, which is the labelling, and whether the prompt changed on or after 14 September, which is the prompt export.

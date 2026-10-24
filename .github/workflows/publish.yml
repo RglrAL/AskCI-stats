@@ -66,6 +66,10 @@ jobs:
       - name: Incident candidates
         run: python3 tools/incidents.py
 
+      # Findings and recommendations, each measurable item recomputed beside the figure brief §72 recorded, at reports/findings.md.
+      - name: Findings
+        run: python3 tools/make_findings.py
+
       - uses: actions/configure-pages@v5
       - uses: actions/upload-pages-artifact@v3
         with:
