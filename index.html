@@ -2748,7 +2748,7 @@ async function loadHoursFile(){
 // script-outcomes-daily.csv: SCRIPTOUT[date][script] = {t, s, c, nf, cl} (turns, scored, cited, not found, clarification)
 let SCRIPTOUT={},hasScriptOut=false;
 let ORULES={},OSTYLE={},ONEXT={},hasRules=false;   // outcome rule ids, the wording fingerprint and what people do next (brief §53)
-let PAGESC={},hasPagesC=false,REPEATS={},hasRepeats=false,SAFETY={},hasSafety=false,QINTENT={},ASKED={},QTOPIC={},hasIntent=false,LEXICON=null;
+let PAGESC={},hasPagesC=false,REPEATS={},hasRepeats=false,SAFETY={},hasSafety=false,QINTENT={},ASKED={},QTOPIC={},hasIntent=false,LEXICON=null,IJOUR={},SETBI={};
 let CONV={},CATOUT={},CITES={},JOURNEYS={},STARTERS={},LATB={},CATDAY={},hasCatDay=false,hasConv=false,hasCatOut=false,hasCites=false,hasJourneys=false,hasStarters=false,hasLatB=false;
 async function loadConversationFiles(){
   try{(await loadCSV('script-outcomes-daily.csv')).forEach(r=>{const d=parseDate(r['Date']);if(!d)return;(SCRIPTOUT[d]||(SCRIPTOUT[d]={}))[r['Script']]={t:nInt(r['Turns']),s:nInt(r['Scored']),c:nInt(r['Cited']),nf:nInt(r['NotFound']),cl:nInt(r['Clarification'])};});}catch(e){}
@@ -2773,6 +2773,9 @@ async function loadConversationFiles(){
   try{(await loadCSV('asked-pages-monthly.csv')).forEach(r=>{const m=String(r['Month']||'').trim();if(!/^\d{4}-\d{2}$/.test(m))return;(ASKED[m]||(ASKED[m]=[])).push({url:r['URL'],cat:r['Category']||'',n:nInt(r['Asked']),same:nInt(r['CitedSame']),sameCat:nInt(r['CitedSameCategory']),other:nInt(r['CitedOther']),nf:nInt(r['NotFound']),cl:nInt(r['Clarification']),oth:nInt(r['Other'])});});}catch(e){}
   try{(await loadCSV('question-topics-daily.csv')).forEach(r=>{const d=parseDate(r['Date']);if(!d)return;const o={};Object.entries(r).forEach(([k,v])=>{if(k!=='Date'&&k!=='Category')o[k]=nInt(v);});(QTOPIC[d]||(QTOPIC[d]={}))[String(r['Category']||'').trim()]=o;});}catch(e){}
   try{const r=await fetch('question-lexicon.json?v='+Date.now());if(r.ok){const j=await r.json();if(j&&j.intents)LEXICON={version:j.version,intents:j.intents,phrases:Object.keys(j.phrases||{}).length};}}catch(e){}
+  // intent journeys and what follows a setback, by the question's intent (brief §69)
+  try{(await loadCSV('intent-journeys-monthly.csv')).forEach(r=>{const m=String(r['Month']||'').trim();if(!/^\d{4}-\d{2}$/.test(m))return;(IJOUR[m]||(IJOUR[m]=[])).push({from:String(r['From']||'other'),to:String(r['To']||'other'),n:nInt(r['Turns'])});});}catch(e){}
+  try{(await loadCSV('setback-intents-monthly.csv')).forEach(r=>{const m=String(r['Month']||'').trim();if(!/^\d{4}-\d{2}$/.test(m))return;(SETBI[m]||(SETBI[m]=[])).push({sb:r['Setback'],intent:String(r['Intent']||'other'),n:nInt(r['Turns']),ended:nInt(r['Ended']),same:nInt(r['SameIntentNext']),other:nInt(r['OtherIntentNext'])});});}catch(e){}
   hasIntent=Object.keys(QINTENT).length>0;
   try{(await loadCSV('categories-daily.csv')).forEach(r=>{const d=parseDate(r['Date']);if(!d)return;(CATDAY[d]||(CATDAY[d]={}))[String(r['Category']||'').trim()]=nInt(r['Citations']);});}catch(e){}
   hasCatDay=Object.keys(CATDAY).length>0;
@@ -5959,6 +5962,36 @@ function renderPages(D,S){
   renderIcons();
 }
 
+// ═══ INTENT JOURNEYS (brief §69 item 5) ═════════════════════════════════════════
+// How people use the thing: what kind of question follows what, inside mature conversations; and after a not-found or
+// clarification answer, by the kind of question, whether they left, asked the same kind again or moved on.
+function intentJourneyCards(months,cohort){
+  const J=months.flatMap(m=>IJOUR[m]||[]),S=months.flatMap(m=>SETBI[m]||[]);
+  if(!J.length)return'';
+  const T={};J.forEach(r=>{const a=T[r.from]||(T[r.from]={});a[r.to]=(a[r.to]||0)+r.n;});
+  const td=(v,o={})=>`<td style="text-align:${o.left?'left':'right'};padding:6px 10px;font-family:${o.left?'inherit':"'DM Mono',monospace"};font-size:.76rem;${o.style||''}">${v}</td>`;
+  const th=(t,left)=>`<th style="text-align:${left?'left':'right'};padding:6px 10px;font-size:.6rem;color:var(--muted);text-transform:uppercase;letter-spacing:.08em;white-space:nowrap">${t}</th>`;
+  const lab=i=>i==='END'?'ended':(INTENT_LABEL[i]||i);
+  const order=INTENT_ORDER.filter(i=>T[i]);
+  const rows=order.map(i=>{const o=T[i],tot=Object.values(o).reduce((a,b)=>a+b,0),end=o.END||0,same=o[i]||0,next=Object.entries(o).filter(([k])=>k!=='END'&&k!==i).sort((x,y)=>y[1]-x[1]).slice(0,3);
+    return`<tr style="border-bottom:1px solid var(--b2)">${td(`<b>${lab(i)}</b>`,{left:true})}${td(num(tot))}${td(rateText(end,tot),{style:'color:var(--muted)'})}${td(rateText(same,tot))}${td(next.map(([k,v])=>`${lab(k)} ${rateText(v,tot)}`).join(' · ')||'—',{left:true,style:'font-size:.72rem'})}</tr>`;}).join('');
+  // the designed path: what is X → can I get it → how do I apply → what do I need
+  const step=(a,b)=>{const o=T[a]||{},out=Object.entries(o).filter(([k])=>k!=='END').reduce((s,[,v])=>s+v,0);return out?{n:o[b]||0,d:out}:null;};
+  const path=[['definition','eligibility'],['eligibility','apply'],['apply','documents']].map(([a,b])=>[a,b,step(a,b)]);
+  let sb='';
+  if(S.length){
+    const A={};S.forEach(r=>{const k=r.sb+':'+r.intent,a=A[k]||(A[k]={sb:r.sb,intent:r.intent,n:0,ended:0,same:0,other:0});a.n+=r.n;a.ended+=r.ended;a.same+=r.same;a.other+=r.other;});
+    const block=(sbk,title)=>{const list=Object.values(A).filter(a=>a.sb===sbk&&a.n>=20).sort((x,y)=>y.n-x.n);if(!list.length)return'';
+      return`<div><div style="font-size:.6rem;color:var(--muted);text-transform:uppercase;letter-spacing:.08em;margin:10px 0 6px">${title}</div><table style="width:100%;border-collapse:collapse"><thead><tr style="border-bottom:1px solid var(--b2)">${th('Kind of question',true)}${th('Answers')}${th('Left')}${th('Asked the same kind again')}${th('Moved to another kind')}</tr></thead><tbody>${list.map(a=>`<tr style="border-bottom:1px solid var(--b2)">${td(lab(a.intent),{left:true})}${td(num(a.n))}${td(rateText(a.ended,a.n),{style:'color:var(--muted)'})}${td(rateText(a.same,a.n),{style:'color:var(--amber)'})}${td(rateText(a.other,a.n))}</tr>`).join('')}</tbody></table></div>`;};
+    sb=block('NF','After a not-found answer')+block('Clar','After a clarification');
+  }
+  return`<div class="card"><div class="card-title">What kind of question follows what${cohort}</div>
+      <div class="grid4" style="margin-bottom:10px">${path.map(([a,b,r])=>uxTile(r?rateText(r.n,r.d):'—',`${lab(a)} → ${lab(b)}`,r?`of ${num(r.d)} ${lab(a)} questions followed by another`:'',C.acc)).join('')}${uxTile(rateText(J.filter(r=>r.to==='END').reduce((a,r)=>a+r.n,0),J.reduce((a,r)=>a+r.n,0)),'Turns that were the last','of all turns in mature conversations',C.muted)}</div>
+      <div class="tbl-wrap"><table style="width:100%;border-collapse:collapse"><thead><tr style="border-bottom:1px solid var(--b2)">${th('After a … question',true)}${th('Turns')}${th('Ended there')}${th('Same kind again')}${th('Most often next',true)}</tr></thead><tbody>${rows}</tbody></table></div>
+      ${sb}
+      <div class="share-foot">The designed path is what is X → can I get it → how do I apply → what do I need. Intents are by rule from the question (${LEXICON?escH(LEXICON.version):'—'}); "asked the same kind again" after a not-found is the retry a rephrase would show; months overlapping the range (${months.map(fmtMonth).join(', ')}).</div></div>`;
+}
+
 // ═══ WHAT PEOPLE ASK (brief §66) ═══════════════════════════════════════════════
 // Intent and form by rule on the question, the scheme it names from the lexicon, what the answer did. Every figure is
 // a count from the redaction step; no question text reaches the page. "Unexpected" = an outcome the design does not
@@ -6312,6 +6345,7 @@ function renderConvs(D,S){
       <table style="width:100%;border-collapse:collapse;max-width:560px"><thead><tr style="border-bottom:1px solid var(--b2)">${th('Cache of the most-asked texts',false)}${tops.map(([n])=>th('top '+n)).join('')}</tr></thead>
         <tbody><tr>${td('share of first turns served','',false)}${tops.map(([,v])=>td(rateText(v,ft))).join('')}</tr><tr>${td('share of all turns served','',false)}${tops.map(([,v])=>td(rateText(v,t))).join('')}</tr></tbody></table>
       <div class="share-foot">A cache keyed on the exact question serves only text that recurs. Beyond the chips, the top 250 texts add a few points and the rest is a long tail of one-off wording; a cache would not change the cost or the response-time picture. The suggested follow-ups are the model's own chips: their clicks concentrate more, and the same texts recur across conversations.</div></div>`;})():''}
+    ${intentJourneyCards(months,cohort)}
     ${clarTurns?`<div class="card"><div class="card-title">Clarification loops${cohort}</div>
       <div class="grid2" style="margin-bottom:0">
         ${uxTile(rateText(clarLoops,clarTurns-clarEnded),'Asked to clarify, then asked again',`${num(clarLoops)} of ${num(clarTurns-clarEnded)} clarification answers that got a reply were followed by another clarification`,C.amber)}

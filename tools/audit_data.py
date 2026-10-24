@@ -52,6 +52,8 @@ SCHEMA = {
     'question-intent-daily.csv': 'Date Intent Chip Turns Cited NotFound Clarification Error OutOfScope Greeting Uncited Partial Year Euro YesNo Situation WithTopic SituationCited SituationNotFound SituationPartial',
     'asked-pages-monthly.csv': 'Month URL Category Asked CitedSame CitedSameCategory CitedOther NotFound Clarification Other',
     'question-topics-daily.csv': 'Date Category Turns Cited NotFound Clarification Error OutOfScope Greeting Uncited Partial',
+    'intent-journeys-monthly.csv': 'Month From To Turns',
+    'setback-intents-monthly.csv': 'Month Setback Intent Turns Ended SameIntentNext OtherIntentNext',
     'repeat-questions-monthly.csv': 'Month Turns FirstTurns StarterFirstTurns DistinctFirstTurnTexts TextsAskedTwicePlus FirstTurnsOnRepeatedTexts Top10 Top25 Top50 Top100 Top250 SuggestedClicks DistinctSuggestedTexts SuggestedTop25',
     'journeys-monthly.csv': 'From To Conversations',
     'starter-prompts-monthly.csv': 'Month Count Cited FollowedByTyped FollowedBySuggested Partial NotFound Clarification Disliked Words TimedTurns ResponseMsSum Mature EndedThere',
@@ -410,6 +412,12 @@ for r in QT: qtt[r['Date']] += I(r['Turns'])
 #  row is smaller than this; the bound that holds is the day's turns)
 check('question topics: per day no more turns than usage.Questions, outcomes sum to Turns', all(qtt[d] <= I(U[d]['Questions']) for d in qtt if d in U)
       and all(sum(I(r[k]) for k in ('Cited', 'NotFound', 'Clarification', 'Error', 'OutOfScope', 'Greeting', 'Uncited')) == I(r['Turns']) for r in QT))
+
+IJ = rd('intent-journeys-monthly.csv'); SBI = rd('setback-intents-monthly.csv')
+ends = C.Counter(r['Month'] for r in IJ for _ in range(I(r['Turns'])) if r['To'] == 'END'); cvm = C.Counter()
+for d, r in CV.items(): cvm[d[:7]] += I(r['Mature'])
+check('intent journeys: END rows per month = mature conversations started that month', all(ends[m] == cvm[m] for m in cvm if m in ends), str([(m, ends[m], cvm[m]) for m in cvm if m in ends and ends[m] != cvm[m]][:3]))
+check('setback intents: Ended + Same + Other = Turns on every row, setback is NF or Clar', all(I(r['Ended']) + I(r['SameIntentNext']) + I(r['OtherIntentNext']) == I(r['Turns']) and r['Setback'] in ('NF', 'Clar') for r in SBI))
 
 # ── 9a1. safety-daily.csv (brief §65) ─────────────────────────────────────────
 SF = rd('safety-daily.csv')

@@ -61,6 +61,9 @@ Outputs (all daily counts; nothing per-turn and no text crosses into the dashboa
                             left out (brief §66)
   question-topics-daily.csv Date, Category, Turns, outcomes, Partial: the category the question named, for turns whose
                             answer carried no topic (brief §66)
+  intent-journeys-monthly.csv  Month, From, To, Turns: consecutive turns' intents in mature conversations, END after the
+                            last (brief §69)
+  setback-intents-monthly.csv  Month, Setback (NF | Clar), Intent, Turns, Ended, SameIntentNext, OtherIntentNext (brief §69)
   safety-daily.csv          Date, Flag, Turns, Cited, NotFound, Clarification, Error, OutOfScope, Greeting, Uncited: turns
                             flagged by redact_feed.py (identifiers typed in, injection phrasings, off-topic and
                             crisis themes) and their outcomes (brief §65)
@@ -315,7 +318,8 @@ def aggregate(files, skip_days=frozenset()):
                 recs.append((conv, tn, t, d, o_rec, own, (row.get("Question Type") or "").strip(),
                              fb == "dislike" and o_rec == "Cited answer", (row.get("Starter Prompt") or "").strip() if has_starter else "",
                              (row.get("Source") or "").strip(),
-                             (row.get("Partial") or "").strip().lower() == "yes", int(row.get("Response Words") or 0) if str(row.get("Response Words") or "").isdigit() else 0, ms_rec))
+                             (row.get("Partial") or "").strip().lower() == "yes", int(row.get("Response Words") or 0) if str(row.get("Response Words") or "").isdigit() else 0, ms_rec,
+                             (row.get("Query Intent") or "").strip()))
                 nus = []
                 for u in urls:
                     nu = norm_url(u)
@@ -421,6 +425,20 @@ def asked_rows(asked, min_asked=5):
     return cols, sorted(rows, key=lambda r: (r[0], -r[3], r[1]))
 
 
+def intent_journey_rows(ij):
+    """intent-journeys-monthly.csv: consecutive turns' intents inside mature conversations, by the month the
+    conversation started; To = END after the last turn (brief §69)."""
+    return ["Month", "From", "To", "Turns"], [[m, a, b, n] for (m, a, b), n in sorted(ij.items(), key=lambda kv: (kv[0][0], -kv[1]))]
+
+
+def setback_intent_rows(sb):
+    """setback-intents-monthly.csv: after a not-found (NF) or clarification (Clar) answer, by the question's intent:
+    the answers, how many were the last turn, how many were followed by the same intent again (a retry) or another
+    intent (brief §69)."""
+    return ["Month", "Setback", "Intent", "Turns", "Ended", "SameIntentNext", "OtherIntentNext"], \
+           [[m, p, i, e["turns"], e["ended"], e["same"], e["other"]] for (m, p, i), e in sorted(sb.items())]
+
+
 def qtopic_rows(qtopic):
     """question-topics-daily.csv: per day and category named in the question, for turns whose answer carried no topic
     (the 'unknown' rows of category-outcomes-daily.csv): turns, outcomes and partial (brief §66)."""
@@ -458,6 +476,8 @@ def conversation_pass(recs):
     co = defaultdict(lambda: defaultdict(int))       # (date, attributed category) -> counters
     jm = defaultdict(int)                            # (month, from, to) -> conversations
     sp = defaultdict(lambda: defaultdict(int))       # (month, prompt) -> counters
+    ij = defaultdict(int)                            # (month, from intent, to intent or END) -> turns (brief §69)
+    sb = defaultdict(lambda: defaultdict(int))       # (month, setback outcome, intent) -> what came next (brief §69)
     stats = {"convs": 0, "mature": 0, "multi_step": 0, "return": 0, "recovered": 0, "nf_total": 0, "fu_1h": 0, "fu_24h": 0, "fu": 0}
     for cid, turns in convs.items():
         turns.sort(key=lambda r: (r[1], r[2]))
@@ -535,6 +555,20 @@ def conversation_pass(recs):
         for a, b in zip(turns, turns[1:]):
             gap = (b[2] - a[2]).total_seconds() / 60
             c["gap_" + ("0_1" if gap <= 1 else "2_5" if gap <= 5 else "6_15" if gap <= 15 else "16_60" if gap <= 60 else "over60")] += 1
+        # intent journeys (brief §69): consecutive turns' intents inside mature conversations, END after the last; and
+        # after a not-found or clarification answer, by the question's intent: ended, asked again with the same intent,
+        # or moved to another intent
+        if any(r[13] for r in turns):
+            m = start.strftime("%Y-%m")
+            for a, b in zip(turns, turns[1:]): ij[(m, a[13] or "other", b[13] or "other")] += 1
+            ij[(m, turns[-1][13] or "other", "END")] += 1
+            for i, r in enumerate(turns):
+                p = SETBACK.get(r[4])
+                if p not in ("NF", "Clar"): continue
+                e = sb[(m, p, r[13] or "other")]; e["turns"] += 1
+                if i == n - 1: e["ended"] += 1
+                elif (turns[i + 1][13] or "other") == (r[13] or "other"): e["same"] += 1
+                else: e["other"] += 1
         # category journeys: consecutive distinct primary categories over category-bearing turns
         seq = []
         for r in turns:
@@ -554,6 +588,7 @@ def conversation_pass(recs):
             if len(set(seq)) < len(seq): stats["return"] += 1
             m = start.strftime("%Y-%m")
             for a, b in zip(seq, seq[1:]): jm[(m, a, b)] += 1
+    stats["ij"], stats["sb"] = ij, sb
     return cd, co, jm, sp, stats
 
 
@@ -815,6 +850,8 @@ def main():
             write(os.path.join(a.out_dir, "question-intent-daily.csv"), *intent_rows(intent))
             write(os.path.join(a.out_dir, "asked-pages-monthly.csv"), *asked_rows(asked))
             write(os.path.join(a.out_dir, "question-topics-daily.csv"), *qtopic_rows(qtopic))
+            if cstats.get("ij"): write(os.path.join(a.out_dir, "intent-journeys-monthly.csv"), *intent_journey_rows(cstats["ij"]))
+            if cstats.get("sb"): write(os.path.join(a.out_dir, "setback-intents-monthly.csv"), *setback_intent_rows(cstats["sb"]))
     elif a.out:
         write(a.out, ucols, urows)
     else:
