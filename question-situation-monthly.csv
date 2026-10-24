@@ -1,0 +1,1660 @@
+Month,Category,Flag,Turns,Cited,NotFound,Clarification,Error,OutOfScope,Greeting,Uncited,Partial
+2026-01,(all),(any situation),892,837,25,1,22,5,1,1,17
+2026-01,(all),(no situation),3972,3525,156,20,117,114,16,24,167
+2026-01,(all),age:16-24,23,21,0,0,1,0,1,0,1
+2026-01,(all),age:25-44,2,2,0,0,0,0,0,0,0
+2026-01,(all),age:45-65,9,9,0,0,0,0,0,0,1
+2026-01,(all),age:66+,24,24,0,0,0,0,0,0,0
+2026-01,(all),county:cork,6,4,1,0,0,1,0,0,0
+2026-01,(all),county:dublin,14,10,0,0,2,2,0,0,1
+2026-01,(all),county:galway,3,2,1,0,0,0,0,0,0
+2026-01,(all),county:kerry,4,2,0,0,2,0,0,0,0
+2026-01,(all),county:leitrim,1,0,0,0,0,1,0,0,0
+2026-01,(all),county:limerick,3,2,0,0,0,1,0,0,0
+2026-01,(all),county:meath,1,1,0,0,0,0,0,0,0
+2026-01,(all),county:sligo,2,2,0,0,0,0,0,0,0
+2026-01,(all),county:waterford,3,3,0,0,0,0,0,0,0
+2026-01,(all),county:westmeath,1,0,1,0,0,0,0,0,0
+2026-01,(all),county:wexford,2,1,1,0,0,0,0,0,0
+2026-01,(all),county:wicklow,4,4,0,0,0,0,0,0,0
+2026-01,(all),household:alone,48,45,1,0,2,0,0,0,0
+2026-01,(all),household:children,115,110,3,0,2,0,0,0,2
+2026-01,(all),household:partner,137,131,4,0,2,0,0,0,2
+2026-01,(all),payment_on,235,233,0,0,2,0,0,0,3
+2026-01,(all),shape:multi,19,17,0,0,2,0,0,0,0
+2026-01,(all),shape:url,1,0,0,0,0,1,0,0,0
+2026-01,(all),work:retired,15,15,0,0,0,0,0,0,0
+2026-01,(all),work:self-employed,61,58,1,0,2,0,0,0,1
+2026-01,(all),work:student,8,7,1,0,0,0,0,0,0
+2026-01,(all),work:unemployed,38,35,1,0,2,0,0,0,0
+2026-01,(all),work:working,230,213,10,1,5,0,0,1,7
+2026-01,(all),year:2016,1,0,1,0,0,0,0,0,0
+2026-01,(all),year:2019,2,2,0,0,0,0,0,0,0
+2026-01,(all),year:2020,1,1,0,0,0,0,0,0,0
+2026-01,(all),year:2021,4,4,0,0,0,0,0,0,0
+2026-01,(all),year:2022,8,8,0,0,0,0,0,0,0
+2026-01,(all),year:2023,2,2,0,0,0,0,0,0,0
+2026-01,(all),year:2024,7,7,0,0,0,0,0,0,0
+2026-01,(all),year:2025,32,31,1,0,0,0,0,0,0
+2026-01,(all),year:2026,44,37,0,0,0,7,0,0,1
+2026-01,(all),year:2027,8,8,0,0,0,0,0,0,1
+2026-01,(none),(any situation),11,0,4,0,3,4,0,0,0
+2026-01,(none),(no situation),251,6,80,15,30,94,16,10,0
+2026-01,about,(no situation),36,34,0,0,0,1,0,1,2
+2026-01,birth-family-relationships,(any situation),30,29,1,0,0,0,0,0,0
+2026-01,birth-family-relationships,(no situation),111,108,0,0,3,0,0,0,4
+2026-01,birth-family-relationships,household:children,5,5,0,0,0,0,0,0,0
+2026-01,birth-family-relationships,household:partner,22,21,1,0,0,0,0,0,0
+2026-01,consumer,(no situation),49,49,0,0,0,0,0,0,2
+2026-01,death,(no situation),53,51,1,0,0,0,0,1,3
+2026-01,education,(any situation),13,12,1,0,0,0,0,0,1
+2026-01,education,(no situation),77,71,3,0,2,1,0,0,5
+2026-01,education,household:children,8,7,1,0,0,0,0,0,0
+2026-01,employment,(any situation),140,123,11,1,4,0,0,1,2
+2026-01,employment,(no situation),365,334,18,2,9,1,0,1,18
+2026-01,employment,household:children,8,8,0,0,0,0,0,0,0
+2026-01,employment,payment_on,6,6,0,0,0,0,0,0,0
+2026-01,employment,work:self-employed,13,11,1,0,1,0,0,0,0
+2026-01,employment,work:unemployed,10,9,0,0,1,0,0,0,0
+2026-01,employment,work:working,97,84,9,1,2,0,0,1,2
+2026-01,employment,year:2025,5,5,0,0,0,0,0,0,0
+2026-01,employment,year:2026,6,5,0,0,0,1,0,0,0
+2026-01,environment,(no situation),20,20,0,0,0,0,0,0,1
+2026-01,government-in-ireland,(any situation),5,5,0,0,0,0,0,0,0
+2026-01,government-in-ireland,(no situation),36,33,2,0,0,1,0,0,4
+2026-01,health,(any situation),20,17,2,0,0,0,1,0,0
+2026-01,health,(no situation),186,172,7,0,6,0,0,1,9
+2026-01,health,age:66+,6,6,0,0,0,0,0,0,0
+2026-01,health,household:partner,5,4,1,0,0,0,0,0,0
+2026-01,housing,(any situation),27,20,2,0,4,1,0,0,1
+2026-01,housing,(no situation),352,320,13,0,18,1,0,0,19
+2026-01,housing,household:partner,5,3,0,0,2,0,0,0,1
+2026-01,housing,year:2025,5,5,0,0,0,0,0,0,0
+2026-01,housing,year:2026,6,6,0,0,0,0,0,0,0
+2026-01,justice,(any situation),6,5,1,0,0,0,0,0,0
+2026-01,justice,(no situation),101,94,3,1,1,0,0,2,10
+2026-01,money-and-tax,(any situation),62,59,0,0,3,0,0,0,2
+2026-01,money-and-tax,(no situation),427,401,13,0,6,4,0,3,17
+2026-01,money-and-tax,household:alone,9,7,0,0,2,0,0,0,0
+2026-01,money-and-tax,household:children,6,6,0,0,0,0,0,0,0
+2026-01,money-and-tax,household:partner,8,8,0,0,0,0,0,0,0
+2026-01,money-and-tax,work:self-employed,6,6,0,0,0,0,0,0,0
+2026-01,money-and-tax,work:working,28,27,0,0,1,0,0,0,2
+2026-01,money-and-tax,year:2026,10,8,0,0,0,2,0,0,0
+2026-01,moving-country,(any situation),77,77,0,0,0,0,0,0,2
+2026-01,moving-country,(no situation),362,353,4,0,4,1,0,0,16
+2026-01,moving-country,household:children,30,30,0,0,0,0,0,0,0
+2026-01,moving-country,household:partner,17,17,0,0,0,0,0,0,1
+2026-01,moving-country,work:working,15,15,0,0,0,0,0,0,0
+2026-01,moving-country,year:2022,6,6,0,0,0,0,0,0,0
+2026-01,moving-country,year:2025,6,6,0,0,0,0,0,0,0
+2026-01,moving-country,year:2026,6,6,0,0,0,0,0,0,1
+2026-01,returning-to-ireland,(any situation),18,18,0,0,0,0,0,0,2
+2026-01,returning-to-ireland,(no situation),85,85,0,0,0,0,0,0,5
+2026-01,returning-to-ireland,household:partner,8,8,0,0,0,0,0,0,0
+2026-01,social-welfare,(any situation),468,457,3,0,8,0,0,0,7
+2026-01,social-welfare,(no situation),1276,1211,12,2,38,8,0,5,34
+2026-01,social-welfare,age:16-24,12,11,0,0,1,0,0,0,1
+2026-01,social-welfare,age:45-65,8,8,0,0,0,0,0,0,1
+2026-01,social-welfare,age:66+,13,13,0,0,0,0,0,0,0
+2026-01,social-welfare,household:alone,31,31,0,0,0,0,0,0,0
+2026-01,social-welfare,household:children,49,46,1,0,2,0,0,0,1
+2026-01,social-welfare,household:partner,61,61,0,0,0,0,0,0,0
+2026-01,social-welfare,payment_on,214,212,0,0,2,0,0,0,2
+2026-01,social-welfare,shape:multi,6,4,0,0,2,0,0,0,0
+2026-01,social-welfare,work:retired,12,12,0,0,0,0,0,0,0
+2026-01,social-welfare,work:self-employed,39,38,0,0,1,0,0,0,1
+2026-01,social-welfare,work:unemployed,26,24,1,0,1,0,0,0,0
+2026-01,social-welfare,work:working,77,75,1,0,1,0,0,0,2
+2026-01,social-welfare,year:2025,11,11,0,0,0,0,0,0,0
+2026-01,social-welfare,year:2026,11,9,0,0,0,2,0,0,0
+2026-01,travel-and-recreation,(any situation),6,6,0,0,0,0,0,0,0
+2026-01,travel-and-recreation,(no situation),185,183,0,0,0,2,0,0,18
+2026-02,(all),(any situation),685,661,17,0,0,0,0,7,23
+2026-02,(all),(no situation),3081,2832,145,17,8,52,17,10,122
+2026-02,(all),age:16-24,13,13,0,0,0,0,0,0,1
+2026-02,(all),age:25-44,3,3,0,0,0,0,0,0,0
+2026-02,(all),age:45-65,16,16,0,0,0,0,0,0,1
+2026-02,(all),age:66+,11,11,0,0,0,0,0,0,0
+2026-02,(all),county:cavan,1,1,0,0,0,0,0,0,0
+2026-02,(all),county:clare,1,1,0,0,0,0,0,0,1
+2026-02,(all),county:cork,4,4,0,0,0,0,0,0,0
+2026-02,(all),county:dublin,18,13,2,0,0,0,0,3,1
+2026-02,(all),county:galway,5,4,1,0,0,0,0,0,0
+2026-02,(all),county:kerry,1,1,0,0,0,0,0,0,0
+2026-02,(all),county:limerick,1,1,0,0,0,0,0,0,0
+2026-02,(all),county:longford,2,2,0,0,0,0,0,0,0
+2026-02,(all),county:mayo,1,0,1,0,0,0,0,0,0
+2026-02,(all),county:westmeath,1,0,0,0,0,0,0,1,0
+2026-02,(all),household:alone,49,49,0,0,0,0,0,0,0
+2026-02,(all),household:children,96,95,1,0,0,0,0,0,4
+2026-02,(all),household:partner,91,88,2,0,0,0,0,1,4
+2026-02,(all),payment_on,203,202,1,0,0,0,0,0,5
+2026-02,(all),shape:multi,14,14,0,0,0,0,0,0,2
+2026-02,(all),work:retired,7,7,0,0,0,0,0,0,0
+2026-02,(all),work:self-employed,36,36,0,0,0,0,0,0,0
+2026-02,(all),work:student,7,7,0,0,0,0,0,0,0
+2026-02,(all),work:unemployed,24,23,1,0,0,0,0,0,0
+2026-02,(all),work:working,198,188,8,0,0,0,0,2,7
+2026-02,(all),year:2011,1,1,0,0,0,0,0,0,0
+2026-02,(all),year:2013,1,1,0,0,0,0,0,0,0
+2026-02,(all),year:2015,1,1,0,0,0,0,0,0,1
+2026-02,(all),year:2016,1,0,1,0,0,0,0,0,0
+2026-02,(all),year:2018,2,2,0,0,0,0,0,0,1
+2026-02,(all),year:2019,1,1,0,0,0,0,0,0,1
+2026-02,(all),year:2020,1,1,0,0,0,0,0,0,0
+2026-02,(all),year:2021,1,1,0,0,0,0,0,0,0
+2026-02,(all),year:2022,4,3,1,0,0,0,0,0,1
+2026-02,(all),year:2024,6,5,1,0,0,0,0,0,0
+2026-02,(all),year:2025,10,9,0,0,0,1,0,0,0
+2026-02,(all),year:2026,22,20,0,0,0,2,0,0,1
+2026-02,(all),year:2027,4,4,0,0,0,0,0,0,0
+2026-02,(none),(any situation),5,0,2,0,0,0,0,3,0
+2026-02,(none),(no situation),158,3,76,15,2,42,17,3,0
+2026-02,about,(no situation),28,25,1,0,0,1,0,1,2
+2026-02,birth-family-relationships,(any situation),19,18,1,0,0,0,0,0,2
+2026-02,birth-family-relationships,(no situation),88,87,1,0,0,0,0,0,6
+2026-02,birth-family-relationships,household:children,11,11,0,0,0,0,0,0,2
+2026-02,birth-family-relationships,household:partner,5,5,0,0,0,0,0,0,0
+2026-02,consumer,(no situation),44,44,0,0,0,0,0,0,1
+2026-02,death,(no situation),34,32,2,0,0,0,0,0,1
+2026-02,education,(any situation),13,13,0,0,0,0,0,0,0
+2026-02,education,(no situation),70,69,1,0,0,0,0,0,3
+2026-02,education,work:working,7,7,0,0,0,0,0,0,0
+2026-02,education,year:2026,5,5,0,0,0,0,0,0,0
+2026-02,employment,(any situation),87,77,8,0,0,0,0,2,2
+2026-02,employment,(no situation),274,263,8,0,2,0,0,1,15
+2026-02,employment,work:working,70,60,8,0,0,0,0,2,2
+2026-02,environment,(no situation),15,15,0,0,0,0,0,0,0
+2026-02,government-in-ireland,(no situation),15,15,0,0,0,0,0,0,2
+2026-02,health,(any situation),15,14,0,0,0,0,0,1,0
+2026-02,health,(no situation),188,176,11,0,0,0,0,1,10
+2026-02,housing,(any situation),24,22,1,0,0,0,0,1,1
+2026-02,housing,(no situation),315,297,14,1,0,0,0,3,14
+2026-02,housing,year:2026,5,5,0,0,0,0,0,0,1
+2026-02,justice,(no situation),42,39,2,0,1,0,0,0,3
+2026-02,money-and-tax,(any situation),58,58,0,0,0,0,0,0,5
+2026-02,money-and-tax,(no situation),259,248,9,0,0,2,0,0,10
+2026-02,money-and-tax,household:alone,9,9,0,0,0,0,0,0,0
+2026-02,money-and-tax,household:children,5,5,0,0,0,0,0,0,0
+2026-02,money-and-tax,household:partner,10,10,0,0,0,0,0,0,1
+2026-02,money-and-tax,payment_on,8,8,0,0,0,0,0,0,2
+2026-02,money-and-tax,work:working,19,19,0,0,0,0,0,0,2
+2026-02,moving-country,(any situation),34,34,0,0,0,0,0,0,2
+2026-02,moving-country,(no situation),228,222,4,0,0,2,0,0,11
+2026-02,moving-country,household:children,26,26,0,0,0,0,0,0,1
+2026-02,returning-to-ireland,(any situation),18,18,0,0,0,0,0,0,1
+2026-02,returning-to-ireland,(no situation),82,82,0,0,0,0,0,0,8
+2026-02,returning-to-ireland,household:partner,10,10,0,0,0,0,0,0,0
+2026-02,social-welfare,(any situation),388,384,4,0,0,0,0,0,8
+2026-02,social-welfare,(no situation),1099,1077,13,1,3,4,0,1,24
+2026-02,social-welfare,age:16-24,8,8,0,0,0,0,0,0,1
+2026-02,social-welfare,age:45-65,12,12,0,0,0,0,0,0,1
+2026-02,social-welfare,age:66+,8,8,0,0,0,0,0,0,0
+2026-02,social-welfare,household:alone,33,33,0,0,0,0,0,0,0
+2026-02,social-welfare,household:children,36,35,1,0,0,0,0,0,0
+2026-02,social-welfare,household:partner,52,51,1,0,0,0,0,0,1
+2026-02,social-welfare,payment_on,180,179,1,0,0,0,0,0,3
+2026-02,social-welfare,shape:multi,7,7,0,0,0,0,0,0,1
+2026-02,social-welfare,work:retired,6,6,0,0,0,0,0,0,0
+2026-02,social-welfare,work:self-employed,26,26,0,0,0,0,0,0,0
+2026-02,social-welfare,work:unemployed,19,18,1,0,0,0,0,0,0
+2026-02,social-welfare,work:working,88,88,0,0,0,0,0,0,3
+2026-02,social-welfare,year:2025,5,4,0,0,0,1,0,0,0
+2026-02,social-welfare,year:2026,9,8,0,0,0,1,0,0,0
+2026-02,travel-and-recreation,(any situation),16,15,1,0,0,0,0,0,2
+2026-02,travel-and-recreation,(no situation),142,138,3,0,0,1,0,0,12
+2026-02,travel-and-recreation,household:children,5,5,0,0,0,0,0,0,0
+2026-03,(all),(any situation),725,665,35,10,8,4,0,3,21
+2026-03,(all),(no situation),3460,2968,227,110,40,57,27,31,121
+2026-03,(all),age:16-24,18,16,1,0,1,0,0,0,0
+2026-03,(all),age:25-44,6,6,0,0,0,0,0,0,1
+2026-03,(all),age:45-65,13,13,0,0,0,0,0,0,0
+2026-03,(all),age:66+,13,11,1,1,0,0,0,0,1
+2026-03,(all),county:clare,1,0,1,0,0,0,0,0,0
+2026-03,(all),county:cork,6,6,0,0,0,0,0,0,1
+2026-03,(all),county:dublin,14,12,1,0,0,1,0,0,0
+2026-03,(all),county:galway,6,4,2,0,0,0,0,0,0
+2026-03,(all),county:kildare,4,2,0,2,0,0,0,0,0
+2026-03,(all),county:limerick,1,1,0,0,0,0,0,0,0
+2026-03,(all),county:monaghan,1,1,0,0,0,0,0,0,0
+2026-03,(all),county:roscommon,2,1,1,0,0,0,0,0,0
+2026-03,(all),county:sligo,1,1,0,0,0,0,0,0,0
+2026-03,(all),county:wexford,1,1,0,0,0,0,0,0,0
+2026-03,(all),county:wicklow,1,1,0,0,0,0,0,0,0
+2026-03,(all),household:alone,38,35,2,1,0,0,0,0,2
+2026-03,(all),household:children,76,68,5,1,1,0,0,1,2
+2026-03,(all),household:partner,102,93,6,0,0,2,0,1,5
+2026-03,(all),payment_on,211,204,3,1,3,0,0,0,6
+2026-03,(all),shape:letter,2,1,1,0,0,0,0,0,0
+2026-03,(all),shape:multi,42,36,2,0,0,3,0,1,3
+2026-03,(all),shape:url,2,2,0,0,0,0,0,0,0
+2026-03,(all),work:retired,13,11,2,0,0,0,0,0,0
+2026-03,(all),work:self-employed,58,53,2,1,1,0,0,1,0
+2026-03,(all),work:student,12,11,0,0,0,1,0,0,0
+2026-03,(all),work:unemployed,39,35,1,1,1,0,0,1,1
+2026-03,(all),work:working,195,180,11,2,2,0,0,0,7
+2026-03,(all),year:2010,1,0,0,1,0,0,0,0,0
+2026-03,(all),year:2012,2,2,0,0,0,0,0,0,0
+2026-03,(all),year:2018,1,1,0,0,0,0,0,0,0
+2026-03,(all),year:2020,2,2,0,0,0,0,0,0,0
+2026-03,(all),year:2021,5,5,0,0,0,0,0,0,0
+2026-03,(all),year:2022,4,2,2,0,0,0,0,0,0
+2026-03,(all),year:2023,1,1,0,0,0,0,0,0,0
+2026-03,(all),year:2024,7,7,0,0,0,0,0,0,1
+2026-03,(all),year:2025,20,18,2,0,0,0,0,0,1
+2026-03,(all),year:2026,44,41,1,1,0,1,0,0,0
+2026-03,(all),year:2027,3,3,0,0,0,0,0,0,0
+2026-03,(all),year:2028,3,3,0,0,0,0,0,0,0
+2026-03,(none),(any situation),7,0,3,3,0,1,0,0,0
+2026-03,(none),(no situation),272,0,112,70,9,43,27,11,0
+2026-03,about,(no situation),38,38,0,0,0,0,0,0,5
+2026-03,birth-family-relationships,(any situation),23,21,2,0,0,0,0,0,1
+2026-03,birth-family-relationships,(no situation),80,77,2,0,0,1,0,0,3
+2026-03,birth-family-relationships,household:alone,5,3,2,0,0,0,0,0,1
+2026-03,birth-family-relationships,household:children,10,9,1,0,0,0,0,0,1
+2026-03,birth-family-relationships,household:partner,7,7,0,0,0,0,0,0,1
+2026-03,consumer,(no situation),69,61,0,0,8,0,0,0,3
+2026-03,death,(any situation),5,5,0,0,0,0,0,0,0
+2026-03,death,(no situation),48,44,2,0,2,0,0,0,3
+2026-03,education,(any situation),17,15,1,1,0,0,0,0,1
+2026-03,education,(no situation),79,76,3,0,0,0,0,0,2
+2026-03,education,household:children,5,3,1,1,0,0,0,0,1
+2026-03,education,work:student,5,5,0,0,0,0,0,0,0
+2026-03,employment,(any situation),99,76,14,3,4,1,0,1,2
+2026-03,employment,(no situation),312,286,21,3,2,0,0,0,11
+2026-03,employment,household:partner,6,3,2,0,0,0,0,1,0
+2026-03,employment,work:self-employed,14,9,2,1,1,0,0,1,0
+2026-03,employment,work:working,67,54,9,2,2,0,0,0,2
+2026-03,environment,(no situation),17,17,0,0,0,0,0,0,0
+2026-03,government-in-ireland,(no situation),32,27,3,0,0,2,0,0,1
+2026-03,health,(any situation),13,13,0,0,0,0,0,0,0
+2026-03,health,(no situation),209,183,13,3,2,1,0,7,6
+2026-03,housing,(any situation),25,22,2,1,0,0,0,0,1
+2026-03,housing,(no situation),322,278,26,6,5,0,0,7,22
+2026-03,housing,household:children,5,4,1,0,0,0,0,0,0
+2026-03,housing,shape:multi,6,4,1,0,0,0,0,1,1
+2026-03,housing,year:2026,8,7,0,1,0,0,0,0,0
+2026-03,justice,(no situation),49,47,2,0,0,0,0,0,3
+2026-03,money-and-tax,(any situation),56,55,1,0,0,0,0,0,4
+2026-03,money-and-tax,(no situation),274,254,7,8,2,2,0,1,15
+2026-03,money-and-tax,household:alone,6,6,0,0,0,0,0,0,1
+2026-03,money-and-tax,household:children,5,5,0,0,0,0,0,0,0
+2026-03,money-and-tax,household:partner,12,12,0,0,0,0,0,0,0
+2026-03,money-and-tax,work:self-employed,9,9,0,0,0,0,0,0,0
+2026-03,money-and-tax,work:working,18,18,0,0,0,0,0,0,2
+2026-03,moving-country,(any situation),27,25,1,0,0,0,0,1,0
+2026-03,moving-country,(no situation),275,265,2,5,0,1,0,2,10
+2026-03,moving-country,household:children,7,7,0,0,0,0,0,0,0
+2026-03,moving-country,household:partner,8,8,0,0,0,0,0,0,0
+2026-03,moving-country,shape:multi,6,6,0,0,0,0,0,0,0
+2026-03,moving-country,work:working,5,4,1,0,0,0,0,0,0
+2026-03,returning-to-ireland,(any situation),11,11,0,0,0,0,0,0,1
+2026-03,returning-to-ireland,(no situation),84,83,1,0,0,0,0,0,3
+2026-03,returning-to-ireland,payment_on,7,7,0,0,0,0,0,0,1
+2026-03,social-welfare,(any situation),423,408,8,2,4,0,0,1,9
+2026-03,social-welfare,(no situation),1149,1094,23,15,9,5,0,3,31
+2026-03,social-welfare,age:16-24,5,5,0,0,0,0,0,0,0
+2026-03,social-welfare,age:45-65,11,11,0,0,0,0,0,0,0
+2026-03,social-welfare,age:66+,9,8,1,0,0,0,0,0,0
+2026-03,social-welfare,household:alone,21,21,0,0,0,0,0,0,0
+2026-03,social-welfare,household:children,35,32,1,0,1,0,0,1,0
+2026-03,social-welfare,household:partner,54,53,1,0,0,0,0,0,2
+2026-03,social-welfare,payment_on,190,183,3,1,3,0,0,0,5
+2026-03,social-welfare,shape:multi,14,14,0,0,0,0,0,0,1
+2026-03,social-welfare,work:retired,11,9,2,0,0,0,0,0,0
+2026-03,social-welfare,work:self-employed,32,32,0,0,0,0,0,0,0
+2026-03,social-welfare,work:student,5,5,0,0,0,0,0,0,0
+2026-03,social-welfare,work:unemployed,32,30,0,1,1,0,0,0,1
+2026-03,social-welfare,work:working,92,91,1,0,0,0,0,0,2
+2026-03,social-welfare,year:2025,7,6,1,0,0,0,0,0,0
+2026-03,social-welfare,year:2026,24,22,1,0,0,1,0,0,0
+2026-03,travel-and-recreation,(any situation),13,9,3,0,0,1,0,0,1
+2026-03,travel-and-recreation,(no situation),151,138,10,0,1,2,0,0,3
+2026-03,travel-and-recreation,household:partner,5,3,1,0,0,1,0,0,1
+2026-04,(all),(any situation),664,609,23,9,12,3,0,8,19
+2026-04,(all),(no situation),3370,2842,244,144,65,33,21,21,112
+2026-04,(all),age:16-24,20,19,0,0,0,0,0,1,1
+2026-04,(all),age:25-44,2,2,0,0,0,0,0,0,0
+2026-04,(all),age:45-65,10,10,0,0,0,0,0,0,0
+2026-04,(all),age:66+,13,10,2,1,0,0,0,0,0
+2026-04,(all),county:carlow,1,1,0,0,0,0,0,0,0
+2026-04,(all),county:clare,1,1,0,0,0,0,0,0,0
+2026-04,(all),county:cork,2,2,0,0,0,0,0,0,1
+2026-04,(all),county:donegal,4,4,0,0,0,0,0,0,0
+2026-04,(all),county:dublin,15,11,2,0,0,0,0,2,0
+2026-04,(all),county:galway,5,4,0,0,1,0,0,0,0
+2026-04,(all),county:kerry,2,2,0,0,0,0,0,0,0
+2026-04,(all),county:kildare,1,0,1,0,0,0,0,0,0
+2026-04,(all),county:leitrim,2,2,0,0,0,0,0,0,0
+2026-04,(all),county:limerick,1,0,0,0,1,0,0,0,0
+2026-04,(all),county:longford,3,3,0,0,0,0,0,0,1
+2026-04,(all),county:louth,1,1,0,0,0,0,0,0,0
+2026-04,(all),county:meath,2,2,0,0,0,0,0,0,0
+2026-04,(all),county:sligo,1,0,1,0,0,0,0,0,0
+2026-04,(all),county:waterford,1,1,0,0,0,0,0,0,0
+2026-04,(all),county:wicklow,1,1,0,0,0,0,0,0,0
+2026-04,(all),household:alone,24,22,0,1,0,1,0,0,0
+2026-04,(all),household:children,86,78,3,2,1,1,0,1,6
+2026-04,(all),household:partner,83,73,5,1,2,2,0,0,3
+2026-04,(all),payment_on,171,165,1,1,3,0,0,1,3
+2026-04,(all),shape:letter,3,1,1,0,1,0,0,0,0
+2026-04,(all),shape:multi,44,42,1,0,0,0,0,1,4
+2026-04,(all),shape:url,2,2,0,0,0,0,0,0,0
+2026-04,(all),work:retired,10,10,0,0,0,0,0,0,0
+2026-04,(all),work:self-employed,52,48,1,3,0,0,0,0,0
+2026-04,(all),work:student,16,15,0,1,0,0,0,0,0
+2026-04,(all),work:unemployed,53,45,2,1,3,0,0,2,1
+2026-04,(all),work:working,192,177,8,0,6,0,0,1,5
+2026-04,(all),year:2010,1,0,1,0,0,0,0,0,0
+2026-04,(all),year:2012,1,1,0,0,0,0,0,0,0
+2026-04,(all),year:2019,2,1,1,0,0,0,0,0,0
+2026-04,(all),year:2020,4,4,0,0,0,0,0,0,0
+2026-04,(all),year:2021,4,4,0,0,0,0,0,0,0
+2026-04,(all),year:2022,4,3,0,1,0,0,0,0,0
+2026-04,(all),year:2023,12,12,0,0,0,0,0,0,1
+2026-04,(all),year:2024,5,5,0,0,0,0,0,0,0
+2026-04,(all),year:2025,7,6,0,0,1,0,0,0,0
+2026-04,(all),year:2026,31,27,2,1,1,0,0,0,1
+2026-04,(all),year:2027,1,1,0,0,0,0,0,0,0
+2026-04,(all),year:2028,1,1,0,0,0,0,0,0,0
+2026-04,(none),(no situation),283,0,124,84,23,26,20,6,0
+2026-04,about,(no situation),57,56,0,0,0,1,0,0,8
+2026-04,birth-family-relationships,(any situation),15,15,0,0,0,0,0,0,1
+2026-04,birth-family-relationships,(no situation),97,94,2,0,0,1,0,0,6
+2026-04,birth-family-relationships,household:children,6,6,0,0,0,0,0,0,1
+2026-04,consumer,(no situation),45,39,0,1,5,0,0,0,2
+2026-04,death,(no situation),30,28,2,0,0,0,0,0,0
+2026-04,education,(any situation),21,19,0,1,1,0,0,0,0
+2026-04,education,(no situation),88,82,5,0,1,0,0,0,1
+2026-04,employment,(any situation),81,70,3,3,4,0,0,1,2
+2026-04,employment,(no situation),259,225,19,5,5,1,0,4,11
+2026-04,employment,payment_on,8,8,0,0,0,0,0,0,0
+2026-04,employment,shape:multi,5,5,0,0,0,0,0,0,0
+2026-04,employment,work:self-employed,17,13,1,3,0,0,0,0,0
+2026-04,employment,work:unemployed,5,4,0,0,1,0,0,0,0
+2026-04,employment,work:working,46,40,2,0,3,0,0,1,2
+2026-04,environment,(no situation),15,15,0,0,0,0,0,0,1
+2026-04,government-in-ireland,(no situation),25,22,2,0,0,1,0,0,1
+2026-04,health,(any situation),10,6,4,0,0,0,0,0,1
+2026-04,health,(no situation),132,115,8,6,1,0,0,2,4
+2026-04,housing,(any situation),11,11,0,0,0,0,0,0,1
+2026-04,housing,(no situation),303,260,27,8,4,0,1,3,14
+2026-04,justice,(any situation),5,4,1,0,0,0,0,0,0
+2026-04,justice,(no situation),60,58,1,0,0,0,0,1,2
+2026-04,money-and-tax,(any situation),46,45,1,0,0,0,0,0,2
+2026-04,money-and-tax,(no situation),281,259,12,5,3,1,0,1,9
+2026-04,money-and-tax,household:partner,8,7,1,0,0,0,0,0,0
+2026-04,money-and-tax,payment_on,10,10,0,0,0,0,0,0,1
+2026-04,money-and-tax,work:working,8,8,0,0,0,0,0,0,1
+2026-04,money-and-tax,year:2026,11,10,0,0,1,0,0,0,1
+2026-04,moving-country,(any situation),48,43,3,0,0,0,0,2,1
+2026-04,moving-country,(no situation),246,226,12,2,4,1,0,1,6
+2026-04,moving-country,household:children,11,11,0,0,0,0,0,0,0
+2026-04,moving-country,household:partner,14,12,2,0,0,0,0,0,1
+2026-04,moving-country,work:working,13,13,0,0,0,0,0,0,0
+2026-04,returning-to-ireland,(any situation),17,17,0,0,0,0,0,0,1
+2026-04,returning-to-ireland,(no situation),92,91,0,1,0,0,0,0,3
+2026-04,social-welfare,(any situation),390,366,8,3,7,1,0,5,10
+2026-04,social-welfare,(no situation),1185,1113,20,29,19,1,0,3,38
+2026-04,social-welfare,age:16-24,13,12,0,0,0,0,0,1,1
+2026-04,social-welfare,age:45-65,8,8,0,0,0,0,0,0,0
+2026-04,social-welfare,age:66+,9,7,2,0,0,0,0,0,0
+2026-04,social-welfare,household:alone,17,16,0,1,0,0,0,0,0
+2026-04,social-welfare,household:children,49,42,3,1,1,1,0,1,4
+2026-04,social-welfare,household:partner,40,37,1,0,1,1,0,0,1
+2026-04,social-welfare,payment_on,144,138,1,1,3,0,0,1,2
+2026-04,social-welfare,shape:multi,15,15,0,0,0,0,0,0,1
+2026-04,social-welfare,work:self-employed,30,30,0,0,0,0,0,0,0
+2026-04,social-welfare,work:student,6,6,0,0,0,0,0,0,0
+2026-04,social-welfare,work:unemployed,41,35,2,0,2,0,0,2,1
+2026-04,social-welfare,work:working,109,105,1,0,3,0,0,0,2
+2026-04,social-welfare,year:2023,6,6,0,0,0,0,0,0,1
+2026-04,social-welfare,year:2026,12,11,1,0,0,0,0,0,0
+2026-04,travel-and-recreation,(any situation),11,10,0,0,0,1,0,0,0
+2026-04,travel-and-recreation,(no situation),172,159,10,3,0,0,0,0,6
+2026-05,(all),(any situation),2111,1841,134,42,68,2,0,24,50
+2026-05,(all),(no situation),8418,6475,807,456,287,102,185,106,230
+2026-05,(all),age:16-24,56,49,3,0,3,0,0,1,2
+2026-05,(all),age:25-44,27,23,1,1,2,0,0,0,0
+2026-05,(all),age:45-65,29,25,3,0,1,0,0,0,0
+2026-05,(all),age:66+,70,53,12,0,1,0,0,4,0
+2026-05,(all),county:carlow,1,1,0,0,0,0,0,0,0
+2026-05,(all),county:cavan,4,3,1,0,0,0,0,0,0
+2026-05,(all),county:clare,5,3,1,1,0,0,0,0,0
+2026-05,(all),county:cork,19,15,4,0,0,0,0,0,0
+2026-05,(all),county:donegal,5,3,1,0,0,0,0,1,0
+2026-05,(all),county:dublin,77,64,8,1,2,0,0,2,5
+2026-05,(all),county:galway,17,10,5,1,1,0,0,0,1
+2026-05,(all),county:kerry,1,1,0,0,0,0,0,0,0
+2026-05,(all),county:kildare,5,4,1,0,0,0,0,0,0
+2026-05,(all),county:kilkenny,2,0,2,0,0,0,0,0,0
+2026-05,(all),county:leitrim,1,1,0,0,0,0,0,0,0
+2026-05,(all),county:limerick,7,7,0,0,0,0,0,0,1
+2026-05,(all),county:longford,6,6,0,0,0,0,0,0,0
+2026-05,(all),county:louth,1,0,1,0,0,0,0,0,0
+2026-05,(all),county:mayo,4,4,0,0,0,0,0,0,0
+2026-05,(all),county:meath,4,3,0,1,0,0,0,0,1
+2026-05,(all),county:monaghan,3,3,0,0,0,0,0,0,0
+2026-05,(all),county:offaly,1,0,0,0,0,0,0,1,0
+2026-05,(all),county:roscommon,1,0,1,0,0,0,0,0,0
+2026-05,(all),county:sligo,8,4,3,0,1,0,0,0,0
+2026-05,(all),county:tipperary,1,0,1,0,0,0,0,0,0
+2026-05,(all),county:waterford,1,1,0,0,0,0,0,0,0
+2026-05,(all),county:westmeath,1,1,0,0,0,0,0,0,0
+2026-05,(all),county:wexford,7,6,0,0,1,0,0,0,0
+2026-05,(all),county:wicklow,3,3,0,0,0,0,0,0,0
+2026-05,(all),household:alone,95,87,6,0,1,0,0,1,4
+2026-05,(all),household:children,335,286,25,5,11,0,0,8,9
+2026-05,(all),household:partner,350,311,18,9,9,1,0,2,16
+2026-05,(all),payment_on,514,478,6,8,16,1,0,5,8
+2026-05,(all),shape:letter,4,2,1,0,1,0,0,0,0
+2026-05,(all),shape:multi,126,113,12,0,1,0,0,0,6
+2026-05,(all),shape:url,2,1,0,0,0,0,0,1,0
+2026-05,(all),work:retired,50,40,4,3,2,0,0,1,1
+2026-05,(all),work:self-employed,81,72,5,1,3,0,0,0,1
+2026-05,(all),work:student,25,23,1,0,1,0,0,0,1
+2026-05,(all),work:unemployed,166,153,3,4,5,0,0,1,6
+2026-05,(all),work:working,564,488,38,10,22,0,0,6,7
+2026-05,(all),year:2010,1,1,0,0,0,0,0,0,0
+2026-05,(all),year:2011,1,1,0,0,0,0,0,0,0
+2026-05,(all),year:2012,1,1,0,0,0,0,0,0,0
+2026-05,(all),year:2013,3,2,1,0,0,0,0,0,0
+2026-05,(all),year:2014,1,0,1,0,0,0,0,0,0
+2026-05,(all),year:2015,7,6,1,0,0,0,0,0,0
+2026-05,(all),year:2016,3,1,2,0,0,0,0,0,0
+2026-05,(all),year:2018,4,3,0,1,0,0,0,0,0
+2026-05,(all),year:2019,11,7,3,0,0,1,0,0,1
+2026-05,(all),year:2020,4,4,0,0,0,0,0,0,1
+2026-05,(all),year:2021,12,8,3,0,1,0,0,0,0
+2026-05,(all),year:2022,23,19,1,1,2,0,0,0,0
+2026-05,(all),year:2023,15,11,3,1,0,0,0,0,1
+2026-05,(all),year:2024,28,24,3,0,1,0,0,0,0
+2026-05,(all),year:2025,46,38,4,2,1,0,0,1,0
+2026-05,(all),year:2026,127,109,8,2,6,1,0,1,3
+2026-05,(all),year:2027,7,6,0,0,0,0,0,1,0
+2026-05,(all),year:2028,1,1,0,0,0,0,0,0,0
+2026-05,(all),year:2029,4,4,0,0,0,0,0,0,0
+2026-05,(none),(any situation),55,0,30,12,8,1,0,4,0
+2026-05,(none),(no situation),1117,0,377,325,99,85,184,47,0
+2026-05,(none),age:66+,5,0,4,0,0,0,0,1,0
+2026-05,(none),county:dublin,6,0,3,1,1,0,0,1,0
+2026-05,(none),household:partner,12,0,4,5,1,1,0,1,0
+2026-05,(none),work:working,6,0,1,4,1,0,0,0,0
+2026-05,(none),year:2025,5,0,2,2,1,0,0,0,0
+2026-05,(none),year:2026,7,0,4,1,1,1,0,0,0
+2026-05,about,(no situation),91,89,0,0,2,0,0,0,3
+2026-05,birth-family-relationships,(any situation),74,69,3,1,1,0,0,0,4
+2026-05,birth-family-relationships,(no situation),269,259,4,2,2,1,0,1,10
+2026-05,birth-family-relationships,age:16-24,5,5,0,0,0,0,0,0,0
+2026-05,birth-family-relationships,household:alone,11,10,1,0,0,0,0,0,0
+2026-05,birth-family-relationships,household:children,25,22,1,1,1,0,0,0,2
+2026-05,birth-family-relationships,household:partner,16,14,2,0,0,0,0,0,1
+2026-05,birth-family-relationships,shape:multi,9,8,1,0,0,0,0,0,0
+2026-05,birth-family-relationships,work:working,5,5,0,0,0,0,0,0,1
+2026-05,consumer,(any situation),5,5,0,0,0,0,0,0,0
+2026-05,consumer,(no situation),119,113,4,1,1,0,0,0,5
+2026-05,death,(no situation),45,39,5,0,1,0,0,0,0
+2026-05,education,(any situation),36,29,5,0,2,0,0,0,2
+2026-05,education,(no situation),173,147,17,4,4,0,0,1,8
+2026-05,education,household:children,17,13,2,0,2,0,0,0,1
+2026-05,education,work:working,12,10,1,0,1,0,0,0,0
+2026-05,education,year:2026,11,11,0,0,0,0,0,0,1
+2026-05,employment,(any situation),265,218,30,8,8,0,0,1,3
+2026-05,employment,(no situation),687,556,80,13,26,2,0,10,14
+2026-05,employment,age:16-24,7,5,1,0,1,0,0,0,2
+2026-05,employment,household:children,22,19,3,0,0,0,0,0,0
+2026-05,employment,household:partner,16,14,2,0,0,0,0,0,0
+2026-05,employment,payment_on,8,8,0,0,0,0,0,0,0
+2026-05,employment,shape:multi,19,17,2,0,0,0,0,0,0
+2026-05,employment,work:self-employed,30,25,4,1,0,0,0,0,0
+2026-05,employment,work:unemployed,17,15,0,0,2,0,0,0,0
+2026-05,employment,work:working,181,143,26,5,6,0,0,1,2
+2026-05,employment,year:2025,7,5,2,0,0,0,0,0,0
+2026-05,employment,year:2026,8,4,2,1,1,0,0,0,0
+2026-05,environment,(no situation),33,31,1,0,0,0,0,1,1
+2026-05,government-in-ireland,(any situation),5,4,1,0,0,0,0,0,0
+2026-05,government-in-ireland,(no situation),64,61,1,0,1,1,0,0,2
+2026-05,health,(any situation),54,44,8,1,1,0,0,0,2
+2026-05,health,(no situation),379,281,52,20,19,3,0,4,11
+2026-05,health,age:66+,6,4,1,0,1,0,0,0,0
+2026-05,health,household:children,16,15,1,0,0,0,0,0,2
+2026-05,health,work:working,10,8,1,1,0,0,0,0,0
+2026-05,housing,(any situation),80,53,15,3,4,0,0,5,0
+2026-05,housing,(no situation),640,490,97,20,20,1,0,12,28
+2026-05,housing,age:66+,5,1,2,0,0,0,0,2,0
+2026-05,housing,county:cork,7,5,2,0,0,0,0,0,0
+2026-05,housing,county:dublin,8,7,0,0,0,0,0,1,0
+2026-05,housing,household:alone,5,4,1,0,0,0,0,0,0
+2026-05,housing,household:children,10,6,2,0,1,0,0,1,0
+2026-05,housing,household:partner,19,12,5,1,1,0,0,0,0
+2026-05,housing,shape:multi,5,4,0,0,1,0,0,0,1
+2026-05,housing,work:working,5,4,1,0,0,0,0,0,0
+2026-05,housing,year:2025,6,6,0,0,0,0,0,0,0
+2026-05,housing,year:2026,12,11,0,0,1,0,0,0,0
+2026-05,justice,(any situation),21,19,1,0,0,0,0,1,2
+2026-05,justice,(no situation),222,200,15,1,1,2,0,3,12
+2026-05,justice,work:working,7,6,0,0,0,0,0,1,0
+2026-05,money-and-tax,(any situation),86,82,1,1,2,0,0,0,3
+2026-05,money-and-tax,(no situation),526,453,40,14,16,2,0,1,15
+2026-05,money-and-tax,household:children,13,12,0,1,0,0,0,0,1
+2026-05,money-and-tax,household:partner,25,25,0,0,0,0,0,0,2
+2026-05,money-and-tax,payment_on,18,18,0,0,0,0,0,0,0
+2026-05,money-and-tax,shape:multi,7,7,0,0,0,0,0,0,1
+2026-05,money-and-tax,work:unemployed,12,12,0,0,0,0,0,0,0
+2026-05,money-and-tax,work:working,26,23,1,0,2,0,0,0,0
+2026-05,money-and-tax,year:2025,5,5,0,0,0,0,0,0,0
+2026-05,money-and-tax,year:2026,7,6,0,0,1,0,0,0,2
+2026-05,moving-country,(any situation),98,87,6,0,5,0,0,0,4
+2026-05,moving-country,(no situation),647,591,30,5,18,1,0,2,22
+2026-05,moving-country,age:16-24,5,4,1,0,0,0,0,0,0
+2026-05,moving-country,county:dublin,6,3,3,0,0,0,0,0,0
+2026-05,moving-country,household:children,21,20,0,0,1,0,0,0,0
+2026-05,moving-country,household:partner,46,42,1,0,3,0,0,0,4
+2026-05,moving-country,shape:multi,20,18,2,0,0,0,0,0,3
+2026-05,moving-country,work:working,15,14,1,0,0,0,0,0,0
+2026-05,moving-country,year:2022,6,5,0,0,1,0,0,0,0
+2026-05,moving-country,year:2026,27,26,0,0,1,0,0,0,0
+2026-05,returning-to-ireland,(any situation),42,40,1,0,0,0,0,1,2
+2026-05,returning-to-ireland,(no situation),199,195,2,1,0,0,0,1,7
+2026-05,returning-to-ireland,household:partner,10,10,0,0,0,0,0,0,2
+2026-05,returning-to-ireland,payment_on,9,9,0,0,0,0,0,0,0
+2026-05,returning-to-ireland,shape:multi,6,6,0,0,0,0,0,0,0
+2026-05,returning-to-ireland,work:working,7,6,0,0,0,0,0,1,0
+2026-05,social-welfare,(any situation),1190,1094,32,16,35,1,0,12,24
+2026-05,social-welfare,(no situation),2705,2492,69,46,71,3,1,23,70
+2026-05,social-welfare,age:16-24,26,23,0,0,2,0,0,1,0
+2026-05,social-welfare,age:25-44,12,12,0,0,0,0,0,0,0
+2026-05,social-welfare,age:45-65,18,18,0,0,0,0,0,0,0
+2026-05,social-welfare,age:66+,42,37,4,0,0,0,0,1,0
+2026-05,social-welfare,county:dublin,14,13,1,0,0,0,0,0,1
+2026-05,social-welfare,county:longford,5,5,0,0,0,0,0,0,0
+2026-05,social-welfare,household:alone,65,62,2,0,1,0,0,0,3
+2026-05,social-welfare,household:children,175,149,12,3,4,0,0,7,3
+2026-05,social-welfare,household:partner,182,172,3,3,3,0,0,1,7
+2026-05,social-welfare,payment_on,471,435,6,8,16,1,0,5,8
+2026-05,social-welfare,shape:multi,41,38,3,0,0,0,0,0,1
+2026-05,social-welfare,work:retired,33,26,4,1,2,0,0,0,1
+2026-05,social-welfare,work:self-employed,46,42,1,0,3,0,0,0,1
+2026-05,social-welfare,work:student,17,17,0,0,0,0,0,0,1
+2026-05,social-welfare,work:unemployed,124,115,2,4,2,0,0,1,6
+2026-05,social-welfare,work:working,283,262,6,0,12,0,0,3,4
+2026-05,social-welfare,year:2021,5,4,0,0,1,0,0,0,0
+2026-05,social-welfare,year:2022,5,4,0,0,1,0,0,0,0
+2026-05,social-welfare,year:2024,15,15,0,0,0,0,0,0,0
+2026-05,social-welfare,year:2025,14,14,0,0,0,0,0,0,0
+2026-05,social-welfare,year:2026,35,32,1,0,1,0,0,1,0
+2026-05,travel-and-recreation,(any situation),92,90,0,0,2,0,0,0,4
+2026-05,travel-and-recreation,(no situation),502,478,13,4,6,1,0,0,22
+2026-05,travel-and-recreation,age:66+,5,5,0,0,0,0,0,0,0
+2026-05,travel-and-recreation,county:dublin,26,26,0,0,0,0,0,0,3
+2026-05,travel-and-recreation,household:children,27,25,0,0,2,0,0,0,0
+2026-05,travel-and-recreation,household:partner,13,13,0,0,0,0,0,0,0
+2026-05,travel-and-recreation,work:working,5,5,0,0,0,0,0,0,0
+2026-05,travel-and-recreation,year:2026,12,12,0,0,0,0,0,0,0
+2026-06,(all),(any situation),3249,2812,263,94,38,7,0,35,92
+2026-06,(all),(no situation),12815,9924,1283,785,200,170,281,172,369
+2026-06,(all),age:16-24,115,97,11,3,1,0,0,3,1
+2026-06,(all),age:25-44,25,21,3,0,0,0,0,1,1
+2026-06,(all),age:45-65,85,72,8,2,3,0,0,0,2
+2026-06,(all),age:66+,135,116,12,5,1,0,0,1,5
+2026-06,(all),county:carlow,4,2,1,0,0,0,0,1,0
+2026-06,(all),county:cavan,9,5,3,0,0,0,0,1,0
+2026-06,(all),county:clare,12,8,4,0,0,0,0,0,1
+2026-06,(all),county:cork,41,31,5,2,2,0,0,1,1
+2026-06,(all),county:donegal,9,6,2,0,1,0,0,0,0
+2026-06,(all),county:dublin,120,90,21,5,2,1,0,1,12
+2026-06,(all),county:galway,16,10,4,2,0,0,0,0,1
+2026-06,(all),county:kerry,6,6,0,0,0,0,0,0,0
+2026-06,(all),county:kildare,10,6,3,1,0,0,0,0,0
+2026-06,(all),county:kilkenny,5,3,1,0,1,0,0,0,0
+2026-06,(all),county:laois,3,3,0,0,0,0,0,0,0
+2026-06,(all),county:leitrim,2,0,2,0,0,0,0,0,0
+2026-06,(all),county:limerick,10,9,0,1,0,0,0,0,0
+2026-06,(all),county:longford,3,2,1,0,0,0,0,0,0
+2026-06,(all),county:louth,3,3,0,0,0,0,0,0,1
+2026-06,(all),county:mayo,5,1,4,0,0,0,0,0,0
+2026-06,(all),county:meath,6,5,0,1,0,0,0,0,1
+2026-06,(all),county:monaghan,1,1,0,0,0,0,0,0,0
+2026-06,(all),county:offaly,2,2,0,0,0,0,0,0,0
+2026-06,(all),county:roscommon,1,0,1,0,0,0,0,0,0
+2026-06,(all),county:sligo,11,10,1,0,0,0,0,0,0
+2026-06,(all),county:tipperary,2,1,0,1,0,0,0,0,0
+2026-06,(all),county:waterford,8,6,0,0,0,0,0,2,1
+2026-06,(all),county:westmeath,4,3,1,0,0,0,0,0,0
+2026-06,(all),county:wexford,6,4,2,0,0,0,0,0,0
+2026-06,(all),county:wicklow,8,6,2,0,0,0,0,0,0
+2026-06,(all),household:alone,175,153,10,8,2,0,0,2,5
+2026-06,(all),household:children,599,524,47,18,4,1,0,5,10
+2026-06,(all),household:partner,547,481,38,18,7,1,0,2,18
+2026-06,(all),payment_on,674,630,19,13,6,2,0,4,19
+2026-06,(all),shape:letter,12,9,2,0,1,0,0,0,0
+2026-06,(all),shape:multi,187,169,8,4,3,2,0,1,8
+2026-06,(all),shape:url,7,6,1,0,0,0,0,0,0
+2026-06,(all),work:retired,70,62,4,4,0,0,0,0,2
+2026-06,(all),work:self-employed,125,110,8,3,1,1,0,2,1
+2026-06,(all),work:student,52,47,5,0,0,0,0,0,0
+2026-06,(all),work:unemployed,207,182,14,8,1,0,0,2,7
+2026-06,(all),work:working,788,688,60,13,15,1,0,11,26
+2026-06,(all),year:2010,2,2,0,0,0,0,0,0,1
+2026-06,(all),year:2011,2,2,0,0,0,0,0,0,0
+2026-06,(all),year:2012,7,5,2,0,0,0,0,0,0
+2026-06,(all),year:2013,9,9,0,0,0,0,0,0,1
+2026-06,(all),year:2014,4,4,0,0,0,0,0,0,0
+2026-06,(all),year:2015,5,4,1,0,0,0,0,0,0
+2026-06,(all),year:2016,3,2,1,0,0,0,0,0,0
+2026-06,(all),year:2017,6,6,0,0,0,0,0,0,0
+2026-06,(all),year:2018,5,4,0,1,0,0,0,0,0
+2026-06,(all),year:2019,10,9,1,0,0,0,0,0,1
+2026-06,(all),year:2020,4,3,0,1,0,0,0,0,0
+2026-06,(all),year:2021,8,8,0,0,0,0,0,0,0
+2026-06,(all),year:2022,22,19,0,2,0,0,0,1,1
+2026-06,(all),year:2023,13,10,1,1,1,0,0,0,0
+2026-06,(all),year:2024,58,46,10,1,0,0,0,1,2
+2026-06,(all),year:2025,88,80,4,4,0,0,0,0,2
+2026-06,(all),year:2026,142,127,10,2,1,1,0,1,5
+2026-06,(all),year:2027,23,21,2,0,0,0,0,0,2
+2026-06,(all),year:2028,6,6,0,0,0,0,0,0,0
+2026-06,(all),year:2029,9,9,0,0,0,0,0,0,0
+2026-06,(none),(any situation),86,0,45,33,4,1,0,3,0
+2026-06,(none),(no situation),1741,0,587,557,96,144,281,76,0
+2026-06,(none),age:66+,5,0,2,2,1,0,0,0,0
+2026-06,(none),county:dublin,12,0,7,3,0,1,0,1,0
+2026-06,(none),household:children,9,0,5,4,0,0,0,0,0
+2026-06,(none),household:partner,19,0,8,11,0,0,0,0,0
+2026-06,(none),work:unemployed,9,0,4,4,0,0,0,1,0
+2026-06,about,(no situation),138,137,0,1,0,0,0,0,16
+2026-06,birth-family-relationships,(any situation),101,91,7,2,1,0,0,0,2
+2026-06,birth-family-relationships,(no situation),347,326,10,5,2,1,0,3,17
+2026-06,birth-family-relationships,age:16-24,13,13,0,0,0,0,0,0,0
+2026-06,birth-family-relationships,county:dublin,5,4,0,0,1,0,0,0,1
+2026-06,birth-family-relationships,household:alone,19,13,3,2,1,0,0,0,1
+2026-06,birth-family-relationships,household:children,40,39,1,0,0,0,0,0,0
+2026-06,birth-family-relationships,household:partner,27,22,4,0,1,0,0,0,1
+2026-06,birth-family-relationships,payment_on,5,5,0,0,0,0,0,0,0
+2026-06,birth-family-relationships,shape:multi,5,5,0,0,0,0,0,0,0
+2026-06,birth-family-relationships,work:working,6,5,1,0,0,0,0,0,0
+2026-06,consumer,(any situation),9,9,0,0,0,0,0,0,0
+2026-06,consumer,(no situation),186,179,6,1,0,0,0,0,5
+2026-06,death,(any situation),8,6,1,0,1,0,0,0,0
+2026-06,death,(no situation),91,85,4,1,1,0,0,0,4
+2026-06,education,(any situation),72,56,10,4,0,0,0,2,1
+2026-06,education,(no situation),285,253,20,10,1,0,0,1,14
+2026-06,education,county:dublin,5,4,1,0,0,0,0,0,0
+2026-06,education,household:children,24,19,4,0,0,0,0,1,0
+2026-06,education,payment_on,7,7,0,0,0,0,0,0,0
+2026-06,education,work:student,16,14,2,0,0,0,0,0,0
+2026-06,education,work:working,17,12,3,2,0,0,0,0,0
+2026-06,education,year:2025,5,5,0,0,0,0,0,0,0
+2026-06,education,year:2026,10,10,0,0,0,0,0,0,2
+2026-06,employment,(any situation),355,271,53,12,10,0,0,9,5
+2026-06,employment,(no situation),869,727,102,21,12,0,0,7,25
+2026-06,employment,age:16-24,8,4,4,0,0,0,0,0,0
+2026-06,employment,household:children,13,13,0,0,0,0,0,0,0
+2026-06,employment,household:partner,9,7,1,0,1,0,0,0,0
+2026-06,employment,payment_on,7,7,0,0,0,0,0,0,0
+2026-06,employment,shape:multi,23,18,3,0,2,0,0,0,0
+2026-06,employment,work:self-employed,29,18,6,3,1,0,0,1,0
+2026-06,employment,work:unemployed,22,18,3,0,1,0,0,0,2
+2026-06,employment,work:working,266,204,39,9,7,0,0,7,3
+2026-06,employment,year:2025,5,3,1,1,0,0,0,0,0
+2026-06,employment,year:2026,12,8,3,1,0,0,0,0,0
+2026-06,environment,(any situation),5,4,1,0,0,0,0,0,0
+2026-06,environment,(no situation),64,62,1,0,1,0,0,0,5
+2026-06,government-in-ireland,(any situation),9,8,1,0,0,0,0,0,0
+2026-06,government-in-ireland,(no situation),63,60,2,0,0,1,0,0,8
+2026-06,health,(any situation),122,94,22,3,2,1,0,0,5
+2026-06,health,(no situation),572,422,97,27,10,4,0,12,12
+2026-06,health,age:16-24,5,5,0,0,0,0,0,0,0
+2026-06,health,age:45-65,6,4,1,1,0,0,0,0,0
+2026-06,health,age:66+,11,9,2,0,0,0,0,0,0
+2026-06,health,county:dublin,8,8,0,0,0,0,0,0,3
+2026-06,health,household:children,24,19,3,1,0,1,0,0,1
+2026-06,health,household:partner,21,14,6,1,0,0,0,0,0
+2026-06,health,payment_on,5,5,0,0,0,0,0,0,1
+2026-06,health,work:unemployed,9,5,3,1,0,0,0,0,0
+2026-06,health,work:working,16,14,1,0,1,0,0,0,0
+2026-06,housing,(any situation),140,106,26,4,0,0,0,4,5
+2026-06,housing,(no situation),1046,824,155,32,10,3,0,22,33
+2026-06,housing,age:45-65,5,4,1,0,0,0,0,0,1
+2026-06,housing,county:cork,6,4,1,0,0,0,0,1,1
+2026-06,housing,county:dublin,24,23,0,1,0,0,0,0,2
+2026-06,housing,household:alone,15,10,5,0,0,0,0,0,0
+2026-06,housing,household:children,19,16,2,0,0,0,0,1,1
+2026-06,housing,household:partner,19,15,2,1,0,0,0,1,0
+2026-06,housing,shape:multi,15,14,1,0,0,0,0,0,2
+2026-06,housing,work:working,10,4,6,0,0,0,0,0,0
+2026-06,housing,year:2026,9,8,0,0,0,0,0,1,1
+2026-06,justice,(any situation),32,26,5,0,1,0,0,0,3
+2026-06,justice,(no situation),289,246,36,2,4,0,0,1,11
+2026-06,justice,county:dublin,5,5,0,0,0,0,0,0,0
+2026-06,justice,shape:multi,5,4,1,0,0,0,0,0,0
+2026-06,money-and-tax,(any situation),154,148,4,0,1,0,0,1,4
+2026-06,money-and-tax,(no situation),917,776,89,28,11,3,0,10,33
+2026-06,money-and-tax,household:alone,16,16,0,0,0,0,0,0,0
+2026-06,money-and-tax,household:children,37,37,0,0,0,0,0,0,0
+2026-06,money-and-tax,household:partner,22,21,1,0,0,0,0,0,0
+2026-06,money-and-tax,payment_on,19,19,0,0,0,0,0,0,0
+2026-06,money-and-tax,shape:multi,22,22,0,0,0,0,0,0,1
+2026-06,money-and-tax,work:retired,8,8,0,0,0,0,0,0,0
+2026-06,money-and-tax,work:self-employed,10,10,0,0,0,0,0,0,0
+2026-06,money-and-tax,work:unemployed,8,8,0,0,0,0,0,0,0
+2026-06,money-and-tax,work:working,32,30,0,0,1,0,0,1,2
+2026-06,money-and-tax,year:2024,9,9,0,0,0,0,0,0,0
+2026-06,money-and-tax,year:2025,5,5,0,0,0,0,0,0,0
+2026-06,money-and-tax,year:2026,28,27,1,0,0,0,0,0,0
+2026-06,moving-country,(any situation),186,163,11,4,4,1,0,3,6
+2026-06,moving-country,(no situation),1028,932,49,25,9,6,0,7,33
+2026-06,moving-country,age:16-24,12,10,0,1,0,0,0,1,0
+2026-06,moving-country,county:cork,5,4,0,1,0,0,0,0,0
+2026-06,moving-country,county:dublin,9,4,4,0,1,0,0,0,2
+2026-06,moving-country,household:children,59,54,0,2,2,0,0,1,0
+2026-06,moving-country,household:partner,57,52,4,0,1,0,0,0,2
+2026-06,moving-country,shape:multi,18,18,0,0,0,0,0,0,0
+2026-06,moving-country,work:self-employed,11,10,1,0,0,0,0,0,0
+2026-06,moving-country,work:student,8,7,1,0,0,0,0,0,0
+2026-06,moving-country,work:working,22,19,1,0,1,1,0,0,1
+2026-06,moving-country,year:2022,5,4,0,1,0,0,0,0,0
+2026-06,moving-country,year:2024,11,10,1,0,0,0,0,0,0
+2026-06,moving-country,year:2025,19,18,0,1,0,0,0,0,1
+2026-06,moving-country,year:2026,10,9,1,0,0,0,0,0,0
+2026-06,returning-to-ireland,(any situation),67,66,1,0,0,0,0,0,2
+2026-06,returning-to-ireland,(no situation),373,368,2,1,1,1,0,0,20
+2026-06,returning-to-ireland,age:16-24,5,5,0,0,0,0,0,0,0
+2026-06,returning-to-ireland,age:66+,5,5,0,0,0,0,0,0,0
+2026-06,returning-to-ireland,county:dublin,6,6,0,0,0,0,0,0,0
+2026-06,returning-to-ireland,household:children,9,8,1,0,0,0,0,0,0
+2026-06,returning-to-ireland,household:partner,17,17,0,0,0,0,0,0,1
+2026-06,returning-to-ireland,payment_on,12,12,0,0,0,0,0,0,1
+2026-06,returning-to-ireland,work:retired,5,5,0,0,0,0,0,0,0
+2026-06,returning-to-ireland,work:working,7,7,0,0,0,0,0,0,0
+2026-06,social-welfare,(any situation),1766,1636,69,31,14,3,0,13,54
+2026-06,social-welfare,(no situation),4017,3778,97,68,39,4,0,31,97
+2026-06,social-welfare,age:16-24,50,47,1,1,0,0,0,1,1
+2026-06,social-welfare,age:25-44,12,12,0,0,0,0,0,0,0
+2026-06,social-welfare,age:45-65,59,52,4,1,2,0,0,0,0
+2026-06,social-welfare,age:66+,98,88,7,2,0,0,0,1,5
+2026-06,social-welfare,county:cork,9,7,1,0,1,0,0,0,0
+2026-06,social-welfare,county:dublin,13,11,2,0,0,0,0,0,1
+2026-06,social-welfare,county:sligo,7,6,1,0,0,0,0,0,0
+2026-06,social-welfare,household:alone,108,103,1,2,0,0,0,2,3
+2026-06,social-welfare,household:children,294,250,29,11,2,0,0,2,6
+2026-06,social-welfare,household:partner,320,302,10,5,2,0,0,1,12
+2026-06,social-welfare,payment_on,610,566,19,13,6,2,0,4,17
+2026-06,social-welfare,shape:multi,71,67,1,2,0,0,0,1,4
+2026-06,social-welfare,work:retired,39,37,1,1,0,0,0,0,2
+2026-06,social-welfare,work:self-employed,67,66,0,0,0,1,0,0,1
+2026-06,social-welfare,work:student,20,20,0,0,0,0,0,0,0
+2026-06,social-welfare,work:unemployed,141,135,3,2,0,0,0,1,4
+2026-06,social-welfare,work:working,400,385,6,1,5,0,0,3,16
+2026-06,social-welfare,year:2013,6,6,0,0,0,0,0,0,1
+2026-06,social-welfare,year:2017,6,6,0,0,0,0,0,0,0
+2026-06,social-welfare,year:2022,7,7,0,0,0,0,0,0,0
+2026-06,social-welfare,year:2023,6,5,0,1,0,0,0,0,0
+2026-06,social-welfare,year:2024,20,18,1,1,0,0,0,0,1
+2026-06,social-welfare,year:2025,39,38,1,0,0,0,0,0,1
+2026-06,social-welfare,year:2026,54,52,0,1,1,0,0,0,1
+2026-06,social-welfare,year:2027,8,8,0,0,0,0,0,0,2
+2026-06,social-welfare,year:2029,7,7,0,0,0,0,0,0,0
+2026-06,travel-and-recreation,(any situation),135,126,7,1,0,1,0,0,5
+2026-06,travel-and-recreation,(no situation),789,749,26,6,3,3,0,2,36
+2026-06,travel-and-recreation,county:cork,6,6,0,0,0,0,0,0,0
+2026-06,travel-and-recreation,county:dublin,23,17,5,1,0,0,0,0,2
+2026-06,travel-and-recreation,household:children,62,62,0,0,0,0,0,0,1
+2026-06,travel-and-recreation,household:partner,19,18,0,0,0,1,0,0,1
+2026-06,travel-and-recreation,shape:multi,8,7,0,0,1,0,0,0,1
+2026-06,travel-and-recreation,work:working,5,5,0,0,0,0,0,0,2
+2026-06,travel-and-recreation,year:2026,7,6,1,0,0,0,0,0,1
+2026-07,(all),(any situation),2715,2500,97,74,34,7,1,2,479
+2026-07,(all),(no situation),11002,9246,477,698,147,164,237,33,1606
+2026-07,(all),age:16-24,87,83,1,0,2,1,0,0,15
+2026-07,(all),age:25-44,28,25,2,1,0,0,0,0,5
+2026-07,(all),age:45-65,56,52,0,1,2,1,0,0,9
+2026-07,(all),age:66+,107,102,2,1,0,1,1,0,19
+2026-07,(all),county:carlow,2,1,1,0,0,0,0,0,0
+2026-07,(all),county:cavan,2,2,0,0,0,0,0,0,0
+2026-07,(all),county:clare,4,3,0,1,0,0,0,0,0
+2026-07,(all),county:cork,37,32,3,2,0,0,0,0,10
+2026-07,(all),county:donegal,7,4,3,0,0,0,0,0,1
+2026-07,(all),county:dublin,108,92,11,0,4,1,0,0,25
+2026-07,(all),county:galway,15,13,0,2,0,0,0,0,4
+2026-07,(all),county:kerry,5,5,0,0,0,0,0,0,2
+2026-07,(all),county:kildare,3,3,0,0,0,0,0,0,2
+2026-07,(all),county:kilkenny,5,4,1,0,0,0,0,0,1
+2026-07,(all),county:leitrim,1,1,0,0,0,0,0,0,1
+2026-07,(all),county:limerick,9,7,0,1,0,1,0,0,4
+2026-07,(all),county:longford,2,2,0,0,0,0,0,0,0
+2026-07,(all),county:mayo,3,2,1,0,0,0,0,0,0
+2026-07,(all),county:meath,8,8,0,0,0,0,0,0,3
+2026-07,(all),county:monaghan,2,1,0,1,0,0,0,0,1
+2026-07,(all),county:offaly,5,5,0,0,0,0,0,0,4
+2026-07,(all),county:roscommon,4,2,0,2,0,0,0,0,1
+2026-07,(all),county:sligo,5,4,0,0,0,0,0,1,2
+2026-07,(all),county:tipperary,4,3,0,0,1,0,0,0,1
+2026-07,(all),county:waterford,7,6,1,0,0,0,0,0,0
+2026-07,(all),county:westmeath,3,2,1,0,0,0,0,0,0
+2026-07,(all),county:wexford,12,8,4,0,0,0,0,0,2
+2026-07,(all),county:wicklow,4,4,0,0,0,0,0,0,1
+2026-07,(all),household:alone,148,128,5,11,4,0,0,0,26
+2026-07,(all),household:children,433,397,18,15,1,1,0,1,97
+2026-07,(all),household:partner,461,426,13,16,5,1,0,0,81
+2026-07,(all),payment_on,601,573,10,10,8,0,0,0,89
+2026-07,(all),shape:letter,5,3,1,0,1,0,0,0,1
+2026-07,(all),shape:multi,136,128,2,0,4,2,0,0,31
+2026-07,(all),shape:url,6,4,2,0,0,0,0,0,0
+2026-07,(all),work:retired,57,49,2,6,0,0,0,0,8
+2026-07,(all),work:self-employed,116,111,4,1,0,0,0,0,13
+2026-07,(all),work:student,27,25,1,0,1,0,0,0,4
+2026-07,(all),work:unemployed,195,181,8,4,2,0,0,0,24
+2026-07,(all),work:working,661,621,22,9,9,0,0,0,111
+2026-07,(all),year:2010,7,6,0,1,0,0,0,0,0
+2026-07,(all),year:2011,7,6,0,0,0,1,0,0,1
+2026-07,(all),year:2012,5,4,1,0,0,0,0,0,0
+2026-07,(all),year:2013,1,1,0,0,0,0,0,0,0
+2026-07,(all),year:2014,6,5,1,0,0,0,0,0,2
+2026-07,(all),year:2015,8,7,1,0,0,0,0,0,2
+2026-07,(all),year:2016,8,7,1,0,0,0,0,0,4
+2026-07,(all),year:2018,8,8,0,0,0,0,0,0,2
+2026-07,(all),year:2019,5,4,0,0,1,0,0,0,1
+2026-07,(all),year:2020,5,5,0,0,0,0,0,0,1
+2026-07,(all),year:2021,23,22,1,0,0,0,0,0,4
+2026-07,(all),year:2022,21,20,1,0,0,0,0,0,3
+2026-07,(all),year:2023,23,21,2,0,0,0,0,0,7
+2026-07,(all),year:2024,29,27,0,2,0,0,0,0,5
+2026-07,(all),year:2025,49,45,2,0,2,0,0,0,5
+2026-07,(all),year:2026,121,110,4,6,0,0,0,1,25
+2026-07,(all),year:2027,32,31,1,0,0,0,0,0,5
+2026-07,(all),year:2028,3,3,0,0,0,0,0,0,1
+2026-07,(all),year:2029,6,6,0,0,0,0,0,0,1
+2026-07,(none),(any situation),53,0,18,25,4,5,0,1,0
+2026-07,(none),(no situation),1155,1,200,501,59,130,237,27,0
+2026-07,(none),county:dublin,5,0,3,0,1,1,0,0,0
+2026-07,(none),household:alone,6,0,1,5,0,0,0,0,0
+2026-07,(none),household:partner,14,0,2,9,2,1,0,0,0
+2026-07,(none),year:2026,5,0,1,4,0,0,0,0,0
+2026-07,about,(no situation),141,134,4,0,0,3,0,0,34
+2026-07,birth-family-relationships,(any situation),127,124,1,1,1,0,0,0,31
+2026-07,birth-family-relationships,(no situation),406,399,2,3,2,0,0,0,58
+2026-07,birth-family-relationships,age:16-24,6,6,0,0,0,0,0,0,1
+2026-07,birth-family-relationships,household:alone,24,22,0,1,1,0,0,0,6
+2026-07,birth-family-relationships,household:children,44,44,0,0,0,0,0,0,12
+2026-07,birth-family-relationships,household:partner,41,40,1,0,0,0,0,0,8
+2026-07,consumer,(any situation),20,20,0,0,0,0,0,0,7
+2026-07,consumer,(no situation),256,255,0,1,0,0,0,0,47
+2026-07,death,(any situation),8,8,0,0,0,0,0,0,1
+2026-07,death,(no situation),156,153,3,0,0,0,0,0,31
+2026-07,education,(any situation),75,73,1,1,0,0,0,0,18
+2026-07,education,(no situation),268,259,5,2,1,1,0,0,51
+2026-07,education,age:16-24,7,7,0,0,0,0,0,0,4
+2026-07,education,household:children,25,24,1,0,0,0,0,0,7
+2026-07,education,household:partner,5,4,1,0,0,0,0,0,0
+2026-07,education,payment_on,12,12,0,0,0,0,0,0,1
+2026-07,education,work:unemployed,6,5,1,0,0,0,0,0,1
+2026-07,education,work:working,18,18,0,0,0,0,0,0,4
+2026-07,education,year:2026,5,4,0,1,0,0,0,0,1
+2026-07,employment,(any situation),324,295,16,8,5,0,0,0,53
+2026-07,employment,(no situation),875,808,21,32,12,1,0,1,122
+2026-07,employment,age:45-65,5,5,0,0,0,0,0,0,1
+2026-07,employment,county:dublin,5,3,2,0,0,0,0,0,1
+2026-07,employment,household:children,7,7,0,0,0,0,0,0,2
+2026-07,employment,household:partner,5,5,0,0,0,0,0,0,0
+2026-07,employment,payment_on,6,6,0,0,0,0,0,0,1
+2026-07,employment,shape:multi,10,10,0,0,0,0,0,0,3
+2026-07,employment,work:self-employed,33,29,3,1,0,0,0,0,3
+2026-07,employment,work:unemployed,18,16,2,0,0,0,0,0,1
+2026-07,employment,work:working,242,220,11,7,4,0,0,0,41
+2026-07,employment,year:2026,13,12,1,0,0,0,0,0,2
+2026-07,environment,(any situation),8,8,0,0,0,0,0,0,3
+2026-07,environment,(no situation),127,127,0,0,0,0,0,0,33
+2026-07,government-in-ireland,(any situation),11,11,0,0,0,0,0,0,2
+2026-07,government-in-ireland,(no situation),95,93,0,0,0,2,0,0,16
+2026-07,health,(any situation),79,74,2,1,1,1,0,0,15
+2026-07,health,(no situation),549,487,30,21,8,3,0,0,86
+2026-07,health,age:66+,10,9,0,0,0,1,0,0,1
+2026-07,health,county:dublin,5,4,1,0,0,0,0,0,2
+2026-07,health,household:children,23,23,0,0,0,0,0,0,2
+2026-07,health,household:partner,7,7,0,0,0,0,0,0,2
+2026-07,health,payment_on,8,8,0,0,0,0,0,0,1
+2026-07,health,shape:multi,8,6,1,0,1,0,0,0,2
+2026-07,health,work:working,7,7,0,0,0,0,0,0,1
+2026-07,housing,(any situation),131,121,6,2,2,0,0,0,34
+2026-07,housing,(no situation),1070,983,41,30,13,3,0,0,198
+2026-07,housing,age:66+,6,6,0,0,0,0,0,0,2
+2026-07,housing,county:cork,7,6,1,0,0,0,0,0,3
+2026-07,housing,county:dublin,15,13,1,0,1,0,0,0,2
+2026-07,housing,household:alone,12,12,0,0,0,0,0,0,4
+2026-07,housing,household:children,23,22,1,0,0,0,0,0,8
+2026-07,housing,household:partner,21,19,0,1,1,0,0,0,5
+2026-07,housing,payment_on,11,11,0,0,0,0,0,0,2
+2026-07,housing,shape:multi,17,17,0,0,0,0,0,0,3
+2026-07,housing,work:retired,8,8,0,0,0,0,0,0,2
+2026-07,housing,work:unemployed,7,6,0,1,0,0,0,0,2
+2026-07,housing,work:working,7,6,1,0,0,0,0,0,1
+2026-07,housing,year:2026,8,8,0,0,0,0,0,0,3
+2026-07,justice,(any situation),20,19,1,0,0,0,0,0,4
+2026-07,justice,(no situation),236,220,10,1,5,0,0,0,67
+2026-07,justice,household:children,7,7,0,0,0,0,0,0,1
+2026-07,money-and-tax,(any situation),89,85,1,3,0,0,0,0,16
+2026-07,money-and-tax,(no situation),473,409,28,25,4,6,0,1,79
+2026-07,money-and-tax,age:66+,5,5,0,0,0,0,0,0,2
+2026-07,money-and-tax,household:alone,6,6,0,0,0,0,0,0,0
+2026-07,money-and-tax,household:children,12,12,0,0,0,0,0,0,3
+2026-07,money-and-tax,household:partner,20,17,0,3,0,0,0,0,3
+2026-07,money-and-tax,payment_on,8,8,0,0,0,0,0,0,1
+2026-07,money-and-tax,work:retired,7,6,0,1,0,0,0,0,1
+2026-07,money-and-tax,work:self-employed,7,7,0,0,0,0,0,0,0
+2026-07,money-and-tax,work:working,19,18,1,0,0,0,0,0,5
+2026-07,money-and-tax,year:2025,5,4,0,0,1,0,0,0,0
+2026-07,money-and-tax,year:2026,10,8,0,1,0,0,0,1,2
+2026-07,moving-country,(any situation),116,102,9,0,4,0,1,0,17
+2026-07,moving-country,(no situation),768,710,30,17,8,3,0,0,132
+2026-07,moving-country,county:dublin,24,19,3,0,2,0,0,0,5
+2026-07,moving-country,household:children,25,22,2,0,1,0,0,0,4
+2026-07,moving-country,household:partner,38,35,2,0,1,0,0,0,3
+2026-07,moving-country,shape:multi,18,17,0,0,1,0,0,0,5
+2026-07,moving-country,work:unemployed,8,7,0,0,1,0,0,0,1
+2026-07,moving-country,work:working,11,9,2,0,0,0,0,0,2
+2026-07,moving-country,year:2021,15,14,1,0,0,0,0,0,3
+2026-07,moving-country,year:2022,7,7,0,0,0,0,0,0,1
+2026-07,moving-country,year:2026,12,12,0,0,0,0,0,0,5
+2026-07,returning-to-ireland,(any situation),105,103,1,1,0,0,0,0,22
+2026-07,returning-to-ireland,(no situation),406,402,3,1,0,0,0,0,64
+2026-07,returning-to-ireland,age:66+,6,6,0,0,0,0,0,0,2
+2026-07,returning-to-ireland,county:dublin,8,8,0,0,0,0,0,0,1
+2026-07,returning-to-ireland,household:children,24,24,0,0,0,0,0,0,6
+2026-07,returning-to-ireland,household:partner,30,30,0,0,0,0,0,0,6
+2026-07,returning-to-ireland,payment_on,22,22,0,0,0,0,0,0,1
+2026-07,returning-to-ireland,shape:multi,5,5,0,0,0,0,0,0,0
+2026-07,returning-to-ireland,work:retired,6,5,0,1,0,0,0,0,0
+2026-07,returning-to-ireland,work:working,14,14,0,0,0,0,0,0,4
+2026-07,social-welfare,(any situation),1428,1341,36,32,17,1,0,1,228
+2026-07,social-welfare,(no situation),3218,3031,82,58,33,10,0,4,451
+2026-07,social-welfare,age:16-24,51,50,0,0,1,0,0,0,8
+2026-07,social-welfare,age:25-44,14,14,0,0,0,0,0,0,2
+2026-07,social-welfare,age:45-65,33,31,0,0,2,0,0,0,6
+2026-07,social-welfare,age:66+,61,59,2,0,0,0,0,0,9
+2026-07,social-welfare,county:cork,7,7,0,0,0,0,0,0,2
+2026-07,social-welfare,county:dublin,14,14,0,0,0,0,0,0,4
+2026-07,social-welfare,household:alone,85,73,4,5,3,0,0,0,11
+2026-07,social-welfare,household:children,186,160,10,14,0,1,0,1,39
+2026-07,social-welfare,household:partner,246,236,6,3,1,0,0,0,46
+2026-07,social-welfare,payment_on,526,498,10,10,8,0,0,0,79
+2026-07,social-welfare,shape:multi,50,49,0,0,0,1,0,0,12
+2026-07,social-welfare,work:retired,32,27,2,3,0,0,0,0,5
+2026-07,social-welfare,work:self-employed,63,63,0,0,0,0,0,0,7
+2026-07,social-welfare,work:student,14,14,0,0,0,0,0,0,1
+2026-07,social-welfare,work:unemployed,138,129,5,3,1,0,0,0,19
+2026-07,social-welfare,work:working,329,317,7,0,5,0,0,0,51
+2026-07,social-welfare,year:2010,7,6,0,1,0,0,0,0,0
+2026-07,social-welfare,year:2024,9,9,0,0,0,0,0,0,2
+2026-07,social-welfare,year:2025,25,23,1,0,1,0,0,0,4
+2026-07,social-welfare,year:2026,52,52,0,0,0,0,0,0,7
+2026-07,social-welfare,year:2027,14,14,0,0,0,0,0,0,4
+2026-07,travel-and-recreation,(any situation),117,112,5,0,0,0,0,0,25
+2026-07,travel-and-recreation,(no situation),801,773,18,6,2,2,0,0,136
+2026-07,travel-and-recreation,age:66+,6,6,0,0,0,0,0,0,2
+2026-07,travel-and-recreation,county:dublin,14,14,0,0,0,0,0,0,4
+2026-07,travel-and-recreation,household:children,50,47,3,0,0,0,0,0,11
+2026-07,travel-and-recreation,household:partner,20,19,1,0,0,0,0,0,5
+2026-07,travel-and-recreation,shape:multi,9,9,0,0,0,0,0,0,3
+2026-07,travel-and-recreation,year:2026,6,6,0,0,0,0,0,0,3
+2026-07,travel-and-recreation,year:2027,8,7,1,0,0,0,0,0,0
+2026-08,(all),(any situation),2745,2542,89,72,37,4,1,0,454
+2026-08,(all),(no situation),11139,9326,432,774,145,191,253,18,1691
+2026-08,(all),age:16-24,96,88,4,2,2,0,0,0,14
+2026-08,(all),age:25-44,29,26,1,0,1,1,0,0,4
+2026-08,(all),age:45-65,80,75,0,1,4,0,0,0,12
+2026-08,(all),age:66+,136,125,2,8,1,0,0,0,9
+2026-08,(all),county:carlow,2,1,1,0,0,0,0,0,1
+2026-08,(all),county:cavan,4,3,1,0,0,0,0,0,2
+2026-08,(all),county:clare,2,2,0,0,0,0,0,0,1
+2026-08,(all),county:cork,27,26,0,1,0,0,0,0,3
+2026-08,(all),county:donegal,21,20,0,1,0,0,0,0,4
+2026-08,(all),county:dublin,110,97,6,5,1,1,0,0,23
+2026-08,(all),county:galway,22,19,2,0,1,0,0,0,4
+2026-08,(all),county:kerry,10,10,0,0,0,0,0,0,3
+2026-08,(all),county:kildare,3,3,0,0,0,0,0,0,2
+2026-08,(all),county:kilkenny,2,2,0,0,0,0,0,0,2
+2026-08,(all),county:laois,1,1,0,0,0,0,0,0,1
+2026-08,(all),county:limerick,22,20,1,1,0,0,0,0,3
+2026-08,(all),county:longford,3,3,0,0,0,0,0,0,0
+2026-08,(all),county:louth,3,3,0,0,0,0,0,0,1
+2026-08,(all),county:mayo,7,7,0,0,0,0,0,0,6
+2026-08,(all),county:meath,8,8,0,0,0,0,0,0,5
+2026-08,(all),county:monaghan,3,3,0,0,0,0,0,0,1
+2026-08,(all),county:offaly,3,3,0,0,0,0,0,0,2
+2026-08,(all),county:roscommon,5,3,2,0,0,0,0,0,3
+2026-08,(all),county:sligo,8,8,0,0,0,0,0,0,3
+2026-08,(all),county:tipperary,6,6,0,0,0,0,0,0,3
+2026-08,(all),county:waterford,11,8,2,0,0,1,0,0,3
+2026-08,(all),county:westmeath,1,1,0,0,0,0,0,0,0
+2026-08,(all),county:wexford,7,7,0,0,0,0,0,0,1
+2026-08,(all),county:wicklow,6,5,1,0,0,0,0,0,2
+2026-08,(all),household:alone,170,163,5,2,0,0,0,0,32
+2026-08,(all),household:children,443,409,23,7,4,0,0,0,81
+2026-08,(all),household:partner,497,466,12,12,5,1,1,0,75
+2026-08,(all),payment_on,580,543,16,12,9,0,0,0,86
+2026-08,(all),shape:letter,6,5,0,0,0,1,0,0,1
+2026-08,(all),shape:multi,142,135,4,1,1,1,0,0,34
+2026-08,(all),shape:url,5,4,1,0,0,0,0,0,2
+2026-08,(all),work:retired,59,55,0,4,0,0,0,0,8
+2026-08,(all),work:self-employed,85,79,1,2,3,0,0,0,8
+2026-08,(all),work:student,31,29,0,1,1,0,0,0,6
+2026-08,(all),work:unemployed,154,149,2,2,1,0,0,0,27
+2026-08,(all),work:working,620,572,18,17,13,0,0,0,96
+2026-08,(all),year:2010,3,3,0,0,0,0,0,0,1
+2026-08,(all),year:2011,2,2,0,0,0,0,0,0,0
+2026-08,(all),year:2012,5,5,0,0,0,0,0,0,0
+2026-08,(all),year:2013,1,1,0,0,0,0,0,0,0
+2026-08,(all),year:2014,4,2,2,0,0,0,0,0,1
+2026-08,(all),year:2015,6,6,0,0,0,0,0,0,2
+2026-08,(all),year:2016,5,5,0,0,0,0,0,0,0
+2026-08,(all),year:2017,8,8,0,0,0,0,0,0,1
+2026-08,(all),year:2018,6,5,0,1,0,0,0,0,1
+2026-08,(all),year:2019,11,11,0,0,0,0,0,0,2
+2026-08,(all),year:2020,15,12,1,2,0,0,0,0,5
+2026-08,(all),year:2021,19,16,0,3,0,0,0,0,3
+2026-08,(all),year:2022,23,20,1,2,0,0,0,0,3
+2026-08,(all),year:2023,19,18,1,0,0,0,0,0,5
+2026-08,(all),year:2024,48,47,0,1,0,0,0,0,5
+2026-08,(all),year:2025,48,41,5,1,0,0,0,1,8
+2026-08,(all),year:2026,140,126,5,6,2,1,0,0,24
+2026-08,(all),year:2027,46,40,0,3,2,1,0,0,17
+2026-08,(all),year:2028,9,8,1,0,0,0,0,0,4
+2026-08,(all),year:2029,1,1,0,0,0,0,0,0,1
+2026-08,(none),(any situation),49,0,12,26,7,3,1,0,0
+2026-08,(none),(no situation),1209,0,167,558,63,153,253,15,0
+2026-08,(none),age:66+,6,0,0,5,1,0,0,0,0
+2026-08,(none),county:dublin,7,0,1,5,1,0,0,0,0
+2026-08,(none),household:partner,16,0,3,9,2,1,1,0,0
+2026-08,(none),work:working,5,0,2,3,0,0,0,0,0
+2026-08,(none),year:2026,5,0,0,3,2,0,0,0,0
+2026-08,about,(any situation),7,7,0,0,0,0,0,0,3
+2026-08,about,(no situation),99,97,2,0,0,0,0,0,40
+2026-08,birth-family-relationships,(any situation),145,145,0,0,0,0,0,0,25
+2026-08,birth-family-relationships,(no situation),497,484,3,6,3,1,0,0,67
+2026-08,birth-family-relationships,age:16-24,5,5,0,0,0,0,0,0,1
+2026-08,birth-family-relationships,age:45-65,6,6,0,0,0,0,0,0,0
+2026-08,birth-family-relationships,county:dublin,5,5,0,0,0,0,0,0,2
+2026-08,birth-family-relationships,household:alone,25,25,0,0,0,0,0,0,5
+2026-08,birth-family-relationships,household:children,41,41,0,0,0,0,0,0,7
+2026-08,birth-family-relationships,household:partner,56,56,0,0,0,0,0,0,7
+2026-08,birth-family-relationships,shape:multi,7,7,0,0,0,0,0,0,1
+2026-08,birth-family-relationships,work:working,7,7,0,0,0,0,0,0,2
+2026-08,consumer,(any situation),24,24,0,0,0,0,0,0,3
+2026-08,consumer,(no situation),256,256,0,0,0,0,0,0,44
+2026-08,consumer,age:66+,7,7,0,0,0,0,0,0,0
+2026-08,consumer,household:partner,6,6,0,0,0,0,0,0,0
+2026-08,consumer,payment_on,5,5,0,0,0,0,0,0,0
+2026-08,consumer,shape:multi,5,5,0,0,0,0,0,0,0
+2026-08,death,(any situation),24,24,0,0,0,0,0,0,5
+2026-08,death,(no situation),167,160,3,0,3,1,0,0,22
+2026-08,death,household:partner,14,14,0,0,0,0,0,0,2
+2026-08,education,(any situation),143,140,2,1,0,0,0,0,27
+2026-08,education,(no situation),489,469,9,7,3,1,0,0,78
+2026-08,education,age:16-24,19,18,1,0,0,0,0,0,2
+2026-08,education,county:cork,6,6,0,0,0,0,0,0,0
+2026-08,education,household:children,53,51,1,1,0,0,0,0,12
+2026-08,education,household:partner,7,7,0,0,0,0,0,0,0
+2026-08,education,payment_on,12,12,0,0,0,0,0,0,1
+2026-08,education,work:student,16,16,0,0,0,0,0,0,3
+2026-08,education,work:unemployed,8,8,0,0,0,0,0,0,3
+2026-08,education,work:working,25,25,0,0,0,0,0,0,5
+2026-08,education,year:2024,6,5,0,1,0,0,0,0,0
+2026-08,education,year:2025,5,5,0,0,0,0,0,0,0
+2026-08,education,year:2026,7,7,0,0,0,0,0,0,1
+2026-08,employment,(any situation),289,254,11,15,9,0,0,0,40
+2026-08,employment,(no situation),899,854,22,12,6,5,0,0,148
+2026-08,employment,age:16-24,5,3,1,0,1,0,0,0,0
+2026-08,employment,county:dublin,6,6,0,0,0,0,0,0,1
+2026-08,employment,household:children,10,10,0,0,0,0,0,0,5
+2026-08,employment,household:partner,9,7,0,1,1,0,0,0,1
+2026-08,employment,payment_on,9,9,0,0,0,0,0,0,2
+2026-08,employment,shape:multi,11,10,0,0,0,1,0,0,1
+2026-08,employment,work:self-employed,24,21,0,2,1,0,0,0,0
+2026-08,employment,work:unemployed,19,18,1,0,0,0,0,0,2
+2026-08,employment,work:working,206,178,9,12,7,0,0,0,27
+2026-08,employment,year:2024,16,16,0,0,0,0,0,0,0
+2026-08,employment,year:2025,5,5,0,0,0,0,0,0,1
+2026-08,employment,year:2026,14,13,0,0,0,1,0,0,3
+2026-08,environment,(any situation),9,9,0,0,0,0,0,0,5
+2026-08,environment,(no situation),104,104,0,0,0,0,0,0,30
+2026-08,government-in-ireland,(any situation),19,19,0,0,0,0,0,0,4
+2026-08,government-in-ireland,(no situation),168,168,0,0,0,0,0,0,25
+2026-08,government-in-ireland,work:working,5,5,0,0,0,0,0,0,0
+2026-08,health,(any situation),86,78,5,1,2,0,0,0,17
+2026-08,health,(no situation),548,488,21,26,10,3,0,0,112
+2026-08,health,age:16-24,7,7,0,0,0,0,0,0,0
+2026-08,health,age:25-44,5,4,1,0,0,0,0,0,1
+2026-08,health,age:66+,13,13,0,0,0,0,0,0,1
+2026-08,health,county:dublin,5,4,1,0,0,0,0,0,1
+2026-08,health,household:alone,5,5,0,0,0,0,0,0,0
+2026-08,health,household:children,17,14,2,0,1,0,0,0,4
+2026-08,health,household:partner,9,9,0,0,0,0,0,0,0
+2026-08,health,work:working,6,5,0,1,0,0,0,0,1
+2026-08,housing,(any situation),173,168,4,0,1,0,0,0,36
+2026-08,housing,(no situation),1129,1046,29,32,17,5,0,0,192
+2026-08,housing,age:66+,8,8,0,0,0,0,0,0,1
+2026-08,housing,county:dublin,14,14,0,0,0,0,0,0,2
+2026-08,housing,county:galway,7,7,0,0,0,0,0,0,1
+2026-08,housing,household:alone,24,24,0,0,0,0,0,0,4
+2026-08,housing,household:children,38,37,1,0,0,0,0,0,10
+2026-08,housing,household:partner,24,22,1,0,1,0,0,0,1
+2026-08,housing,payment_on,21,21,0,0,0,0,0,0,5
+2026-08,housing,shape:multi,15,14,1,0,0,0,0,0,2
+2026-08,housing,work:retired,6,6,0,0,0,0,0,0,1
+2026-08,housing,work:unemployed,7,7,0,0,0,0,0,0,3
+2026-08,housing,work:working,18,17,1,0,0,0,0,0,1
+2026-08,housing,year:2026,10,9,0,1,0,0,0,0,0
+2026-08,justice,(any situation),16,14,2,0,0,0,0,0,6
+2026-08,justice,(no situation),186,172,6,4,3,1,0,0,49
+2026-08,money-and-tax,(any situation),89,87,1,1,0,0,0,0,19
+2026-08,money-and-tax,(no situation),437,380,24,23,5,5,0,0,91
+2026-08,money-and-tax,age:16-24,5,5,0,0,0,0,0,0,0
+2026-08,money-and-tax,age:66+,8,8,0,0,0,0,0,0,3
+2026-08,money-and-tax,household:alone,7,7,0,0,0,0,0,0,2
+2026-08,money-and-tax,household:children,14,14,0,0,0,0,0,0,3
+2026-08,money-and-tax,household:partner,12,12,0,0,0,0,0,0,1
+2026-08,money-and-tax,payment_on,10,10,0,0,0,0,0,0,2
+2026-08,money-and-tax,shape:multi,9,8,0,0,1,0,0,0,2
+2026-08,money-and-tax,work:retired,7,7,0,0,0,0,0,0,1
+2026-08,money-and-tax,work:unemployed,6,6,0,0,0,0,0,0,0
+2026-08,money-and-tax,work:working,16,15,0,1,0,0,0,0,4
+2026-08,money-and-tax,year:2026,8,7,1,0,0,0,0,0,0
+2026-08,moving-country,(any situation),132,124,4,4,0,0,0,0,36
+2026-08,moving-country,(no situation),869,797,41,18,4,8,0,1,146
+2026-08,moving-country,age:16-24,7,7,0,0,0,0,0,0,4
+2026-08,moving-country,county:donegal,9,9,0,0,0,0,0,0,0
+2026-08,moving-country,county:dublin,18,18,0,0,0,0,0,0,3
+2026-08,moving-country,household:children,31,28,2,1,0,0,0,0,8
+2026-08,moving-country,household:partner,37,35,1,1,0,0,0,0,12
+2026-08,moving-country,shape:multi,18,17,1,0,0,0,0,0,6
+2026-08,moving-country,work:unemployed,5,5,0,0,0,0,0,0,1
+2026-08,moving-country,work:working,21,20,1,0,0,0,0,0,6
+2026-08,moving-country,year:2022,7,7,0,0,0,0,0,0,1
+2026-08,moving-country,year:2023,5,5,0,0,0,0,0,0,1
+2026-08,moving-country,year:2025,5,5,0,0,0,0,0,0,2
+2026-08,moving-country,year:2026,11,10,1,0,0,0,0,0,1
+2026-08,returning-to-ireland,(any situation),136,135,1,0,0,0,0,0,19
+2026-08,returning-to-ireland,(no situation),449,445,2,2,0,0,0,0,59
+2026-08,returning-to-ireland,age:66+,9,9,0,0,0,0,0,0,1
+2026-08,returning-to-ireland,county:dublin,6,6,0,0,0,0,0,0,1
+2026-08,returning-to-ireland,household:children,30,29,1,0,0,0,0,0,4
+2026-08,returning-to-ireland,household:partner,45,45,0,0,0,0,0,0,9
+2026-08,returning-to-ireland,payment_on,30,30,0,0,0,0,0,0,6
+2026-08,returning-to-ireland,shape:multi,11,11,0,0,0,0,0,0,2
+2026-08,returning-to-ireland,work:working,18,18,0,0,0,0,0,0,3
+2026-08,returning-to-ireland,year:2026,7,7,0,0,0,0,0,0,1
+2026-08,social-welfare,(any situation),1288,1201,44,24,18,1,0,0,188
+2026-08,social-welfare,(no situation),2857,2651,97,77,23,7,0,2,436
+2026-08,social-welfare,age:16-24,35,32,1,1,1,0,0,0,6
+2026-08,social-welfare,age:25-44,11,11,0,0,0,0,0,0,2
+2026-08,social-welfare,age:45-65,54,54,0,0,0,0,0,0,10
+2026-08,social-welfare,age:66+,67,63,1,3,0,0,0,0,2
+2026-08,social-welfare,county:cork,5,5,0,0,0,0,0,0,0
+2026-08,social-welfare,county:dublin,9,6,2,0,0,1,0,0,2
+2026-08,social-welfare,household:alone,87,82,4,1,0,0,0,0,13
+2026-08,social-welfare,household:children,157,135,14,5,3,0,0,0,23
+2026-08,social-welfare,household:partner,239,230,7,1,1,0,0,0,35
+2026-08,social-welfare,payment_on,476,439,16,12,9,0,0,0,68
+2026-08,social-welfare,shape:multi,40,39,1,0,0,0,0,0,11
+2026-08,social-welfare,work:retired,32,30,0,2,0,0,0,0,4
+2026-08,social-welfare,work:self-employed,44,41,1,0,2,0,0,0,5
+2026-08,social-welfare,work:student,11,10,0,0,1,0,0,0,2
+2026-08,social-welfare,work:unemployed,104,100,1,2,1,0,0,0,17
+2026-08,social-welfare,work:working,286,275,5,0,6,0,0,0,45
+2026-08,social-welfare,year:2024,14,14,0,0,0,0,0,0,3
+2026-08,social-welfare,year:2025,19,16,2,1,0,0,0,0,2
+2026-08,social-welfare,year:2026,61,57,3,1,0,0,0,0,14
+2026-08,social-welfare,year:2027,17,16,0,1,0,0,0,0,8
+2026-08,travel-and-recreation,(any situation),114,111,3,0,0,0,0,0,21
+2026-08,travel-and-recreation,(no situation),773,752,6,9,5,1,0,0,152
+2026-08,travel-and-recreation,age:66+,8,7,1,0,0,0,0,0,1
+2026-08,travel-and-recreation,county:cork,6,6,0,0,0,0,0,0,0
+2026-08,travel-and-recreation,county:dublin,26,25,1,0,0,0,0,0,7
+2026-08,travel-and-recreation,county:limerick,6,6,0,0,0,0,0,0,0
+2026-08,travel-and-recreation,household:alone,5,4,1,0,0,0,0,0,1
+2026-08,travel-and-recreation,household:children,39,38,1,0,0,0,0,0,5
+2026-08,travel-and-recreation,household:partner,16,16,0,0,0,0,0,0,3
+2026-08,travel-and-recreation,shape:multi,12,12,0,0,0,0,0,0,3
+2026-08,travel-and-recreation,year:2026,10,9,0,1,0,0,0,0,2
+2026-09,(all),(any situation),3469,3008,246,165,35,14,1,0,834
+2026-09,(all),(no situation),13425,10352,946,1355,170,317,267,18,2592
+2026-09,(all),age:16-24,129,116,7,5,0,1,0,0,37
+2026-09,(all),age:25-44,26,22,0,4,0,0,0,0,4
+2026-09,(all),age:45-65,95,79,6,8,1,1,0,0,19
+2026-09,(all),age:66+,204,181,7,13,3,0,0,0,41
+2026-09,(all),county:carlow,8,5,3,0,0,0,0,0,4
+2026-09,(all),county:cavan,4,4,0,0,0,0,0,0,1
+2026-09,(all),county:clare,4,3,0,1,0,0,0,0,1
+2026-09,(all),county:cork,33,24,4,1,1,3,0,0,12
+2026-09,(all),county:donegal,12,11,1,0,0,0,0,0,3
+2026-09,(all),county:dublin,119,98,15,4,2,0,0,0,39
+2026-09,(all),county:galway,19,15,1,3,0,0,0,0,8
+2026-09,(all),county:kerry,7,5,0,2,0,0,0,0,2
+2026-09,(all),county:kildare,3,1,2,0,0,0,0,0,0
+2026-09,(all),county:kilkenny,6,4,1,1,0,0,0,0,3
+2026-09,(all),county:leitrim,3,2,1,0,0,0,0,0,0
+2026-09,(all),county:limerick,18,17,0,1,0,0,0,0,6
+2026-09,(all),county:longford,2,1,1,0,0,0,0,0,1
+2026-09,(all),county:louth,3,2,1,0,0,0,0,0,0
+2026-09,(all),county:mayo,4,4,0,0,0,0,0,0,3
+2026-09,(all),county:meath,3,2,1,0,0,0,0,0,1
+2026-09,(all),county:monaghan,1,0,1,0,0,0,0,0,0
+2026-09,(all),county:offaly,3,2,1,0,0,0,0,0,2
+2026-09,(all),county:sligo,12,9,3,0,0,0,0,0,4
+2026-09,(all),county:tipperary,4,4,0,0,0,0,0,0,0
+2026-09,(all),county:waterford,6,5,1,0,0,0,0,0,2
+2026-09,(all),county:westmeath,2,2,0,0,0,0,0,0,1
+2026-09,(all),county:wexford,8,5,0,1,0,2,0,0,3
+2026-09,(all),county:wicklow,7,5,1,1,0,0,0,0,2
+2026-09,(all),household:alone,260,223,19,16,1,1,0,0,67
+2026-09,(all),household:children,562,484,41,29,6,2,0,0,156
+2026-09,(all),household:partner,543,473,37,24,6,2,1,0,129
+2026-09,(all),payment_on,876,789,54,26,6,1,0,0,224
+2026-09,(all),shape:letter,4,4,0,0,0,0,0,0,0
+2026-09,(all),shape:multi,179,161,11,2,1,4,0,0,61
+2026-09,(all),shape:url,2,1,1,0,0,0,0,0,0
+2026-09,(all),work:retired,117,103,7,6,1,0,0,0,25
+2026-09,(all),work:self-employed,129,115,8,6,0,0,0,0,23
+2026-09,(all),work:student,60,55,1,4,0,0,0,0,18
+2026-09,(all),work:unemployed,217,192,16,7,1,1,0,0,48
+2026-09,(all),work:working,767,672,52,28,14,1,0,0,161
+2026-09,(all),year:2010,3,3,0,0,0,0,0,0,1
+2026-09,(all),year:2011,4,2,0,2,0,0,0,0,1
+2026-09,(all),year:2012,3,2,1,0,0,0,0,0,0
+2026-09,(all),year:2013,2,2,0,0,0,0,0,0,1
+2026-09,(all),year:2014,8,6,1,0,0,0,1,0,2
+2026-09,(all),year:2015,6,5,1,0,0,0,0,0,0
+2026-09,(all),year:2016,2,2,0,0,0,0,0,0,0
+2026-09,(all),year:2017,3,2,1,0,0,0,0,0,1
+2026-09,(all),year:2018,8,8,0,0,0,0,0,0,3
+2026-09,(all),year:2019,7,7,0,0,0,0,0,0,2
+2026-09,(all),year:2020,15,13,1,1,0,0,0,0,3
+2026-09,(all),year:2021,11,10,1,0,0,0,0,0,1
+2026-09,(all),year:2022,20,20,0,0,0,0,0,0,6
+2026-09,(all),year:2023,30,27,1,2,0,0,0,0,9
+2026-09,(all),year:2024,49,40,3,4,2,0,0,0,15
+2026-09,(all),year:2025,50,42,3,5,0,0,0,0,16
+2026-09,(all),year:2026,157,133,15,7,1,1,0,0,34
+2026-09,(all),year:2027,55,38,13,3,0,1,0,0,14
+2026-09,(all),year:2028,2,2,0,0,0,0,0,0,1
+2026-09,(all),year:2029,3,2,0,1,0,0,0,0,1
+2026-09,(none),(any situation),93,0,32,50,3,7,1,0,0
+2026-09,(none),(no situation),1817,2,304,897,72,260,266,16,0
+2026-09,(none),age:45-65,5,0,1,4,0,0,0,0,0
+2026-09,(none),age:66+,8,0,0,7,1,0,0,0,0
+2026-09,(none),county:cork,6,0,2,1,0,3,0,0,0
+2026-09,(none),county:dublin,12,0,9,2,1,0,0,0,0
+2026-09,(none),household:children,5,0,2,3,0,0,0,0,0
+2026-09,(none),household:partner,16,0,5,10,0,0,1,0,0
+2026-09,(none),shape:multi,6,0,2,1,0,3,0,0,0
+2026-09,(none),work:working,16,0,5,10,1,0,0,0,0
+2026-09,(none),year:2026,13,0,5,6,1,1,0,0,0
+2026-09,(none),year:2027,5,0,1,3,0,1,0,0,0
+2026-09,about,(any situation),5,4,1,0,0,0,0,0,4
+2026-09,about,(no situation),144,134,6,3,0,1,0,0,58
+2026-09,birth-family-relationships,(any situation),110,105,3,2,0,0,0,0,36
+2026-09,birth-family-relationships,(no situation),421,403,11,3,1,3,0,0,92
+2026-09,birth-family-relationships,age:16-24,6,6,0,0,0,0,0,0,3
+2026-09,birth-family-relationships,county:dublin,6,6,0,0,0,0,0,0,4
+2026-09,birth-family-relationships,household:alone,18,16,1,1,0,0,0,0,6
+2026-09,birth-family-relationships,household:children,45,43,1,1,0,0,0,0,14
+2026-09,birth-family-relationships,household:partner,42,39,2,1,0,0,0,0,14
+2026-09,birth-family-relationships,shape:multi,5,5,0,0,0,0,0,0,1
+2026-09,birth-family-relationships,work:working,6,6,0,0,0,0,0,0,1
+2026-09,consumer,(any situation),19,19,0,0,0,0,0,0,5
+2026-09,consumer,(no situation),288,279,3,5,1,0,0,0,78
+2026-09,death,(any situation),12,12,0,0,0,0,0,0,4
+2026-09,death,(no situation),159,149,7,0,1,2,0,0,54
+2026-09,death,household:partner,5,5,0,0,0,0,0,0,1
+2026-09,education,(any situation),140,124,8,6,2,0,0,0,44
+2026-09,education,(no situation),406,375,22,8,0,1,0,0,97
+2026-09,education,age:16-24,22,20,1,1,0,0,0,0,8
+2026-09,education,household:children,52,44,3,4,1,0,0,0,17
+2026-09,education,payment_on,25,25,0,0,0,0,0,0,8
+2026-09,education,shape:multi,6,6,0,0,0,0,0,0,3
+2026-09,education,work:student,20,19,0,1,0,0,0,0,7
+2026-09,education,work:unemployed,12,11,0,0,1,0,0,0,1
+2026-09,education,work:working,28,23,4,1,0,0,0,0,8
+2026-09,education,year:2026,7,7,0,0,0,0,0,0,1
+2026-09,education,year:2027,6,5,1,0,0,0,0,0,3
+2026-09,employment,(any situation),356,287,36,23,9,1,0,0,63
+2026-09,employment,(no situation),1018,889,59,54,13,3,0,0,239
+2026-09,employment,age:16-24,10,6,3,1,0,0,0,0,1
+2026-09,employment,age:45-65,6,3,1,1,1,0,0,0,1
+2026-09,employment,county:dublin,5,4,1,0,0,0,0,0,2
+2026-09,employment,household:children,13,12,1,0,0,0,0,0,2
+2026-09,employment,household:partner,12,7,2,2,1,0,0,0,4
+2026-09,employment,payment_on,15,15,0,0,0,0,0,0,7
+2026-09,employment,shape:multi,12,11,1,0,0,0,0,0,5
+2026-09,employment,work:retired,5,3,2,0,0,0,0,0,0
+2026-09,employment,work:self-employed,41,29,6,6,0,0,0,0,4
+2026-09,employment,work:unemployed,29,27,0,2,0,0,0,0,8
+2026-09,employment,work:working,236,191,25,11,8,1,0,0,39
+2026-09,employment,year:2020,5,5,0,0,0,0,0,0,1
+2026-09,employment,year:2024,16,15,1,0,0,0,0,0,5
+2026-09,employment,year:2025,8,7,0,1,0,0,0,0,4
+2026-09,employment,year:2026,12,9,3,0,0,0,0,0,3
+2026-09,environment,(any situation),6,6,0,0,0,0,0,0,3
+2026-09,environment,(no situation),99,98,0,0,1,0,0,0,29
+2026-09,government-in-ireland,(any situation),22,22,0,0,0,0,0,0,8
+2026-09,government-in-ireland,(no situation),144,138,0,2,1,3,0,0,33
+2026-09,government-in-ireland,county:dublin,5,5,0,0,0,0,0,0,1
+2026-09,government-in-ireland,household:partner,6,6,0,0,0,0,0,0,0
+2026-09,health,(any situation),118,104,6,6,1,1,0,0,30
+2026-09,health,(no situation),699,585,45,51,10,6,1,1,157
+2026-09,health,age:16-24,6,6,0,0,0,0,0,0,2
+2026-09,health,age:66+,13,13,0,0,0,0,0,0,2
+2026-09,health,household:alone,14,13,0,1,0,0,0,0,5
+2026-09,health,household:children,34,29,2,2,1,0,0,0,5
+2026-09,health,household:partner,15,14,0,1,0,0,0,0,2
+2026-09,health,shape:multi,5,4,0,1,0,0,0,0,2
+2026-09,health,work:retired,5,5,0,0,0,0,0,0,2
+2026-09,health,work:unemployed,6,6,0,0,0,0,0,0,3
+2026-09,health,work:working,13,11,0,2,0,0,0,0,1
+2026-09,housing,(any situation),220,197,14,7,1,1,0,0,59
+2026-09,housing,(no situation),1230,1090,54,72,10,3,0,1,306
+2026-09,housing,age:16-24,7,7,0,0,0,0,0,0,1
+2026-09,housing,age:45-65,7,6,0,1,0,0,0,0,1
+2026-09,housing,age:66+,13,13,0,0,0,0,0,0,1
+2026-09,housing,county:cork,7,7,0,0,0,0,0,0,2
+2026-09,housing,county:donegal,5,5,0,0,0,0,0,0,2
+2026-09,housing,county:dublin,25,23,2,0,0,0,0,0,6
+2026-09,housing,county:galway,5,5,0,0,0,0,0,0,3
+2026-09,housing,county:limerick,6,6,0,0,0,0,0,0,1
+2026-09,housing,county:wicklow,5,4,0,1,0,0,0,0,1
+2026-09,housing,household:alone,23,20,1,1,0,1,0,0,6
+2026-09,housing,household:children,49,43,3,2,1,0,0,0,12
+2026-09,housing,household:partner,45,37,4,3,0,1,0,0,12
+2026-09,housing,payment_on,20,20,0,0,0,0,0,0,8
+2026-09,housing,shape:multi,21,18,3,0,0,0,0,0,6
+2026-09,housing,work:retired,11,10,1,0,0,0,0,0,4
+2026-09,housing,work:unemployed,9,9,0,0,0,0,0,0,5
+2026-09,housing,work:working,17,14,3,0,0,0,0,0,1
+2026-09,housing,year:2026,7,6,1,0,0,0,0,0,2
+2026-09,justice,(any situation),31,28,1,2,0,0,0,0,8
+2026-09,justice,(no situation),289,266,11,7,1,4,0,0,101
+2026-09,money-and-tax,(any situation),134,125,8,1,0,0,0,0,43
+2026-09,money-and-tax,(no situation),685,583,47,45,4,6,0,0,160
+2026-09,money-and-tax,age:66+,6,6,0,0,0,0,0,0,2
+2026-09,money-and-tax,household:alone,18,18,0,0,0,0,0,0,9
+2026-09,money-and-tax,household:children,24,22,1,1,0,0,0,0,6
+2026-09,money-and-tax,household:partner,30,28,2,0,0,0,0,0,7
+2026-09,money-and-tax,payment_on,25,25,0,0,0,0,0,0,12
+2026-09,money-and-tax,shape:multi,13,12,1,0,0,0,0,0,3
+2026-09,money-and-tax,work:retired,14,14,0,0,0,0,0,0,4
+2026-09,money-and-tax,work:self-employed,5,5,0,0,0,0,0,0,2
+2026-09,money-and-tax,work:working,25,23,2,0,0,0,0,0,5
+2026-09,money-and-tax,year:2024,5,4,1,0,0,0,0,0,1
+2026-09,money-and-tax,year:2026,12,12,0,0,0,0,0,0,2
+2026-09,money-and-tax,year:2027,5,2,3,0,0,0,0,0,0
+2026-09,moving-country,(any situation),164,148,10,4,1,1,0,0,48
+2026-09,moving-country,(no situation),1024,903,80,25,7,9,0,0,236
+2026-09,moving-country,age:16-24,6,6,0,0,0,0,0,0,1
+2026-09,moving-country,county:dublin,21,20,1,0,0,0,0,0,11
+2026-09,moving-country,household:alone,6,6,0,0,0,0,0,0,2
+2026-09,moving-country,household:children,53,45,7,0,0,1,0,0,12
+2026-09,moving-country,household:partner,36,32,1,3,0,0,0,0,10
+2026-09,moving-country,shape:multi,30,29,1,0,0,0,0,0,11
+2026-09,moving-country,work:student,11,9,1,1,0,0,0,0,2
+2026-09,moving-country,work:working,20,20,0,0,0,0,0,0,7
+2026-09,moving-country,year:2021,6,6,0,0,0,0,0,0,0
+2026-09,moving-country,year:2023,5,4,1,0,0,0,0,0,2
+2026-09,moving-country,year:2024,10,10,0,0,0,0,0,0,4
+2026-09,moving-country,year:2025,13,12,1,0,0,0,0,0,6
+2026-09,moving-country,year:2026,14,12,2,0,0,0,0,0,5
+2026-09,moving-country,year:2027,8,8,0,0,0,0,0,0,2
+2026-09,returning-to-ireland,(any situation),75,73,2,0,0,0,0,0,15
+2026-09,returning-to-ireland,(no situation),202,197,3,1,1,0,0,0,47
+2026-09,returning-to-ireland,age:66+,7,7,0,0,0,0,0,0,0
+2026-09,returning-to-ireland,household:children,18,17,1,0,0,0,0,0,6
+2026-09,returning-to-ireland,household:partner,18,16,2,0,0,0,0,0,1
+2026-09,returning-to-ireland,payment_on,17,17,0,0,0,0,0,0,2
+2026-09,returning-to-ireland,work:working,13,12,1,0,0,0,0,0,4
+2026-09,social-welfare,(any situation),1862,1658,121,63,18,2,0,0,439
+2026-09,social-welfare,(no situation),4144,3643,271,177,40,13,0,0,759
+2026-09,social-welfare,age:16-24,62,58,3,1,0,0,0,0,15
+2026-09,social-welfare,age:25-44,11,10,0,1,0,0,0,0,1
+2026-09,social-welfare,age:45-65,63,58,4,1,0,0,0,0,12
+2026-09,social-welfare,age:66+,138,124,7,5,2,0,0,0,31
+2026-09,social-welfare,county:dublin,10,8,0,1,1,0,0,0,3
+2026-09,social-welfare,county:sligo,11,9,2,0,0,0,0,0,4
+2026-09,social-welfare,household:alone,168,143,15,9,1,0,0,0,38
+2026-09,social-welfare,household:children,225,186,19,16,3,1,0,0,72
+2026-09,social-welfare,household:partner,291,265,17,4,5,0,0,0,74
+2026-09,social-welfare,payment_on,752,665,54,26,6,1,0,0,181
+2026-09,social-welfare,shape:multi,57,52,3,0,1,1,0,0,18
+2026-09,social-welfare,work:retired,70,63,4,2,1,0,0,0,13
+2026-09,social-welfare,work:self-employed,70,68,2,0,0,0,0,0,12
+2026-09,social-welfare,work:student,19,19,0,0,0,0,0,0,8
+2026-09,social-welfare,work:unemployed,145,127,14,4,0,0,0,0,28
+2026-09,social-welfare,work:working,377,356,12,4,5,0,0,0,94
+2026-09,social-welfare,year:2022,9,9,0,0,0,0,0,0,4
+2026-09,social-welfare,year:2023,6,6,0,0,0,0,0,0,1
+2026-09,social-welfare,year:2024,11,8,1,0,2,0,0,0,2
+2026-09,social-welfare,year:2025,15,12,2,1,0,0,0,0,2
+2026-09,social-welfare,year:2026,74,70,3,1,0,0,0,0,18
+2026-09,social-welfare,year:2027,25,19,6,0,0,0,0,0,8
+2026-09,travel-and-recreation,(any situation),102,96,4,1,0,1,0,0,25
+2026-09,travel-and-recreation,(no situation),655,617,23,5,7,3,0,0,146
+2026-09,travel-and-recreation,age:66+,6,5,0,1,0,0,0,0,2
+2026-09,travel-and-recreation,county:cork,6,6,0,0,0,0,0,0,4
+2026-09,travel-and-recreation,county:dublin,20,19,1,0,0,0,0,0,7
+2026-09,travel-and-recreation,household:children,33,32,1,0,0,0,0,0,4
+2026-09,travel-and-recreation,household:partner,19,16,2,0,0,1,0,0,2
+2026-09,travel-and-recreation,shape:multi,9,9,0,0,0,0,0,0,2
+2026-09,travel-and-recreation,work:working,6,6,0,0,0,0,0,0,0
+2026-09,travel-and-recreation,year:2026,12,11,1,0,0,0,0,0,1
+2026-10,(all),(any situation),3298,2721,352,185,15,25,0,0,1032
+2026-10,(all),(no situation),13875,10032,1271,1717,96,518,209,32,3074
+2026-10,(all),age:16-24,92,79,5,6,1,1,0,0,34
+2026-10,(all),age:25-44,20,17,2,1,0,0,0,0,6
+2026-10,(all),age:45-65,100,80,11,7,0,2,0,0,29
+2026-10,(all),age:66+,201,176,10,12,1,2,0,0,58
+2026-10,(all),county:carlow,3,3,0,0,0,0,0,0,3
+2026-10,(all),county:cavan,3,2,1,0,0,0,0,0,0
+2026-10,(all),county:clare,4,3,0,1,0,0,0,0,1
+2026-10,(all),county:cork,32,13,14,4,0,1,0,0,7
+2026-10,(all),county:donegal,9,7,1,1,0,0,0,0,5
+2026-10,(all),county:dublin,83,56,14,10,0,3,0,0,28
+2026-10,(all),county:galway,18,15,3,0,0,0,0,0,8
+2026-10,(all),county:kerry,6,4,2,0,0,0,0,0,3
+2026-10,(all),county:kildare,3,3,0,0,0,0,0,0,2
+2026-10,(all),county:kilkenny,1,0,0,0,0,1,0,0,0
+2026-10,(all),county:laois,3,3,0,0,0,0,0,0,2
+2026-10,(all),county:leitrim,1,1,0,0,0,0,0,0,0
+2026-10,(all),county:limerick,11,6,5,0,0,0,0,0,5
+2026-10,(all),county:longford,1,1,0,0,0,0,0,0,1
+2026-10,(all),county:mayo,9,6,1,1,0,1,0,0,2
+2026-10,(all),county:meath,7,6,0,0,0,1,0,0,3
+2026-10,(all),county:offaly,1,0,0,1,0,0,0,0,0
+2026-10,(all),county:roscommon,3,3,0,0,0,0,0,0,3
+2026-10,(all),county:sligo,8,6,2,0,0,0,0,0,2
+2026-10,(all),county:tipperary,5,4,1,0,0,0,0,0,2
+2026-10,(all),county:waterford,5,3,0,2,0,0,0,0,1
+2026-10,(all),county:westmeath,1,1,0,0,0,0,0,0,1
+2026-10,(all),county:wexford,3,1,2,0,0,0,0,0,1
+2026-10,(all),county:wicklow,4,2,1,1,0,0,0,0,2
+2026-10,(all),household:alone,347,291,38,17,0,1,0,0,106
+2026-10,(all),household:children,481,396,50,29,1,5,0,0,156
+2026-10,(all),household:partner,533,448,50,28,3,4,0,0,183
+2026-10,(all),payment_on,834,714,91,23,4,2,0,0,282
+2026-10,(all),shape:letter,10,6,2,0,1,1,0,0,1
+2026-10,(all),shape:multi,142,117,20,1,1,2,0,1,68
+2026-10,(all),shape:url,4,1,1,1,0,1,0,0,1
+2026-10,(all),work:retired,131,102,17,10,1,1,0,0,47
+2026-10,(all),work:self-employed,131,110,14,6,1,0,0,0,47
+2026-10,(all),work:student,52,43,5,4,0,0,0,0,12
+2026-10,(all),work:unemployed,197,169,15,12,1,0,0,0,63
+2026-10,(all),work:working,703,596,66,33,4,4,0,0,208
+2026-10,(all),year:2010,3,1,1,0,0,1,0,0,0
+2026-10,(all),year:2011,4,3,0,1,0,0,0,0,1
+2026-10,(all),year:2012,2,2,0,0,0,0,0,0,1
+2026-10,(all),year:2013,1,1,0,0,0,0,0,0,1
+2026-10,(all),year:2014,4,3,1,0,0,0,0,0,1
+2026-10,(all),year:2015,8,5,2,1,0,0,0,0,2
+2026-10,(all),year:2016,3,2,1,0,0,0,0,0,1
+2026-10,(all),year:2017,8,7,0,1,0,0,0,0,2
+2026-10,(all),year:2018,7,4,3,0,0,0,0,0,1
+2026-10,(all),year:2019,12,7,4,1,0,0,0,0,2
+2026-10,(all),year:2020,9,9,0,0,0,0,0,0,2
+2026-10,(all),year:2021,15,13,2,0,0,0,0,0,7
+2026-10,(all),year:2022,23,20,0,3,0,0,0,0,8
+2026-10,(all),year:2023,15,12,3,0,0,0,0,0,5
+2026-10,(all),year:2024,35,30,2,3,0,0,0,0,9
+2026-10,(all),year:2025,53,45,5,2,0,0,0,1,20
+2026-10,(all),year:2026,198,159,23,12,2,2,0,0,65
+2026-10,(all),year:2027,440,346,48,41,2,3,0,0,138
+2026-10,(all),year:2028,10,8,1,0,0,1,0,0,5
+2026-10,(none),(any situation),96,0,28,57,2,9,0,0,0
+2026-10,(none),(no situation),2152,1,368,1068,45,437,208,25,0
+2026-10,(none),age:66+,9,0,0,7,1,1,0,0,0
+2026-10,(none),county:cork,7,0,4,2,0,1,0,0,0
+2026-10,(none),county:dublin,15,0,5,8,0,2,0,0,0
+2026-10,(none),household:alone,7,0,3,4,0,0,0,0,0
+2026-10,(none),household:children,5,0,2,2,0,1,0,0,0
+2026-10,(none),household:partner,17,0,3,11,1,2,0,0,0
+2026-10,(none),shape:multi,8,0,5,1,0,1,0,1,0
+2026-10,(none),work:working,12,0,3,7,1,1,0,0,0
+2026-10,(none),year:2026,11,0,4,6,0,1,0,0,0
+2026-10,(none),year:2027,20,0,4,12,1,3,0,0,0
+2026-10,about,(any situation),7,5,2,0,0,0,0,0,3
+2026-10,about,(no situation),153,142,5,2,1,3,0,0,70
+2026-10,birth-family-relationships,(any situation),77,72,5,0,0,0,0,0,30
+2026-10,birth-family-relationships,(no situation),292,275,11,3,1,2,0,0,94
+2026-10,birth-family-relationships,age:16-24,7,7,0,0,0,0,0,0,4
+2026-10,birth-family-relationships,household:alone,13,10,3,0,0,0,0,0,7
+2026-10,birth-family-relationships,household:children,26,24,2,0,0,0,0,0,7
+2026-10,birth-family-relationships,household:partner,28,25,3,0,0,0,0,0,9
+2026-10,consumer,(any situation),11,11,0,0,0,0,0,0,4
+2026-10,consumer,(no situation),220,205,5,9,0,0,1,0,54
+2026-10,death,(any situation),14,14,0,0,0,0,0,0,8
+2026-10,death,(no situation),129,115,9,3,1,1,0,0,40
+2026-10,death,household:partner,9,9,0,0,0,0,0,0,4
+2026-10,education,(any situation),99,83,9,7,0,0,0,0,27
+2026-10,education,(no situation),336,291,21,19,1,4,0,0,82
+2026-10,education,age:16-24,16,15,1,0,0,0,0,0,6
+2026-10,education,household:children,35,30,4,1,0,0,0,0,10
+2026-10,education,payment_on,8,8,0,0,0,0,0,0,3
+2026-10,education,work:student,21,16,2,3,0,0,0,0,4
+2026-10,education,work:unemployed,6,6,0,0,0,0,0,0,2
+2026-10,education,work:working,15,14,0,1,0,0,0,0,6
+2026-10,education,year:2026,7,7,0,0,0,0,0,0,1
+2026-10,education,year:2027,8,7,0,1,0,0,0,0,1
+2026-10,employment,(any situation),419,343,43,28,2,3,0,0,112
+2026-10,employment,(no situation),1114,977,80,43,8,5,0,1,314
+2026-10,employment,age:16-24,7,5,0,2,0,0,0,0,2
+2026-10,employment,age:45-65,10,6,3,0,0,1,0,0,4
+2026-10,employment,household:alone,5,3,2,0,0,0,0,0,1
+2026-10,employment,household:children,22,18,3,1,0,0,0,0,5
+2026-10,employment,household:partner,11,8,2,1,0,0,0,0,4
+2026-10,employment,payment_on,22,22,0,0,0,0,0,0,10
+2026-10,employment,shape:multi,17,16,1,0,0,0,0,0,9
+2026-10,employment,work:self-employed,48,32,9,6,1,0,0,0,11
+2026-10,employment,work:unemployed,47,44,1,2,0,0,0,0,13
+2026-10,employment,work:working,263,215,28,17,1,2,0,0,68
+2026-10,employment,year:2025,5,5,0,0,0,0,0,0,4
+2026-10,employment,year:2026,18,16,2,0,0,0,0,0,8
+2026-10,employment,year:2027,12,10,2,0,0,0,0,0,3
+2026-10,environment,(any situation),8,8,0,0,0,0,0,0,1
+2026-10,environment,(no situation),87,85,0,1,0,1,0,0,36
+2026-10,government-in-ireland,(any situation),12,11,1,0,0,0,0,0,6
+2026-10,government-in-ireland,(no situation),113,104,4,0,0,5,0,0,31
+2026-10,health,(any situation),91,76,13,1,0,1,0,0,32
+2026-10,health,(no situation),557,418,73,56,1,9,0,0,127
+2026-10,health,age:16-24,5,5,0,0,0,0,0,0,2
+2026-10,health,age:66+,10,9,1,0,0,0,0,0,2
+2026-10,health,household:alone,5,5,0,0,0,0,0,0,4
+2026-10,health,household:children,23,22,0,1,0,0,0,0,11
+2026-10,health,household:partner,16,13,3,0,0,0,0,0,4
+2026-10,health,payment_on,8,8,0,0,0,0,0,0,4
+2026-10,health,work:working,7,4,3,0,0,0,0,0,1
+2026-10,health,year:2027,5,2,3,0,0,0,0,0,2
+2026-10,housing,(any situation),180,164,11,3,1,1,0,0,74
+2026-10,housing,(no situation),1324,1115,99,94,5,9,0,2,336
+2026-10,housing,age:45-65,6,6,0,0,0,0,0,0,1
+2026-10,housing,age:66+,10,10,0,0,0,0,0,0,2
+2026-10,housing,county:cork,8,5,3,0,0,0,0,0,4
+2026-10,housing,county:dublin,22,20,2,0,0,0,0,0,11
+2026-10,housing,household:alone,19,18,0,1,0,0,0,0,9
+2026-10,housing,household:children,26,22,3,0,1,0,0,0,7
+2026-10,housing,household:partner,26,23,0,2,0,1,0,0,12
+2026-10,housing,payment_on,30,30,0,0,0,0,0,0,13
+2026-10,housing,shape:multi,13,10,2,0,1,0,0,0,6
+2026-10,housing,work:retired,8,8,0,0,0,0,0,0,2
+2026-10,housing,work:unemployed,5,5,0,0,0,0,0,0,2
+2026-10,housing,work:working,9,8,1,0,0,0,0,0,2
+2026-10,housing,year:2025,5,4,1,0,0,0,0,0,0
+2026-10,housing,year:2026,15,15,0,0,0,0,0,0,2
+2026-10,housing,year:2027,12,11,0,1,0,0,0,0,6
+2026-10,justice,(any situation),15,14,1,0,0,0,0,0,5
+2026-10,justice,(no situation),219,194,20,4,1,0,0,0,74
+2026-10,money-and-tax,(any situation),220,197,14,7,0,2,0,0,99
+2026-10,money-and-tax,(no situation),1530,1301,103,105,6,15,0,0,457
+2026-10,money-and-tax,age:45-65,7,6,1,0,0,0,0,0,4
+2026-10,money-and-tax,age:66+,11,10,1,0,0,0,0,0,5
+2026-10,money-and-tax,household:alone,45,43,0,2,0,0,0,0,19
+2026-10,money-and-tax,household:children,32,29,2,1,0,0,0,0,14
+2026-10,money-and-tax,household:partner,26,21,2,2,0,1,0,0,8
+2026-10,money-and-tax,payment_on,46,46,0,0,0,0,0,0,27
+2026-10,money-and-tax,shape:multi,16,14,2,0,0,0,0,0,8
+2026-10,money-and-tax,work:retired,16,15,1,0,0,0,0,0,7
+2026-10,money-and-tax,work:self-employed,18,17,1,0,0,0,0,0,11
+2026-10,money-and-tax,work:unemployed,5,5,0,0,0,0,0,0,3
+2026-10,money-and-tax,work:working,34,29,3,2,0,0,0,0,10
+2026-10,money-and-tax,year:2024,5,3,0,2,0,0,0,0,1
+2026-10,money-and-tax,year:2025,12,12,0,0,0,0,0,0,3
+2026-10,money-and-tax,year:2026,52,44,3,5,0,0,0,0,17
+2026-10,money-and-tax,year:2027,238,198,15,24,1,0,0,0,62
+2026-10,moving-country,(any situation),93,80,9,4,0,0,0,0,43
+2026-10,moving-country,(no situation),699,596,57,34,2,9,0,1,207
+2026-10,moving-country,county:dublin,7,4,3,0,0,0,0,0,2
+2026-10,moving-country,household:children,24,23,0,1,0,0,0,0,11
+2026-10,moving-country,household:partner,34,29,2,3,0,0,0,0,17
+2026-10,moving-country,payment_on,6,6,0,0,0,0,0,0,4
+2026-10,moving-country,shape:multi,13,11,2,0,0,0,0,0,8
+2026-10,moving-country,work:unemployed,5,4,1,0,0,0,0,0,3
+2026-10,moving-country,work:working,11,8,3,0,0,0,0,0,4
+2026-10,moving-country,year:2021,7,5,2,0,0,0,0,0,2
+2026-10,moving-country,year:2022,6,6,0,0,0,0,0,0,3
+2026-10,moving-country,year:2026,10,8,2,0,0,0,0,0,7
+2026-10,moving-country,year:2027,6,6,0,0,0,0,0,0,4
+2026-10,returning-to-ireland,(any situation),48,46,2,0,0,0,0,0,22
+2026-10,returning-to-ireland,(no situation),206,201,4,0,1,0,0,0,70
+2026-10,returning-to-ireland,household:children,13,13,0,0,0,0,0,0,3
+2026-10,returning-to-ireland,household:partner,13,12,1,0,0,0,0,0,7
+2026-10,returning-to-ireland,work:working,5,5,0,0,0,0,0,0,2
+2026-10,social-welfare,(any situation),1843,1534,212,78,10,9,0,0,540
+2026-10,social-welfare,(no situation),4204,3512,388,271,18,12,0,3,933
+2026-10,social-welfare,age:16-24,37,32,4,0,1,0,0,0,14
+2026-10,social-welfare,age:25-44,10,9,1,0,0,0,0,0,4
+2026-10,social-welfare,age:45-65,69,59,7,2,0,1,0,0,19
+2026-10,social-welfare,age:66+,142,128,8,5,0,1,0,0,42
+2026-10,social-welfare,county:dublin,8,6,0,2,0,0,0,0,4
+2026-10,social-welfare,county:galway,5,5,0,0,0,0,0,0,3
+2026-10,social-welfare,county:sligo,5,5,0,0,0,0,0,0,1
+2026-10,social-welfare,household:alone,245,205,30,9,0,1,0,0,61
+2026-10,social-welfare,household:children,240,181,33,22,0,4,0,0,75
+2026-10,social-welfare,household:partner,335,291,33,9,2,0,0,0,110
+2026-10,social-welfare,payment_on,701,581,91,23,4,2,0,0,216
+2026-10,social-welfare,shape:multi,50,44,5,0,0,1,0,0,23
+2026-10,social-welfare,work:retired,88,64,14,8,1,1,0,0,29
+2026-10,social-welfare,work:self-employed,54,50,4,0,0,0,0,0,19
+2026-10,social-welfare,work:student,17,15,2,0,0,0,0,0,4
+2026-10,social-welfare,work:unemployed,121,102,11,7,1,0,0,0,38
+2026-10,social-welfare,work:working,335,303,23,6,2,1,0,0,110
+2026-10,social-welfare,year:2023,5,4,1,0,0,0,0,0,0
+2026-10,social-welfare,year:2024,15,13,2,0,0,0,0,0,2
+2026-10,social-welfare,year:2025,19,16,3,0,0,0,0,0,9
+2026-10,social-welfare,year:2026,76,61,12,1,1,1,0,0,26
+2026-10,social-welfare,year:2027,132,106,23,3,0,0,0,0,57
+2026-10,social-welfare,year:2028,6,6,0,0,0,0,0,0,4
+2026-10,travel-and-recreation,(any situation),65,63,2,0,0,0,0,0,26
+2026-10,travel-and-recreation,(no situation),536,496,24,5,5,6,0,0,146
+2026-10,travel-and-recreation,age:66+,5,5,0,0,0,0,0,0,3
+2026-10,travel-and-recreation,county:dublin,7,7,0,0,0,0,0,0,1
+2026-10,travel-and-recreation,household:children,28,27,1,0,0,0,0,0,10
+2026-10,travel-and-recreation,household:partner,11,11,0,0,0,0,0,0,5
+2026-10,travel-and-recreation,shape:multi,6,5,1,0,0,0,0,0,3
+2026-10,travel-and-recreation,year:2022,7,6,0,1,0,0,0,0,1

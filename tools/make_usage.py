@@ -60,6 +60,12 @@ Outputs (all daily counts; nothing per-turn and no text crosses into the dashboa
   asked-pages-monthly.csv   Month, URL, Category, Asked, CitedSame, CitedSameCategory, CitedOther, NotFound, Clarification,
                             Other, CitedUnderHub, Hub: the page a typed question named and what the answer did; pages
                             asked under 5 times a month left out (brief §66, §71)
+  question-situation-monthly.csv   Month, Category, Flag, Turns, outcomes, Partial: what the typed question says about the
+                                   person, as classes (county, age band, household, work, payment on, year, shape) (brief §75)
+  clarification-asks-monthly.csv   Month, Asks, Given, Turns: what a clarification asked for, and whether the question had
+                                   already given it (brief §75)
+  answer-personalisation-monthly.csv  Month, SituationGiven, Personalised, Answers: cited answers by whether the question gave
+                                   a detail and the answer used one ("in your case") (brief §75)
   answer-figures-monthly.csv       Month, URL, Answers, Partial, Figures, Matched, Unmatched, Unverifiable: figures quoted
                                    in answers checked against dated snapshots of the cited pages; (all) and (uncited) rows (brief §75)
   answer-signposts-monthly.csv     Month, Org, Category, Turns, outcomes, Partial: organisations the answer names
@@ -214,6 +220,9 @@ def aggregate(files, skip_days=frozenset()):
     tmpl = defaultdict(lambda: defaultdict(int))     # (date, template id or "(none)") -> answers, outcomes (brief §75)
     orgs = defaultdict(lambda: defaultdict(int))     # (month, org id | (any) | (external) | (none), category | (all)) -> answers, outcomes (brief §75)
     figs = defaultdict(lambda: defaultdict(int))     # (month, cited page | (all)) -> answers with figures, figures matched / unmatched / unverifiable (brief §75)
+    sit = defaultdict(lambda: defaultdict(int))      # (month, category | (all), situation flag) -> typed turns, outcomes, partial (brief §75 layer 2)
+    asks = defaultdict(int)                          # (month, ask class | (any) | (none), given 0/1) -> clarification answers
+    pers = defaultdict(int)                          # (month, situation given 0/1, personalised 0/1) -> cited answers to typed questions
     safety = defaultdict(lambda: defaultdict(int))   # (date, flag) -> turns and their outcomes (brief §65)
     intent = defaultdict(lambda: defaultdict(int))   # (date, intent, chip) -> turns, outcomes, form flags (brief §66)
     asked = defaultdict(lambda: defaultdict(int))    # (month, page asked about) -> what the answer did (brief §66)
@@ -411,6 +420,29 @@ def aggregate(files, skip_days=frozenset()):
                                 e9 = orgs[(mo9, oid, c9)]; e9["Turns"] += 1
                                 if o_rec: e9["o:" + o_rec] += 1
                                 if is_partial: e9["o:partial"] += 1
+                    if chip == 0 and "Query Shape" in row:   # layer 2 (brief §75): what the question says about the person, by category; the clarification's asks against it
+                        mo8 = d.strftime("%Y-%m"); ocat = own or qc or "(none)"
+                        flags8 = []
+                        if row.get("Query County"): flags8.append("county:" + row["Query County"].strip())
+                        if row.get("Query Age Band"): flags8.append("age:" + row["Query Age Band"].strip())
+                        flags8 += ["household:" + x for x in (row.get("Query Household") or "").split(";") if x]
+                        if row.get("Query Work"): flags8.append("work:" + row["Query Work"].strip())
+                        if (row.get("Query Payment On") or "").strip() == "1": flags8.append("payment_on")
+                        if row.get("Query Year Value"): flags8.append("year:" + row["Query Year Value"].strip())
+                        flags8 += ["shape:" + x for x in (row.get("Query Shape") or "").split(";") if x]
+                        given_any = any(not f.startswith(("year:", "shape:")) for f in flags8)
+                        flags8.append("(any situation)" if given_any else "(no situation)")
+                        for f8 in flags8:
+                            for c8 in (ocat, "(all)"):
+                                e8 = sit[(mo8, c8, f8)]; e8["Turns"] += 1
+                                if o_rec: e8["o:" + o_rec] += 1
+                                if is_partial: e8["o:partial"] += 1
+                        if o_rec == "Clarification":
+                            akeys = [x for x in (row.get("Answer Asks") or "").split(";") if x]; g8 = int(row.get("Answer Asked Given") or 0)
+                            for k8 in akeys: asks[(mo8, k8, 1 if (k8 in ("county", "age", "household", "employment", "payment") and _given(row, k8)) else 0)] += 1
+                            asks[(mo8, "(any)" if akeys else "(none)", 1 if g8 else 0)] += 1
+                        if o_rec == "Cited answer":
+                            pers[(mo8, 1 if given_any else 0, 1 if (row.get("Answer Personalised") or "").strip() == "1" else 0)] += 1
                     if chip == 0:   # the broad category cut and the topic layer (brief §75): typed questions only
                         mo = d.strftime("%Y-%m"); qt = (row.get("Query Topic") or "").strip()
                         # a turn is in a category when the answer cited it (source cited), the question named a page in it
@@ -482,11 +514,11 @@ def aggregate(files, skip_days=frozenset()):
                         cat_dropped += sum(1 for x in slugs if x is None)
                         toks = [x for x in slugs if x]
                     for s in set(toks): cats[d][s] += 1
-    return D, sess, lat, hours, hour_sess, cats, bad, has_voice, dupes, cat_dropped, has_outcome, rules, has_starter, has_script, recs, (cites_m, cites_x, pages), latb, rulesd, (style, safety, intent, asked, qtopic, cint, askw, qtop, qcat, qic, tmpl, orgs, figs)
+    return D, sess, lat, hours, hour_sess, cats, bad, has_voice, dupes, cat_dropped, has_outcome, rules, has_starter, has_script, recs, (cites_m, cites_x, pages), latb, rulesd, (style, safety, intent, asked, qtopic, cint, askw, qtop, qcat, qic, tmpl, orgs, figs, sit, asks, pers)
 
 
 STYLE_COLS = ["Lines", "Hedges", "Apologies", "Signposts", "Questions", "Links", "Openers", "Invitations", "Absolutes", "Emphasis", "Nested", "External", "Freshness", "Signoff"]
-SAFETY_FLAGS = ["Query PPS", "Query Phone", "Query Email", "Query IBAN", "Query Card", "Query Injection"]
+SAFETY_FLAGS = ["Query PPS", "Query Phone", "Query Email", "Query IBAN", "Query Card", "Query Injection", "Query Letter"]   # Letter: a pasted letter or form (brief §75)
 
 
 OUT7 = [k for k, _ in [("Cited", "o:Cited answer"), ("NotFound", "o:Not found"), ("Clarification", "o:Clarification"), ("Error", "o:Error"), ("OutOfScope", "o:Out of scope"), ("Greeting", "o:Greeting"), ("Uncited", "o:Uncited answer")]]
@@ -599,6 +631,33 @@ def orgs_rows(orgs, min_turns=5):
     "(all)" rows always kept (brief §75)."""
     cols = ["Month", "Org", "Category", "Turns"] + OUT7 + ["Partial"]
     return cols, [[m, o, c, e["Turns"]] + [e[k] for k in OUT7_SRC] + [e["o:partial"]] for (m, o, c), e in sorted(orgs.items()) if c == "(all)" or e["Turns"] >= min_turns]
+
+
+def _given(row, k):
+    """did the question give what the clarification asked for (class k)? mirrors redact_feed.GIVEN_FOR on the columns"""
+    col = {"county": "Query County", "age": "Query Age Band", "household": "Query Household", "employment": "Query Work", "payment": "Query Payment On"}[k]
+    return bool((row.get(col) or "").strip())
+
+
+def sit_rows(sit, min_turns=5):
+    """question-situation-monthly.csv: per month, category ("(all)" = every category) and situation flag read from the
+    typed question (county:<name>, age:<band>, household:<children|partner|alone>, work:<status>, payment_on,
+    year:<value>, shape:<letter|multi|url>, (any situation), (no situation)): turns, outcomes, partial. Flags are never
+    crossed with each other; category rows under min_turns left out (brief §75)."""
+    cols = ["Month", "Category", "Flag", "Turns"] + OUT7 + ["Partial"]
+    return cols, [[m, c, f, e["Turns"]] + [e[k] for k in OUT7_SRC] + [e["o:partial"]] for (m, c, f), e in sorted(sit.items()) if c == "(all)" or e["Turns"] >= min_turns]
+
+
+def asks_rows(asks):
+    """clarification-asks-monthly.csv: per month, the class a clarification asked for ((any) = one or more, (none) = none
+    recognised) and whether the question had already given it (Given 1/0): clarification answers to typed questions (brief §75)."""
+    return ["Month", "Asks", "Given", "Turns"], [[m, k, g, n] for (m, k, g), n in sorted(asks.items())]
+
+
+def pers_rows(pers):
+    """answer-personalisation-monthly.csv: per month, whether the typed question gave a situation detail (SituationGiven
+    1/0) and whether the cited answer carried a personalisation marker ("in your case", Personalised 1/0): answers (brief §75)."""
+    return ["Month", "SituationGiven", "Personalised", "Answers"], [[m, g, p, n] for (m, g, p), n in sorted(pers.items())]
 
 
 def figs_rows(figs, min_answers=5):
@@ -964,7 +1023,7 @@ def main():
     # An export taken on day X contains only part of day X; skip those rows unless asked to keep them.
     export_days = {datetime.strptime(m.group(1), "%Y%m%d").date() for m in (re.search(r"(\d{8})_\d{6}", os.path.basename(f)) for f in a.files) if m}
     skip = frozenset() if (a.keep_partial or not export_days) else frozenset({max(export_days)})  # only the newest export's own day is partial
-    D, sess, lat, hours, hour_sess, cats, bad, has_voice, dupes, cat_dropped, has_outcome, rules, has_starter, has_script, recs, (cites_m, cites_x, pages), latb, rulesd, (style, safety, intent, asked, qtopic, cint, askw, qtop, qcat, qic, tmpl, orgs, figs) = aggregate(a.files, skip)
+    D, sess, lat, hours, hour_sess, cats, bad, has_voice, dupes, cat_dropped, has_outcome, rules, has_starter, has_script, recs, (cites_m, cites_x, pages), latb, rulesd, (style, safety, intent, asked, qtopic, cint, askw, qtop, qcat, qic, tmpl, orgs, figs, sit, asks, pers) = aggregate(a.files, skip)
     rules = ", ".join(sorted(r for r in rules if r))
     if skip and any(True for _ in skip): print(f"note: export day(s) {', '.join(str(x) for x in sorted(skip))} skipped as partial (--keep-partial to keep)")
     cd, co, jm, sp, cstats = conversation_pass(recs)
@@ -1003,6 +1062,10 @@ def main():
             if tmpl: write(os.path.join(a.out_dir, "answer-templates-daily.csv"), *tmpl_rows(tmpl))
             if orgs: write(os.path.join(a.out_dir, "answer-signposts-monthly.csv"), *orgs_rows(orgs))
             if figs: write(os.path.join(a.out_dir, "answer-figures-monthly.csv"), *figs_rows(figs))
+            if sit:
+                write(os.path.join(a.out_dir, "question-situation-monthly.csv"), *sit_rows(sit))
+                write(os.path.join(a.out_dir, "clarification-asks-monthly.csv"), *asks_rows(asks))
+                write(os.path.join(a.out_dir, "answer-personalisation-monthly.csv"), *pers_rows(pers))
         if safety: write(os.path.join(a.out_dir, "safety-daily.csv"), *safety_rows(safety))
         if intent:
             write(os.path.join(a.out_dir, "question-intent-daily.csv"), *intent_rows(intent))

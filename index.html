@@ -2751,6 +2751,7 @@ let SCRIPTOUT={},hasScriptOut=false;
 let OTMPL={},TMPL_META={},hasTmpl=false;   // the bot's fixed wording per day and the template list (brief §75)
 let ORGSM={},ORG_META={},hasOrgs=false;   // organisations the answers signpost to, per month and category (brief §75)
 let FIGM={},hasFigs=false;   // figures quoted in answers, checked against dated page snapshots, per month and cited page (brief §75)
+let QSIT={},QASK={},QPERS={},hasSit=false,hasAsk=false;   // layer 2: what the question says about the person, what the clarification asked for, personalisation (brief §75)
 let ORULES={},OSTYLE={},ONEXT={},hasRules=false;   // outcome rule ids, the wording fingerprint and what people do next (brief §53)
 let PAGESC={},hasPagesC=false,REPEATS={},hasRepeats=false,SAFETY={},hasSafety=false,QINTENT={},ASKED={},QTOPIC={},hasIntent=false,LEXICON=null,IJOUR={},SETBI={},GAPS=[],GAPSTAT={},REGCFG=null,QCATM={},QTOPM={},QICM={},hasTopics=false,ASKED_CAT='housing';   // the topic layer (brief §75)
 let CONV={},CATOUT={},CITES={},JOURNEYS={},STARTERS={},LATB={},CATDAY={},hasCatDay=false,hasConv=false,hasCatOut=false,hasCites=false,hasJourneys=false,hasStarters=false,hasLatB=false;
@@ -2798,6 +2799,9 @@ async function loadConversationFiles(){
   try{(await loadCSV('answer-style-daily.csv')).forEach(r=>{const d=parseDate(r['Date']);if(!d)return;const o={};Object.entries(r).forEach(([k,v])=>{if(k!=='Date'&&k!=='Outcome')o[k]=nInt(v);});(OSTYLE[d]||(OSTYLE[d]={}))[String(r['Outcome']||'').trim()]=o;});}catch(e){}
   try{(await loadCSV('answer-templates-daily.csv')).forEach(r=>{const d=parseDate(r['Date']);if(!d)return;const o={};Object.entries(r).forEach(([k,v])=>{if(k!=='Date'&&k!=='Template')o[k]=nInt(v);});(OTMPL[d]||(OTMPL[d]={}))[String(r['Template']||'').trim()]=o;});hasTmpl=Object.keys(OTMPL).length>0;}catch(e){}
   try{const j=await(await fetch('answer-templates.json',{cache:'no-store'})).json();(j.templates||[]).forEach(t=>{TMPL_META[t.id]={family:t.family,pattern:t.pattern};});TMPL_META._version=j.derivation_version||'';(j.organisations||[]).forEach(o=>{ORG_META[o.id]={family:o.family,pattern:o.pattern};});}catch(e){}
+  await loadM('question-situation-monthly.csv',{cat:'Category',flag:'Flag'},QSIT);hasSit=Object.keys(QSIT).length>0;
+  await loadM('clarification-asks-monthly.csv',{asks:'Asks',given:'Given'},QASK);hasAsk=Object.keys(QASK).length>0;
+  await loadM('answer-personalisation-monthly.csv',{given:'SituationGiven',pers:'Personalised'},QPERS);
   try{(await loadCSV('answer-figures-monthly.csv')).forEach(r=>{const m=String(r['Month']||'').trim();if(!/^\d{4}-\d{2}$/.test(m))return;(FIGM[m]||(FIGM[m]=[])).push({url:String(r['URL']||'').trim(),answers:nInt(r['Answers']),partial:nInt(r['Partial']),figures:nInt(r['Figures']),matched:nInt(r['Matched']),unmatched:nInt(r['Unmatched']),unverifiable:nInt(r['Unverifiable'])});});hasFigs=Object.keys(FIGM).length>0;}catch(e){}
   try{(await loadCSV('answer-signposts-monthly.csv')).forEach(r=>{const m=String(r['Month']||'').trim();if(!/^\d{4}-\d{2}$/.test(m))return;const o={org:String(r['Org']||'').trim(),cat:String(r['Category']||'').trim()};Object.entries(r).forEach(([k,v])=>{if(!['Month','Org','Category'].includes(k))o[k]=nInt(v);});(ORGSM[m]||(ORGSM[m]=[])).push(o);});hasOrgs=Object.keys(ORGSM).length>0;}catch(e){}
   // answer-next-daily.csv (tools/next_step.py, on the raw feed): ONEXT[date][class] = counts of what came after each answer
@@ -6117,6 +6121,46 @@ function renderAsked(D,S){
   const pageRow=([u,o])=>`<tr style="border-bottom:1px solid var(--b2)">${td(`<a href="${u}" target="_blank" rel="noopener" title="${u}" style="color:${C.acc};text-decoration:none">${ciPageTitle(u)}</a> <span style="color:var(--muted)">· ${o.cat}${o.isHub?' · hub':''}</span>`,{left:true})}${td(num(o.n))}${td(cell(o.same,o.n))}${td(cell(o.sameCat,o.n))}${td(cell(o.other,o.n))}${td(cell(o.nf,o.n),{style:o.n&&o.nf/o.n>=0.15?'color:var(--red);font-weight:600':''})}${td(cell(o.cl,o.n))}</tr>`;
   const byNf=apRows.filter(([,o])=>o.n>=30).sort((x,y)=>y[1].nf/y[1].n-x[1].nf/x[1].n).slice(0,12),byMiss=apRows.filter(([,o])=>o.n>=30).sort((x,y)=>x[1].same/x[1].n-y[1].same/y[1].n).slice(0,12);
   const tot2=k=>apRows.reduce((s,[,o])=>s+o[k],0);
+  // Layer 2 (brief §75): what people say about themselves, and what the clarification asked for against it
+  let sitCard='',askCard='';
+  const tr3=cells=>`<tr style="border-bottom:1px solid var(--b2)">${cells}</tr>`;
+  const tbl3=(head,body)=>`<div class="tbl-wrap"><table style="width:100%;border-collapse:collapse"><thead><tr style="border-bottom:1px solid var(--b2)">${head}</tr></thead><tbody>${body}</tbody></table></div>`;
+  if(hasSit){
+    const S3={};months.forEach(m=>(QSIT[m]||[]).forEach(r=>{if(r.cat!=='(all)')return;const a=S3[r.flag]||(S3[r.flag]={Turns:0,NotFound:0,Cited:0,Partial:0,Clarification:0});['Turns','NotFound','Cited','Partial','Clarification'].forEach(k=>{a[k]+=r[k]||0;});}));
+    const Z={Turns:0,NotFound:0,Cited:0,Partial:0,Clarification:0},anyS=S3['(any situation)']||Z,noS=S3['(no situation)']||Z,typedT=anyS.Turns+noS.Turns;
+    const grp=p=>Object.entries(S3).filter(([f])=>f.startsWith(p)).sort((a,b)=>b[1].Turns-a[1].Turns);
+    const row3=(label,a)=>tr3(td(escH(label),{left:true})+td(num(a.Turns))+td(pc(a.Turns,typedT))+td(pc(a.NotFound,a.Turns))+td(pc(a.Partial,a.Cited))+td(pc(a.Clarification,a.Turns)));
+    const HH={children:'children at home',partner:'a partner or spouse',alone:'living alone, widowed or separated'},SH={letter:'a pasted letter or form',multi:'more than one question',url:'a link pasted in'};
+    const sections=[['A county named',grp('county:').slice(0,10).map(([f,a])=>row3(catLabel(f.slice(7)),a))],['An age given',grp('age:').map(([f,a])=>row3(f.slice(4),a))],['Household',grp('household:').map(([f,a])=>row3(HH[f.slice(10)]||f,a))],['Work',grp('work:').map(([f,a])=>row3(f.slice(5),a))],['A payment they already receive',S3.payment_on?[row3('names a payment they are on',S3.payment_on)]:[]],['The year asked about',grp('year:').map(([f,a])=>row3(f.slice(5),a))],['How the question was written',grp('shape:').map(([f,a])=>row3(SH[f.slice(6)]||f,a))]];
+    const secHtml=sections.map(([h,rows])=>rows.length?`<tr><td colspan="6" style="padding:10px 10px 2px;font-size:.6rem;color:var(--muted);text-transform:uppercase;letter-spacing:.08em">${h}</td></tr>`+rows.join(''):'').join('');
+    sitCard=`<div class="card"><div class="card-title">What people say about themselves<span class="card-title-note">classes read from the typed question, never the words · ${spanLabel(from,to)}</span></div>
+      <div class="grid4" style="margin-bottom:12px">
+        ${uxTile(pc(anyS.Turns,typedT),'Questions giving a personal detail',`${num(anyS.Turns)} of ${num(typedT)} typed questions · a county, an age, a household, a work status or a payment`,C.acc)}
+        ${uxTile(pc(anyS.NotFound,anyS.Turns),'Not found, when a detail was given',`against ${pc(noS.NotFound,noS.Turns)} when none was`,C.red)}
+        ${uxTile(pc(anyS.Clarification,anyS.Turns),'Clarification, when a detail was given',`against ${pc(noS.Clarification,noS.Turns)} when none was`,C.purple)}
+        ${uxTile(pc(anyS.Partial,anyS.Cited),'Partial, when a detail was given',`against ${pc(noS.Partial,noS.Cited)} when none was`,C.amber)}
+      </div>
+      ${tbl3(th('Detail',true)+th('Questions')+th('Share of typed')+th('Not found')+th('Partial')+th('Clarif.'),secHtml)}
+      <div class="share-foot">Each flag is a class and is published on its own: a county is never crossed with an age or a household, and a county row under five questions in a category is left out of the per-category file. The year is the year the question asked about; the shape flags say how the question was written. A pasted letter's answer is left out of the template, organisation and figure counts.</div></div>`;
+  }
+  if(hasAsk){
+    const A3={};months.forEach(m=>(QASK[m]||[]).forEach(r=>{const a=A3[r.asks]||(A3[r.asks]={0:0,1:0});a[+r.given]+=r.Turns||0;}));
+    const any=A3['(any)']||{0:0,1:0},none=A3['(none)']||{0:0,1:0},clar=any[0]+any[1]+none[0]+none[1];
+    const LBLA={county:'where they live',age:'their age',payment:'their payment or income',status:'their immigration status or nationality',household:'their household',employment:'their work',dates:'a date or duration',scheme:'which scheme they mean'},GIVABLE=new Set(['county','age','payment','household','employment']);
+    const rowsA=Object.entries(A3).filter(([k])=>!k.startsWith('(')).sort((a,b)=>(b[1][0]+b[1][1])-(a[1][0]+a[1][1])).map(([k,a])=>{const n=a[0]+a[1];return tr3(td(LBLA[k]||k,{left:true})+td(num(n))+td(pc(n,clar))+td(GIVABLE.has(k)?num(a[1]):'—')+td(GIVABLE.has(k)?pc(a[1],n):'—'));}).join('');
+    const giv=Object.entries(A3).filter(([k])=>GIVABLE.has(k)),givAsk=giv.reduce((s,[,a])=>s+a[0]+a[1],0),givYes=giv.reduce((s,[,a])=>s+a[1],0);
+    const P3={};months.forEach(m=>(QPERS[m]||[]).forEach(r=>{P3[r.given+r.pers]=(P3[r.given+r.pers]||0)+(r.Answers||0);}));
+    const pg=(P3['11']||0)/Math.max((P3['10']||0)+(P3['11']||0),1),pn=(P3['01']||0)/Math.max((P3['00']||0)+(P3['01']||0),1);
+    askCard=`<div class="card"><div class="card-title">What the clarification asked for<span class="card-title-note">classes read from clarification answers to typed questions · ${num(clar)} clarifications · ${spanLabel(from,to)}</span></div>
+      <div class="grid4" style="margin-bottom:12px">
+        ${uxTile(pc(any[0]+any[1],clar),'Clarifications asking for something the classes name',`${num(none[0]+none[1])} asked for nothing recognisable`,C.acc)}
+        ${uxTile(pc(givYes,givAsk),'Asked for a detail the question had already given',`${num(givYes)} of ${num(givAsk)} asks for where they live, age, household, work or payment`,C.red)}
+        ${uxTile((pg*100).toFixed(1)+'%','Cited answers that spoke to the person, when a detail was given',`"in your case", "since you …" · ${(pn*100).toFixed(1)}% when none was given`,C.teal)}
+        ${uxTile(pc(any[1],any[0]+any[1]),'Clarifications with at least one already-given ask',`${num(any[1])} clarifications`,C.amber)}
+      </div>
+      ${tbl3(th('Asked for',true)+th('Clarifications')+th('Share')+th('Already given')+th('Share'),rowsA)}
+      <div class="share-foot">A clarification that asks for something the question already said is the measure §75 was built for: it points at the classifier or the prompt, not at the content. Only five classes can be checked against the question (where they live, age, household, work, payment); the others show a dash. The mirror measure is the third tile: whether an answer used the detail it was given.</div></div>`;
+  }
   // One category, from the question (brief §75): the broad cut (answer cited the category, question named a page in it,
   // or the question's topic gives it), its topics, its intents, its months and its register rows
   let catDive='';
@@ -6173,6 +6217,8 @@ function renderAsked(D,S){
       ${uxTile(unk.a.nf?num(unk.a.nf-unk.a.rec):'—','Not-found answers still with no topic',`of ${num(unk.a.nf)} that carried none from the answer; the question names a scheme for ${num(unk.a.rec)}${unk.b.nf?' · was '+num(unk.b.nf-unk.b.rec)+' of '+num(unk.b.nf):''}`,C.amber)}
     </div>
     ${catDive}
+    ${sitCard}
+    ${askCard}
     <div class="card" style="overflow-x:auto"><div class="card-title">Outcomes by what was asked<span class="card-title-note">typed questions · ${spanLabel(from,to)}${hasPrev?` · in brackets the change in points against ${escH(W.rule)} (${spanLabel(W.from,W.to)})`:' · no preceding window in the data to compare with'} · unexpected = an outcome the design does not expect for that intent</span></div>
       <table style="width:100%;border-collapse:collapse;min-width:1000px"><thead><tr style="border-bottom:1px solid var(--b2)">${th('Intent',true)}${th('Turns')}${th('Share')}${th('Cited')}${th('Cited, not partial')}${th('Not found')}${th('Clarification')}${th('Unexpected')}${th('Personal situation')}${th('Names a scheme')}</tr></thead><tbody>${rows}</tbody></table>
       <div class="share-foot">A cited answer is the expected outcome for every intent, including a question about the person's own claim, where the right answer explains how to check it. Unexpected = a not-found or uncited answer, or a clarification on a question that named a scheme; a clarification on "what is the benefit?" with no scheme named is the designed outcome and is not counted. Typed questions only: starter prompts and the model's own suggested follow-ups (${num(tot(AC))} turns in range) are left out, since a suggested follow-up is written to the prompt's pattern and carries an intent by construction. ${intentCaveat()}.</div></div>
@@ -6206,7 +6252,7 @@ function safetyCardHTML(fr){
   const g=f=>A[f]||{Turns:0};const pk=f=>(g(f).Turns/turns*1000);
   const td=(v,o={})=>`<td style="text-align:${o.left?'left':'right'};padding:7px 10px;font-family:${o.left?'inherit':"'DM Mono',monospace"};font-size:.78rem">${v}</td>`;
   const th=(t,left)=>`<th style="text-align:${left?'left':'right'};padding:7px 10px;font-size:.6rem;color:var(--muted);text-transform:uppercase;letter-spacing:.08em;white-space:nowrap">${t}</th>`;
-  const rows=[['Any identifier','An identifier typed in (PPS, phone, email, IBAN or card)'],['PPS','PPS number'],['Phone','Phone number'],['Email','Email address'],['IBAN','IBAN'],['Card','16-digit card number'],['Injection','Injection phrasing (ignore your instructions, system prompt, pretend you are…)'],['Theme crisis','Crisis language'],['Theme creative','Off topic: creative writing'],['Theme code','Off topic: code'],['Theme entertainment','Off topic: entertainment'],['Theme sport','Off topic: sport'],['Theme weather','Off topic: weather']].filter(([f])=>A[f]);
+  const rows=[['Any identifier','An identifier typed in (PPS, phone, email, IBAN or card)'],['Letter','A pasted letter or form (80+ words with letter markers; its answer is left out of the phrase extraction)'],['PPS','PPS number'],['Phone','Phone number'],['Email','Email address'],['IBAN','IBAN'],['Card','16-digit card number'],['Injection','Injection phrasing (ignore your instructions, system prompt, pretend you are…)'],['Theme crisis','Crisis language'],['Theme creative','Off topic: creative writing'],['Theme code','Off topic: code'],['Theme entertainment','Off topic: entertainment'],['Theme sport','Off topic: sport'],['Theme weather','Off topic: weather']].filter(([f])=>A[f]);
   const out=(a,k)=>a.Turns?`${num(a[k]||0)} <span style="color:var(--muted)">(${Math.round((a[k]||0)/a.Turns*100)}%)</span>`:'—';
   return`<div class="card"><div class="card-title">Safety counts<span class="card-title-note">flags read from the question before it is dropped · ${num(turns)} turns in range · what AskCI answered to each</span></div>
     <div class="grid4" style="margin-bottom:10px">

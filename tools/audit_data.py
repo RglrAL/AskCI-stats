@@ -62,6 +62,9 @@ SCHEMA = {
     'answer-templates-daily.csv': 'Date Template Turns Cited NotFound Clarification Error OutOfScope Greeting Uncited Partial',
     'answer-signposts-monthly.csv': 'Month Org Category Turns Cited NotFound Clarification Error OutOfScope Greeting Uncited Partial',
     'answer-figures-monthly.csv': 'Month URL Answers Partial Figures Matched Unmatched Unverifiable',
+    'question-situation-monthly.csv': 'Month Category Flag Turns Cited NotFound Clarification Error OutOfScope Greeting Uncited Partial',
+    'clarification-asks-monthly.csv': 'Month Asks Given Turns',
+    'answer-personalisation-monthly.csv': 'Month SituationGiven Personalised Answers',
     'setback-intents-monthly.csv': 'Month Setback Intent Turns Ended SameIntentNext OtherIntentNext',
     'repeat-questions-monthly.csv': 'Month Turns FirstTurns StarterFirstTurns DistinctFirstTurnTexts TextsAskedTwicePlus FirstTurnsOnRepeatedTexts Top10 Top25 Top50 Top100 Top250 SuggestedClicks DistinctSuggestedTexts SuggestedTop25',
     'journeys-monthly.csv': 'From To Conversations',
@@ -487,6 +490,32 @@ if FIG:
           all(I(r['Matched']) + I(r['Unmatched']) + I(r['Unverifiable']) == I(r['Figures']) and I(r['Partial']) <= I(r['Answers']) and I(r['Figures']) >= I(r['Answers']) for r in FIG)
           and all(I(r['Answers']) <= I(fall[r['Month']]['Answers']) for r in FIG if r['Month'] in fall) and all(I(r['Answers']) <= sum(I(U[d]['Questions']) for d in U if d[:7] == m) for m, r in fall.items()),
           str([(r['Month'], r['URL'][-40:]) for r in FIG if I(r['Matched']) + I(r['Unmatched']) + I(r['Unverifiable']) != I(r['Figures'])][:3]))
+SIT = rd('question-situation-monthly.csv'); ASK = rd('clarification-asks-monthly.csv'); PERS = rd('answer-personalisation-monthly.csv')
+if SIT:
+    typed_m = C.Counter()
+    for r in QI:
+        if r['Chip'] == '0': typed_m[r['Date'][:7]] += I(r['Turns'])
+    anyno = C.Counter()
+    for r in SIT:
+        if r['Category'] == '(all)' and r['Flag'] in ('(any situation)', '(no situation)'): anyno[r['Month']] += I(r['Turns'])
+    check('question situation: outcomes sum to Turns, flags are of a known kind, no flag exceeds the month\'s typed turns, (any) + (no) = typed turns',
+          all(sum(I(r[k]) for k in OUT7) == I(r['Turns']) and re.match(r'^(county:[a-z]+|age:(16-24|25-44|45-65|66\+)|household:(children|partner|alone)|work:[a-z-]+|payment_on|year:20[12]\d|shape:(letter|multi|url)|\(any situation\)|\(no situation\))$', r['Flag']) for r in SIT)
+          and all(I(r['Turns']) <= typed_m[r['Month']] for r in SIT) and all(anyno[m] == typed_m[m] for m in anyno),
+          str([(r['Month'], r['Flag']) for r in SIT if not re.match(r'^(county:|age:|household:|work:|payment_on|year:|shape:|\(any|\(no)', r['Flag'])][:3] + [(m, anyno[m], typed_m[m]) for m in anyno if anyno[m] != typed_m[m]][:3]))
+    clar_m = C.Counter()
+    for r in QI:
+        if r['Chip'] == '0': clar_m[r['Date'][:7]] += I(r['Clarification'])
+    anyn = C.Counter()
+    for r in ASK:
+        if r['Asks'] in ('(any)', '(none)'): anyn[r['Month']] += I(r['Turns'])
+    check('clarification asks: Given is 0/1, (any) + (none) = the month\'s typed clarifications, every class row <= that', all(r['Given'] in ('0', '1') for r in ASK) and all(anyn[m] == clar_m[m] for m in anyn)
+          and all(I(r['Turns']) <= clar_m[r['Month']] for r in ASK), str([(m, anyn[m], clar_m[m]) for m in anyn if anyn[m] != clar_m[m]][:3]))
+    cited_m = C.Counter()
+    for r in QI:
+        if r['Chip'] == '0': cited_m[r['Date'][:7]] += I(r['Cited'])
+    pm = C.Counter()
+    for r in PERS: pm[r['Month']] += I(r['Answers'])
+    check('answer personalisation: the four cells sum to the month\'s typed cited answers', all(pm[m] == cited_m[m] for m in pm), str([(m, pm[m], cited_m[m]) for m in pm if pm[m] != cited_m[m]][:3]))
 GAPSF = rd('content-gaps.csv')
 try: _rc = _j.load(open(f'{REPO}/register-config.json', encoding='utf-8')); _kinds = set(_rc.get('teams', {}))
 except (OSError, ValueError): _kinds = set()

@@ -133,7 +133,64 @@ INTENT_VERSION = "2026.10.24-2"
 #   2026.10.24-3  organisations the answer signposts to (ORGS below), Answer Orgs column
 #   2026.10.24-4  figures quoted in the answer checked against dated snapshots of the cited pages, four Answer Figures columns
 #   2026.10.24-5  topic tables for social welfare, employment, money and tax, moving country and health (47 topics; lexicon 2026.10.24-5)
-DERIVATION_VERSION = "2026.10.24-5"
+#   2026.10.24-6  layer 2: what the question says about the person (county, age band, household, work, payment on, year, shape),
+#                 what a clarification asked for and whether the question had already given it, personalisation markers;
+#                 answers to pasted letters excluded from every phrase extraction
+DERIVATION_VERSION = "2026.10.24-6"
+
+# Layer 2 (brief §75): situation entities read from the question, published as classes only (a county name, an age band,
+# a household flag, a work status, a payment-on flag, the year asked about, a shape flag); the classes a clarification
+# asked for; and the pairing of the two, which is the measure "did it ask for something already given". Pasted letters
+# (80+ words with letter markers) are the highest-PII turns in the feed: counted as a safety flag, and their answers are
+# left out of the template, organisation and figure extraction.
+COUNTIES = ["carlow", "cavan", "clare", "cork", "donegal", "dublin", "galway", "kerry", "kildare", "kilkenny", "laois", "leitrim", "limerick", "longford",
+            "louth", "mayo", "meath", "monaghan", "offaly", "roscommon", "sligo", "tipperary", "waterford", "westmeath", "wexford", "wicklow"]
+COUNTY_RE = re.compile(r"\b(?:co\.?\s+|county\s+)?(" + "|".join(COUNTIES) + r")\b")
+AGE_RE = re.compile(r"\b(?:i am|i'm|im|i am aged|aged|turning|turned|my age is|i will be)\s+(\d{2})\b(?!\s*(?:%|euro|eur|hours?|weeks?|months?|days?|years? (?:in|of|ago|working|living|paying|contribut|married)))|\b(\d{2})\s*(?:years? old|yrs? old|year-old|yo)\b")
+HOUSEHOLD = [("children", re.compile(r"\bmy (?:child|children|son|daughter|kids|baby|twins|sons|daughters|grandchild)\b|\b(?:i have|with) (?:\d+|a|an|one|two|three|four|five) (?:child|children|kids?|son|daughter|baby|dependents?)\b|\bsingle (?:mother|father|parent|mum|mam|dad)\b|\blone parent\b")),
+             ("partner", re.compile(r"\bmy (?:husband|wife|partner|spouse|fianc[eé]e?|boyfriend|girlfriend)\b|\bwe are married\b|\bi am married\b|\bi'm married\b|\bim married\b|\bcohabit")),
+             ("alone", re.compile(r"\blive alone\b|\bliving alone\b|\bon my own\b|\bby myself\b|\bwidow(?:ed|er)?\b|\bseparated\b|\bdivorced\b|\bsingle person\b"))]
+WORK = [("self-employed", re.compile(r"\bself[- ]?employed\b|\bsole trader\b|\bmy (?:own )?business\b|\bfreelanc")),
+        ("unemployed", re.compile(r"\bunemployed\b|\blost my job\b|\bout of work\b|\bmade redundant\b|\bno job\b|\bnot working\b|\bon jobseekers\b|\bon the dole\b")),
+        ("student", re.compile(r"\bi am a student\b|\bi'm a student\b|\bim a student\b|\bin college\b|\bat university\b|\bstudying\b|\bmy course\b|\bfull[- ]time student\b")),
+        ("retired", re.compile(r"\bretired\b|\bi am a pensioner\b|\bpensioner\b|\bon the (?:state )?pension\b")),
+        ("working", re.compile(r"\bi (?:work|am working|am employed|have a job)\b|\bmy (?:job|employer|boss|salary|wages|work contract)\b|\bfull[- ]time\b|\bpart[- ]time\b|\bi earn\b"))]
+PAYMENT_ON = re.compile(r"\b(?:i am|i'm|im|currently|am) (?:on|getting|receiving|claiming|in receipt of)\b|\bi (?:get|receive|claim|am paid)\b")
+LETTER_RE = re.compile(r"\b(?:dear|to whom it may concern|yours sincerely|yours faithfully|kind regards|best regards|regards,|reference number|ref\.? no|ref:|your ref|our ref|account number|claim number)\b", re.I)
+MULTI_RE = re.compile(r"\?.+\?|\bsecond(?:ly)? question\b|\banother question\b|\band also\b|\bone more (?:thing|question)\b", re.S | re.I)
+ASKS = [("county", re.compile(r"which county|what county|local authority (?:are you|do you|you)|where (?:do you|are you) (?:live|living|based|located)|where you live|your (?:county|local authority|area|location)|which (?:local authority|council)")),
+        ("age", re.compile(r"how old|your age|what age|age are you|date of birth|over (?:66|65|70)\?|under (?:18|66)\?")),
+        ("payment", re.compile(r"which payment|what payment|which (?:social welfare )?(?:benefit|allowance|scheme|pension)|(?:are you|you are) (?:currently )?(?:receiving|getting|on|claiming|in receipt)|do you (?:currently )?(?:receive|get|claim)|your (?:income|earnings|means|savings|household income|weekly income)|how much (?:do you|does your).{0,20}(?:earn|get|receive)|means[- ]test")),
+        ("status", re.compile(r"your (?:immigration |residence |current )?(?:status|permission|stamp|nationality|citizenship)|which stamp|are you an? (?:eu|eea|irish|uk|non)|what (?:is your )?nationality|where are you from|which country|are you (?:from|a citizen)")),
+        ("household", re.compile(r"(?:do you have|have you|any) (?:children|dependents|dependants|a child)|are you (?:married|single|cohabiting|living with|a lone parent)|your (?:spouse|partner|husband|wife|children|household|family)|live alone|who (?:do you )?live with")),
+        ("employment", re.compile(r"are you (?:currently )?(?:employed|working|self[- ]employed|an employee|in employment)|your (?:employer|employment|job|work|working hours|contract|hours)|do you work|how many hours")),
+        ("dates", re.compile(r"when did you|when do you|what date|how long (?:have|had|were|are) you|since when|how many (?:years|months|weeks)|date (?:did|of|you)")),
+        ("scheme", re.compile(r"which (?:scheme|one|of these|of the following|type of)|do you mean|are you asking about|could you (?:please )?(?:clarify|specify|tell me|let me know)|what (?:exactly |specifically )?(?:do you|are you) (?:mean|asking|looking for|trying)|more detail|more information about (?:your|what)|bit more about"))]
+GIVEN_FOR = {"county": 0, "age": 1, "household": 2, "employment": 3, "payment": 4}   # ask class -> index in the situation tuple
+PERSONAL_RE = re.compile(r"\bin your (?:case|situation|circumstances)\b|\bsince you (?:are|have|mentioned|said|were)\b|\bas you (?:mentioned|said|are|have|described)\b|\bgiven (?:that )?you\b|\bbecause you (?:are|have|were)\b|\bbased on (?:what you|your situation|your circumstances)\b|\bfrom what you(?:'ve| have)? (?:said|described)\b")
+YEAR_RE = re.compile(r"\b(20[12]\d)\b")
+
+
+def situation_of(q, sw_named):
+    """(county, age band, household flags, work, payment-on, year, shape) read from one question; classes only. Payment-on
+    needs a first-person receiving phrase and a social-welfare page named (sw_named), so 'I get a letter' does not count."""
+    nq = norm_words(q); raw = q or ""
+    county = COUNTY_RE.search(nq)
+    m = AGE_RE.search(nq); age = int(m.group(1) or m.group(2)) if m else None
+    band = "" if age is None or age < 16 or age > 100 else ("16-24" if age < 25 else "25-44" if age < 45 else "45-65" if age < 66 else "66+")
+    hh = ";".join(n for n, rx in HOUSEHOLD if rx.search(nq))
+    work = next((n for n, rx in WORK if rx.search(nq)), "")
+    pay = "1" if sw_named and PAYMENT_ON.search(nq) else ""
+    ym = YEAR_RE.search(nq); year = ym.group(1) if ym else ""
+    words = len(nq.split())
+    shape = ";".join(f for f, ok in (("letter", words >= 80 and bool(LETTER_RE.search(raw))), ("multi", words >= 8 and bool(MULTI_RE.search(raw))), ("url", "http" in raw.lower())) if ok)
+    return county.group(1) if county else "", band, hh, work, pay, year, shape
+
+
+def asks_of(a):
+    """';'-joined classes a clarification asked for, or ''."""
+    t = (a or "").translate(APOS).lower()
+    return ";".join(n for n, rx in ASKS if rx.search(t))
 
 # Figures quoted (brief §75, response layer 2): euro amounts, percentages and years in the answer, checked against the
 # text of every page the answer cites as that page was when the answer was given (tools/fetch_pages.py keeps a snapshot
@@ -473,7 +530,9 @@ def redact(src, dst):
                                                           "Outcome Rule", "Style Version"] + list(STYLE) + ["Answer Signoff", "Safety Version"] + list(SAFETY) + ["Query Theme",
                                                           "Intent Version", "Query Intent", "Query Form", "Query Page", "Query Category", "Query Schemes",
                                                           "Derivation Version", "Query Topic", "Category Source", "Answer Templates", "Answer Orgs",
-                                                          "Answer Figures", "Answer Figures Matched", "Answer Figures Unmatched", "Answer Figures Unverifiable"]
+                                                          "Answer Figures", "Answer Figures Matched", "Answer Figures Unmatched", "Answer Figures Unverifiable",
+                                                          "Query County", "Query Age Band", "Query Household", "Query Work", "Query Payment On", "Query Year Value", "Query Shape", "Query Letter",
+                                                          "Answer Asks", "Answer Asked Given", "Answer Personalised"]
         dropped = [c for c in r.fieldnames if c in DROP]
         w = csv.DictWriter(fo, fieldnames=keep, extrasaction="ignore")
         w.writeheader()
@@ -497,15 +556,28 @@ def redact(src, dst):
             row["Query Page"], row["Query Category"], row["Query Schemes"] = topic_of(q)
             # topic layer (brief §75): a question naming no page takes its category from its topic; Category Source says which
             row["Derivation Version"] = DERIVATION_VERSION
-            row["Answer Templates"] = answer_templates(row.get("Assistant Response"))
-            row["Answer Orgs"] = answer_orgs(row.get("Assistant Response"))
-            try: day = datetime.strptime((row.get("Timestamp") or "").strip(), "%b %d, %Y %H:%M").date().isoformat()
-            except ValueError: day = "9999-12-31"
-            row["Answer Figures"], row["Answer Figures Matched"], row["Answer Figures Unmatched"], row["Answer Figures Unverifiable"] = check_figures(row.get("Assistant Response"), row.get("Citations"), day)
             row["Query Topic"], tcat = question_topic(q)
             if row["Query Category"]: row["Category Source"] = "page"
             elif tcat: row["Query Category"], row["Category Source"] = tcat, "topic"
             else: row["Category Source"] = ""
+            # layer 2: the person's situation from the question, the clarification's asks from the answer, and their overlap
+            sit = situation_of(q, row["Query Category"] == "social-welfare" and row["Category Source"] == "page")
+            row["Query County"], row["Query Age Band"], row["Query Household"], row["Query Work"], row["Query Payment On"], row["Query Year Value"], row["Query Shape"] = sit
+            row["Query Letter"] = "1" if "letter" in row["Query Shape"] else ""
+            ans = row.get("Assistant Response") or ""
+            row["Answer Asks"] = asks_of(ans) if o == "Clarification" else ""
+            row["Answer Asked Given"] = sum(1 for k in row["Answer Asks"].split(";") if k in GIVEN_FOR and sit[GIVEN_FOR[k]])
+            row["Answer Personalised"] = "1" if PERSONAL_RE.search(ans.translate(APOS).lower()) else ""
+            # the response pass: templates, organisations and figures; a pasted letter's answer is left out of all three
+            if row["Query Letter"]:
+                row["Answer Templates"], row["Answer Orgs"] = "", ""
+                row["Answer Figures"] = row["Answer Figures Matched"] = row["Answer Figures Unmatched"] = row["Answer Figures Unverifiable"] = 0
+            else:
+                row["Answer Templates"] = answer_templates(ans)
+                row["Answer Orgs"] = answer_orgs(ans)
+                try: day = datetime.strptime((row.get("Timestamp") or "").strip(), "%b %d, %Y %H:%M").date().isoformat()
+                except ValueError: day = "9999-12-31"
+                row["Answer Figures"], row["Answer Figures Matched"], row["Answer Figures Unmatched"], row["Answer Figures Unverifiable"] = check_figures(ans, row.get("Citations"), day)
             if row["Starter Prompt"]: counts["(starter prompt)"] = counts.get("(starter prompt)", 0) + 1
             w.writerow(row)
             n += 1

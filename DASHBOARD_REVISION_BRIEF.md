@@ -1710,3 +1710,37 @@ partial over the year), arrive when October closes. Topic rows carry "not yet re
 sheet's topic column says otherwise. Ten of the sixteen categories have no topic table yet (travel and recreation,
 family and relationships, education, justice, consumer, death, returning to Ireland, government, environment, about);
 their questions enter by page and citation only, and the next four by size are an afternoon each.
+
+**Sixth leg: layer 2, the person in the question and the clarification against it (24 Oct 2026).** `redact_feed.py`
+reads from each typed question, as classes only: a county named (26 counties), an age given in the first person
+(banded 16–24, 25–44, 45–65, 66+), household flags (children, partner, alone), a work status (working, unemployed,
+self-employed, student, retired), a payment already received (a first-person receiving phrase plus a social-welfare
+page named), the year asked about, and the question's shape (a pasted letter: 80+ words with letter markers; more than
+one question; a link). From each clarification answer it reads the classes asked for (where they live, age, payment or
+income, status, household, work, dates, which scheme) and counts how many of those the question had already given.
+From each cited answer, a personalisation marker ("in your case", "since you …"). Pasted letters are a safety flag
+(Letter row in `safety-daily.csv` and on the safety card) and their answers are left out of the template, organisation
+and figure extraction. Three files: **`question-situation-monthly.csv`** (month, category and "(all)", flag; flags
+never crossed with each other; category rows under 5 left out), **`clarification-asks-monthly.csv`** (month, class,
+given 0/1) and **`answer-personalisation-monthly.csv`** (month, detail given 0/1, personalised 0/1). Derivation
+2026.10.24-6; audit 153 checks. Usage › What people ask gains two cards, **What people say about themselves** and
+**What the clarification asked for**.
+
+**First figures, January–22 October, typed questions.** 20,553 questions (19.6%) give a personal detail. With a detail
+the outcomes are: not found 6.2% against 7.1% without, clarification 3.2% against 7.2%, partial 16.6% against 14.9%:
+a detail halves the chance of being asked a question back and slightly raises the chance of a hedged answer. Details
+given: a partner or spouse 3,344, children 3,226, living alone 1,354; working 4,918, unemployed 1,290, self-employed
+874, retired 529, a student 290; a payment already on 4,899; an age 2,224, most often 66+ (914) and 16–24 (649); a
+county 1,500, Dublin 678, Cork 207, Galway 126. The year asked about: 2026 in 1,026 questions, 2027 in 619 (10.3% not
+found, the Budget questions), 2025 in 403. Pasted letters: 46 all year (17% not found); more than one question in one
+turn: 1,031.
+
+**The clarification measure.** 6,728 clarifications to typed questions, and 6,715 of them ask which scheme the person
+means (the "for example, are you asking about:" form): the clarification step is scheme disambiguation, almost never a
+request for circumstances. Asks for a circumstance are rare: payment or income 519, work 257, household 148, status 88,
+where they live 85, age 71, a date 67. Of the 1,080 asks for a checkable circumstance, 142 (13%) asked for something the
+question had already given, concentrated in household (73 of 148, 49%) and work (41 of 257, 16%); county and age are
+almost never re-asked (1 each). Over all clarifications that is 2%. So the §71 question, "does it ask for what it was
+told", has its answer: rarely, and when it does it is about household and work, which is a prompt-wording point rather
+than a classifier fault. The mirror measure: 8.1% of cited answers used a personalisation marker when the question
+gave a detail, 3.9% when it did not.
