@@ -436,8 +436,8 @@ LEXT = {}
 try:
     import json as _j
     _lx = _j.load(open(f'{REPO}/question-lexicon.json', encoding='utf-8')); LEXT = {t: c for c, tops in (_lx.get('topics') or {}).items() for t in tops}
-    check('lexicon: derivation_version present and every topic has 1+ keywords of 3+ characters', bool(_lx.get('derivation_version'))
-          and all(spec.get('keywords') and all(len(k) >= 3 for k in spec['keywords']) for tops in (_lx.get('topics') or {}).values() for spec in tops.values()))
+    check('lexicon: derivation_version present and every topic has 1+ keywords of 2+ characters (gp, 1g, lpt are real)', bool(_lx.get('derivation_version'))
+          and all(spec.get('keywords') and all(len(k) >= 2 for k in spec['keywords']) for tops in (_lx.get('topics') or {}).values() for spec in tops.values()))
 except (OSError, ValueError): check('lexicon: readable', False)
 for name, F, extra in (('question topics monthly', QTM, lambda r: r['Topic'] in LEXT and LEXT[r['Topic']] == r['Category'] and I(r['Turns']) >= 5),
                        ('question categories monthly', QCM, lambda r: r['Source'] in ('cited', 'page', 'topic', 'none') and (r['Source'] == 'none') == (r['Category'] == '(none)')),

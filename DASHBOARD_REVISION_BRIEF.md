@@ -1675,3 +1675,24 @@ unmatched), the employment-permits overview (34.4%), retiring to Ireland as a re
 permits (30.9%), work permits (29.3% of 1,316), coming to work in Ireland (27.0%), then invalidity pension (20.1% of
 1,216). Tax rules, permit salary thresholds and payment rates: the three places a figure from memory or from a second
 page is most likely to differ from the cited one.
+
+**Fifth leg: topic tables for the other five large categories (24 Oct 2026).** Forty-seven more topics in the lexicon,
+written as generic keywords and pruned by the 20-match check (490 keywords removed, no topic lost): social welfare 12
+(jobseekers; state pension; illness and disability payments; carers; families and children; extra benefits;
+supplementary welfare; means tests and income limits; PRSI and contributions; appeals, overpayments and decisions;
+working while claiming; general), employment 9, money and tax 8, moving country 9, health 9. Lexicon 2026.10.24-5,
+derivation 2026.10.24-5; 67 topics in six categories. The redaction and every aggregate were rebuilt; the audit's
+keyword-length rule now allows two-character acronyms (gp, 1g). The residue, typed questions no test places in a
+category, fell from 13,187 to 10,614 (10.1% of typed). Topic-sourced questions by category: social welfare 5,249,
+employment 3,703, housing 3,623, money and tax 2,633, health 2,355, moving country 1,628.
+
+**What the new tables say, January–22 October, typed questions.** Social welfare's not-found rates are low across the
+board (2.8–5.8% for every named topic; 9.5% only on appeals, overpayments and decisions, 389 questions), which is the
+largest category being the best served. Employment: leave and holidays is the biggest topic (2,827) at 4.2% not
+found; contracts and conditions 8.4%, rights and the WRC 9.3%, and the general bucket 10.8%: the further from a named
+entitlement, the less the site answers. Money and tax: the two topics the site covers least are the two people ask
+about in the moment, cost-of-living supports (13.8% not found, 30.5% partial) and the Budget (11.2% and 26.3%).
+Moving country: citizenship is large and well served (2,181, 3.9%); residence permissions and stamps (10.3%) and visas
+(10.6%) are not. Health: GP, hospital and waiting lists 11.1% not found, pregnancy and children 10.1%, the medical card
+3.1%. These are the rows the register will compute once the topic layer feeds it; the seeded housing rows stand until
+then.

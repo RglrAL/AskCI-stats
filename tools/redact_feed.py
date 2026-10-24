@@ -132,7 +132,8 @@ INTENT_VERSION = "2026.10.24-2"
 #   2026.10.24-2  fixed-wording templates (TEMPLATES below), Answer Templates column
 #   2026.10.24-3  organisations the answer signposts to (ORGS below), Answer Orgs column
 #   2026.10.24-4  figures quoted in the answer checked against dated snapshots of the cited pages, four Answer Figures columns
-DERIVATION_VERSION = "2026.10.24-4"
+#   2026.10.24-5  topic tables for social welfare, employment, money and tax, moving country and health (47 topics; lexicon 2026.10.24-5)
+DERIVATION_VERSION = "2026.10.24-5"
 
 # Figures quoted (brief §75, response layer 2): euro amounts, percentages and years in the answer, checked against the
 # text of every page the answer cites as that page was when the answer was given (tools/fetch_pages.py keeps a snapshot

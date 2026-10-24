@@ -18,7 +18,7 @@ from datetime import datetime
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 REPO = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-LEXICON_VERSION = "2026.10.24-4"
+LEXICON_VERSION = "2026.10.24-5"
 MIN_CHARS = 6            # a phrase shorter than this never matches on its own ("tax" would match everything)
 CI = "https://www.citizensinformation.ie/en/"
 # What people call things → the page slug (or full path) it means. Checked against the unmatched report.
@@ -128,7 +128,7 @@ def build():
 # matches (counts only) and the build refuses a keyword under TOPIC_MIN_MATCHES, so nothing rare and identifying can
 # enter this public file. A question's topic is the matching keyword that is longest; a topic marked general applies
 # only when no other does. DERIVATION_VERSION bundles this key with redact_feed.py's response rules and template list.
-DERIVATION_VERSION = "2026.10.24-4"   # bumped with redact_feed.py's: -2 the fixed-wording templates, -3 the organisations list, -4 figures
+DERIVATION_VERSION = "2026.10.24-5"   # bumped with redact_feed.py's: -2 the fixed-wording templates, -3 the organisations list, -4 figures, -5 five more topic tables
 TOPIC_MIN_MATCHES = 20
 TOPICS = {
     "housing": {
@@ -152,6 +152,63 @@ TOPICS = {
         "Student and short-term accommodation": ["student accommodation", "airbnb", "holiday home"],
         "Apartment management companies": ["management company"],
         "Housing, general": {"general": True, "keywords": ["housing", "accommodation", "apartment", "apartments", "renting", "rented", "rent", "rents", "property", "properties", "home owner", "my house", "our house", "a house", "the house", "my home", "our home", "new home", "new house", "house i", "house we"]},
+    },
+    "social-welfare": {
+        "Jobseekers": ["jobseekers", "jobseeker", "jobseekers allowance", "jobseekers benefit", "the dole", "dole", "unemployment benefit", "signing on", "sign on", "unemployed"],
+        "State pension": ["state pension", "contributory pension", "non contributory pension", "pension age", "old age pension", "widows pension", "pension rate", "my pension", "the pension", "pension entitlement", "pension when i"],
+        "Illness and disability payments": ["disability allowance", "illness benefit", "invalidity pension", "partial capacity", "injury benefit", "blind pension", "domiciliary care", "disability payment", "disability benefit", "sick from work", "out sick", "on sick leave"],
+        "Carers": ["carers allowance", "carers benefit", "carers support grant", "carer", "carers", "caring for my", "half rate carers"],
+        "Families and children": ["child benefit", "childrens allowance", "maternity benefit", "paternity benefit", "parents benefit", "one parent family", "working family payment", "back to school", "lone parent", "single parent", "single mother", "child support", "child maintenance", "maintenance payments", "newborn", "new baby", "my baby", "my children", "my child", "my son", "my daughter", "my kids"],
+        "Extra benefits": ["fuel allowance", "household benefits", "free travel", "living alone", "christmas bonus", "telephone support", "electricity allowance", "tv licence", "winter fuel", "double payment", "lump sum payment"],
+        "Supplementary welfare": ["additional needs payment", "exceptional needs", "supplementary welfare", "community welfare", "community welfare officer", "financial help", "financial assistance", "hardship"],
+        "Means tests and income limits": ["means test", "means tested", "means testing", "income limit", "income limits", "income threshold", "how much can i earn", "assessable income", "means assessment", "household income", "my savings", "savings affect", "disregard"],
+        "PRSI and contributions": ["prsi", "pps number", "pps", "social insurance", "contributions", "stamps", "credited contributions", "credits", "class a", "class s", "voluntary contributions", "insurance record", "contribution record", "paid contributions", "homemakers"],
+        "Appeals, overpayments and decisions": ["appeal", "appeals", "appealed", "overpayment", "overpaid", "was refused", "been refused", "cut off", "suspended", "review my", "reviewed"],
+        "Working while claiming": ["back to work enterprise", "btwea", "work while on", "casual work", "community employment", "tus scheme", "back to education allowance"],
+        "Social welfare, general": {"general": True, "keywords": ["social welfare", "welfare payment", "welfare", "my payment", "payment", "payments", "benefit", "benefits", "allowance", "allowances", "entitled to", "entitlements", "entitlement", "intreo", "department of social protection", "social protection", "dsp", "weekly payment", "claim", "claiming", "my claim"]},
+    },
+    "employment": {
+        "Pay and the minimum wage": ["minimum wage", "wages", "payslip", "payslips", "overtime", "not been paid", "hourly rate", "my pay", "my wages", "my salary", "back pay", "rate of pay"],
+        "Leave and holidays": ["annual leave", "holiday pay", "holidays", "holiday entitlement", "public holiday", "public holidays", "bank holiday", "bank holidays", "sick leave", "sick pay", "statutory sick", "maternity leave", "paternity leave", "parental leave", "parents leave", "carers leave", "force majeure", "unpaid leave", "leave entitlement", "days off", "day off", "time off", "accrue", "accrued"],
+        "Redundancy and losing a job": ["redundancy", "redundant", "laid off", "lay off", "layoff", "dismissal", "dismissed", "fired", "let go", "unfair dismissal", "notice period", "short time", "insolvency", "lose my job", "lost my job", "terminated"],
+        "Contracts and conditions": ["contract of employment", "my contract", "employment contract", "contract", "probation", "fixed term", "fixed term contract", "zero hours", "working hours", "my hours", "reduce my hours", "part time", "part time worker", "remote working", "work from home", "working from home", "flexible working", "roster", "shift", "shifts"],
+        "Rights, disputes and the WRC": ["wrc", "workplace relations", "grievance", "bullying", "bullied", "harassment", "discrimination", "equality", "employer refuses", "employment rights", "disciplinary"],
+        "Self-employment and starting a business": ["self employed", "self employment", "sole trader", "contractor", "freelance", "register as self employed", "limited company", "my business", "small business", "own business"],
+        "Retirement from work": ["retire", "retiring", "retirement", "retirement age", "occupational pension", "company pension", "work pension", "auto enrolment", "my future fund", "prsa", "pension scheme", "pension contributions"],
+        "Agency, young and migrant workers": ["under 18", "16 year old", "17 year old", "internship", "apprentice", "apprenticeship"],
+        "Employment, general": {"general": True, "keywords": ["employer", "employers", "employee", "employees", "employment", "my job", "new job", "my boss", "my manager", "workplace", "at work", "my work", "staff", "job offer", "full time", "started work", "start work", "working for"]},
+    },
+    "money-and-tax": {
+        "Income tax, PAYE and credits": ["income tax", "tax credits", "tax credit", "paye", "emergency tax", "tax refund", "tax back", "tax return", "form 12", "form 11", "myaccount", "statement of liability", "usc", "tax free", "tax relief", "single person child carer", "jointly assessed", "joint assessment", "tax on my", "pay tax on", "do i pay tax", "taxable", "taxed", "net pay", "take home pay", "gross pay", "tax year"],
+        "Reliefs on expenses": ["medical expenses", "tuition fees", "cycle to work", "bike to work", "tax relief on", "claim back", "claim tax back", "rent a room relief", "relief for"],
+        "Capital taxes: inheritance, gifts, gains": ["inheritance tax", "capital acquisitions", "capital gains", "cgt", "inherit", "inherited", "inheritance"],
+        "Budget": ["budget 2026", "budget 2027", "the budget", "in the budget"],
+        "Banking, debt and personal finance": ["mabs", "debt", "debts", "credit union", "bank account", "open a bank account", "loan", "loans", "credit card", "savings account", "repayments", "repay"],
+        "VAT, duties and other taxes": ["vat", "vat rate", "vrt", "customs", "duty on", "carbon tax", "local property tax", "lpt"],
+        "Cost of living supports": ["cost of living", "electricity bill", "cant afford", "cannot afford", "cost of", "price of"],
+        "Money and tax, general": {"general": True, "keywords": ["tax", "taxes", "revenue", "taxation", "income", "my income", "earnings", "salary", "money", "finances", "financial"]},
+    },
+    "moving-country": {
+        "Citizenship and naturalisation": ["citizenship", "naturalisation", "naturalization", "irish citizen", "citizen by", "foreign birth", "foreign births register", "citizenship application", "reckonable residence"],
+        "Residence permissions and stamps": ["stamp 1", "stamp 1g", "stamp 2", "stamp 3", "stamp 4", "stamp 0", "irp card", "irp", "gnib", "residence permission", "permission to remain", "immigration permission", "eu treaty rights", "renew my irp", "my permission"],
+        "Visas and entry": ["visa", "visas", "visa application", "short stay visa", "short stay", "do i need a visa", "need a visa", "entry visa", "preclearance", "tourist visa", "schengen", "d visa"],
+        "Employment permits": ["employment permit", "work permit", "critical skills", "general employment permit", "permit holder", "permit application", "allowed to work", "right to work", "sponsorship"],
+        "Family reunification": ["family reunification", "spouse visa", "de facto partner", "de facto", "family member of", "married to an irish"],
+        "International protection and Ukraine": ["asylum", "asylum seeker", "international protection", "ipas", "temporary protection", "ukrainian", "ukrainians", "ukraine", "refugee", "refugees", "refugee status", "leave to remain", "subsidiary protection", "ipo"],
+        "Students and graduates": ["student visa", "international student", "1g", "20 hours"],
+        "Returning to and leaving Ireland": ["returning to ireland", "return to ireland", "moving back", "move back to ireland", "moving back to ireland", "move abroad", "leaving ireland", "leave ireland", "habitual residence", "living abroad", "uk pension"],
+        "Moving country, general": {"general": True, "keywords": ["immigration", "immigrant", "non eea", "non eu", "eu citizen", "uk citizen", "british citizen", "british passport", "common travel area", "residency", "resident in ireland", "moving to ireland", "move to ireland", "living in ireland", "nationality", "from india", "from brazil", "from the us", "from canada", "from australia", "from the uk", "from england", "from ukraine"]},
+    },
+    "health": {
+        "Medical card and GP visit card": ["medical card", "medical cards", "gp visit card", "gp card", "medical card application", "renew my medical card", "medical card means", "over 70s medical card", "discretionary medical card", "medical card cover", "with a medical card", "full medical card"],
+        "GP, hospital and waiting lists": ["gp", "my gp", "doctor", "my doctor", "hospital", "a&e", "waiting list", "consultant", "referral", "referred", "cross border", "ambulance"],
+        "Prescriptions and medicines": ["drugs payment scheme", "dps", "prescription", "prescriptions", "long term illness", "long term illness scheme", "medicines", "medication", "pharmacy", "hrt"],
+        "Dental, eyes and ears": ["dentist", "dental", "dental treatment", "teeth", "tooth", "dentures", "eye test", "glasses", "hearing aid", "hearing aids", "treatment benefit", "filling", "extraction"],
+        "Older people's care: home support and nursing homes": ["fair deal", "nursing home", "home support", "home help", "home care", "respite", "respite care", "my mother is", "my father is", "dementia", "care of my", "residential care"],
+        "Disability, mental health and services": ["mental health", "counselling", "therapy", "therapist", "autism", "autistic", "asd", "adhd", "physiotherapy", "wheelchair", "mobility aids", "primary care", "special needs", "my disability", "disabled", "disability", "addiction", "alcohol", "rehab", "depression", "anxiety"],
+        "Pregnancy, birth and children": ["pregnant", "pregnancy", "maternity and infant", "antenatal", "public health nurse", "vaccine", "vaccination"],
+        "Health insurance and costs": ["health insurance", "private health insurance", "private health", "medical expenses"],
+        "Health, general": {"general": True, "keywords": ["hse", "health services", "health", "medical", "treatment", "clinic", "public health", "healthcare", "health care", "sick", "illness", "diagnosed", "diagnosis", "condition", "surgery", "operation", "scan", "blood test", "diabetic", "diabetes", "cancer", "stroke", "heart"]},
     },
 }
 

@@ -1,6 +1,6 @@
 {
  "_comment": "Scheme names a question can be matched on (brief §66): the site's English information page slugs as phrases, plus aliases, minus generic slugs and ordinary-phrase titles. redact_feed.py tags each question with the longest phrase it contains, as the page address and category. hub = other pages sit beneath it, so a citation of any of them counts as a hit (brief §71). Public data: the site's own addresses. INTENTS carries the outcome the design expects per intent.",
- "version": "2026.10.24-4",
+ "version": "2026.10.24-5",
  "min_chars": 6,
  "intents": {
   "status": "cited",
@@ -14,7 +14,7 @@
   "statement": "cited",
   "other": null
  },
- "derivation_version": "2026.10.24-4",
+ "derivation_version": "2026.10.24-5",
  "topics": {
   "housing": {
    "Renting: landlord and tenant": {
@@ -228,6 +228,829 @@
      "rented",
      "rents",
      "rent"
+    ],
+    "general": true
+   }
+  },
+  "social-welfare": {
+   "Jobseekers": {
+    "keywords": [
+     "jobseekers allowance",
+     "unemployment benefit",
+     "jobseekers benefit",
+     "jobseekers",
+     "signing on",
+     "unemployed",
+     "jobseeker",
+     "the dole",
+     "sign on",
+     "dole"
+    ],
+    "general": false
+   },
+   "State pension": {
+    "keywords": [
+     "non contributory pension",
+     "contributory pension",
+     "pension entitlement",
+     "old age pension",
+     "pension when i",
+     "widows pension",
+     "state pension",
+     "pension rate",
+     "pension age",
+     "the pension",
+     "my pension"
+    ],
+    "general": false
+   },
+   "Illness and disability payments": {
+    "keywords": [
+     "disability allowance",
+     "disability benefit",
+     "disability payment",
+     "invalidity pension",
+     "domiciliary care",
+     "partial capacity",
+     "illness benefit",
+     "injury benefit",
+     "sick from work",
+     "blind pension",
+     "on sick leave",
+     "out sick"
+    ],
+    "general": false
+   },
+   "Carers": {
+    "keywords": [
+     "carers support grant",
+     "carers allowance",
+     "half rate carers",
+     "carers benefit",
+     "caring for my",
+     "carers",
+     "carer"
+    ],
+    "general": false
+   },
+   "Families and children": {
+    "keywords": [
+     "working family payment",
+     "maintenance payments",
+     "childrens allowance",
+     "child maintenance",
+     "maternity benefit",
+     "one parent family",
+     "paternity benefit",
+     "parents benefit",
+     "back to school",
+     "child benefit",
+     "child support",
+     "single mother",
+     "single parent",
+     "lone parent",
+     "my children",
+     "my daughter",
+     "my child",
+     "new baby",
+     "my baby",
+     "my kids",
+     "newborn",
+     "my son"
+    ],
+    "general": false
+   },
+   "Extra benefits": {
+    "keywords": [
+     "electricity allowance",
+     "household benefits",
+     "telephone support",
+     "lump sum payment",
+     "christmas bonus",
+     "double payment",
+     "fuel allowance",
+     "living alone",
+     "free travel",
+     "winter fuel",
+     "tv licence"
+    ],
+    "general": false
+   },
+   "Supplementary welfare": {
+    "keywords": [
+     "community welfare officer",
+     "additional needs payment",
+     "supplementary welfare",
+     "financial assistance",
+     "community welfare",
+     "exceptional needs",
+     "financial help",
+     "hardship"
+    ],
+    "general": false
+   },
+   "Means tests and income limits": {
+    "keywords": [
+     "how much can i earn",
+     "assessable income",
+     "household income",
+     "income threshold",
+     "means assessment",
+     "savings affect",
+     "income limits",
+     "means testing",
+     "income limit",
+     "means tested",
+     "means test",
+     "my savings",
+     "disregard"
+    ],
+    "general": false
+   },
+   "PRSI and contributions": {
+    "keywords": [
+     "voluntary contributions",
+     "credited contributions",
+     "contribution record",
+     "paid contributions",
+     "insurance record",
+     "social insurance",
+     "contributions",
+     "homemakers",
+     "pps number",
+     "class a",
+     "class s",
+     "credits",
+     "stamps",
+     "prsi",
+     "pps"
+    ],
+    "general": false
+   },
+   "Appeals, overpayments and decisions": {
+    "keywords": [
+     "been refused",
+     "overpayment",
+     "was refused",
+     "review my",
+     "suspended",
+     "appealed",
+     "overpaid",
+     "reviewed",
+     "appeals",
+     "cut off",
+     "appeal"
+    ],
+    "general": false
+   },
+   "Working while claiming": {
+    "keywords": [
+     "back to education allowance",
+     "back to work enterprise",
+     "community employment",
+     "work while on",
+     "casual work",
+     "tus scheme",
+     "btwea"
+    ],
+    "general": false
+   },
+   "Social welfare, general": {
+    "keywords": [
+     "department of social protection",
+     "social protection",
+     "welfare payment",
+     "social welfare",
+     "weekly payment",
+     "entitlements",
+     "entitled to",
+     "entitlement",
+     "allowances",
+     "my payment",
+     "allowance",
+     "benefits",
+     "claiming",
+     "my claim",
+     "payments",
+     "benefit",
+     "payment",
+     "welfare",
+     "intreo",
+     "claim",
+     "dsp"
+    ],
+    "general": true
+   }
+  },
+  "employment": {
+   "Pay and the minimum wage": {
+    "keywords": [
+     "not been paid",
+     "minimum wage",
+     "hourly rate",
+     "rate of pay",
+     "my salary",
+     "back pay",
+     "my wages",
+     "overtime",
+     "payslips",
+     "payslip",
+     "my pay",
+     "wages"
+    ],
+    "general": false
+   },
+   "Leave and holidays": {
+    "keywords": [
+     "holiday entitlement",
+     "leave entitlement",
+     "maternity leave",
+     "paternity leave",
+     "public holidays",
+     "parental leave",
+     "public holiday",
+     "statutory sick",
+     "bank holidays",
+     "force majeure",
+     "parents leave",
+     "annual leave",
+     "bank holiday",
+     "carers leave",
+     "unpaid leave",
+     "holiday pay",
+     "sick leave",
+     "days off",
+     "holidays",
+     "sick pay",
+     "time off",
+     "accrued",
+     "day off",
+     "accrue"
+    ],
+    "general": false
+   },
+   "Redundancy and losing a job": {
+    "keywords": [
+     "unfair dismissal",
+     "notice period",
+     "lose my job",
+     "lost my job",
+     "insolvency",
+     "redundancy",
+     "short time",
+     "terminated",
+     "dismissal",
+     "dismissed",
+     "redundant",
+     "laid off",
+     "lay off",
+     "layoff",
+     "let go",
+     "fired"
+    ],
+    "general": false
+   },
+   "Contracts and conditions": {
+    "keywords": [
+     "contract of employment",
+     "employment contract",
+     "fixed term contract",
+     "working from home",
+     "flexible working",
+     "part time worker",
+     "reduce my hours",
+     "remote working",
+     "work from home",
+     "working hours",
+     "my contract",
+     "fixed term",
+     "zero hours",
+     "part time",
+     "probation",
+     "contract",
+     "my hours",
+     "roster",
+     "shifts",
+     "shift"
+    ],
+    "general": false
+   },
+   "Rights, disputes and the WRC": {
+    "keywords": [
+     "workplace relations",
+     "employment rights",
+     "employer refuses",
+     "discrimination",
+     "disciplinary",
+     "harassment",
+     "grievance",
+     "bullying",
+     "equality",
+     "bullied",
+     "wrc"
+    ],
+    "general": false
+   },
+   "Self-employment and starting a business": {
+    "keywords": [
+     "register as self employed",
+     "limited company",
+     "self employment",
+     "small business",
+     "self employed",
+     "own business",
+     "my business",
+     "sole trader",
+     "contractor",
+     "freelance"
+    ],
+    "general": false
+   },
+   "Retirement from work": {
+    "keywords": [
+     "pension contributions",
+     "occupational pension",
+     "company pension",
+     "auto enrolment",
+     "my future fund",
+     "pension scheme",
+     "retirement age",
+     "work pension",
+     "retirement",
+     "retiring",
+     "retire",
+     "prsa"
+    ],
+    "general": false
+   },
+   "Agency, young and migrant workers": {
+    "keywords": [
+     "apprenticeship",
+     "16 year old",
+     "17 year old",
+     "apprentice",
+     "internship",
+     "under 18"
+    ],
+    "general": false
+   },
+   "Employment, general": {
+    "keywords": [
+     "started work",
+     "working for",
+     "employment",
+     "my manager",
+     "start work",
+     "employees",
+     "employers",
+     "full time",
+     "job offer",
+     "workplace",
+     "employee",
+     "employer",
+     "at work",
+     "my boss",
+     "my work",
+     "new job",
+     "my job",
+     "staff"
+    ],
+    "general": true
+   }
+  },
+  "money-and-tax": {
+   "Income tax, PAYE and credits": {
+    "keywords": [
+     "single person child carer",
+     "statement of liability",
+     "joint assessment",
+     "jointly assessed",
+     "emergency tax",
+     "take home pay",
+     "do i pay tax",
+     "tax credits",
+     "income tax",
+     "pay tax on",
+     "tax credit",
+     "tax refund",
+     "tax relief",
+     "tax return",
+     "gross pay",
+     "myaccount",
+     "tax on my",
+     "tax back",
+     "tax free",
+     "tax year",
+     "form 11",
+     "form 12",
+     "net pay",
+     "taxable",
+     "taxed",
+     "paye",
+     "usc"
+    ],
+    "general": false
+   },
+   "Reliefs on expenses": {
+    "keywords": [
+     "rent a room relief",
+     "medical expenses",
+     "claim tax back",
+     "cycle to work",
+     "tax relief on",
+     "bike to work",
+     "tuition fees",
+     "claim back",
+     "relief for"
+    ],
+    "general": false
+   },
+   "Capital taxes: inheritance, gifts, gains": {
+    "keywords": [
+     "capital acquisitions",
+     "inheritance tax",
+     "capital gains",
+     "inheritance",
+     "inherited",
+     "inherit",
+     "cgt"
+    ],
+    "general": false
+   },
+   "Budget": {
+    "keywords": [
+     "in the budget",
+     "budget 2026",
+     "budget 2027",
+     "the budget"
+    ],
+    "general": false
+   },
+   "Banking, debt and personal finance": {
+    "keywords": [
+     "open a bank account",
+     "savings account",
+     "bank account",
+     "credit union",
+     "credit card",
+     "repayments",
+     "debts",
+     "loans",
+     "repay",
+     "debt",
+     "loan",
+     "mabs"
+    ],
+    "general": false
+   },
+   "VAT, duties and other taxes": {
+    "keywords": [
+     "local property tax",
+     "carbon tax",
+     "vat rate",
+     "customs",
+     "duty on",
+     "lpt",
+     "vat",
+     "vrt"
+    ],
+    "general": false
+   },
+   "Cost of living supports": {
+    "keywords": [
+     "electricity bill",
+     "cost of living",
+     "cannot afford",
+     "cant afford",
+     "price of",
+     "cost of"
+    ],
+    "general": false
+   },
+   "Money and tax, general": {
+    "keywords": [
+     "financial",
+     "my income",
+     "earnings",
+     "finances",
+     "taxation",
+     "revenue",
+     "income",
+     "salary",
+     "money",
+     "taxes",
+     "tax"
+    ],
+    "general": true
+   }
+  },
+  "moving-country": {
+   "Citizenship and naturalisation": {
+    "keywords": [
+     "citizenship application",
+     "foreign births register",
+     "reckonable residence",
+     "naturalisation",
+     "naturalization",
+     "foreign birth",
+     "irish citizen",
+     "citizenship",
+     "citizen by"
+    ],
+    "general": false
+   },
+   "Residence permissions and stamps": {
+    "keywords": [
+     "immigration permission",
+     "permission to remain",
+     "residence permission",
+     "eu treaty rights",
+     "my permission",
+     "renew my irp",
+     "irp card",
+     "stamp 1g",
+     "stamp 0",
+     "stamp 1",
+     "stamp 2",
+     "stamp 3",
+     "stamp 4",
+     "gnib",
+     "irp"
+    ],
+    "general": false
+   },
+   "Visas and entry": {
+    "keywords": [
+     "do i need a visa",
+     "visa application",
+     "short stay visa",
+     "preclearance",
+     "tourist visa",
+     "need a visa",
+     "entry visa",
+     "short stay",
+     "schengen",
+     "d visa",
+     "visas",
+     "visa"
+    ],
+    "general": false
+   },
+   "Employment permits": {
+    "keywords": [
+     "general employment permit",
+     "permit application",
+     "employment permit",
+     "allowed to work",
+     "critical skills",
+     "permit holder",
+     "right to work",
+     "sponsorship",
+     "work permit"
+    ],
+    "general": false
+   },
+   "Family reunification": {
+    "keywords": [
+     "family reunification",
+     "married to an irish",
+     "de facto partner",
+     "family member of",
+     "spouse visa",
+     "de facto"
+    ],
+    "general": false
+   },
+   "International protection and Ukraine": {
+    "keywords": [
+     "international protection",
+     "subsidiary protection",
+     "temporary protection",
+     "leave to remain",
+     "refugee status",
+     "asylum seeker",
+     "ukrainians",
+     "ukrainian",
+     "refugees",
+     "refugee",
+     "ukraine",
+     "asylum",
+     "ipas",
+     "ipo"
+    ],
+    "general": false
+   },
+   "Students and graduates": {
+    "keywords": [
+     "international student",
+     "student visa",
+     "20 hours",
+     "1g"
+    ],
+    "general": false
+   },
+   "Returning to and leaving Ireland": {
+    "keywords": [
+     "moving back to ireland",
+     "move back to ireland",
+     "returning to ireland",
+     "habitual residence",
+     "return to ireland",
+     "leaving ireland",
+     "leave ireland",
+     "living abroad",
+     "move abroad",
+     "moving back",
+     "uk pension"
+    ],
+    "general": false
+   },
+   "Moving country, general": {
+    "keywords": [
+     "resident in ireland",
+     "common travel area",
+     "living in ireland",
+     "moving to ireland",
+     "british passport",
+     "british citizen",
+     "move to ireland",
+     "from australia",
+     "from england",
+     "from ukraine",
+     "from brazil",
+     "from canada",
+     "from the uk",
+     "from the us",
+     "immigration",
+     "nationality",
+     "eu citizen",
+     "from india",
+     "uk citizen",
+     "immigrant",
+     "residency",
+     "non eea",
+     "non eu"
+    ],
+    "general": true
+   }
+  },
+  "health": {
+   "Medical card and GP visit card": {
+    "keywords": [
+     "discretionary medical card",
+     "medical card application",
+     "over 70s medical card",
+     "renew my medical card",
+     "with a medical card",
+     "medical card cover",
+     "medical card means",
+     "full medical card",
+     "gp visit card",
+     "medical cards",
+     "medical card",
+     "gp card"
+    ],
+    "general": false
+   },
+   "GP, hospital and waiting lists": {
+    "keywords": [
+     "cross border",
+     "waiting list",
+     "consultant",
+     "ambulance",
+     "my doctor",
+     "hospital",
+     "referral",
+     "referred",
+     "doctor",
+     "my gp",
+     "a e",
+     "gp"
+    ],
+    "general": false
+   },
+   "Prescriptions and medicines": {
+    "keywords": [
+     "long term illness scheme",
+     "drugs payment scheme",
+     "long term illness",
+     "prescriptions",
+     "prescription",
+     "medication",
+     "medicines",
+     "pharmacy",
+     "dps",
+     "hrt"
+    ],
+    "general": false
+   },
+   "Dental, eyes and ears": {
+    "keywords": [
+     "treatment benefit",
+     "dental treatment",
+     "hearing aids",
+     "hearing aid",
+     "extraction",
+     "dentures",
+     "eye test",
+     "dentist",
+     "filling",
+     "glasses",
+     "dental",
+     "teeth",
+     "tooth"
+    ],
+    "general": false
+   },
+   "Older people's care: home support and nursing homes": {
+    "keywords": [
+     "residential care",
+     "home support",
+     "my father is",
+     "my mother is",
+     "nursing home",
+     "respite care",
+     "care of my",
+     "fair deal",
+     "home care",
+     "home help",
+     "dementia",
+     "respite"
+    ],
+    "general": false
+   },
+   "Disability, mental health and services": {
+    "keywords": [
+     "mental health",
+     "mobility aids",
+     "my disability",
+     "physiotherapy",
+     "special needs",
+     "primary care",
+     "counselling",
+     "depression",
+     "disability",
+     "wheelchair",
+     "addiction",
+     "therapist",
+     "autistic",
+     "disabled",
+     "alcohol",
+     "anxiety",
+     "therapy",
+     "autism",
+     "rehab",
+     "adhd",
+     "asd"
+    ],
+    "general": false
+   },
+   "Pregnancy, birth and children": {
+    "keywords": [
+     "maternity and infant",
+     "public health nurse",
+     "vaccination",
+     "antenatal",
+     "pregnancy",
+     "pregnant",
+     "vaccine"
+    ],
+    "general": false
+   },
+   "Health insurance and costs": {
+    "keywords": [
+     "private health insurance",
+     "health insurance",
+     "medical expenses",
+     "private health"
+    ],
+    "general": false
+   },
+   "Health, general": {
+    "keywords": [
+     "health services",
+     "public health",
+     "health care",
+     "blood test",
+     "healthcare",
+     "condition",
+     "diagnosed",
+     "diagnosis",
+     "operation",
+     "treatment",
+     "diabetes",
+     "diabetic",
+     "illness",
+     "medical",
+     "surgery",
+     "cancer",
+     "clinic",
+     "health",
+     "stroke",
+     "heart",
+     "scan",
+     "sick",
+     "hse"
     ],
     "general": true
    }

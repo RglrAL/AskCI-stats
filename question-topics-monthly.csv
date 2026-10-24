@@ -1,149 +1,603 @@
 Month,Category,Topic,Turns,Cited,NotFound,Clarification,Error,OutOfScope,Greeting,Uncited,Partial
-2026-01,housing,Buying a home,25,23,1,0,1,0,0,0,1
-2026-01,housing,"HAP, Rent Supplement and RAS",54,53,0,0,1,0,0,0,2
+2026-01,employment,"Agency, young and migrant workers",13,12,1,0,0,0,0,0,0
+2026-01,employment,Contracts and conditions,73,66,5,0,1,0,0,1,3
+2026-01,employment,"Employment, general",110,90,15,2,3,0,0,0,3
+2026-01,employment,Leave and holidays,147,144,1,1,1,0,0,0,4
+2026-01,employment,Pay and the minimum wage,32,31,0,0,0,1,0,0,0
+2026-01,employment,Redundancy and losing a job,55,52,2,0,1,0,0,0,1
+2026-01,employment,Retirement from work,60,58,2,0,0,0,0,0,6
+2026-01,employment,"Rights, disputes and the WRC",36,30,1,0,5,0,0,0,4
+2026-01,employment,Self-employment and starting a business,40,38,1,0,1,0,0,0,0
+2026-01,health,"Dental, eyes and ears",14,12,0,0,2,0,0,0,0
+2026-01,health,"Disability, mental health and services",45,43,1,0,0,0,1,0,3
+2026-01,health,"GP, hospital and waiting lists",30,24,2,0,4,0,0,0,2
+2026-01,health,Health insurance and costs,5,5,0,0,0,0,0,0,0
+2026-01,health,"Health, general",35,33,1,0,1,0,0,0,6
+2026-01,health,Medical card and GP visit card,70,70,0,0,0,0,0,0,0
+2026-01,health,Older people's care: home support and nursing homes,24,19,4,0,1,0,0,0,1
+2026-01,health,"Pregnancy, birth and children",9,8,0,0,0,0,0,1,0
+2026-01,health,Prescriptions and medicines,7,7,0,0,0,0,0,0,0
+2026-01,housing,Buying a home,24,22,1,0,1,0,0,0,1
+2026-01,housing,"HAP, Rent Supplement and RAS",48,47,0,0,1,0,0,0,1
 2026-01,housing,Home grants and energy upgrades,36,28,0,0,8,0,0,0,1
 2026-01,housing,Homelessness and emergency accommodation,10,10,0,0,0,0,0,0,1
-2026-01,housing,"Housing, general",153,142,5,0,4,2,0,0,9
+2026-01,housing,"Housing, general",95,84,5,0,4,2,0,0,4
 2026-01,housing,Mortgage arrears and repossession,7,7,0,0,0,0,0,0,0
 2026-01,housing,"Neighbours, boundaries and nuisance",12,7,5,0,0,0,0,0,0
-2026-01,housing,Planning permission and building,10,10,0,0,0,0,0,0,1
-2026-01,housing,Property taxes,19,19,0,0,0,0,0,0,0
+2026-01,housing,Planning permission and building,9,9,0,0,0,0,0,0,1
+2026-01,housing,Property taxes,17,17,0,0,0,0,0,0,0
 2026-01,housing,Rent tax credit,12,12,0,0,0,0,0,0,0
-2026-01,housing,Rent-a-room and lodgers,14,14,0,0,0,0,0,0,0
-2026-01,housing,Renting: landlord and tenant,83,75,4,0,4,0,0,0,7
-2026-01,housing,"Renting: repairs, standards and overcrowding",9,9,0,0,0,0,0,0,0
+2026-01,housing,Rent-a-room and lodgers,8,8,0,0,0,0,0,0,0
+2026-01,housing,Renting: landlord and tenant,74,67,3,0,4,0,0,0,7
+2026-01,housing,"Renting: repairs, standards and overcrowding",8,8,0,0,0,0,0,0,0
 2026-01,housing,Social and council housing,43,37,2,0,4,0,0,0,2
-2026-01,housing,Student and short-term accommodation,6,6,0,0,0,0,0,0,0
-2026-02,housing,Buying a home,34,32,1,0,0,0,0,1,1
-2026-02,housing,"HAP, Rent Supplement and RAS",42,41,1,0,0,0,0,0,1
-2026-02,housing,Home grants and energy upgrades,45,45,0,0,0,0,0,0,0
-2026-02,housing,Homelessness and emergency accommodation,13,13,0,0,0,0,0,0,0
-2026-02,housing,"Housing, general",118,115,3,0,0,0,0,0,11
+2026-01,money-and-tax,"Banking, debt and personal finance",10,10,0,0,0,0,0,0,0
+2026-01,money-and-tax,"Capital taxes: inheritance, gifts, gains",35,32,3,0,0,0,0,0,0
+2026-01,money-and-tax,"Income tax, PAYE and credits",141,130,4,0,4,2,0,1,4
+2026-01,money-and-tax,"Money and tax, general",115,101,6,0,4,2,0,2,4
+2026-01,money-and-tax,Reliefs on expenses,27,23,1,0,3,0,0,0,1
+2026-01,money-and-tax,"VAT, duties and other taxes",8,8,0,0,0,0,0,0,2
+2026-01,moving-country,Citizenship and naturalisation,159,157,2,0,0,0,0,0,10
+2026-01,moving-country,Employment permits,23,23,0,0,0,0,0,0,1
+2026-01,moving-country,Family reunification,19,18,0,0,1,0,0,0,2
+2026-01,moving-country,International protection and Ukraine,46,46,0,0,0,0,0,0,5
+2026-01,moving-country,"Moving country, general",45,45,0,0,0,0,0,0,2
+2026-01,moving-country,Residence permissions and stamps,84,81,0,0,3,0,0,0,3
+2026-01,moving-country,Returning to and leaving Ireland,22,21,0,0,0,1,0,0,0
+2026-01,moving-country,Students and graduates,6,6,0,0,0,0,0,0,1
+2026-01,moving-country,Visas and entry,39,36,2,0,0,1,0,0,1
+2026-01,social-welfare,"Appeals, overpayments and decisions",29,24,1,0,2,1,0,1,2
+2026-01,social-welfare,Carers,161,158,0,0,1,1,0,1,3
+2026-01,social-welfare,Extra benefits,106,103,0,0,1,2,0,0,1
+2026-01,social-welfare,Families and children,290,277,3,1,9,0,0,0,2
+2026-01,social-welfare,Illness and disability payments,281,271,0,0,10,0,0,0,4
+2026-01,social-welfare,Jobseekers,185,178,1,0,5,0,0,1,5
+2026-01,social-welfare,Means tests and income limits,35,35,0,0,0,0,0,0,3
+2026-01,social-welfare,PRSI and contributions,160,153,3,0,2,1,0,1,8
+2026-01,social-welfare,"Social welfare, general",223,203,8,1,9,1,0,1,8
+2026-01,social-welfare,State pension,155,149,2,0,3,0,0,1,1
+2026-01,social-welfare,Supplementary welfare,19,18,0,0,1,0,0,0,0
+2026-01,social-welfare,Working while claiming,25,24,0,0,1,0,0,0,2
+2026-02,employment,"Agency, young and migrant workers",7,6,1,0,0,0,0,0,0
+2026-02,employment,Contracts and conditions,69,63,4,0,0,0,0,2,2
+2026-02,employment,"Employment, general",80,72,7,0,0,0,0,1,7
+2026-02,employment,Leave and holidays,108,107,1,0,0,0,0,0,4
+2026-02,employment,Pay and the minimum wage,15,15,0,0,0,0,0,0,0
+2026-02,employment,Redundancy and losing a job,35,35,0,0,0,0,0,0,1
+2026-02,employment,Retirement from work,26,26,0,0,0,0,0,0,2
+2026-02,employment,"Rights, disputes and the WRC",23,22,1,0,0,0,0,0,2
+2026-02,employment,Self-employment and starting a business,24,24,0,0,0,0,0,0,0
+2026-02,health,"Dental, eyes and ears",16,16,0,0,0,0,0,0,0
+2026-02,health,"Disability, mental health and services",44,40,3,0,1,0,0,0,2
+2026-02,health,"GP, hospital and waiting lists",26,22,4,0,0,0,0,0,2
+2026-02,health,Health insurance and costs,6,6,0,0,0,0,0,0,0
+2026-02,health,"Health, general",31,25,4,0,0,0,0,2,2
+2026-02,health,Medical card and GP visit card,82,81,1,0,0,0,0,0,5
+2026-02,health,Older people's care: home support and nursing homes,30,30,0,0,0,0,0,0,4
+2026-02,health,"Pregnancy, birth and children",8,7,1,0,0,0,0,0,1
+2026-02,housing,Buying a home,30,28,1,0,0,0,0,1,1
+2026-02,housing,"HAP, Rent Supplement and RAS",34,34,0,0,0,0,0,0,0
+2026-02,housing,Home grants and energy upgrades,43,43,0,0,0,0,0,0,0
+2026-02,housing,Homelessness and emergency accommodation,12,12,0,0,0,0,0,0,0
+2026-02,housing,"Housing, general",73,71,2,0,0,0,0,0,8
 2026-02,housing,"Neighbours, boundaries and nuisance",11,7,4,0,0,0,0,0,0
 2026-02,housing,Planning permission and building,6,4,2,0,0,0,0,0,0
 2026-02,housing,Property taxes,6,6,0,0,0,0,0,0,0
 2026-02,housing,Rent increases and rent pressure zones,8,8,0,0,0,0,0,0,0
-2026-02,housing,Rent-a-room and lodgers,10,10,0,0,0,0,0,0,0
-2026-02,housing,Renting: landlord and tenant,64,61,3,0,0,0,0,0,3
+2026-02,housing,Rent-a-room and lodgers,7,7,0,0,0,0,0,0,0
+2026-02,housing,Renting: landlord and tenant,58,55,3,0,0,0,0,0,2
 2026-02,housing,"Renting: repairs, standards and overcrowding",7,5,0,1,0,0,0,1,0
-2026-02,housing,Social and council housing,42,37,3,0,0,0,0,2,1
-2026-03,housing,Buying a home,24,24,0,0,0,0,0,0,3
-2026-03,housing,"HAP, Rent Supplement and RAS",45,39,5,0,0,0,0,1,4
-2026-03,housing,Home grants and energy upgrades,38,37,0,0,1,0,0,0,1
-2026-03,housing,Homelessness and emergency accommodation,14,14,0,0,0,0,0,0,0
-2026-03,housing,"Housing, general",121,99,13,3,4,0,0,2,3
+2026-02,housing,Social and council housing,38,33,3,0,0,0,0,2,1
+2026-02,money-and-tax,"Banking, debt and personal finance",13,11,2,0,0,0,0,0,1
+2026-02,money-and-tax,"Capital taxes: inheritance, gifts, gains",18,18,0,0,0,0,0,0,1
+2026-02,money-and-tax,Cost of living supports,5,4,1,0,0,0,0,0,0
+2026-02,money-and-tax,"Income tax, PAYE and credits",99,98,1,0,0,0,0,0,3
+2026-02,money-and-tax,"Money and tax, general",89,82,5,0,0,2,0,0,6
+2026-02,money-and-tax,Reliefs on expenses,17,17,0,0,0,0,0,0,1
+2026-02,moving-country,Citizenship and naturalisation,96,94,1,0,0,1,0,0,3
+2026-02,moving-country,Employment permits,9,9,0,0,0,0,0,0,1
+2026-02,moving-country,Family reunification,7,7,0,0,0,0,0,0,0
+2026-02,moving-country,International protection and Ukraine,30,29,1,0,0,0,0,0,1
+2026-02,moving-country,"Moving country, general",46,45,1,0,0,0,0,0,4
+2026-02,moving-country,Residence permissions and stamps,58,58,0,0,0,0,0,0,3
+2026-02,moving-country,Returning to and leaving Ireland,7,7,0,0,0,0,0,0,0
+2026-02,moving-country,Visas and entry,34,31,2,0,0,1,0,0,5
+2026-02,social-welfare,"Appeals, overpayments and decisions",11,10,0,0,0,0,0,1,1
+2026-02,social-welfare,Carers,136,136,0,0,0,0,0,0,1
+2026-02,social-welfare,Extra benefits,69,69,0,0,0,0,0,0,2
+2026-02,social-welfare,Families and children,183,182,1,0,0,0,0,0,2
+2026-02,social-welfare,Illness and disability payments,207,204,0,0,2,1,0,0,4
+2026-02,social-welfare,Jobseekers,176,174,2,0,0,0,0,0,3
+2026-02,social-welfare,Means tests and income limits,23,20,3,0,0,0,0,0,0
+2026-02,social-welfare,PRSI and contributions,136,134,1,0,1,0,0,0,3
+2026-02,social-welfare,"Social welfare, general",175,162,9,1,0,3,0,0,2
+2026-02,social-welfare,State pension,157,156,1,0,0,0,0,0,2
+2026-02,social-welfare,Supplementary welfare,39,39,0,0,0,0,0,0,0
+2026-02,social-welfare,Working while claiming,37,37,0,0,0,0,0,0,1
+2026-03,employment,"Agency, young and migrant workers",6,6,0,0,0,0,0,0,0
+2026-03,employment,Contracts and conditions,46,39,6,0,0,1,0,0,1
+2026-03,employment,"Employment, general",84,65,16,3,0,0,0,0,4
+2026-03,employment,Leave and holidays,152,146,3,0,3,0,0,0,3
+2026-03,employment,Pay and the minimum wage,26,23,1,1,1,0,0,0,0
+2026-03,employment,Redundancy and losing a job,55,49,4,1,1,0,0,0,2
+2026-03,employment,Retirement from work,37,35,2,0,0,0,0,0,3
+2026-03,employment,"Rights, disputes and the WRC",10,10,0,0,0,0,0,0,0
+2026-03,employment,Self-employment and starting a business,45,39,3,1,1,0,0,1,0
+2026-03,health,"Dental, eyes and ears",14,13,0,1,0,0,0,0,2
+2026-03,health,"Disability, mental health and services",54,47,5,0,1,0,0,1,0
+2026-03,health,"GP, hospital and waiting lists",27,23,4,0,0,0,0,0,0
+2026-03,health,Health insurance and costs,7,7,0,0,0,0,0,0,0
+2026-03,health,"Health, general",47,39,3,2,0,1,0,2,3
+2026-03,health,Medical card and GP visit card,75,72,1,0,2,0,0,0,2
+2026-03,health,Older people's care: home support and nursing homes,25,21,2,0,0,0,0,2,0
+2026-03,health,"Pregnancy, birth and children",5,5,0,0,0,0,0,0,0
+2026-03,health,Prescriptions and medicines,20,17,3,0,0,0,0,0,1
+2026-03,housing,Buying a home,18,18,0,0,0,0,0,0,3
+2026-03,housing,"HAP, Rent Supplement and RAS",34,31,2,0,0,0,0,1,1
+2026-03,housing,Home grants and energy upgrades,35,34,0,0,1,0,0,0,1
+2026-03,housing,Homelessness and emergency accommodation,10,10,0,0,0,0,0,0,0
+2026-03,housing,"Housing, general",80,64,11,3,1,0,0,1,1
 2026-03,housing,"Neighbours, boundaries and nuisance",7,6,1,0,0,0,0,0,0
-2026-03,housing,Planning permission and building,17,15,2,0,0,0,0,0,0
-2026-03,housing,Property taxes,9,9,0,0,0,0,0,0,0
-2026-03,housing,Rent-a-room and lodgers,16,16,0,0,0,0,0,0,4
-2026-03,housing,Renting: landlord and tenant,81,70,4,2,2,0,0,3,4
-2026-03,housing,Separation and the family home,5,4,0,1,0,0,0,0,2
-2026-03,housing,Social and council housing,42,37,4,0,0,0,0,1,3
-2026-04,housing,Buying a home,30,26,3,1,0,0,0,0,1
-2026-04,housing,"HAP, Rent Supplement and RAS",38,35,2,0,0,0,0,1,0
-2026-04,housing,Home grants and energy upgrades,49,43,2,3,1,0,0,0,0
-2026-04,housing,Homelessness and emergency accommodation,12,12,0,0,0,0,0,0,1
-2026-04,housing,"Housing, general",101,91,5,3,1,0,1,0,4
+2026-03,housing,Planning permission and building,16,14,2,0,0,0,0,0,0
+2026-03,housing,Property taxes,7,7,0,0,0,0,0,0,0
+2026-03,housing,Rent-a-room and lodgers,13,13,0,0,0,0,0,0,3
+2026-03,housing,Renting: landlord and tenant,76,65,4,2,2,0,0,3,4
+2026-03,housing,Social and council housing,40,35,4,0,0,0,0,1,3
+2026-03,money-and-tax,"Banking, debt and personal finance",15,12,2,0,0,0,0,1,2
+2026-03,money-and-tax,"Capital taxes: inheritance, gifts, gains",14,14,0,0,0,0,0,0,0
+2026-03,money-and-tax,Cost of living supports,7,5,2,0,0,0,0,0,0
+2026-03,money-and-tax,"Income tax, PAYE and credits",65,61,1,1,1,1,0,0,3
+2026-03,money-and-tax,"Money and tax, general",91,80,3,5,1,0,0,2,6
+2026-03,money-and-tax,Reliefs on expenses,17,15,0,0,1,1,0,0,0
+2026-03,money-and-tax,"VAT, duties and other taxes",9,8,0,1,0,0,0,0,0
+2026-03,moving-country,Citizenship and naturalisation,73,70,1,1,0,0,0,1,3
+2026-03,moving-country,Employment permits,19,19,0,0,0,0,0,0,0
+2026-03,moving-country,International protection and Ukraine,36,34,1,1,0,0,0,0,1
+2026-03,moving-country,"Moving country, general",48,41,2,1,1,2,0,1,2
+2026-03,moving-country,Residence permissions and stamps,53,51,1,0,0,0,0,1,1
+2026-03,moving-country,Returning to and leaving Ireland,14,14,0,0,0,0,0,0,2
+2026-03,moving-country,Visas and entry,29,27,0,2,0,0,0,0,2
+2026-03,social-welfare,"Appeals, overpayments and decisions",12,9,1,2,0,0,0,0,0
+2026-03,social-welfare,Carers,126,120,2,1,2,1,0,0,3
+2026-03,social-welfare,Extra benefits,112,107,0,1,4,0,0,0,3
+2026-03,social-welfare,Families and children,151,147,2,1,0,0,0,1,5
+2026-03,social-welfare,Illness and disability payments,177,175,1,0,0,1,0,0,3
+2026-03,social-welfare,Jobseekers,139,134,3,1,1,0,0,0,2
+2026-03,social-welfare,Means tests and income limits,31,27,3,1,0,0,0,0,1
+2026-03,social-welfare,PRSI and contributions,134,130,1,2,1,0,0,0,4
+2026-03,social-welfare,"Social welfare, general",239,205,18,8,3,2,0,3,11
+2026-03,social-welfare,State pension,154,151,2,0,0,1,0,0,2
+2026-03,social-welfare,Supplementary welfare,17,17,0,0,0,0,0,0,2
+2026-03,social-welfare,Working while claiming,22,22,0,0,0,0,0,0,0
+2026-04,employment,"Agency, young and migrant workers",11,9,1,0,1,0,0,0,1
+2026-04,employment,Contracts and conditions,72,63,6,1,2,0,0,0,1
+2026-04,employment,"Employment, general",68,57,6,1,2,0,0,2,5
+2026-04,employment,Leave and holidays,110,102,3,1,2,0,0,2,4
+2026-04,employment,Pay and the minimum wage,13,12,0,1,0,0,0,0,0
+2026-04,employment,Redundancy and losing a job,57,49,5,0,2,0,0,1,3
+2026-04,employment,Retirement from work,18,13,2,1,2,0,0,0,1
+2026-04,employment,"Rights, disputes and the WRC",18,15,0,1,1,1,0,0,1
+2026-04,employment,Self-employment and starting a business,42,38,1,3,0,0,0,0,0
+2026-04,health,"Dental, eyes and ears",14,14,0,0,0,0,0,0,0
+2026-04,health,"Disability, mental health and services",51,46,2,3,0,0,0,0,2
+2026-04,health,"GP, hospital and waiting lists",23,20,3,0,0,0,0,0,2
+2026-04,health,Health insurance and costs,11,10,1,0,0,0,0,0,0
+2026-04,health,"Health, general",53,42,5,4,2,0,0,0,1
+2026-04,health,Medical card and GP visit card,60,58,1,0,0,0,0,1,4
+2026-04,health,Older people's care: home support and nursing homes,21,20,0,0,0,0,0,1,1
+2026-04,health,"Pregnancy, birth and children",13,12,0,0,0,0,0,1,0
+2026-04,health,Prescriptions and medicines,14,13,1,0,0,0,0,0,2
+2026-04,housing,Buying a home,29,26,2,1,0,0,0,0,1
+2026-04,housing,"HAP, Rent Supplement and RAS",31,28,2,0,0,0,0,1,0
+2026-04,housing,Home grants and energy upgrades,47,41,2,3,1,0,0,0,0
+2026-04,housing,Homelessness and emergency accommodation,10,10,0,0,0,0,0,0,1
+2026-04,housing,"Housing, general",69,60,5,3,0,0,1,0,3
 2026-04,housing,"Neighbours, boundaries and nuisance",12,4,7,1,0,0,0,0,0
-2026-04,housing,Planning permission and building,10,7,2,0,1,0,0,0,1
+2026-04,housing,Planning permission and building,9,6,2,0,1,0,0,0,0
 2026-04,housing,Property taxes,8,7,0,0,1,0,0,0,0
-2026-04,housing,Rent-a-room and lodgers,9,9,0,0,0,0,0,0,0
-2026-04,housing,Renting: landlord and tenant,67,61,5,0,0,0,0,1,4
-2026-04,housing,"Renting: repairs, standards and overcrowding",7,7,0,0,0,0,0,0,2
-2026-04,housing,Social and council housing,40,37,1,0,1,0,0,1,2
-2026-05,housing,Accommodation for refugees and protection applicants,10,8,0,2,0,0,0,0,0
-2026-05,housing,Buying a home,54,43,5,0,4,0,0,2,2
-2026-05,housing,"HAP, Rent Supplement and RAS",77,56,9,1,4,0,0,7,3
-2026-05,housing,Home grants and energy upgrades,69,64,1,1,1,0,0,2,5
+2026-04,housing,Rent-a-room and lodgers,5,5,0,0,0,0,0,0,0
+2026-04,housing,Renting: landlord and tenant,62,56,5,0,0,0,0,1,4
+2026-04,housing,"Renting: repairs, standards and overcrowding",6,6,0,0,0,0,0,0,1
+2026-04,housing,Social and council housing,36,33,1,0,1,0,0,1,2
+2026-04,money-and-tax,"Banking, debt and personal finance",33,27,4,2,0,0,0,0,1
+2026-04,money-and-tax,"Capital taxes: inheritance, gifts, gains",12,12,0,0,0,0,0,0,0
+2026-04,money-and-tax,Cost of living supports,8,8,0,0,0,0,0,0,0
+2026-04,money-and-tax,"Income tax, PAYE and credits",47,46,1,0,0,0,0,0,2
+2026-04,money-and-tax,"Money and tax, general",95,82,8,2,1,1,0,1,5
+2026-04,money-and-tax,Reliefs on expenses,13,12,1,0,0,0,0,0,0
+2026-04,money-and-tax,"VAT, duties and other taxes",18,17,0,0,1,0,0,0,0
+2026-04,moving-country,Citizenship and naturalisation,67,64,0,0,3,0,0,0,2
+2026-04,moving-country,Employment permits,14,14,0,0,0,0,0,0,0
+2026-04,moving-country,Family reunification,6,6,0,0,0,0,0,0,0
+2026-04,moving-country,International protection and Ukraine,38,34,3,1,0,0,0,0,0
+2026-04,moving-country,"Moving country, general",36,33,0,1,1,1,0,0,1
+2026-04,moving-country,Residence permissions and stamps,73,63,6,1,0,0,0,3,3
+2026-04,moving-country,Returning to and leaving Ireland,11,8,1,0,2,0,0,0,0
+2026-04,moving-country,Students and graduates,6,6,0,0,0,0,0,0,1
+2026-04,moving-country,Visas and entry,24,17,6,0,0,1,0,0,3
+2026-04,social-welfare,"Appeals, overpayments and decisions",22,19,2,0,0,0,0,1,2
+2026-04,social-welfare,Carers,102,99,0,0,2,0,0,1,4
+2026-04,social-welfare,Extra benefits,66,60,0,4,2,0,0,0,3
+2026-04,social-welfare,Families and children,116,106,4,2,1,1,0,2,4
+2026-04,social-welfare,Illness and disability payments,191,186,3,0,2,0,0,0,7
+2026-04,social-welfare,Jobseekers,148,139,2,2,3,0,0,2,1
+2026-04,social-welfare,Means tests and income limits,23,22,0,0,1,0,0,0,1
+2026-04,social-welfare,PRSI and contributions,136,129,1,5,1,0,0,0,3
+2026-04,social-welfare,"Social welfare, general",240,206,16,12,6,0,0,0,7
+2026-04,social-welfare,State pension,145,138,1,2,2,1,0,1,4
+2026-04,social-welfare,Supplementary welfare,30,29,0,0,1,0,0,0,0
+2026-04,social-welfare,Working while claiming,14,14,0,0,0,0,0,0,0
+2026-05,employment,"Agency, young and migrant workers",22,21,0,0,0,1,0,0,0
+2026-05,employment,Contracts and conditions,191,148,25,4,11,0,0,3,1
+2026-05,employment,"Employment, general",226,172,35,5,9,0,0,5,5
+2026-05,employment,Leave and holidays,347,310,20,2,11,0,0,4,8
+2026-05,employment,Pay and the minimum wage,70,60,8,1,1,0,0,0,1
+2026-05,employment,Redundancy and losing a job,102,87,10,3,1,0,0,1,0
+2026-05,employment,Retirement from work,67,57,4,2,3,1,0,0,3
+2026-05,employment,"Rights, disputes and the WRC",31,19,8,1,2,0,0,1,1
+2026-05,employment,Self-employment and starting a business,79,69,6,2,2,0,0,0,2
+2026-05,health,"Dental, eyes and ears",55,37,9,3,4,1,0,1,3
+2026-05,health,"Disability, mental health and services",167,131,23,9,4,0,0,0,8
+2026-05,health,"GP, hospital and waiting lists",67,54,6,2,3,0,0,2,1
+2026-05,health,Health insurance and costs,8,6,1,0,0,1,0,0,0
+2026-05,health,"Health, general",122,88,21,9,3,0,0,1,2
+2026-05,health,Medical card and GP visit card,151,140,3,0,8,0,0,0,5
+2026-05,health,Older people's care: home support and nursing homes,56,46,5,2,3,0,0,0,3
+2026-05,health,"Pregnancy, birth and children",26,21,4,1,0,0,0,0,2
+2026-05,health,Prescriptions and medicines,30,25,3,0,1,1,0,0,3
+2026-05,housing,Accommodation for refugees and protection applicants,7,5,0,2,0,0,0,0,0
+2026-05,housing,Buying a home,48,39,5,0,2,0,0,2,2
+2026-05,housing,"HAP, Rent Supplement and RAS",70,51,8,1,3,0,0,7,3
+2026-05,housing,Home grants and energy upgrades,67,62,1,1,1,0,0,2,4
 2026-05,housing,Homelessness and emergency accommodation,26,20,4,1,1,0,0,0,2
-2026-05,housing,"Housing, general",312,244,45,12,8,0,0,3,12
+2026-05,housing,"Housing, general",193,142,36,9,5,0,0,1,6
 2026-05,housing,"Neighbours, boundaries and nuisance",23,15,6,1,0,1,0,0,0
-2026-05,housing,Planning permission and building,42,31,6,3,1,0,0,1,1
-2026-05,housing,Property taxes,22,18,1,1,2,0,0,0,0
+2026-05,housing,Planning permission and building,40,29,6,3,1,0,0,1,1
+2026-05,housing,Property taxes,21,17,1,1,2,0,0,0,0
 2026-05,housing,Rent tax credit,9,9,0,0,0,0,0,0,1
-2026-05,housing,Rent-a-room and lodgers,23,19,3,1,0,0,0,0,1
-2026-05,housing,Renting: landlord and tenant,137,110,21,2,4,0,0,0,6
-2026-05,housing,"Renting: repairs, standards and overcrowding",21,17,4,0,0,0,0,0,1
-2026-05,housing,Separation and the family home,16,10,5,1,0,0,0,0,0
-2026-05,housing,Social and council housing,90,64,13,1,7,0,0,5,1
+2026-05,housing,Rent-a-room and lodgers,18,14,3,1,0,0,0,0,1
+2026-05,housing,Renting: landlord and tenant,124,99,19,2,4,0,0,0,6
+2026-05,housing,"Renting: repairs, standards and overcrowding",17,14,3,0,0,0,0,0,1
+2026-05,housing,Separation and the family home,14,8,5,1,0,0,0,0,0
+2026-05,housing,Social and council housing,85,60,13,1,6,0,0,5,1
 2026-05,housing,Student and short-term accommodation,7,5,2,0,0,0,0,0,0
-2026-06,housing,Accommodation for refugees and protection applicants,19,13,1,3,1,0,0,1,1
-2026-06,housing,Buying a home,99,86,8,2,1,0,0,2,3
-2026-06,housing,"HAP, Rent Supplement and RAS",74,58,9,1,1,0,0,5,4
-2026-06,housing,Home grants and energy upgrades,101,86,9,3,1,0,0,2,5
-2026-06,housing,Homelessness and emergency accommodation,53,48,2,1,0,0,0,2,0
-2026-06,housing,"Housing, general",428,319,73,19,4,3,0,10,15
-2026-06,housing,"Neighbours, boundaries and nuisance",58,37,19,1,1,0,0,0,2
-2026-06,housing,Planning permission and building,52,45,5,1,1,0,0,0,0
-2026-06,housing,Property taxes,30,25,2,1,1,0,0,1,2
-2026-06,housing,Rent increases and rent pressure zones,6,5,1,0,0,0,0,0,0
-2026-06,housing,Rent tax credit,7,7,0,0,0,0,0,0,0
-2026-06,housing,Rent-a-room and lodgers,32,30,1,0,0,0,0,1,1
-2026-06,housing,Renting: landlord and tenant,210,167,35,4,0,0,0,4,11
-2026-06,housing,"Renting: repairs, standards and overcrowding",23,18,4,1,0,0,0,0,1
-2026-06,housing,Separation and the family home,19,16,3,0,0,0,0,0,0
-2026-06,housing,Social and council housing,173,120,41,3,2,0,0,7,5
+2026-05,money-and-tax,"Banking, debt and personal finance",61,50,8,1,2,0,0,0,6
+2026-05,money-and-tax,"Capital taxes: inheritance, gifts, gains",31,29,1,1,0,0,0,0,0
+2026-05,money-and-tax,Cost of living supports,22,15,6,0,1,0,0,0,1
+2026-05,money-and-tax,"Income tax, PAYE and credits",109,95,7,1,5,1,0,0,3
+2026-05,money-and-tax,"Money and tax, general",172,139,16,8,7,1,0,1,5
+2026-05,money-and-tax,Reliefs on expenses,29,24,3,1,1,0,0,0,1
+2026-05,money-and-tax,"VAT, duties and other taxes",34,29,4,1,0,0,0,0,1
+2026-05,moving-country,Citizenship and naturalisation,197,178,6,3,8,0,0,2,5
+2026-05,moving-country,Employment permits,67,63,1,0,3,0,0,0,1
+2026-05,moving-country,Family reunification,16,15,0,0,1,0,0,0,2
+2026-05,moving-country,International protection and Ukraine,51,49,1,0,1,0,0,0,0
+2026-05,moving-country,"Moving country, general",78,67,8,1,2,0,0,0,1
+2026-05,moving-country,Residence permissions and stamps,130,123,3,0,3,0,0,1,8
+2026-05,moving-country,Returning to and leaving Ireland,40,34,4,0,1,0,0,1,1
+2026-05,moving-country,Students and graduates,25,18,2,2,3,0,0,0,0
+2026-05,moving-country,Visas and entry,65,48,13,0,2,2,0,0,4
+2026-05,social-welfare,"Appeals, overpayments and decisions",39,31,6,0,1,0,0,1,2
+2026-05,social-welfare,Carers,264,248,2,3,9,0,0,2,4
+2026-05,social-welfare,Extra benefits,127,121,1,0,5,0,0,0,3
+2026-05,social-welfare,Families and children,394,353,16,3,14,0,0,8,9
+2026-05,social-welfare,Illness and disability payments,455,418,6,3,23,0,0,5,10
+2026-05,social-welfare,Jobseekers,320,299,5,8,7,0,0,1,3
+2026-05,social-welfare,Means tests and income limits,61,52,3,1,3,1,0,1,1
+2026-05,social-welfare,PRSI and contributions,276,247,10,8,7,2,1,1,5
+2026-05,social-welfare,"Social welfare, general",582,487,34,26,23,1,0,11,12
+2026-05,social-welfare,State pension,258,244,4,4,5,0,0,1,7
+2026-05,social-welfare,Supplementary welfare,44,41,1,0,2,0,0,0,1
+2026-05,social-welfare,Working while claiming,27,26,1,0,0,0,0,0,0
+2026-06,employment,"Agency, young and migrant workers",39,30,6,1,1,0,0,1,1
+2026-06,employment,Contracts and conditions,279,230,35,6,3,1,0,4,9
+2026-06,employment,"Employment, general",336,258,55,14,4,0,0,5,13
+2026-06,employment,Leave and holidays,443,410,21,4,5,0,0,3,9
+2026-06,employment,Pay and the minimum wage,68,61,5,1,1,0,0,0,1
+2026-06,employment,Redundancy and losing a job,169,147,17,2,3,0,0,0,3
+2026-06,employment,Retirement from work,127,115,7,1,2,0,0,2,0
+2026-06,employment,"Rights, disputes and the WRC",38,26,9,0,3,0,0,0,0
+2026-06,employment,Self-employment and starting a business,121,101,13,3,2,0,0,2,0
+2026-06,health,"Dental, eyes and ears",93,74,11,4,2,0,0,2,2
+2026-06,health,"Disability, mental health and services",263,217,24,13,5,1,0,3,9
+2026-06,health,"GP, hospital and waiting lists",124,86,26,9,1,0,0,2,6
+2026-06,health,Health insurance and costs,8,5,2,0,1,0,0,0,0
+2026-06,health,"Health, general",219,163,34,10,4,3,0,5,15
+2026-06,health,Medical card and GP visit card,204,189,10,3,2,0,0,0,9
+2026-06,health,Older people's care: home support and nursing homes,81,62,17,1,1,0,0,0,2
+2026-06,health,"Pregnancy, birth and children",53,47,4,1,0,0,0,1,0
+2026-06,health,Prescriptions and medicines,36,31,4,0,1,0,0,0,2
+2026-06,housing,Accommodation for refugees and protection applicants,8,4,0,3,1,0,0,0,0
+2026-06,housing,Buying a home,89,77,7,2,1,0,0,2,3
+2026-06,housing,"HAP, Rent Supplement and RAS",62,47,8,1,1,0,0,5,0
+2026-06,housing,Home grants and energy upgrades,91,79,6,3,1,0,0,2,5
+2026-06,housing,Homelessness and emergency accommodation,46,42,2,1,0,0,0,1,0
+2026-06,housing,"Housing, general",293,212,53,16,3,3,0,6,10
+2026-06,housing,"Neighbours, boundaries and nuisance",57,36,19,1,1,0,0,0,2
+2026-06,housing,Planning permission and building,45,38,5,1,1,0,0,0,0
+2026-06,housing,Property taxes,26,22,1,1,1,0,0,1,1
+2026-06,housing,Rent increases and rent pressure zones,5,4,1,0,0,0,0,0,0
+2026-06,housing,Rent tax credit,6,6,0,0,0,0,0,0,0
+2026-06,housing,Rent-a-room and lodgers,26,24,1,0,0,0,0,1,1
+2026-06,housing,Renting: landlord and tenant,190,150,33,4,0,0,0,3,9
+2026-06,housing,"Renting: repairs, standards and overcrowding",19,14,4,1,0,0,0,0,1
+2026-06,housing,Separation and the family home,17,14,3,0,0,0,0,0,0
+2026-06,housing,Social and council housing,165,115,40,1,2,0,0,7,4
 2026-06,housing,Student and short-term accommodation,9,7,2,0,0,0,0,0,0
-2026-07,housing,Accommodation for refugees and protection applicants,11,10,0,1,0,0,0,0,3
-2026-07,housing,Buying a home,67,62,2,1,2,0,0,0,14
-2026-07,housing,"HAP, Rent Supplement and RAS",95,92,1,2,0,0,0,0,16
-2026-07,housing,Home grants and energy upgrades,79,76,0,1,1,1,0,0,13
-2026-07,housing,Homelessness and emergency accommodation,47,45,1,0,1,0,0,0,6
-2026-07,housing,"Housing, general",426,376,19,23,7,1,0,0,84
-2026-07,housing,"Neighbours, boundaries and nuisance",66,61,3,1,1,0,0,0,14
-2026-07,housing,Planning permission and building,46,45,1,0,0,0,0,0,14
-2026-07,housing,Property taxes,19,18,0,1,0,0,0,0,2
+2026-06,money-and-tax,"Banking, debt and personal finance",87,63,14,7,3,0,0,0,7
+2026-06,money-and-tax,"Capital taxes: inheritance, gifts, gains",58,47,8,0,2,0,0,1,2
+2026-06,money-and-tax,Cost of living supports,33,22,8,0,0,2,0,1,2
+2026-06,money-and-tax,"Income tax, PAYE and credits",158,143,12,1,1,0,0,1,3
+2026-06,money-and-tax,"Money and tax, general",314,245,44,12,6,1,0,6,13
+2026-06,money-and-tax,Reliefs on expenses,39,34,4,0,0,0,0,1,2
+2026-06,money-and-tax,"VAT, duties and other taxes",38,29,8,0,1,0,0,0,0
+2026-06,moving-country,Citizenship and naturalisation,354,329,7,10,4,1,0,3,7
+2026-06,moving-country,Employment permits,100,92,5,0,2,1,0,0,4
+2026-06,moving-country,Family reunification,23,19,1,1,2,0,0,0,1
+2026-06,moving-country,International protection and Ukraine,121,102,11,5,1,0,0,2,5
+2026-06,moving-country,"Moving country, general",130,103,12,7,1,2,0,5,6
+2026-06,moving-country,Residence permissions and stamps,133,117,13,2,1,0,0,0,3
+2026-06,moving-country,Returning to and leaving Ireland,62,55,2,3,2,0,0,0,4
+2026-06,moving-country,Students and graduates,28,24,1,2,1,0,0,0,2
+2026-06,moving-country,Visas and entry,132,104,20,1,2,4,0,1,6
+2026-06,social-welfare,"Appeals, overpayments and decisions",63,53,5,1,2,0,0,2,3
+2026-06,social-welfare,Carers,447,421,6,11,4,0,0,5,11
+2026-06,social-welfare,Extra benefits,237,227,1,1,6,1,0,1,4
+2026-06,social-welfare,Families and children,636,572,36,11,6,2,0,9,13
+2026-06,social-welfare,Illness and disability payments,543,509,14,8,8,0,0,4,13
+2026-06,social-welfare,Jobseekers,374,349,14,6,3,0,0,2,6
+2026-06,social-welfare,Means tests and income limits,122,113,3,5,0,0,0,1,4
+2026-06,social-welfare,PRSI and contributions,396,371,5,9,4,1,0,6,10
+2026-06,social-welfare,"Social welfare, general",902,784,69,30,9,2,0,8,21
+2026-06,social-welfare,State pension,409,389,8,4,5,1,0,2,12
+2026-06,social-welfare,Supplementary welfare,53,50,1,0,2,0,0,0,4
+2026-06,social-welfare,Working while claiming,42,41,0,0,1,0,0,0,2
+2026-07,employment,"Agency, young and migrant workers",30,28,1,1,0,0,0,0,9
+2026-07,employment,Contracts and conditions,242,220,11,7,4,0,0,0,40
+2026-07,employment,"Employment, general",245,218,7,16,3,1,0,0,44
+2026-07,employment,Leave and holidays,371,352,8,5,6,0,0,0,54
+2026-07,employment,Pay and the minimum wage,48,44,2,2,0,0,0,0,5
+2026-07,employment,Redundancy and losing a job,141,136,2,3,0,0,0,0,15
+2026-07,employment,Retirement from work,93,88,1,3,1,0,0,0,16
+2026-07,employment,"Rights, disputes and the WRC",42,39,2,0,1,0,0,0,6
+2026-07,employment,Self-employment and starting a business,98,92,3,2,1,0,0,0,10
+2026-07,health,"Dental, eyes and ears",72,68,0,1,3,0,0,0,11
+2026-07,health,"Disability, mental health and services",189,176,6,7,0,0,0,0,41
+2026-07,health,"GP, hospital and waiting lists",102,95,4,2,0,1,0,0,28
+2026-07,health,Health insurance and costs,19,18,0,1,0,0,0,0,1
+2026-07,health,"Health, general",192,167,14,5,3,3,0,0,28
+2026-07,health,Medical card and GP visit card,241,231,5,2,3,0,0,0,33
+2026-07,health,Older people's care: home support and nursing homes,78,72,2,3,1,0,0,0,21
+2026-07,health,"Pregnancy, birth and children",31,27,2,1,1,0,0,0,5
+2026-07,health,Prescriptions and medicines,59,54,2,3,0,0,0,0,10
+2026-07,housing,Accommodation for refugees and protection applicants,7,6,0,1,0,0,0,0,1
+2026-07,housing,Buying a home,59,54,2,1,2,0,0,0,10
+2026-07,housing,"HAP, Rent Supplement and RAS",86,84,0,2,0,0,0,0,13
+2026-07,housing,Home grants and energy upgrades,76,73,0,1,1,1,0,0,11
+2026-07,housing,Homelessness and emergency accommodation,41,39,1,0,1,0,0,0,5
+2026-07,housing,"Housing, general",270,229,15,20,5,1,0,0,58
+2026-07,housing,"Neighbours, boundaries and nuisance",64,59,3,1,1,0,0,0,13
+2026-07,housing,Planning permission and building,43,42,1,0,0,0,0,0,13
+2026-07,housing,Property taxes,17,16,0,1,0,0,0,0,1
 2026-07,housing,Rent increases and rent pressure zones,5,5,0,0,0,0,0,0,1
-2026-07,housing,Rent-a-room and lodgers,36,35,1,0,0,0,0,0,8
-2026-07,housing,Renting: landlord and tenant,189,175,9,5,0,0,0,0,38
-2026-07,housing,"Renting: repairs, standards and overcrowding",13,12,1,0,0,0,0,0,1
-2026-07,housing,Separation and the family home,19,16,2,0,0,1,0,0,1
-2026-07,housing,Social and council housing,144,123,15,1,5,0,0,0,21
-2026-08,housing,Accommodation for refugees and protection applicants,14,9,0,2,1,2,0,0,4
-2026-08,housing,Buying a home,85,81,3,0,1,0,0,0,12
-2026-08,housing,"HAP, Rent Supplement and RAS",104,95,4,1,4,0,0,0,17
-2026-08,housing,Home grants and energy upgrades,89,79,3,3,4,0,0,0,13
-2026-08,housing,Homelessness and emergency accommodation,45,42,0,1,2,0,0,0,11
-2026-08,housing,"Housing, general",426,380,17,21,7,1,0,0,83
+2026-07,housing,Rent-a-room and lodgers,31,30,1,0,0,0,0,0,7
+2026-07,housing,Renting: landlord and tenant,162,152,6,4,0,0,0,0,29
+2026-07,housing,"Renting: repairs, standards and overcrowding",9,8,1,0,0,0,0,0,0
+2026-07,housing,Separation and the family home,18,15,2,0,0,1,0,0,1
+2026-07,housing,Social and council housing,131,111,14,1,5,0,0,0,17
+2026-07,money-and-tax,"Banking, debt and personal finance",88,76,4,7,0,1,0,0,17
+2026-07,money-and-tax,"Capital taxes: inheritance, gifts, gains",56,53,1,2,0,0,0,0,10
+2026-07,money-and-tax,Cost of living supports,28,24,2,2,0,0,0,0,7
+2026-07,money-and-tax,"Income tax, PAYE and credits",140,127,8,1,2,2,0,0,22
+2026-07,money-and-tax,"Money and tax, general",277,249,14,10,2,2,0,0,53
+2026-07,money-and-tax,Reliefs on expenses,40,39,1,0,0,0,0,0,10
+2026-07,money-and-tax,"VAT, duties and other taxes",37,36,0,1,0,0,0,0,5
+2026-07,moving-country,Citizenship and naturalisation,324,306,8,7,1,1,1,0,50
+2026-07,moving-country,Employment permits,83,77,2,0,4,0,0,0,15
+2026-07,moving-country,Family reunification,26,23,2,0,1,0,0,0,4
+2026-07,moving-country,International protection and Ukraine,95,86,7,1,1,0,0,0,21
+2026-07,moving-country,"Moving country, general",108,97,7,4,0,0,0,0,24
+2026-07,moving-country,Residence permissions and stamps,98,82,13,1,2,0,0,0,18
+2026-07,moving-country,Returning to and leaving Ireland,38,38,0,0,0,0,0,0,6
+2026-07,moving-country,Students and graduates,8,8,0,0,0,0,0,0,4
+2026-07,moving-country,Visas and entry,116,99,9,4,2,2,0,0,16
+2026-07,social-welfare,"Appeals, overpayments and decisions",49,42,3,2,1,1,0,0,11
+2026-07,social-welfare,Carers,371,359,5,3,4,0,0,0,53
+2026-07,social-welfare,Extra benefits,256,243,5,5,2,0,0,1,37
+2026-07,social-welfare,Families and children,555,512,20,18,4,0,0,1,108
+2026-07,social-welfare,Illness and disability payments,491,462,20,2,7,0,0,0,65
+2026-07,social-welfare,Jobseekers,330,312,10,2,6,0,0,0,38
+2026-07,social-welfare,Means tests and income limits,94,83,3,3,2,1,0,2,16
+2026-07,social-welfare,PRSI and contributions,351,333,6,6,2,3,0,1,44
+2026-07,social-welfare,"Social welfare, general",806,715,30,38,15,6,0,2,120
+2026-07,social-welfare,State pension,382,356,15,6,5,0,0,0,43
+2026-07,social-welfare,Supplementary welfare,60,58,1,0,1,0,0,0,10
+2026-07,social-welfare,Working while claiming,36,36,0,0,0,0,0,0,8
+2026-08,employment,"Agency, young and migrant workers",24,21,1,1,1,0,0,0,3
+2026-08,employment,Contracts and conditions,226,211,5,4,6,0,0,0,31
+2026-08,employment,"Employment, general",247,217,10,12,5,3,0,0,50
+2026-08,employment,Leave and holidays,352,338,10,4,0,0,0,0,50
+2026-08,employment,Pay and the minimum wage,57,53,2,0,2,0,0,0,7
+2026-08,employment,Redundancy and losing a job,106,101,2,2,1,0,0,0,13
+2026-08,employment,Retirement from work,95,90,1,4,0,0,0,0,15
+2026-08,employment,"Rights, disputes and the WRC",32,30,1,0,1,0,0,0,7
+2026-08,employment,Self-employment and starting a business,75,70,1,2,1,1,0,0,10
+2026-08,health,"Dental, eyes and ears",87,85,1,1,0,0,0,0,18
+2026-08,health,"Disability, mental health and services",279,255,6,12,5,1,0,0,57
+2026-08,health,"GP, hospital and waiting lists",101,90,7,4,0,0,0,0,14
+2026-08,health,Health insurance and costs,21,19,2,0,0,0,0,0,3
+2026-08,health,"Health, general",180,162,3,8,5,2,0,0,38
+2026-08,health,Medical card and GP visit card,223,215,3,0,5,0,0,0,34
+2026-08,health,Older people's care: home support and nursing homes,85,77,1,6,1,0,0,0,15
+2026-08,health,"Pregnancy, birth and children",27,27,0,0,0,0,0,0,7
+2026-08,health,Prescriptions and medicines,40,38,1,1,0,0,0,0,7
+2026-08,housing,Accommodation for refugees and protection applicants,11,6,0,2,1,2,0,0,3
+2026-08,housing,Buying a home,76,72,3,0,1,0,0,0,10
+2026-08,housing,"HAP, Rent Supplement and RAS",87,79,3,1,4,0,0,0,11
+2026-08,housing,Home grants and energy upgrades,82,74,1,3,4,0,0,0,12
+2026-08,housing,Homelessness and emergency accommodation,39,36,0,1,2,0,0,0,9
+2026-08,housing,"Housing, general",281,242,13,20,5,1,0,0,51
 2026-08,housing,"Inheriting, selling or transferring a home",5,5,0,0,0,0,0,0,0
 2026-08,housing,"Neighbours, boundaries and nuisance",47,45,2,0,0,0,0,0,12
-2026-08,housing,Planning permission and building,80,73,4,2,1,0,0,0,26
-2026-08,housing,Property taxes,16,16,0,0,0,0,0,0,5
-2026-08,housing,Rent-a-room and lodgers,25,24,1,0,0,0,0,0,3
-2026-08,housing,Renting: landlord and tenant,185,175,5,1,2,2,0,0,28
-2026-08,housing,"Renting: repairs, standards and overcrowding",15,14,0,1,0,0,0,0,6
-2026-08,housing,Separation and the family home,17,14,3,0,0,0,0,0,2
-2026-08,housing,Social and council housing,130,122,7,1,0,0,0,0,17
+2026-08,housing,Planning permission and building,77,70,4,2,1,0,0,0,23
+2026-08,housing,Property taxes,14,14,0,0,0,0,0,0,5
+2026-08,housing,Rent-a-room and lodgers,19,18,1,0,0,0,0,0,3
+2026-08,housing,Renting: landlord and tenant,165,158,3,1,1,2,0,0,26
+2026-08,housing,"Renting: repairs, standards and overcrowding",13,12,0,1,0,0,0,0,4
+2026-08,housing,Separation and the family home,15,12,3,0,0,0,0,0,2
+2026-08,housing,Social and council housing,123,117,5,1,0,0,0,0,15
 2026-08,housing,Student and short-term accommodation,12,11,0,1,0,0,0,0,2
-2026-09,housing,Accommodation for refugees and protection applicants,11,9,0,2,0,0,0,0,3
+2026-08,money-and-tax,"Banking, debt and personal finance",86,80,2,3,0,1,0,0,18
+2026-08,money-and-tax,"Capital taxes: inheritance, gifts, gains",49,46,2,0,1,0,0,0,4
+2026-08,money-and-tax,Cost of living supports,39,34,3,1,1,0,0,0,13
+2026-08,money-and-tax,"Income tax, PAYE and credits",137,134,2,0,1,0,0,0,29
+2026-08,money-and-tax,"Money and tax, general",262,230,13,14,2,3,0,0,49
+2026-08,money-and-tax,Reliefs on expenses,36,34,2,0,0,0,0,0,2
+2026-08,money-and-tax,"VAT, duties and other taxes",33,31,2,0,0,0,0,0,2
+2026-08,moving-country,Citizenship and naturalisation,317,295,16,3,1,1,0,1,47
+2026-08,moving-country,Employment permits,68,64,2,2,0,0,0,0,18
+2026-08,moving-country,Family reunification,25,25,0,0,0,0,0,0,7
+2026-08,moving-country,International protection and Ukraine,84,73,6,5,0,0,0,0,23
+2026-08,moving-country,"Moving country, general",127,113,4,8,1,1,0,0,21
+2026-08,moving-country,Residence permissions and stamps,141,128,12,1,0,0,0,0,46
+2026-08,moving-country,Returning to and leaving Ireland,61,59,1,0,1,0,0,0,11
+2026-08,moving-country,Students and graduates,12,11,0,0,0,1,0,0,3
+2026-08,moving-country,Visas and entry,132,111,8,6,1,6,0,0,20
+2026-08,social-welfare,"Appeals, overpayments and decisions",51,45,3,1,2,0,0,0,4
+2026-08,social-welfare,Carers,249,236,9,3,0,0,0,1,44
+2026-08,social-welfare,Extra benefits,396,379,6,5,4,1,0,1,40
+2026-08,social-welfare,Families and children,438,401,24,9,4,0,0,0,62
+2026-08,social-welfare,Illness and disability payments,471,453,12,1,5,0,0,0,86
+2026-08,social-welfare,Jobseekers,361,334,16,6,5,0,0,0,47
+2026-08,social-welfare,Means tests and income limits,79,69,4,4,2,0,0,0,22
+2026-08,social-welfare,PRSI and contributions,300,282,8,5,1,4,0,0,43
+2026-08,social-welfare,"Social welfare, general",733,641,44,41,6,1,0,0,123
+2026-08,social-welfare,State pension,393,371,9,7,5,1,0,0,51
+2026-08,social-welfare,Supplementary welfare,52,50,2,0,0,0,0,0,10
+2026-08,social-welfare,Working while claiming,30,30,0,0,0,0,0,0,4
+2026-09,employment,"Agency, young and migrant workers",39,35,3,1,0,0,0,0,11
+2026-09,employment,Contracts and conditions,224,188,20,13,3,0,0,0,66
+2026-09,employment,"Employment, general",304,242,24,30,4,4,0,0,65
+2026-09,employment,Leave and holidays,391,348,23,6,13,1,0,0,86
+2026-09,employment,Pay and the minimum wage,68,55,6,6,1,0,0,0,14
+2026-09,employment,Redundancy and losing a job,116,107,5,4,0,0,0,0,16
+2026-09,employment,Retirement from work,95,86,5,4,0,0,0,0,20
+2026-09,employment,"Rights, disputes and the WRC",30,24,2,2,2,0,0,0,6
+2026-09,employment,Self-employment and starting a business,108,90,9,9,0,0,0,0,20
+2026-09,health,"Dental, eyes and ears",73,63,6,3,0,1,0,0,16
+2026-09,health,"Disability, mental health and services",244,202,22,14,5,1,0,0,52
+2026-09,health,"GP, hospital and waiting lists",122,107,5,8,1,0,0,1,34
+2026-09,health,Health insurance and costs,15,14,1,0,0,0,0,0,3
+2026-09,health,"Health, general",222,185,15,18,1,2,1,0,51
+2026-09,health,Medical card and GP visit card,230,211,10,7,2,0,0,0,53
+2026-09,health,Older people's care: home support and nursing homes,77,58,8,8,3,0,0,0,23
+2026-09,health,"Pregnancy, birth and children",53,49,4,0,0,0,0,0,13
+2026-09,health,Prescriptions and medicines,71,61,1,6,0,3,0,0,15
+2026-09,housing,Accommodation for refugees and protection applicants,8,6,0,2,0,0,0,0,2
 2026-09,housing,Apartment management companies,7,5,2,0,0,0,0,0,1
-2026-09,housing,Buying a home,98,86,5,5,2,0,0,0,28
-2026-09,housing,"HAP, Rent Supplement and RAS",97,89,7,0,1,0,0,0,23
-2026-09,housing,Home grants and energy upgrades,116,105,5,5,0,1,0,0,27
-2026-09,housing,Homelessness and emergency accommodation,58,48,2,8,0,0,0,0,14
-2026-09,housing,"Housing, general",538,438,46,45,5,4,0,0,160
-2026-09,housing,"Neighbours, boundaries and nuisance",34,28,2,4,0,0,0,0,10
-2026-09,housing,Planning permission and building,58,53,4,1,0,0,0,0,17
-2026-09,housing,Property taxes,27,25,2,0,0,0,0,0,10
-2026-09,housing,Rent-a-room and lodgers,54,50,4,0,0,0,0,0,20
-2026-09,housing,Renting: landlord and tenant,176,155,14,3,3,1,0,0,64
-2026-09,housing,"Renting: repairs, standards and overcrowding",27,22,1,4,0,0,0,0,2
-2026-09,housing,Separation and the family home,14,12,1,1,0,0,0,0,4
-2026-09,housing,Social and council housing,149,122,17,7,2,0,0,1,22
+2026-09,housing,Buying a home,86,76,3,5,2,0,0,0,24
+2026-09,housing,"HAP, Rent Supplement and RAS",79,73,5,0,1,0,0,0,18
+2026-09,housing,Home grants and energy upgrades,110,100,4,5,0,1,0,0,25
+2026-09,housing,Homelessness and emergency accommodation,49,39,2,8,0,0,0,0,10
+2026-09,housing,"Housing, general",342,269,25,41,4,3,0,0,92
+2026-09,housing,"Neighbours, boundaries and nuisance",33,28,1,4,0,0,0,0,10
+2026-09,housing,Planning permission and building,53,48,4,1,0,0,0,0,16
+2026-09,housing,Property taxes,25,23,2,0,0,0,0,0,8
+2026-09,housing,Rent-a-room and lodgers,49,47,2,0,0,0,0,0,20
+2026-09,housing,Renting: landlord and tenant,157,137,14,3,3,0,0,0,55
+2026-09,housing,"Renting: repairs, standards and overcrowding",24,19,1,4,0,0,0,0,1
+2026-09,housing,Separation and the family home,13,12,0,1,0,0,0,0,4
+2026-09,housing,Social and council housing,143,120,13,7,2,0,0,1,21
 2026-09,housing,Student and short-term accommodation,6,5,1,0,0,0,0,0,2
-2026-10,housing,Accommodation for refugees and protection applicants,14,9,3,2,0,0,0,0,5
-2026-10,housing,Buying a home,90,78,6,5,1,0,0,0,34
-2026-10,housing,"HAP, Rent Supplement and RAS",96,82,12,2,0,0,0,0,26
-2026-10,housing,Home grants and energy upgrades,241,216,8,14,1,2,0,0,67
-2026-10,housing,Homelessness and emergency accommodation,53,42,5,5,1,0,0,0,18
-2026-10,housing,"Housing, general",500,393,57,44,0,5,1,0,175
+2026-09,money-and-tax,"Banking, debt and personal finance",77,63,9,4,1,0,0,0,25
+2026-09,money-and-tax,Budget,9,7,2,0,0,0,0,0,2
+2026-09,money-and-tax,"Capital taxes: inheritance, gifts, gains",52,43,6,2,0,1,0,0,14
+2026-09,money-and-tax,Cost of living supports,51,37,6,5,1,2,0,0,13
+2026-09,money-and-tax,"Income tax, PAYE and credits",151,138,10,2,0,1,0,0,36
+2026-09,money-and-tax,"Money and tax, general",322,267,27,26,1,1,0,0,70
+2026-09,money-and-tax,Reliefs on expenses,38,38,0,0,0,0,0,0,8
+2026-09,money-and-tax,"VAT, duties and other taxes",54,48,4,0,1,1,0,0,9
+2026-09,moving-country,Citizenship and naturalisation,382,336,32,10,1,3,0,0,74
+2026-09,moving-country,Employment permits,72,60,5,2,3,2,0,0,16
+2026-09,moving-country,Family reunification,24,21,3,0,0,0,0,0,5
+2026-09,moving-country,International protection and Ukraine,102,85,12,0,2,3,0,0,27
+2026-09,moving-country,"Moving country, general",126,112,4,9,0,1,0,0,30
+2026-09,moving-country,Residence permissions and stamps,125,89,31,4,1,0,0,0,36
+2026-09,moving-country,Returning to and leaving Ireland,48,41,3,3,0,1,0,0,16
+2026-09,moving-country,Students and graduates,19,18,0,1,0,0,0,0,7
+2026-09,moving-country,Visas and entry,113,91,14,2,3,3,0,0,28
+2026-09,social-welfare,"Appeals, overpayments and decisions",49,41,4,4,0,0,0,0,11
+2026-09,social-welfare,Carers,379,338,20,14,7,0,0,0,83
+2026-09,social-welfare,Extra benefits,1100,1024,49,16,11,0,0,0,187
+2026-09,social-welfare,Families and children,559,492,34,23,9,1,0,0,131
+2026-09,social-welfare,Illness and disability payments,579,506,51,13,7,2,0,0,130
+2026-09,social-welfare,Jobseekers,359,319,26,9,5,0,0,0,70
+2026-09,social-welfare,Means tests and income limits,155,134,10,10,1,0,0,0,34
+2026-09,social-welfare,PRSI and contributions,390,347,28,9,0,6,0,0,71
+2026-09,social-welfare,"Social welfare, general",1060,846,90,110,11,3,0,0,231
+2026-09,social-welfare,State pension,484,447,24,11,2,0,0,0,95
+2026-09,social-welfare,Supplementary welfare,70,60,9,0,1,0,0,0,15
+2026-09,social-welfare,Working while claiming,43,40,1,1,1,0,0,0,11
+2026-10,employment,"Agency, young and migrant workers",36,28,4,4,0,0,0,0,10
+2026-10,employment,Contracts and conditions,214,184,21,8,1,0,0,0,73
+2026-10,employment,"Employment, general",265,201,37,23,1,3,0,0,72
+2026-10,employment,Leave and holidays,406,365,30,5,5,1,0,0,116
+2026-10,employment,Pay and the minimum wage,115,91,11,9,1,3,0,0,27
+2026-10,employment,Redundancy and losing a job,91,85,3,3,0,0,0,0,19
+2026-10,employment,Retirement from work,115,86,17,10,1,1,0,0,39
+2026-10,employment,"Rights, disputes and the WRC",42,36,4,2,0,0,0,0,9
+2026-10,employment,Self-employment and starting a business,125,102,16,7,0,0,0,0,43
+2026-10,health,"Dental, eyes and ears",64,56,3,5,0,0,0,0,20
+2026-10,health,"Disability, mental health and services",302,251,14,37,0,0,0,0,109
+2026-10,health,"GP, hospital and waiting lists",114,82,21,7,0,4,0,0,47
+2026-10,health,Health insurance and costs,20,20,0,0,0,0,0,0,6
+2026-10,health,"Health, general",201,141,27,28,1,4,0,0,41
+2026-10,health,Medical card and GP visit card,193,172,14,7,0,0,0,0,46
+2026-10,health,Older people's care: home support and nursing homes,65,55,7,3,0,0,0,0,21
+2026-10,health,"Pregnancy, birth and children",51,36,13,0,0,2,0,0,14
+2026-10,health,Prescriptions and medicines,39,31,4,2,1,1,0,0,14
+2026-10,housing,Accommodation for refugees and protection applicants,10,7,1,2,0,0,0,0,4
+2026-10,housing,Buying a home,74,62,6,5,1,0,0,0,24
+2026-10,housing,"HAP, Rent Supplement and RAS",75,62,11,2,0,0,0,0,20
+2026-10,housing,Home grants and energy upgrades,204,181,6,14,1,2,0,0,57
+2026-10,housing,Homelessness and emergency accommodation,42,34,3,4,1,0,0,0,14
+2026-10,housing,"Housing, general",316,229,38,43,0,5,1,0,95
 2026-10,housing,"Neighbours, boundaries and nuisance",37,25,6,6,0,0,0,0,7
-2026-10,housing,Planning permission and building,54,39,14,0,0,1,0,0,19
-2026-10,housing,Property taxes,33,29,1,2,1,0,0,0,9
+2026-10,housing,Planning permission and building,49,37,12,0,0,0,0,0,17
+2026-10,housing,Property taxes,30,26,1,2,1,0,0,0,8
 2026-10,housing,Rent tax credit,11,9,2,0,0,0,0,0,4
-2026-10,housing,Rent-a-room and lodgers,64,50,8,6,0,0,0,0,22
-2026-10,housing,Renting: landlord and tenant,208,175,14,13,2,2,0,2,51
-2026-10,housing,"Renting: repairs, standards and overcrowding",27,15,3,7,0,2,0,0,4
-2026-10,housing,Separation and the family home,9,9,0,0,0,0,0,0,2
-2026-10,housing,Social and council housing,125,97,27,1,0,0,0,0,30
-2026-10,housing,Student and short-term accommodation,9,7,2,0,0,0,0,0,1
+2026-10,housing,Rent-a-room and lodgers,54,40,8,6,0,0,0,0,19
+2026-10,housing,Renting: landlord and tenant,193,163,11,13,2,2,0,2,45
+2026-10,housing,"Renting: repairs, standards and overcrowding",25,13,3,7,0,2,0,0,4
+2026-10,housing,Separation and the family home,6,6,0,0,0,0,0,0,1
+2026-10,housing,Social and council housing,116,94,21,1,0,0,0,0,29
+2026-10,housing,Student and short-term accommodation,6,4,2,0,0,0,0,0,1
+2026-10,money-and-tax,"Banking, debt and personal finance",85,67,10,6,1,1,0,0,25
+2026-10,money-and-tax,Budget,240,172,26,41,1,0,0,0,45
+2026-10,money-and-tax,"Capital taxes: inheritance, gifts, gains",69,58,11,0,0,0,0,0,15
+2026-10,money-and-tax,Cost of living supports,67,51,8,6,0,2,0,0,25
+2026-10,money-and-tax,"Income tax, PAYE and credits",265,219,28,9,2,7,0,0,69
+2026-10,money-and-tax,"Money and tax, general",355,270,32,42,4,7,0,0,86
+2026-10,money-and-tax,Reliefs on expenses,50,48,2,0,0,0,0,0,11
+2026-10,money-and-tax,"VAT, duties and other taxes",67,58,7,1,1,0,0,0,27
+2026-10,moving-country,Citizenship and naturalisation,212,184,13,13,2,0,0,0,57
+2026-10,moving-country,Employment permits,53,40,11,1,1,0,0,0,18
+2026-10,moving-country,Family reunification,21,16,3,1,0,1,0,0,10
+2026-10,moving-country,International protection and Ukraine,100,78,10,7,0,5,0,0,33
+2026-10,moving-country,"Moving country, general",84,64,9,10,0,1,0,0,27
+2026-10,moving-country,Residence permissions and stamps,90,64,22,3,0,0,0,1,34
+2026-10,moving-country,Returning to and leaving Ireland,33,23,7,3,0,0,0,0,7
+2026-10,moving-country,Students and graduates,12,8,4,0,0,0,0,0,1
+2026-10,moving-country,Visas and entry,62,51,5,2,0,4,0,0,19
+2026-10,social-welfare,"Appeals, overpayments and decisions",64,47,12,5,0,0,0,0,21
+2026-10,social-welfare,Carers,380,334,30,12,3,1,0,0,109
+2026-10,social-welfare,Extra benefits,1161,1043,87,24,4,3,0,0,267
+2026-10,social-welfare,Families and children,514,428,54,30,0,2,0,0,135
+2026-10,social-welfare,Illness and disability payments,736,644,77,10,4,1,0,0,252
+2026-10,social-welfare,Jobseekers,329,271,37,16,4,1,0,0,100
+2026-10,social-welfare,Means tests and income limits,141,116,15,10,0,0,0,0,34
+2026-10,social-welfare,PRSI and contributions,358,305,31,13,4,5,0,0,78
+2026-10,social-welfare,"Social welfare, general",1118,829,129,149,6,5,0,0,275
+2026-10,social-welfare,State pension,622,547,59,12,4,0,0,0,152
+2026-10,social-welfare,Supplementary welfare,41,31,8,2,0,0,0,0,6
+2026-10,social-welfare,Working while claiming,42,38,3,1,0,0,0,0,14
