@@ -1,6 +1,6 @@
 {
  "_comment": "Scheme names a question can be matched on (brief §66): the site's English information page slugs as phrases, plus aliases, minus generic slugs and ordinary-phrase titles. redact_feed.py tags each question with the longest phrase it contains, as the page address and category. hub = other pages sit beneath it, so a citation of any of them counts as a hit (brief §71). Public data: the site's own addresses. INTENTS carries the outcome the design expects per intent.",
- "version": "2026.10.24-5",
+ "version": "2026.10.24-6",
  "min_chars": 6,
  "intents": {
   "status": "cited",
@@ -14,7 +14,7 @@
   "statement": "cited",
   "other": null
  },
- "derivation_version": "2026.10.24-6",
+ "derivation_version": "2026.10.24-7",
  "topics": {
   "housing": {
    "Renting: landlord and tenant": {
@@ -1051,6 +1051,645 @@
      "scan",
      "sick",
      "hse"
+    ],
+    "general": true
+   }
+  },
+  "travel-and-recreation": {
+   "Passports": {
+    "keywords": [
+     "passport application",
+     "renew my passport",
+     "passport renewal",
+     "childs passport",
+     "passport office",
+     "first passport",
+     "passport card",
+     "passports",
+     "passport"
+    ],
+    "general": false
+   },
+   "Driving licences and tests": {
+    "keywords": [
+     "renew my driving licence",
+     "drivers licence",
+     "drivers license",
+     "driving licence",
+     "driving license",
+     "learner permit",
+     "driving test",
+     "theory test",
+     "ndls"
+    ],
+    "general": false
+   },
+   "Cars: tax, NCT, insurance and buying": {
+    "keywords": [
+     "vehicle registration",
+     "change of ownership",
+     "car insurance",
+     "bought a car",
+     "electric car",
+     "buy a car",
+     "motor tax",
+     "log book",
+     "used car",
+     "car tax",
+     "logbook",
+     "nct",
+     "vrt"
+    ],
+    "general": false
+   },
+   "Parking, fines and road rules": {
+    "keywords": [
+     "disabled parking",
+     "parking permit",
+     "penalty points",
+     "drink driving",
+     "speeding",
+     "parking"
+    ],
+    "general": false
+   },
+   "Public transport and travel passes": {
+    "keywords": [
+     "free travel pass",
+     "public transport",
+     "travel pass",
+     "bus pass"
+    ],
+    "general": false
+   },
+   "Travelling abroad and holidays": {
+    "keywords": [
+     "european health insurance card",
+     "travel insurance",
+     "travel abroad",
+     "ehic"
+    ],
+    "general": false
+   },
+   "Leisure, sport, pets and licences": {
+    "keywords": [
+     "fishing",
+     "drone"
+    ],
+    "general": false
+   },
+   "Travel and recreation, general": {
+    "keywords": [
+     "motorcycle",
+     "travelling",
+     "driving",
+     "tourist",
+     "driver",
+     "travel"
+    ],
+    "general": true
+   }
+  },
+  "birth-family-relationships": {
+   "Separation and divorce": {
+    "keywords": [
+     "separation agreement",
+     "judicial separation",
+     "legal separation",
+     "ex husband",
+     "ex partner",
+     "separating",
+     "separation",
+     "mediation",
+     "separated",
+     "divorced",
+     "divorce",
+     "ex wife",
+     "my ex"
+    ],
+    "general": false
+   },
+   "Children: custody, access and maintenance": {
+    "keywords": [
+     "maintenance payments",
+     "child maintenance",
+     "maintenance order",
+     "pay maintenance",
+     "legal guardian",
+     "guardianship",
+     "guardian",
+     "custody"
+    ],
+    "general": false
+   },
+   "Birth and registering a baby": {
+    "keywords": [
+     "birth registration",
+     "register the birth",
+     "birth certificate",
+     "birth cert",
+     "adoption",
+     "adopted",
+     "foster",
+     "adopt"
+    ],
+    "general": false
+   },
+   "Marriage and civil partnership": {
+    "keywords": [
+     "marriage certificate",
+     "civil partnership",
+     "getting married",
+     "living together",
+     "cohabitation",
+     "get married",
+     "cohabiting",
+     "marriage",
+     "wedding",
+     "marry"
+    ],
+    "general": false
+   },
+   "Domestic violence and protection orders": {
+    "keywords": [
+     "domestic violence",
+     "protection order",
+     "barring order",
+     "safety order",
+     "abusive"
+    ],
+    "general": false
+   },
+   "Older relatives, capacity and care": {
+    "keywords": [
+     "enduring power of attorney",
+     "power of attorney",
+     "decision making",
+     "epa"
+    ],
+    "general": false
+   },
+   "Childcare and parenting support": {
+    "keywords": [
+     "national childcare scheme",
+     "childcare",
+     "preschool",
+     "creche",
+     "ecce",
+     "ncs"
+    ],
+    "general": false
+   },
+   "Family and relationships, general": {
+    "keywords": [
+     "grandchildren",
+     "mother in law",
+     "relationship",
+     "grandchild",
+     "sibling",
+     "nephew",
+     "niece"
+    ],
+    "general": true
+   }
+  },
+  "education": {
+   "Third level: fees, grants and SUSI": {
+    "keywords": [
+     "student contribution",
+     "grant application",
+     "maintenance grant",
+     "student grant",
+     "college fees",
+     "postgraduate",
+     "tuition fees",
+     "third level",
+     "points for",
+     "susi grant",
+     "university",
+     "free fees",
+     "defer my",
+     "fees for",
+     "college",
+     "masters",
+     "tuition",
+     "susi",
+     "cao",
+     "phd"
+    ],
+    "general": false
+   },
+   "Schools: enrolment, transport and costs": {
+    "keywords": [
+     "school transport",
+     "secondary school",
+     "school holidays",
+     "primary school",
+     "school year",
+     "school bus",
+     "enrolment",
+     "schools",
+     "uniform",
+     "school",
+     "enrol"
+    ],
+    "general": false
+   },
+   "Exams and the Leaving Cert": {
+    "keywords": [
+     "leaving certificate",
+     "junior cycle",
+     "leaving cert",
+     "junior cert",
+     "exams",
+     "exam"
+    ],
+    "general": false
+   },
+   "Special educational needs": {
+    "keywords": [
+     "additional needs",
+     "special needs",
+     "dyslexia",
+     "sna"
+    ],
+    "general": false
+   },
+   "Adult, further education and training": {
+    "keywords": [
+     "back to education allowance",
+     "back to education",
+     "further education",
+     "training course",
+     "apprenticeship",
+     "mature student",
+     "springboard",
+     "apprentice",
+     "plc course",
+     "youthreach",
+     "safe pass",
+     "btea",
+     "vtos",
+     "etb",
+     "plc",
+     "qqi"
+    ],
+    "general": false
+   },
+   "Student life: accommodation, work and welfare": {
+    "keywords": [
+     "international student",
+     "student accommodation",
+     "student visa"
+    ],
+    "general": false
+   },
+   "Education, general": {
+    "keywords": [
+     "qualifications",
+     "qualification",
+     "educational",
+     "education",
+     "graduate",
+     "students",
+     "studying",
+     "teachers",
+     "teaching",
+     "student",
+     "teacher",
+     "degree",
+     "study"
+    ],
+    "general": true
+   }
+  },
+  "justice": {
+   "Going to court and legal help": {
+    "keywords": [
+     "civil legal aid",
+     "district court",
+     "free legal aid",
+     "circuit court",
+     "court hearing",
+     "legal advice",
+     "court order",
+     "court case",
+     "high court",
+     "affidavit",
+     "legal aid",
+     "witnesses",
+     "enforce",
+     "hearing",
+     "summons",
+     "witness",
+     "courts",
+     "court",
+     "judge",
+     "flac"
+    ],
+    "general": false
+   },
+   "Crime, victims and the Gardaí": {
+    "keywords": [
+     "garda station",
+     "threatening",
+     "harassment",
+     "the guards",
+     "threatened",
+     "victim of",
+     "assault",
+     "fiosru",
+     "gardai",
+     "stolen",
+     "fraud",
+     "garda",
+     "scam"
+    ],
+    "general": false
+   },
+   "Criminal records, vetting and sentences": {
+    "keywords": [
+     "police certificate",
+     "criminal record",
+     "garda vetting",
+     "convictions",
+     "conviction",
+     "probation",
+     "arrested",
+     "vetting",
+     "arrest",
+     "prison"
+    ],
+    "general": false
+   },
+   "Wills, probate and inheritance": {
+    "keywords": [
+     "beneficiaries",
+     "making a will",
+     "beneficiary",
+     "make a will",
+     "next of kin",
+     "executor",
+     "my will",
+     "no will",
+     "probate"
+    ],
+    "general": false
+   },
+   "Neighbours, noise and disputes": {
+    "keywords": [
+     "anti social behaviour",
+     "boundary wall",
+     "right of way",
+     "anti social",
+     "neighbours",
+     "neighbour"
+    ],
+    "general": false
+   },
+   "Consumer and civil claims": {
+    "keywords": [
+     "freedom of information",
+     "small claims procedure",
+     "small claims court",
+     "accident at work",
+     "personal injury",
+     "claim against",
+     "car accident",
+     "compensation",
+     "small claims",
+     "foi",
+     "sue"
+    ],
+    "general": false
+   },
+   "Driving offences": {
+    "keywords": [
+     "disqualification",
+     "penalty points",
+     "drink driving",
+     "disqualified"
+    ],
+    "general": false
+   },
+   "Justice, general": {
+    "keywords": [
+     "restraining order",
+     "solicitors",
+     "solicitor",
+     "criminal",
+     "offences",
+     "illegal",
+     "justice",
+     "legally",
+     "offence",
+     "lawyer",
+     "crime",
+     "legal",
+     "laws",
+     "law"
+    ],
+    "general": true
+   }
+  },
+  "consumer": {
+   "Buying goods, refunds and returns": {
+    "keywords": [
+     "replacement",
+     "money back",
+     "return the",
+     "refunded",
+     "returned",
+     "warranty",
+     "faulty",
+     "refund"
+    ],
+    "general": false
+   },
+   "Utilities, telecoms and services": {
+    "keywords": [
+     "electricity supplier",
+     "tv licence",
+     "switching"
+    ],
+    "general": false
+   },
+   "Scams, complaints and consumer rights": {
+    "keywords": [
+     "consumer rights",
+     "small claims",
+     "airbnb",
+     "scam"
+    ],
+    "general": false
+   },
+   "Consumer, general": {
+    "keywords": [
+     "consumer",
+     "retailer",
+     "shopping",
+     "seller",
+     "trader",
+     "shop"
+    ],
+    "general": true
+   }
+  },
+  "death": {
+   "Registering a death and funerals": {
+    "keywords": [
+     "death certificate",
+     "help with funeral",
+     "funeral expenses",
+     "funeral costs",
+     "funeral grant",
+     "funeral",
+     "inquest",
+     "grave",
+     "body"
+    ],
+    "general": false
+   },
+   "After a death: payments, pensions and the estate": {
+    "keywords": [
+     "widows pension",
+     "husband died",
+     "the deceased",
+     "bereavement",
+     "father died",
+     "passed away",
+     "bereaved",
+     "deceased",
+     "my late",
+     "widow"
+    ],
+    "general": false
+   },
+   "Death, general": {
+    "keywords": [
+     "bereavement",
+     "bereaved",
+     "funeral",
+     "death"
+    ],
+    "general": true
+   }
+  },
+  "returning-to-ireland": {
+   "Returning to Ireland, general": {
+    "keywords": [
+     "back to ireland",
+     "home to ireland"
+    ],
+    "general": true
+   }
+  },
+  "government-in-ireland": {
+   "Voting and elections": {
+    "keywords": [
+     "candidate",
+     "election",
+     "vote"
+    ],
+    "general": false
+   },
+   "Public services, identity and information": {
+    "keywords": [
+     "commissioner for oaths",
+     "freedom of information",
+     "statutory declaration",
+     "public services card",
+     "peace commissioner",
+     "proof of address",
+     "certified copy",
+     "jury service",
+     "legislation",
+     "jury duty",
+     "age card",
+     "eircode",
+     "mygovid",
+     "gov ie",
+     "jury",
+     "foi",
+     "psc"
+    ],
+    "general": false
+   },
+   "Government in Ireland, general": {
+    "keywords": [
+     "irish government"
+    ],
+    "general": true
+   }
+  },
+  "environment": {
+   "Environment, general": {
+    "keywords": [
+     "septic tank",
+     "septic",
+     "waste",
+     "bins",
+     "epa"
+    ],
+    "general": true
+   }
+  },
+  "about": {
+   "About this service": {
+    "keywords": [
+     "customer service",
+     "speak to a human",
+     "speak to someone",
+     "the website",
+     "live agent",
+     "an agent",
+     "askci"
+    ],
+    "general": false
+   },
+   "Contacting Citizens Information": {
+    "keywords": [
+     "contact citizens information",
+     "nearest citizens information",
+     "citizens information centre",
+     "citizens information office",
+     "local citizens information",
+     "book an appointment",
+     "make an appointment",
+     "citizens advice",
+     "opening hours",
+     "phone service",
+     "volunteer",
+     "near me",
+     "walk in",
+     "mabs",
+     "cic"
+    ],
+    "general": false
+   },
+   "Languages, accessibility and privacy": {
+    "keywords": [
+     "data protection",
+     "out of date",
+     "translation",
+     "accessible",
+     "my english",
+     "translate",
+     "in irish",
+     "recorded",
+     "my data",
+     "privacy",
+     "blind",
+     "gdpr"
+    ],
+    "general": false
+   },
+   "About Citizens Information, general": {
+    "keywords": [
+     "citizensinformation ie",
+     "citizens information",
+     "citizen information",
+     "citizensinformation"
     ],
     "general": true
    }

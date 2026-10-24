@@ -1744,3 +1744,25 @@ almost never re-asked (1 each). Over all clarifications that is 2%. So the §71 
 told", has its answer: rarely, and when it does it is about household and work, which is a prompt-wording point rather
 than a classifier fault. The mirror measure: 8.1% of cited answers used a personalisation marker when the question
 gave a detail, 3.9% when it did not.
+
+**Seventh leg: topic tables for the ten smaller categories (24 Oct 2026).** Forty-seven more topics: travel and
+recreation 8, family and relationships 8, education 7, justice 8, consumer 4, death 3, government 2, and a general
+bucket each for returning to Ireland and the environment; "about" gets four (about this service, contacting Citizens
+Information, languages, accessibility and privacy, general). Written as generic keywords; 456 removed by hand before
+the count check because they were question framing or words every category uses ("will", "rights", "fee",
+"contract", "department of", "ireland", "help me", "what should i do"), and 1,094 more by the 20-match check. Every one
+of the sixteen categories now has a topic table: 114 topics, lexicon 2026.10.24-6, derivation 2026.10.24-7. The
+residue, typed questions no test places in a category, is 9,600 (9.1% of typed), down from 13,187 at the start of
+the day. The register computes three topic rows for August–September: residence permissions and stamps (247, 15.8%
+not found), **contacting Citizens Information (123, 18.7% not found)**, and crime, victims and the Gardaí (108,
+10.2%).
+
+**What the small tables say, January–22 October.** Travel is passports (1,556, 7.6% not found) and driving licences
+(494, 5.5%); cars, tax and NCT run at 10.4% not found. Family is marriage, birth registration and separation in equal
+measure (500 each); domestic violence questions are answered but a quarter of the answers are partial. Education is
+third-level fees and grants (759, 5.8%) and schools (568, 10.7%). Justice is the weakest category the site has: going
+to court 10.6% not found, criminal records and vetting 12.6%, the general bucket 14.6%, crime and the Gardaí 9.9%,
+wills 10.2%. Death: the after-a-death payments topic (439) runs at 10.0% not found and 21% partial. And the "about"
+category is the finding: people asking how to contact Citizens Information, where the nearest centre is or when it
+is open are not found 14.4% of the time, and questions about languages and accessibility 13.7%; the service answers
+questions about the State better than questions about itself.

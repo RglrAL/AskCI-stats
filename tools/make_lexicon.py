@@ -18,7 +18,7 @@ from datetime import datetime
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 REPO = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-LEXICON_VERSION = "2026.10.24-5"
+LEXICON_VERSION = "2026.10.24-6"
 MIN_CHARS = 6            # a phrase shorter than this never matches on its own ("tax" would match everything)
 CI = "https://www.citizensinformation.ie/en/"
 # What people call things → the page slug (or full path) it means. Checked against the unmatched report.
@@ -128,7 +128,7 @@ def build():
 # matches (counts only) and the build refuses a keyword under TOPIC_MIN_MATCHES, so nothing rare and identifying can
 # enter this public file. A question's topic is the matching keyword that is longest; a topic marked general applies
 # only when no other does. DERIVATION_VERSION bundles this key with redact_feed.py's response rules and template list.
-DERIVATION_VERSION = "2026.10.24-6"   # bumped with redact_feed.py's: -2 templates, -3 organisations, -4 figures, -5 five more topic tables, -6 layer 2 (situation, asks)
+DERIVATION_VERSION = "2026.10.24-7"   # bumped with redact_feed.py's: -2 templates, -3 organisations, -4 figures, -5 five more topic tables, -6 layer 2, -7 the ten smaller categories
 TOPIC_MIN_MATCHES = 20
 TOPICS = {
     "housing": {
@@ -209,6 +209,73 @@ TOPICS = {
         "Pregnancy, birth and children": ["pregnant", "pregnancy", "maternity and infant", "antenatal", "public health nurse", "vaccine", "vaccination"],
         "Health insurance and costs": ["health insurance", "private health insurance", "private health", "medical expenses"],
         "Health, general": {"general": True, "keywords": ["hse", "health services", "health", "medical", "treatment", "clinic", "public health", "healthcare", "health care", "sick", "illness", "diagnosed", "diagnosis", "condition", "surgery", "operation", "scan", "blood test", "diabetic", "diabetes", "cancer", "stroke", "heart"]},
+    },
+    "travel-and-recreation": {
+        "Passports": ["passport", "passports", "passport renewal", "renew my passport", "passport application", "passport card", "first passport", "passport office", "childs passport"],
+        "Driving licences and tests": ["driving licence", "driving license", "drivers licence", "drivers license", "learner permit", "theory test", "driving test", "ndls", "renew my driving licence"],
+        "Cars: tax, NCT, insurance and buying": ["motor tax", "car tax", "nct", "car insurance", "vrt", "buy a car", "bought a car", "change of ownership", "log book", "logbook", "vehicle registration", "electric car", "used car"],
+        "Parking, fines and road rules": ["parking", "speeding", "penalty points", "drink driving", "disabled parking", "parking permit"],
+        "Public transport and travel passes": ["free travel pass", "travel pass", "public transport", "bus pass"],
+        "Travelling abroad and holidays": ["travel abroad", "ehic", "european health insurance card", "travel insurance"],
+        "Leisure, sport, pets and licences": ["fishing", "drone"],
+        "Travel and recreation, general": {"general": True, "keywords": ["travel", "travelling", "driving", "driver", "motorcycle", "tourist"]},
+    },
+    "birth-family-relationships": {
+        "Separation and divorce": ["separation", "separated", "separating", "divorce", "divorced", "judicial separation", "separation agreement", "legal separation", "ex husband", "ex wife", "ex partner", "my ex", "mediation"],
+        "Children: custody, access and maintenance": ["custody", "guardianship", "guardian", "legal guardian", "child maintenance", "maintenance order", "pay maintenance", "maintenance payments"],
+        "Birth and registering a baby": ["register the birth", "birth cert", "birth certificate", "birth registration", "adoption", "adopt", "adopted", "foster"],
+        "Marriage and civil partnership": ["getting married", "get married", "marriage", "marry", "wedding", "civil partnership", "marriage certificate", "cohabiting", "cohabitation", "living together"],
+        "Domestic violence and protection orders": ["domestic violence", "barring order", "safety order", "protection order", "abusive"],
+        "Older relatives, capacity and care": ["power of attorney", "enduring power of attorney", "epa", "decision making"],
+        "Childcare and parenting support": ["childcare", "creche", "ncs", "national childcare scheme", "ecce", "preschool"],
+        "Family and relationships, general": {"general": True, "keywords": ["relationship", "sibling", "grandchild", "grandchildren", "nephew", "niece", "mother in law"]},
+    },
+    "education": {
+        "Third level: fees, grants and SUSI": ["susi", "susi grant", "student grant", "maintenance grant", "college fees", "student contribution", "free fees", "fees for", "postgraduate", "masters", "phd", "college", "university", "third level", "cao", "points for", "tuition", "tuition fees", "grant application", "defer my"],
+        "Schools: enrolment, transport and costs": ["school", "schools", "primary school", "secondary school", "enrol", "enrolment", "school transport", "school bus", "uniform", "school holidays", "school year"],
+        "Exams and the Leaving Cert": ["leaving cert", "leaving certificate", "junior cert", "junior cycle", "exam", "exams"],
+        "Special educational needs": ["special needs", "sna", "dyslexia", "additional needs"],
+        "Adult, further education and training": ["further education", "plc course", "plc", "apprenticeship", "apprentice", "etb", "training course", "springboard", "back to education", "back to education allowance", "btea", "mature student", "youthreach", "vtos", "qqi", "safe pass"],
+        "Student life: accommodation, work and welfare": ["student accommodation", "student visa", "international student"],
+        "Education, general": {"general": True, "keywords": ["education", "educational", "study", "studying", "student", "students", "teacher", "teachers", "teaching", "qualification", "qualifications", "degree", "graduate"]},
+    },
+    "justice": {
+        "Going to court and legal help": ["court", "courts", "court case", "court order", "summons", "court hearing", "hearing", "district court", "circuit court", "high court", "judge", "legal aid", "free legal aid", "civil legal aid", "legal advice", "flac", "affidavit", "witness", "witnesses", "enforce"],
+        "Crime, victims and the Gardaí": ["garda", "gardai", "gardaí", "the guards", "garda station", "victim of", "assault", "stolen", "scam", "fraud", "harassment", "threatened", "threatening", "fiosru"],
+        "Criminal records, vetting and sentences": ["criminal record", "conviction", "convictions", "garda vetting", "vetting", "police certificate", "probation", "arrest", "arrested", "prison"],
+        "Wills, probate and inheritance": ["make a will", "making a will", "my will", "probate", "executor", "no will", "next of kin", "beneficiary", "beneficiaries"],
+        "Neighbours, noise and disputes": ["neighbour", "neighbours", "boundary wall", "right of way", "anti social", "anti social behaviour"],
+        "Consumer and civil claims": ["small claims", "small claims court", "small claims procedure", "sue", "claim against", "compensation", "personal injury", "accident at work", "car accident", "freedom of information", "foi"],
+        "Driving offences": ["drink driving", "penalty points", "disqualified", "disqualification"],
+        "Justice, general": {"general": True, "keywords": ["legal", "legally", "law", "laws", "lawyer", "solicitor", "solicitors", "illegal", "offence", "offences", "crime", "criminal", "justice", "restraining order"]},
+    },
+    "consumer": {
+        "Buying goods, refunds and returns": ["refund", "refunded", "money back", "faulty", "warranty", "return the", "returned", "replacement"],
+        "Utilities, telecoms and services": ["electricity supplier", "switching", "tv licence"],
+        "Scams, complaints and consumer rights": ["scam", "small claims", "consumer rights", "airbnb"],
+        "Consumer, general": {"general": True, "keywords": ["consumer", "shop", "shopping", "retailer", "seller", "trader"]},
+    },
+    "death": {
+        "Registering a death and funerals": ["death certificate", "funeral", "funeral costs", "funeral expenses", "funeral grant", "help with funeral", "grave", "inquest", "body"],
+        "After a death: payments, pensions and the estate": ["widows pension", "husband died", "father died", "passed away", "my late", "deceased", "the deceased", "bereaved", "bereavement", "widow"],
+        "Death, general": {"general": True, "keywords": ["death", "funeral", "bereavement", "bereaved"]},
+    },
+    "returning-to-ireland": {
+        "Returning to Ireland, general": {"general": True, "keywords": ["back to ireland", "home to ireland"]},
+    },
+    "government-in-ireland": {
+        "Voting and elections": ["vote", "election", "candidate"],
+        "Public services, identity and information": ["public services card", "psc", "mygovid", "gov.ie", "freedom of information", "foi", "jury", "jury duty", "jury service", "legislation", "eircode", "proof of address", "age card", "certified copy", "peace commissioner", "commissioner for oaths", "statutory declaration"],
+        "Government in Ireland, general": {"general": True, "keywords": ["irish government"]},
+    },
+    "environment": {
+        "Environment, general": {"general": True, "keywords": ["bins", "waste", "septic tank", "septic", "epa"]},
+    },
+    "about": {
+        "About this service": ["askci", "the website", "speak to someone", "speak to a human", "an agent", "live agent", "customer service"],
+        "Contacting Citizens Information": ["citizens information centre", "citizens information office", "cic", "nearest citizens information", "local citizens information", "near me", "contact citizens information", "opening hours", "make an appointment", "book an appointment", "walk in", "phone service", "mabs", "citizens advice", "volunteer"],
+        "Languages, accessibility and privacy": ["in irish","translate", "translation", "my english", "accessible", "blind", "my data", "privacy", "data protection", "gdpr", "recorded", "out of date"],
+        "About Citizens Information, general": {"general": True, "keywords": ["citizens information", "citizensinformation", "citizensinformation.ie", "citizen information", "citizen's information"]},
     },
 }
 

@@ -136,7 +136,9 @@ INTENT_VERSION = "2026.10.24-2"
 #   2026.10.24-6  layer 2: what the question says about the person (county, age band, household, work, payment on, year, shape),
 #                 what a clarification asked for and whether the question had already given it, personalisation markers;
 #                 answers to pasted letters excluded from every phrase extraction
-DERIVATION_VERSION = "2026.10.24-6"
+#   2026.10.24-7  topic tables for the ten smaller categories (travel, family, education, justice, consumer, death,
+#                 returning to Ireland, government, environment, about); lexicon 2026.10.24-6
+DERIVATION_VERSION = "2026.10.24-7"
 
 # Layer 2 (brief §75): situation entities read from the question, published as classes only (a county name, an age band,
 # a household flag, a work status, a payment-on flag, the year asked about, a shape flag); the classes a clarification

@@ -1,6 +1,6 @@
 {
  "_comment": "The bot's fixed-wording templates (brief §75): sentences the answering model is told to use, found as sentences in 200+ answers and 50+ conversations. redact_feed.py records which an answer carries; make_usage.py counts them per day (answer-templates-daily.csv). Configuration, not citizen text.",
- "derivation_version": "2026.10.24-6",
+ "derivation_version": "2026.10.24-7",
  "templates": [
   {
    "id": "signoff.query",
