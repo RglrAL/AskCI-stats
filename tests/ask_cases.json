@@ -464,9 +464,10 @@
  },
  {
   "q": "what questions do people ask about housing",
-  "group": "content",
+  "group": "asked",
   "expect": [
-   "The question text isn’t available here"
+   "pages people named",
+   "Housing Assistance Payment"
   ]
  },
  {
@@ -2342,13 +2343,13 @@
  {
   "q": "organic first turns in September",
   "expect": [
-   "10,852 organic first turns"
+   "10,850 organic first turns"
   ],
   "not": [
    "isn’t split by"
   ],
   "group": "bestfit",
-  "note": "'first turns' after 'organic' is not the new-topics filter"
+  "note": "'first turns' after 'organic' is not the new-topics filter 10,852 before the Household Benefits chip was configured (brief §55)"
  },
  {
   "q": "out-of-scope share in September",
@@ -2558,7 +2559,7 @@
    "| 15 Sep | 81.7% |",
    "Definition: Answers that cite at least one citizensinformation.ie page",
    "Caveats: - Outcome figures from 14 Sep are unvalidated",
-   "outcome rules 2026.10.08-1 (unvalidated from 14 Sep 2026)",
+   "outcome rules 2026.10.23-2 (unvalidated from 14 Sep 2026)",
    "usage data to 22 Oct 2026"
   ]
  },
@@ -2775,6 +2776,51 @@
   "expect": [
    "Top 10 categories by turns in Sep'26",
    "1 Social Welfare · 7,868 turns"
+  ]
+ },
+ {
+  "q": "what kinds of questions do people ask",
+  "group": "asked",
+  "expect": [
+   "kinds of question",
+   "Eligibility"
+  ]
+ },
+ {
+  "q": "which pages do people ask about most",
+  "group": "asked",
+  "expect": [
+   "pages people named",
+   "State Pension Contributory"
+  ]
+ },
+ {
+  "q": "not found rate for rate questions last month",
+  "group": "asked",
+  "expect": [
+   "not-found rate for rate questions"
+  ]
+ },
+ {
+  "q": "cited answer rate for personal situations in september",
+  "group": "asked",
+  "expect": [
+   "90.3% cited answer rate for personal situations"
+  ]
+ },
+ {
+  "q": "answers not what the question needed last month",
+  "group": "asked",
+  "expect": [
+   "answers not what the question needed",
+   "reader agreement not yet measured"
+  ]
+ },
+ {
+  "q": "how many eligibility questions in september",
+  "group": "asked",
+  "expect": [
+   "typed questions · eligibility questions"
   ]
  }
 ]

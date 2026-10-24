@@ -2180,6 +2180,7 @@ const CONFIG={
   // as well as worse answers. Until a hand-labelled sample settles it, outcome figures from this date carry
   // a note. Set to null once the rules are checked against the new model.
   outcome_rules_unvalidated_from:'2026-09-14',
+  intent_measured:null,       // {measured, n, agreement} from tools/score_labels.py once the labelling sheet is scored (brief §69); null = not yet
   // Set from tools/score_labels.py's last line once a hand-labelled sample is scored (brief §48, Phase B step 0).
   // When set, the data-quality strip shows the measured agreement instead of "unvalidated", and clear
   // outcome_rules_unvalidated_from if the agreement after the model change is acceptable.
@@ -3004,9 +3005,15 @@ function perTurnStats(rows){
   // Conversations that reached a cited answer: mature conversations by start day, over every usage day in
   // the window (not only settled join days; this is a feed measure with no cost component).
   const cv=rows.filter(d=>CONV[d.date]&&CONV[d.date].ReachedCited!=null),cvMat=cv.reduce((s,d)=>s+CONV[d.date].Mature,0),cvR=cv.reduce((s,d)=>s+CONV[d.date].ReachedCited,0);
+  // Answers that were not what the question needed (brief §69): typed turns whose outcome is not the one the design
+  // expects for the question's intent (lexicon.intents): a not-found, clarification or uncited answer where a cited
+  // answer is expected; a cited answer where a redirect is expected. Turns with no named intent ('other') are left out.
+  let unexN=0,unexD=0;
+  if(typeof QINTENT!=='undefined'&&LEXICON&&LEXICON.intents)rows.forEach(d=>(QINTENT[d.date]||[]).forEach(r=>{if(r.chip)return;const e=LEXICON.intents[r.intent];if(!e)return;unexD+=r.Turns;unexN+=e==='cited'?(r.NotFound+r.Clarification+r.Uncited):e==='redirect'?r.Cited:0;}));
   return{days,from,to,turns,convs,gen,tot,variable:vr,fixed:fx,unclassified:un,valid,
     udays,ufrom,uto,uturns,uconvs,uvalid,uspan:udays?spanLabel(ufrom,uto,true):'no usage days',
     reachedCited:cv.length?rate(cvR,cvMat):null,
+    unexpectedRate:unexD>=CONFIG.min_rate_denominator?unexN/unexD*100:null,unexpectedN:unexD,
     scored:sc,cited,notFound:nf,errors:er,
     citedRate:hasTax?vrate(cited,sc):null,notFoundRate:hasTax?vrate(nf,sc):null,clarRate:hasTax?vrate(cl,sc):null,uncitedRate:hasTax?vrate(unc,sc):null,
     errorRate:hasTax?vrate(er,uturns):null,outOfScopeShare:hasTax?vrate(oos,uturns):null,partialRate:hasTax?vrate(pa,cited):null,
@@ -3126,6 +3133,7 @@ const WC_CANDIDATES=[
   {cls:3,name:'Cited but partial',k:'partialRate',kind:'pts'},
   {cls:3,name:'Conversations that reached a cited answer',k:'reachedCited',kind:'pts'},
   {cls:3,name:'Clarification rate',k:'clarRate',kind:'pts'},
+  {cls:3,name:'Answers not what the question needed',k:'unexpectedRate',kind:'pts'},
   {cls:3,name:'Dislikes per 1,000 cited answers',k:'dislikesPerK',kind:'perk'},
   {cls:3,name:'Generation cost per turn',k:'genPT',kind:'pence',cost:true},
   {cls:4,name:'Turns per day',k:'turnsPerDay',kind:'count'},
@@ -4931,6 +4939,7 @@ function renderHome(D,S){
   const tiles=[
     cols.taxonomy?kpi(pct(P.citedRate),'Cited answer rate',P.uvalid?`of scored turns · ${P.uspan}`:P.uwhy,{color:C.green,delta:delta('citedRate',false,'pts')}):(cols.outcomes?kpi(pct(P.answeredShare),'Answered share',P.uvalid?`of turns · ${P.uspan}`:P.uwhy,{color:C.green,delta:delta('answeredShare',false,'pts')}):null),
     cols.taxonomy?kpi(pct(P.notFoundRate),'Not-found rate',P.uvalid?'of scored turns':P.uwhy,{color:C.red,delta:delta('notFoundRate',true,'pts')}):null,
+    hasIntent&&P.unexpectedRate!=null?kpi(pct(P.unexpectedRate),'Not what the question needed',`of ${num(P.unexpectedN)} typed questions with a named intent · ${intentCaveat()}`,{color:C.amber,delta:delta('unexpectedRate',true,'pts')}):null,
     cols.latency?kpi(secs(P.latP50),'Response time p50','turn-weighted daily median',{color:C.acc,delta:delta('latP50',true,'ms')}):null,
     D.hasUsage?kpi(num(convs),'Conversations',`${num(Math.round(convs/Math.max(days,1)))} a day · ${num(turns)} turns`,{color:C.teal,delta:delta('convsPerDay',false)}):null,
     fc?kpi(gbp(fc.forecast,0),'Month forecast',`${fc.monthName} · ${fcLabel(fc)}`,{color:C.amber}):null,
@@ -5937,6 +5946,9 @@ function renderPages(D,S){
 // a count from the redaction step; no question text reaches the page. "Unexpected" = an outcome the design does not
 // expect for that intent (lexicon.intents): a not-found on a rate question is unexpected, on a status question it is not.
 const INTENT_ORDER=['eligibility','rate','apply','definition','timing','documents','contact','status','other'];
+// The caveat every intent figure carries (brief §69): the rules version, and the reader agreement from the labelling or
+// "not yet measured". CONFIG.intent_measured is filled from score_labels.py when the sample is scored.
+function intentCaveat(){const m=CONFIG.intent_measured;return `by rule from the question${LEXICON?' ('+escH(LEXICON.version)+')':''} · reader agreement ${m&&m.n?`${Math.round(m.agreement*100)}% on ${m.n} labelled questions`:'not yet measured'}`;}
 const INTENT_LABEL={status:'Own claim or application',contact:'Contact or office',documents:'Documents needed',apply:'How to apply',rate:'Rate or amount',eligibility:'Eligibility',timing:'Timing',definition:'What is …',other:'Other'};
 function renderAsked(D,S){
   const el=document.getElementById('pane-asked');
@@ -7875,6 +7887,7 @@ function renderDqStrip(){
     U.outcomeRules&&CONFIG.outcome_rules_measured?(()=>{const m=CONFIG.outcome_rules_measured,a=m.agreement_after!=null?m.agreement_after:m.agreement_before;
       return item('outcome rules',`${U.outcomeRules} · agreement ${a!=null?(a*100).toFixed(0)+'%':'—'} on ${m.n} hand-labelled answers, ${fmtDate(m.measured)}`,{amber:!!CONFIG.outcome_rules_unvalidated_from,title:`Checked by people against a blind, stratified sample (tools/score_labels.py), rules ${m.rules}: agreement before ${m.agreement_before!=null?(m.agreement_before*100).toFixed(0)+'%':'—'}, after ${m.agreement_after!=null?(m.agreement_after*100).toFixed(0)+'%':'—'}`+(m.notfound_answered_after!=null?`; ${(m.notfound_answered_after*100).toFixed(0)}% of rule “not found” answers after the change were judged to answer the question`:'')});})():
     U.outcomeRules?item('outcome rules',U.outcomeRules+(CONFIG.outcome_rules_unvalidated_from?` · unvalidated from ${fmtDate(CONFIG.outcome_rules_unvalidated_from)}`:''),{amber:!!CONFIG.outcome_rules_unvalidated_from,title:'rule-set version written by tools/redact_feed.py; a change replays from the raw feed'+(CONFIG.outcome_rules_unvalidated_from?'. Not yet checked against the model in use from '+fmtDate(CONFIG.outcome_rules_unvalidated_from):'')}):'',
+    hasIntent?item('what people ask',`rules ${LEXICON?LEXICON.version:'—'} · ${CONFIG.intent_measured&&CONFIG.intent_measured.n?'agreement '+Math.round(CONFIG.intent_measured.agreement*100)+'% on '+CONFIG.intent_measured.n:'agreement not yet measured'}`,{amber:!(CONFIG.intent_measured&&CONFIG.intent_measured.n),title:'Intent and the scheme named are set by rule on the question in redact_feed.py (question-lexicon.json). The agreement figure comes from the hand-labelled sample (tools/score_labels.py).'}):'',
     PROMPTS?item('prompts',`snapshot ${fmtDate(PROMPTS.snapshot)} · ${PROMPTS.verified_current?'confirmed current':'unverified since'}`,{amber:!PROMPTS.verified_current,title:`The outcome rules (${U.outcomeRules||'—'}) were checked against the system prompts exported on ${fmtDate(PROMPTS.snapshot)}: ${PROMPTS.prompts} prompts, set fingerprint ${String(PROMPTS.set_sha256).slice(0,12)}. Prompts can change without a deploy and leave no trace in billing or the feed; whether any changed since is ${PROMPTS.verified_current?'confirmed: none':'unknown'}.`}):'',
     (U.columns&&Object.values(U.columns).some(Boolean))||hasHours?item('usage detail',['outcomes','types','sources','latency','voice'].filter(k=>U.columns&&U.columns[k]).concat(hasHours?['hours']:[]).join(' · ')||'—',{title:'optional columns found in usage.csv, plus usage-hours.csv'}):'',
     hasClicks?item('click-throughs',`${spanLabel(clickRange.from,clickRange.to)}`,{title:'GA4 page views of CI pages carrying AskCI citation tags (tools/make_clicks.py); consenting visitors only, so a minimum. Rates count the standalone site from '+fmtDate(CONFIG.click_tracking_from.app)+' and the pop-up from '+fmtDate(CONFIG.click_tracking_from.embed)}):'',
@@ -8168,7 +8181,14 @@ init();
     return null;
   }
   // Source / question-type filter for outcome metrics ("not-found rate for modal", "cited rate for chips").
+  // "rate questions" needs a preposition before it ("not-found rate questions" would otherwise read as a filter); the rest stand alone
+  const ASKED_FILTERS=[['rate',/\b(for|of|on|among|in)\s+(the\s+)?(rate|amount|how[- ]much) questions?\b/,'rate questions'],['eligibility',/\b((for|of|on|among|in)\s+(the\s+)?)?eligibility questions?\b/,'eligibility questions'],
+    ['apply',/\b((for|of|on|among|in)\s+(the\s+)?)?(how[- ]to[- ]apply|apply|application) questions?\b/,'how-to-apply questions'],['timing',/\b((for|of|on|among|in)\s+(the\s+)?)?(timing|when|how[- ]long) questions?\b/,'timing questions'],
+    ['definition',/\b((for|of|on|among|in)\s+(the\s+)?)?(definition|what[- ]is) questions?\b/,'what-is questions'],['documents',/\b((for|of|on|among|in)\s+(the\s+)?)?documents? questions?\b/,'documents questions'],
+    ['contact',/\b((for|of|on|among|in)\s+(the\s+)?)?contact questions?\b/,'contact questions'],['status',/\b((for|of|on|among|in)\s+(the\s+)?)?(status|own[- ]claim|my[- ]claim) questions?\b/,'own-claim questions'],
+    ['situation',/\b((for|of|on|among|in)\s+(the\s+)?)?personal (situations?|stories|cases)\b/,'personal situations']];
   function parseFilter(q){
+    for(const[key,rx,label]of ASKED_FILTERS){const m=q.match(rx);if(m&&hasIntent)return{key:'asked',asked:key,label,phrase:m[0].replace(/\s*questions?\s*$/,'')};}   // what the question asked for (brief §69); "questions" stays so the measure can still be read
     // a follow-up naming only a source: "and the pop-up?" (read as modal), "what about the standalone site?"
     {const m=q.trim().match(/^(and|but|what about|how about|now|then)\s+(for\s+|on\s+)?(the\s+)?(modal|web)\s*$/);if(m)return m[4]==='modal'?{key:'modal',label:'Modal'}:{key:'web',label:'Web'};}
     if(/\bmodal (vs\.?|versus|and|or) web\b|\bweb (vs\.?|versus|and|or) modal\b|\bmodal share\b|\bweb share\b/.test(q))return null;   // the source split itself, not a filter
@@ -8426,6 +8446,8 @@ init();
     if(/\b(percentage|share|proportion) of (the )?(ci |citizens ?information )?pages\b/.test(q))return null;
     if(/journeys?|transitions|category steps|from .* to .* categor|\b(ask|asked|go|move|moved|turn) (about |on |to )?(next |after)\b|\bafter\b.*\b(what|which) (topic|next)\b/.test(q))entity='journey';
     else if(/\bservices\b|cost drivers\b/.test(q))entity='service';
+    else if(/\b(what|which) (kinds?|types?|sorts?) of (questions?|things?)\b|\bkinds? of questions?\b|\bintents?\b|\bwhat (do|are|did) people (ask for|want|asking for|need)\b|\bwhat (questions?|things?) (do|did|are) people ask(ing)?\b|\bquestions? by (kind|type|intent)\b/.test(q))entity='asked';   // what people ask for: the intent mix (brief §69)
+    else if(/\b(schemes?|pages?|subjects?) (do |did )?people (ask|asked|asking) about\b|\basked[- ]about pages?\b|\bmost asked[- ]about\b|\bask about by name\b|\bnamed pages?\b|\bwhat do people ask about\b.*\b(by )?(page|scheme)s?\b/.test(q))entity='askedpage';   // the pages people name
     else if(/\b(categories|category)\b|(?<!new )\btopics?\b|ask(ed)? about (the )?most|most (asked|popular)|popular subjects?|what do people ask/.test(q))entity='category';   // "new topics" is a question-type filter, not the topic list
     else if(/\bhow many (different |distinct |unique )?(ci |citizens ?information )?pages?\b/.test(q))entity=null;   // a count of pages, not a list
     else if(/(read|visit)(ed)? most|most (read|visited)|go(es)? on to read|went on to read|people (read|visit)/.test(q))entity='clickpage';
@@ -8441,7 +8463,7 @@ init();
     // N from "top N", "N most …", or "N services/models/weeks/months" (NOT "N days" — avoids "last 7 days")
     const nm=q.match(/\b(?:top|first|bottom)\s+(\d{1,2})\b/)||q.match(/\b(\d{1,2})\s+(?:most|biggest|largest|highest|busiest|cheapest|quietest|lowest|smallest|fewest|expensive|costliest|priciest|worst|best)\b/)||q.match(/\b(\d{1,2})\s+(?:services|models|weeks|months)\b/);
     let N=nm?+nm[1]:0;
-    const listEntity=['page','clickpage','prompt','journey','category'].includes(entity);
+    const listEntity=['page','clickpage','prompt','journey','category','asked','askedpage'].includes(entity);
     if(!ranked&&N<2&&!listEntity)return null;
     N=Math.min(Math.max(N||(/\bwhich\b/.test(q)?5:listEntity?10:5),2),25);
     const dir=/cheapest|quietest|lowest|smallest|fewest|\bleast\b|\bbottom\b|\bbest\b/.test(q)&&!/most/.test(q)?'min':'max';
@@ -8480,6 +8502,18 @@ init();
       const agg={};rows.forEach(d=>(CLICKPAGES[d.date]||[]).forEach(p=>{agg[p.url]=(agg[p.url]||0)+p.n;}));
       items=Object.entries(agg).map(([u,n])=>({label:ciPageName(u),act:['url',u],v:n,extra:ciPageSection(u),title:u}));
       fmt=v=>num(v);by='click-throughs from AskCI citation links (GA4, a minimum)';
+    }else if(entity==='asked'){
+      if(!hasIntent)return{topn:true,empty:true,intent};
+      if(intent.category){intent.entity='askedpage';return computeTopN(intent);}   // the intent file is not cut by topic; the pages named in that topic are the nearest answer
+      const agg={};rows.forEach(d=>(QINTENT[d.date]||[]).forEach(r=>{if(r.chip)return;const a=agg[r.intent]||(agg[r.intent]={Turns:0,NotFound:0,Cited:0,Partial:0});a.Turns+=r.Turns;a.NotFound+=r.NotFound;a.Cited+=r.Cited;a.Partial+=r.Partial;}));
+      const all=Object.values(agg).reduce((a,o)=>a+o.Turns,0);
+      items=Object.entries(agg).map(([i,o])=>({label:INTENT_LABEL[i]||i,act:['sub','asked'],v:all?o.Turns/all*100:0,extra:` · ${num(o.Turns)} questions · ${rateText(o.NotFound,o.Turns)} not found`}));
+      fmt=pctF(1);by='share of typed questions (what the question asks for, by rule)';
+    }else if(entity==='askedpage'){
+      if(!hasIntent||!Object.keys(ASKED).length)return{topn:true,empty:true,intent};
+      const months=[...new Set(rows.map(d=>d.month))],agg={};months.forEach(m=>(ASKED[m]||[]).forEach(r=>{if(intent.category&&(CAT_ALIAS[r.cat]||r.cat)!==intent.category)return;const a=agg[r.url]||(agg[r.url]={n:0,same:0,nf:0,cat:r.cat});a.n+=r.n;a.same+=r.same;a.nf+=r.nf;}));
+      items=Object.entries(agg).map(([u,o])=>({label:ciPageName(u),act:['url',u],v:o.n,extra:` · ${ciPageSection(u)} · cited it ${rateText(o.same,o.n)} · not found ${rateText(o.nf,o.n)}`,title:u}));
+      fmt=v=>num(v);by='questions naming the page (months overlapping the period)'+(intent.category?' · '+catLabel(CAT_ALIAS[intent.category]||intent.category):'');
     }else if(entity==='page'){
       if(!hasCites)return{topn:true,empty:true,intent};
       const months=[...new Set(rows.map(d=>d.month))],agg={};months.forEach(m=>(CITES[m]||[]).forEach(r=>{if(intent.category&&(CAT_ALIAS[r.cat]||r.cat)!==intent.category)return;const a=agg[r.url]||(agg[r.url]={n:0,cat:r.cat});a.n+=r.n;}));
@@ -8749,6 +8783,19 @@ init();
       if(cc)return{...rateRes(S(cc.n),S(cc.d),cc.of+' in '+cl,cc.of,1,cc.x||100,cc.say||'of'),subj:(cc.subj||lc(MET[k].label))+' in '+cl};
       return{value:null,fmt:v=>'—',series:null,note:`${metric.label} is not available by category; try citations, turns, cited, not-found, clarification, error or dislikes in ${cl}`,intent};
     }
+    // What the question asked for (question-intent-daily.csv): questions, cited, not-found, clarification and partial by intent, or personal situations
+    if(filter&&filter.asked){
+      const want=filter.asked,sit=want==='situation';
+      const S=f=>rows.reduce((a,d)=>a+(QINTENT[d.date]||[]).reduce((b,r)=>b+((r.chip||(!sit&&r.intent!==want))?0:(r[f]||0)),0),0);
+      const T=sit?S('Situation'):S('Turns'),cited=sit?S('SituationCited'):S('Cited'),nf=sit?S('SituationNotFound'):S('NotFound'),pa=sit?S('SituationPartial'):S('Partial');
+      const cav=' · '+intentCaveat();
+      if(k==='questions'||k==='spend')return{value:T,fmt:v=>num(Math.round(v)),series:null,note:'typed questions · '+filter.label+cav,intent,subj:filter.label};
+      if(k==='cited')return{...rateRes(cited,T,'typed '+filter.label,'questions'),subj:'cited answer rate for '+filter.label,note:`${num(cited)} of ${num(T)} typed ${filter.label}${cav}`};
+      if(k==='notfound')return{...rateRes(nf,T,'typed '+filter.label,'questions'),subj:'not-found rate for '+filter.label,note:`${num(nf)} of ${num(T)} typed ${filter.label}${cav}`};
+      if(k==='partial')return{...rateRes(pa,cited,'cited answers to '+filter.label,'cited answers'),subj:'partial share for '+filter.label,note:`${num(pa)} of ${num(cited)} cited answers to ${filter.label}${cav}`};
+      if(k==='clarification'&&!sit)return{...rateRes(S('Clarification'),T,'typed '+filter.label,'questions'),subj:'clarification rate for '+filter.label,note:`${num(S('Clarification'))} of ${num(T)} typed ${filter.label}${cav}`};
+      return{value:null,fmt:v=>'—',series:null,note:`${metric.label} isn’t split by what was asked: by kind of question the Ask bar has questions, the cited, not-found and clarification rates, and the partial share`,intent};
+    }
     // Source / question-type filter (cross columns in usage.csv)
     if(filter&&!mIs(k,x=>x.bySource))
       return{value:null,fmt:v=>'—',series:null,note:`${metric.label} isn’t split by ${filter.label}: by source the Ask bar has questions, conversations, the cited answer and not-found rates, and click-throughs`,intent};
@@ -8761,6 +8808,7 @@ init();
       if(k==='sessions'&&sk)return{value:sumD(d=>d.ux?.[sk]),fmt:v=>num(Math.round(v)),series:rows.map(d=>d.ux?.[sk]||0),note:'conversations started on '+filter.label,intent,subj:filter.label+' conversations'};
       return{value:sumD(d=>d.ux?.[tk]),fmt:v=>num(Math.round(v)),series:rows.map(d=>d.ux?.[tk]||0),note:'turns · '+filter.label,intent,subj:filter.label+' turns'};
     }
+    if(k==='unexpected'){const P=perTurnStats(rows);return{value:P.unexpectedRate,fmt:pctF(1),series:null,note:P.unexpectedRate==null?'needs question-intent data and 50+ typed questions with a named intent':`of ${num(P.unexpectedN)} typed questions with a named intent · ${intentCaveat()}`,intent,subj:'answers not what the question needed'};}
     if(k==='cpc'){const P=perTurnStats(rows);return{value:P.valid?P.totPC:null,fmt:v=>v==null?'—':v.toFixed(2)+'p',series:null,note:P.valid?'allocated total cost per conversation · settled join days: '+P.span:P.why,intent,subj:'allocated cost per conversation'};}
     if(k==='weekday'){const DN=['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'],t=Array(7).fill(0),n=Array(7).fill(0);
       rows.filter(d=>d.queries>0).forEach(d=>{const w=isoDow(d.date);t[w]+=d.queries;n[w]++;});
@@ -8923,6 +8971,7 @@ init();
     AM('span','Conversations over 5 min','pct',{calc:{src:'conv',n:['Span6to15','Span16to60','SpanOver60'],d:['Span0to1','Span2to5','Span6to15','Span16to60','SpanOver60'],of:'multi-turn conversations',note:'multi-turn conversations lasting over 5 minutes, minute precision',subj:'conversations over 5 minutes'},syn:[[/\bconversations? (over|longer than|lasting( over| more than)?) (5|five) min(ute)?s?\b|\bhow long (are|do|did) conversations( last| take)?\b|\bconversation (length|duration)\b/,5,'conversations over 5 minutes'],[/how long|conversation (length|span|duration)|observed span|\bspan\b|duration/,190,'conversations over 5 minutes']],def:'Mature multi-turn conversations lasting more than 5 minutes from first to last turn, minute precision.'}),
     AM('script','Non-Latin script share','pct',{def:'Turns whose question starts with a non-Latin letter, as a share of turns with letters. A script, not a language.'}),
     AM('events','Events','list',{groupable:false,prior:false,syn:[[/\bevents?\b|milestones/,290,'events']]}),
+    AM('unexpected','Answers not what the question needed','pct',{polarity:'down',syn:[[/not what (the|their|people.s) questions? needed|unexpected (outcomes?|answers?)|wrong kind of answer|answers? (that )?(weren.t|were not|didn.t|did not) (match|fit|suit)/,700,'answers not what the question needed']],def:'Typed questions with a named intent whose outcome is not the one the design expects for it: a not-found, clarification or uncited answer where a cited answer is expected; a cited answer where the question was about the person\'s own claim and a redirect is expected. By rule from the question (brief §69).'}),
     AM('cpc','Allocated cost per conversation','pence',{polarity:'down',cost:true,syn:[[/\bcost (per|of a|of each) conversation\b|\b(how much|what) (does|do|did) (a|each|one|every) conversation cost\b/,30,'allocated cost per conversation']],def:'Allocated total billed cost divided by conversations, over settled billing days with turns.'}),
     AM('oos','Out-of-scope share','pct',{calc:{src:'ux',n:'outOfScope',d:'Q',of:'turns',note:'questions outside CI’s remit, declined by AskCI',subj:'out-of-scope share of turns'},polarity:'down',syn:[[/\bout[- ]of[- ]scope\b|\boutside (its|the|ci'?s) remit\b|\brefus(ed|al|als)\b|\bdeclined\b/,70,'out-of-scope share of turns']],def:'Turns AskCI declined as outside Citizens Information\'s remit, as a share of all turns.'}),
     AM('adoption','Share of site sessions (at most)','pct',{syn:[[/\b(share|percentage|proportion) of (the )?site (visitors|visits|sessions|traffic)\b|\bsite (visitors|visits|sessions) (use|using|used)\b|\badoption( rate)?\b/,110,'AskCI conversations as a share of site sessions']],def:'AskCI conversations as a share of citizensinformation.ie site sessions. At most: GA4 undercounts sessions (cookie consent) while AskCI counts every conversation.'}),
@@ -9357,13 +9406,14 @@ init();
       const at=it.act?' data-act="'+it.act[0]+'" data-arg="'+escA(it.act[1])+'"':'';
       return '<button class="ask-topn-row"'+at+(it.title?' title="'+escA(it.title)+'"':'')+'><span class="ask-topn-rank">'+(i+1)+'</span><span class="ask-topn-lbl">'+esc(it.label)+(it.extra?'<span style="color:var(--dim)">'+esc(it.extra)+'</span>':'')+'</span><span class="ask-topn-bar"><span style="width:'+pct.toFixed(1)+'%"></span></span><span class="ask-topn-val">'+fmt(it.v)+'</span></button>';
     }).join('');
-    const ent={service:'services',model:'models',day:'days',week:'weeks',month:'months',category:'categories',page:'pages',clickpage:'clicked pages',prompt:'starter prompts',journey:'journeys'}[intent.entity];
+    const ent={service:'services',model:'models',day:'days',week:'weeks',month:'months',category:'categories',page:'pages',clickpage:'clicked pages',prompt:'starter prompts',journey:'journeys',asked:'kinds of question',askedpage:'pages people named'}[intent.entity];
+    const caveat=(intent.entity==='asked'||intent.entity==='askedpage')&&typeof intentCaveat==='function'?'<div class="ask-card-sub" style="margin-top:var(--sp-2)">'+intentCaveat()+'</div>':'';
     const by=res.by||(intent.metric==='questions'?'turns':(intent.metric==='llm'?'generation cost':'spend'));
     const where=intent.period.kind==='all'?'overall':'in '+intent.period.label;
     el.innerHTML='<div class="ask-card" style="flex-direction:column;align-items:stretch">'+
       '<div class="ask-card-q">'+esc(intent.raw)+'</div>'+
       '<div class="ask-card-sub" style="margin-bottom:var(--sp-2)">'+esc((intent.dir==='min'?'Lowest ':'Top ')+items.length+' '+ent+' by '+by+' '+where)+'</div>'+
-      '<div class="ask-topn">'+rows+'</div></div>';
+      '<div class="ask-topn">'+rows+'</div>'+caveat+'</div>';
     el.classList.add('show'); if(typeof renderIcons==='function')renderIcons();
   }
   function renderForecast(res){
@@ -9619,6 +9669,7 @@ init();
   // Questions the data cannot answer, declined plainly with something it can answer instead.
   function guard(q){
     const lm=(DATA.merged.filter(d=>d.queries>0).slice(-1)[0]||{}).date||'';const mon=lm?MONFULL[+lm.slice(5,7)-1]:'this month';
+    {const tn=hasIntent?parseTopN(q):null;if(tn&&(tn.entity==='asked'||tn.entity==='askedpage'))return false;}   // what people ask, by kind or by page, is answerable from counts (brief §69)
     if(/\b(show|list|see|read|give me)\b.*\b(questions|queries|transcripts?|what people (asked|typed|said))\b|\bwhat (did|do|are|were) (people|users|citizens) (ask|asking|type|typing|say|saying)\b(?! about (next|after|most)| (next|after|most)| most)|\b(examples? of|which|what) questions (do|did|are|were) (people|users)\b|\bwhat questions\b/.test(q)){
       const tp=parseCategory(q);
       showCard('The question text isn’t available here','The dashboard holds counts only. Citizens’ questions and AskCI’s answers are removed before any figure is made, so it can say how many questions there were on a topic or a day, but not what they said.',
@@ -10100,6 +10151,7 @@ init();
     (CONFIG.model_families||[]).forEach(f=>add(f.family));MONFULL.forEach(add);ABBR.forEach(add);
     ['monday','tuesday','wednesday','thursday','friday','saturday','sunday','mon','tue','wed','thu','fri','sat','sun'].forEach(add);
     confirmedEvents().forEach(e=>add(e.title));
+    if(typeof ASKED_FILTERS!=='undefined')ASKED_FILTERS.forEach(([,rx,l])=>{add(rx.source);add(l);});if(typeof INTENT_LABEL!=='undefined')Object.values(INTENT_LABEL).forEach(add);   // what people ask (brief §69)
     // page names are not added: a page's words used as a subject ("questions about pensions") get the card that
     // offers the matching pages, since questions aren't counted by page
     RESIDUE_KNOWN=k;return k;
