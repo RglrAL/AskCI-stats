@@ -1927,3 +1927,41 @@ prints each step's last line, counts only. `--from-audit` resumes after the aggr
 `--skip-test` exist for repairs. First full run, 24 October: every step passed, the recount at 179 checks, the Ask
 bar at 311, and the redaction and aggregates reproduced the committed files byte for byte (collect: 0 changed),
 which is the reproducibility the audits could not test from outside.
+
+## 77. UI pass 1: the polish layer removed, outcomes first, one caveat strip (24 Oct 2026, night)
+
+Two UI/UX reviews of the page (kept in `brief/`, untracked) agreed on the same first five changes; this entry
+records them as built, so the next pass (§76 items 6–12: Usage regrouped into six doors, outcome-over-time on
+Quality, a 12px floor, small multiples, "show all", caching, accessibility) starts from a known state. The page
+shrank by 256 lines; the Ask bar test still passes 311 of 311.
+
+1. **Straight lines, no fills, square bars.** Every `tension` is 0 and every area fill is off, except the
+   cumulative "settled to date" burn-down, where the filled area is the quantity. The global Chart.js overrides
+   that rounded bars (`borderRadius 6`), curved lines (`tension .35`) and painted gradient fills under every line
+   are gone. A line now reads as the data; a change of slope is a change in the figures, not an easing.
+2. **The polish layer removed.** Glassmorphism, the gradient Ask button, the tab hover animation, the KPI
+   `!important` restyles and the forecast hero (the £1,176 panel with its count-up) are deleted. Kept: the static
+   background wash, the brand title, the focus ring and the editorial type scale. Month forecast is a tile again,
+   placed last on Overview and labelled "detail on Cost".
+3. **Overview re-ordered with outcomes first.** The tile order is cited answer rate, not found, not what the
+   question needed, response time, conversations, reached a cited answer, click-through, then generation cost per
+   turn and the month forecast. The cost KPI row above the group tabs now shows only when a Cost sub-view is active
+   (`body.costs-active`), so a reader landing on Overview sees outcomes before money.
+4. **One caveat strip.** The three standing caveats that were repeated on card after card (outcome rules
+   unvalidated from 14 Sep; intent, topic and situation read by rule from the question; unmatched figures an upper
+   bound) now appear once, in an amber strip under the data-quality strip, ending "One labelling sheet settles all
+   three (brief §75)". `outcomeCaveat()` returns nothing; the per-card warnings are gone.
+5. **Doughnuts to ranked bars.** The five share doughnuts (Cost summary's fixed / variable / generation, Services'
+   by-service and Foundry-meter totals, Models' by-family and by-meter-type) are horizontal bars sorted by value,
+   £ ticks, no legend, the same colours, the same click targets, with a shared `hbarOpts()` (350 ms animation,
+   tooltip showing the value and its share). Hints read "click a bar".
+
+**Before-and-after screenshots** are in `screenshots/before/` and `screenshots/after/` (untracked), fifteen views
+in both themes. One capture caveat: headless Chrome leaves these five bar charts (and, before, the doughnuts) empty
+because the chart animation never completes under a virtual-time budget; in a real browser they render, checked
+live on the Models, Services and Cost summary views in both themes. The Ask bar test is unaffected.
+
+**Not done in this pass, by design:** item 6 onward; the Overview's "What changed" list, the era footer and the
+strip wording are unchanged; no definitions moved. The removed hero's forecast sentence ("£777 settled to 20 Oct
+plus 11 days at the 28-day pattern") survives in the tile's sub-line and on Cost → Summary.
+

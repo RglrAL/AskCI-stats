@@ -202,6 +202,10 @@ dated by the fixed wording, 4 candidate chip changes, launches and observed chan
   no network. Entities include day, week, month, category, page, prompt, journey, kinds of question, pages people
   named, and subjects within a category; a quick-list and a command palette sit beside it.
 - **Browser storage**: theme, range, personal event markers, a spend target; nothing else.
+- **Chart conventions** (brief §77): straight lines, no area fills except the cumulative burn-down, square bars,
+  share charts as ranked horizontal bars; the page carries no Chart.js global overrides for radius, tension or
+  gradient fills. The three standing caveats appear once, in the amber strip under the data-quality strip, not per
+  card. The cost KPI row above the group tabs shows only on Cost sub-views.
 - **The data-quality strip** under the header prints every version string the files carry, the join window, rows
   de-duplicated and excluded, and the caveats ("unvalidated from 14 Sep", "agreement not yet measured").
 - **The build stamp**: a meta tag `askci-build` the workflow sets to the page commit and the data commit; the
