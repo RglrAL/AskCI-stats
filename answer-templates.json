@@ -1,6 +1,6 @@
 {
  "_comment": "The bot's fixed-wording templates (brief §75): sentences the answering model is told to use, found as sentences in 200+ answers and 50+ conversations. redact_feed.py records which an answer carries; make_usage.py counts them per day (answer-templates-daily.csv). Configuration, not citizen text.",
- "derivation_version": "2026.10.24-2",
+ "derivation_version": "2026.10.24-3",
  "templates": [
   {
    "id": "signoff.query",
@@ -91,6 +91,203 @@
    "id": "greet.happy",
    "family": "greeting",
    "pattern": "i'd be happy to help with that\\."
+  }
+ ],
+ "organisations": [
+  {
+   "id": "cic.centre",
+   "family": "cic",
+   "pattern": "citizens information (?:centre|center|service|office)s?"
+  },
+  {
+   "id": "cic.phone",
+   "family": "cic",
+   "pattern": "citizens information phone service|0818 07 4000"
+  },
+  {
+   "id": "cic.mabs",
+   "family": "ngo",
+   "pattern": "\\bmabs\\b|money advice and budgeting"
+  },
+  {
+   "id": "dept.dsp",
+   "family": "dept",
+   "pattern": "department of social protection|\\bdsp\\b"
+  },
+  {
+   "id": "dept.intreo",
+   "family": "agency",
+   "pattern": "\\bintreo\\b"
+  },
+  {
+   "id": "dept.revenue",
+   "family": "dept",
+   "pattern": "\\brevenue\\b(?! commissioners)|revenue commissioners|myaccount|\\bros\\b"
+  },
+  {
+   "id": "dept.housing",
+   "family": "dept",
+   "pattern": "department of housing"
+  },
+  {
+   "id": "dept.justice",
+   "family": "dept",
+   "pattern": "department of justice"
+  },
+  {
+   "id": "dept.education",
+   "family": "dept",
+   "pattern": "department of education"
+  },
+  {
+   "id": "dept.enterprise",
+   "family": "dept",
+   "pattern": "department of enterprise"
+  },
+  {
+   "id": "dept.foreign",
+   "family": "dept",
+   "pattern": "department of foreign affairs|passport (?:service|office)"
+  },
+  {
+   "id": "agency.hse",
+   "family": "agency",
+   "pattern": "\\bhse\\b|health service executive"
+  },
+  {
+   "id": "agency.rtb",
+   "family": "agency",
+   "pattern": "\\brtb\\b|residential tenancies board"
+  },
+  {
+   "id": "agency.wrc",
+   "family": "agency",
+   "pattern": "\\bwrc\\b|workplace relations commission"
+  },
+  {
+   "id": "agency.isd",
+   "family": "agency",
+   "pattern": "immigration service delivery|\\bisd\\b|\\binis\\b|irish naturalisation"
+  },
+  {
+   "id": "agency.susi",
+   "family": "agency",
+   "pattern": "\\bsusi\\b"
+  },
+  {
+   "id": "agency.seai",
+   "family": "agency",
+   "pattern": "\\bseai\\b|sustainable energy authority"
+  },
+  {
+   "id": "agency.ndls",
+   "family": "agency",
+   "pattern": "\\bndls\\b|national driver licence service"
+  },
+  {
+   "id": "agency.rsa",
+   "family": "agency",
+   "pattern": "road safety authority|\\brsa\\b"
+  },
+  {
+   "id": "agency.pensions",
+   "family": "agency",
+   "pattern": "pensions authority|pensions council"
+  },
+  {
+   "id": "agency.housing_agency",
+   "family": "agency",
+   "pattern": "housing agency|land development agency|\\blda\\b"
+  },
+  {
+   "id": "agency.tusla",
+   "family": "agency",
+   "pattern": "\\btusla\\b"
+  },
+  {
+   "id": "agency.garda",
+   "family": "agency",
+   "pattern": "\\bgarda[ií]?\\b|garda s[ií]och[aá]na"
+  },
+  {
+   "id": "agency.ombudsman",
+   "family": "agency",
+   "pattern": "ombudsman"
+  },
+  {
+   "id": "agency.ccpc",
+   "family": "agency",
+   "pattern": "\\bccpc\\b|competition and consumer protection"
+  },
+  {
+   "id": "agency.dpc",
+   "family": "agency",
+   "pattern": "data protection commission"
+  },
+  {
+   "id": "agency.legalaid",
+   "family": "agency",
+   "pattern": "legal aid board"
+  },
+  {
+   "id": "local.authority",
+   "family": "local",
+   "pattern": "local authority|county council|city council|local council"
+  },
+  {
+   "id": "court.courts",
+   "family": "court",
+   "pattern": "courts service|district court|circuit court|high court|small claims"
+  },
+  {
+   "id": "ngo.threshold",
+   "family": "ngo",
+   "pattern": "\\bthreshold\\b"
+  },
+  {
+   "id": "ngo.flac",
+   "family": "ngo",
+   "pattern": "\\bflac\\b|free legal advice"
+  },
+  {
+   "id": "ngo.focus",
+   "family": "ngo",
+   "pattern": "focus ireland|simon community|peter mcverry|depaul"
+  },
+  {
+   "id": "ngo.womensaid",
+   "family": "ngo",
+   "pattern": "women'?s aid|men'?s aid|safe ireland"
+  },
+  {
+   "id": "ngo.samaritans",
+   "family": "ngo",
+   "pattern": "samaritans|\\bpieta\\b|text about it|50808"
+  },
+  {
+   "id": "ngo.treoir",
+   "family": "ngo",
+   "pattern": "\\btreoir\\b|one family"
+  },
+  {
+   "id": "ngo.immigrant",
+   "family": "ngo",
+   "pattern": "immigrant council|nasc\\b|crosscare|irish refugee council"
+  },
+  {
+   "id": "ngo.union",
+   "family": "ngo",
+   "pattern": "trade union|\\bsiptu\\b|\\bictu\\b"
+  },
+  {
+   "id": "ngo.solicitor",
+   "family": "ngo",
+   "pattern": "\\bsolicitor\\b"
+  },
+  {
+   "id": "ngo.gp",
+   "family": "ngo",
+   "pattern": "\\byour gp\\b|\\ba gp\\b|\\bdoctor\\b"
   }
  ]
 }

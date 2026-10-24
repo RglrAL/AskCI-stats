@@ -129,7 +129,62 @@ INTENT_VERSION = "2026.10.24-2"
 # checked against the lexicon's derivation_version at run time. Changelog, one line per bump:
 #   2026.10.24-1  topic layer (housing, 20 topics), Query Topic and Category Source columns
 #   2026.10.24-2  fixed-wording templates (TEMPLATES below), Answer Templates column
-DERIVATION_VERSION = "2026.10.24-2"
+#   2026.10.24-3  organisations the answer signposts to (ORGS below), Answer Orgs column
+DERIVATION_VERSION = "2026.10.24-3"
+
+# Organisations an answer can signpost to (brief §75, response layer 3): public bodies, helplines and the service's own
+# channels, matched by name in the answer text. The ids and counts are published; the measure is whether a not-found or
+# partial answer sent the person somewhere, and where. Families: dept (government department), agency (state body),
+# local (local authority), ngo (charity or helpline), cic (Citizens Information's own channels), court (courts and
+# tribunals). Names are public; tools/answer_templates.py --org-counts prints how often each is named (counts only).
+ORGS = [
+    ("cic.centre", "cic", r"citizens information (?:centre|center|service|office)s?"),
+    ("cic.phone", "cic", r"citizens information phone service|0818 07 4000"),
+    ("cic.mabs", "ngo", r"\bmabs\b|money advice and budgeting"),
+    ("dept.dsp", "dept", r"department of social protection|\bdsp\b"),
+    ("dept.intreo", "agency", r"\bintreo\b"),
+    ("dept.revenue", "dept", r"\brevenue\b(?! commissioners)|revenue commissioners|myaccount|\bros\b"),
+    ("dept.housing", "dept", r"department of housing"),
+    ("dept.justice", "dept", r"department of justice"),
+    ("dept.education", "dept", r"department of education"),
+    ("dept.enterprise", "dept", r"department of enterprise"),
+    ("dept.foreign", "dept", r"department of foreign affairs|passport (?:service|office)"),
+    ("agency.hse", "agency", r"\bhse\b|health service executive"),
+    ("agency.rtb", "agency", r"\brtb\b|residential tenancies board"),
+    ("agency.wrc", "agency", r"\bwrc\b|workplace relations commission"),
+    ("agency.isd", "agency", r"immigration service delivery|\bisd\b|\binis\b|irish naturalisation"),
+    ("agency.susi", "agency", r"\bsusi\b"),
+    ("agency.seai", "agency", r"\bseai\b|sustainable energy authority"),
+    ("agency.ndls", "agency", r"\bndls\b|national driver licence service"),
+    ("agency.rsa", "agency", r"road safety authority|\brsa\b"),
+    ("agency.pensions", "agency", r"pensions authority|pensions council"),
+    ("agency.housing_agency", "agency", r"housing agency|land development agency|\blda\b"),
+    ("agency.tusla", "agency", r"\btusla\b"),
+    ("agency.garda", "agency", r"\bgarda[ií]?\b|garda s[ií]och[aá]na"),
+    ("agency.ombudsman", "agency", r"ombudsman"),
+    ("agency.ccpc", "agency", r"\bccpc\b|competition and consumer protection"),
+    ("agency.dpc", "agency", r"data protection commission"),
+    ("agency.legalaid", "agency", r"legal aid board"),
+    ("local.authority", "local", r"local authority|county council|city council|local council"),
+    ("court.courts", "court", r"courts service|district court|circuit court|high court|small claims"),
+    ("ngo.threshold", "ngo", r"\bthreshold\b"),
+    ("ngo.flac", "ngo", r"\bflac\b|free legal advice"),
+    ("ngo.focus", "ngo", r"focus ireland|simon community|peter mcverry|depaul"),
+    ("ngo.womensaid", "ngo", r"women'?s aid|men'?s aid|safe ireland"),
+    ("ngo.samaritans", "ngo", r"samaritans|\bpieta\b|text about it|50808"),
+    ("ngo.treoir", "ngo", r"\btreoir\b|one family"),
+    ("ngo.immigrant", "ngo", r"immigrant council|nasc\b|crosscare|irish refugee council"),
+    ("ngo.union", "ngo", r"trade union|\bsiptu\b|\bictu\b"),
+    ("ngo.solicitor", "ngo", r"\bsolicitor\b"),
+    ("ngo.gp", "ngo", r"\byour gp\b|\ba gp\b|\bdoctor\b"),
+]
+_ORX = [(oid, fam, re.compile(rx)) for oid, fam, rx in ORGS]
+
+
+def answer_orgs(a):
+    """';'-joined ids of every ORGS entry named in the answer, or ''."""
+    t = (a or "").translate(APOS).lower()
+    return ";".join(oid for oid, _, rx in _ORX if rx.search(t))
 
 # The bot's fixed wording (brief §75, response layer 1): sentences the answering model is told to use, found by
 # tools/answer_templates.py --discover (a sentence in 200+ answers and 50+ conversations, so the bot's own words, never
@@ -343,7 +398,7 @@ def redact(src, dst):
         keep = [c for c in r.fieldnames if c not in DROP] + ["Outcome", "Partial", "Outcome Rules", "Starter Prompt", "Query Script", "Response Words",
                                                           "Outcome Rule", "Style Version"] + list(STYLE) + ["Answer Signoff", "Safety Version"] + list(SAFETY) + ["Query Theme",
                                                           "Intent Version", "Query Intent", "Query Form", "Query Page", "Query Category", "Query Schemes",
-                                                          "Derivation Version", "Query Topic", "Category Source", "Answer Templates"]
+                                                          "Derivation Version", "Query Topic", "Category Source", "Answer Templates", "Answer Orgs"]
         dropped = [c for c in r.fieldnames if c in DROP]
         w = csv.DictWriter(fo, fieldnames=keep, extrasaction="ignore")
         w.writeheader()
@@ -368,6 +423,7 @@ def redact(src, dst):
             # topic layer (brief §75): a question naming no page takes its category from its topic; Category Source says which
             row["Derivation Version"] = DERIVATION_VERSION
             row["Answer Templates"] = answer_templates(row.get("Assistant Response"))
+            row["Answer Orgs"] = answer_orgs(row.get("Assistant Response"))
             row["Query Topic"], tcat = question_topic(q)
             if row["Query Category"]: row["Category Source"] = "page"
             elif tcat: row["Query Category"], row["Category Source"] = tcat, "topic"
@@ -388,9 +444,10 @@ def main():
     if a.write_templates:
         json.dump({"_comment": "The bot's fixed-wording templates (brief §75): sentences the answering model is told to use, found as sentences in 200+ answers and 50+ conversations. "
                                "redact_feed.py records which an answer carries; make_usage.py counts them per day (answer-templates-daily.csv). Configuration, not citizen text.",
-                   "derivation_version": DERIVATION_VERSION, "templates": [{"id": t, "family": f, "pattern": p} for t, f, p in TEMPLATES]},
+                   "derivation_version": DERIVATION_VERSION, "templates": [{"id": t, "family": f, "pattern": p} for t, f, p in TEMPLATES],
+                   "organisations": [{"id": o, "family": f, "pattern": p} for o, f, p in ORGS]},
                   open(a.write_templates, "w", encoding="utf-8"), indent=1, ensure_ascii=False); open(a.write_templates, "a").write("\n")
-        print(f"wrote {a.write_templates}: {len(TEMPLATES)} templates, derivation {DERIVATION_VERSION}"); return
+        print(f"wrote {a.write_templates}: {len(TEMPLATES)} templates, {len(ORGS)} organisations, derivation {DERIVATION_VERSION}"); return
     if lexicon()["derivation"] and lexicon()["derivation"] != DERIVATION_VERSION:
         sys.exit(f"derivation version mismatch: redact_feed.py {DERIVATION_VERSION}, question-lexicon.json {lexicon()['derivation']}; bump both together (brief §75)")
     for f in a.files:

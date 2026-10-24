@@ -1604,3 +1604,33 @@ a rare sentence's first or last day is noise, and a thin tail after a real drop 
 line was last seen 9 April with one answer in the 28 days before, which is not an April change).
 `answer-templates-daily.csv`: 18 ids plus "(none)"; 90,007 of 136,752 answers carry no
 template, which is the room the response layers that follow (organisations, figures) have to work in.
+
+**Third leg: where the answers send people (24 Oct 2026).** `ORGS` in `redact_feed.py`: 39 organisations an answer
+can signpost to, matched by name in the answer text, in six families (Citizens Information's own centre, phone line
+and MABS; government departments; state agencies; local authorities; courts; charities, helplines and professionals
+such as a solicitor or a GP). `tools/answer_templates.py --org-counts FEEDS` prints how often each is named, by
+outcome, and refuses any named in under 20 answers (two were dropped). The redaction writes an Answer Orgs column;
+`make_usage.py` counts answers per month, organisation and the turn's category into
+**`answer-signposts-monthly.csv`**, with three pseudo-rows per month and category, "(any)" (named one or more),
+"(external)" (named one outside the service's own channels) and "(none)", so shares need no double counting; category
+rows under 5 are left out and "(all)" rows always kept. Derivation 2026.10.24-3 across the redaction, the lexicon and
+`answer-templates.json`, which now carries the organisations list too. The audit checks the ids, the sums, that
+category rows never exceed the "(all)" row, and that (any) + (none) equals the month's turns. Usage › Answer wording
+gains **Where the answers send people**: the share of answers naming an organisation, the share of not-found answers
+that signpost anywhere, the share naming an outside body, the same for partial answers, each organisation's answers
+and its presence in not-found and partial answers, and a month table of where the not-found answers point. The
+category picker shows the same for one category. `make_findings.py` item 12 carries the measure: not-found answers
+naming an outside body in the last full month, baseline set on this first run.
+**First figures, January–22 October.** 77,422 of 136,752 answers (57%) name an organisation; the Department of Social
+Protection (19,556), a Citizens Information centre (19,416), the phone service (13,629), a local authority (8,678),
+Intreo (8,609), Revenue (6,346), the HSE (6,224) and "your GP" (5,997) lead. Of the 7,909 not-found answers, 97% name
+somewhere, and that somewhere is almost always the service's own centre (7,331) and phone line (7,275): an outside
+body appears in 1,232 (15.6%), with a local authority (339) the only one above a hundred; the RTB appears in 12
+not-found answers, Threshold in 41, MABS in 6. Partial answers point outside more often (6,470 of 10,045, 64%), which
+is the cited page's own signposting coming through. September's figure, 21.2% of 1,249 not-found answers naming an
+outside body, is the baseline in `make_findings.py` item 12; the recommendation is measured against it.
+By month the picture moves: the share of all answers naming an outside body ran at 51–55% from January to June and
+has fallen since, 49% in July, 43% in September, 37% in October; among not-found answers the outside-body share
+jumped from about 9% to 24% in July, when the fixed no-results sentence and the guidance line were retired, and has
+drifted back to 19% in October. Both are wording effects (§75 second leg) rather than content effects, and both are
+now measured monthly, so the recommendation has a before.

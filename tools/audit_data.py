@@ -60,6 +60,7 @@ SCHEMA = {
     'question-intent-category-monthly.csv': 'Month Category Intent Turns Cited NotFound Clarification Error OutOfScope Greeting Uncited Partial',
     'content-gaps.csv': 'kind page category intent evidence asks rate priority team period rules_version lexicon_version built',
     'answer-templates-daily.csv': 'Date Template Turns Cited NotFound Clarification Error OutOfScope Greeting Uncited Partial',
+    'answer-signposts-monthly.csv': 'Month Org Category Turns Cited NotFound Clarification Error OutOfScope Greeting Uncited Partial',
     'setback-intents-monthly.csv': 'Month Setback Intent Turns Ended SameIntentNext OtherIntentNext',
     'repeat-questions-monthly.csv': 'Month Turns FirstTurns StarterFirstTurns DistinctFirstTurnTexts TextsAskedTwicePlus FirstTurnsOnRepeatedTexts Top10 Top25 Top50 Top100 Top250 SuggestedClicks DistinctSuggestedTexts SuggestedTop25',
     'journeys-monthly.csv': 'From To Conversations',
@@ -464,6 +465,20 @@ if TMPL:
           all((r['Template'] == '(none)' or r['Template'] in _tids) and sum(I(r[k]) for k in OUT7) == I(r['Turns']) for r in TMPL) and all(tnone[d] <= I(U[d]['Questions']) for d in tnone if d in U),
           str([r['Template'] for r in TMPL if r['Template'] != '(none)' and r['Template'] not in _tids][:3]))
     check('answer templates: derivation version agrees with the lexicon', _tver == _lx.get('derivation_version', ''), f'{_tver} vs {_lx.get("derivation_version", "")}')
+ORG = rd('answer-signposts-monthly.csv')
+if ORG:
+    _oids = {o['id'] for o in _tj.get('organisations', [])} | {'(any)', '(external)', '(none)'}
+    allrow = {(r['Month'], r['Org']): I(r['Turns']) for r in ORG if r['Category'] == '(all)'}
+    catsum = C.Counter()
+    for r in ORG:
+        if r['Category'] != '(all)': catsum[(r['Month'], r['Org'])] += I(r['Turns'])
+    anyrow = {m: n for (m, o), n in allrow.items() if o == '(any)'}; ext = {m: n for (m, o), n in allrow.items() if o == '(external)'}; none = {m: n for (m, o), n in allrow.items() if o == '(none)'}
+    qpm = C.Counter()
+    for d, r in U.items(): qpm[d[:7]] += I(r['Questions'])
+    check('answer signposts: every org is listed, outcomes sum to Turns, category rows <= the (all) row, (any) + (none) = the month\'s turns, (external) <= (any)',
+          all(r['Org'] in _oids and sum(I(r[k]) for k in OUT7) == I(r['Turns']) for r in ORG) and all(catsum[k] <= n for k, n in allrow.items())
+          and all(anyrow.get(m, 0) + none.get(m, 0) == qpm[m] for m in anyrow) and all(ext.get(m, 0) <= anyrow.get(m, 0) for m in anyrow),
+          str([(m, anyrow.get(m, 0) + none.get(m, 0), qpm[m]) for m in anyrow if anyrow.get(m, 0) + none.get(m, 0) != qpm[m]][:3]))
 GAPSF = rd('content-gaps.csv')
 try: _rc = _j.load(open(f'{REPO}/register-config.json', encoding='utf-8')); _kinds = set(_rc.get('teams', {}))
 except (OSError, ValueError): _kinds = set()

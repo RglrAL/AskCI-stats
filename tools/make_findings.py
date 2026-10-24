@@ -19,7 +19,7 @@ I = lambda x: int(float(x or 0))
 RECORDED = "24 Oct 2026"
 # The figures §72 recorded, so the report can say whether each has moved. Dated on purpose: they are the record.
 BASE = {"chip_empty": 8.2, "typed_first_empty": 0.99, "unexpected": 11.9, "sit_nf": 14.1, "other_nf": 9.2, "whatis_named_clar": 14.8, "whatis_unnamed_clar": 33.9,
-        "named_hit": 54.8, "named_nf": 6.9, "old_share": 28.3, "crisis_per_k": 0.59, "crisis_cited": 76, "about_partial": 52, "intent_named": 77.0}
+        "named_hit": 54.8, "named_nf": 6.9, "old_share": 28.3, "crisis_per_k": 0.59, "crisis_cited": 76, "about_partial": 52, "intent_named": 77.0, "ext_nf": 21.2}
 
 
 def rd(p):
@@ -124,6 +124,14 @@ def main():
     except OSError: page = ""
     om = re.search(r"outcome_rules_measured:\s*(\{[^}]*\}|null)", page); im = re.search(r"intent_measured:\s*(\{[^}]*\}|null)", page)
     P(f"| 11 | Hand-labelled sample scored | outcome rules: {'yes' if om and om.group(1) != 'null' else 'not yet'}; intents: {'yes' if im and im.group(1) != 'null' else 'not yet'} | not yet / not yet | — | §61, §66: the one step that gives ground truth |")
+    # 12. signposting (brief §75): not-found answers that name a body outside Citizens Information's own channels, last full month
+    SP = [r for r in rd("answer-signposts-monthly.csv") if r["Month"] == last_full and r["Category"] == "(all)"]
+    if SP:
+        g = lambda k: next((r for r in SP if r["Org"] == k), None)
+        a_, e_, n_ = g("(any)"), g("(external)"), g("(none)")
+        nf_all = (I(a_["NotFound"]) if a_ else 0) + (I(n_["NotFound"]) if n_ else 0); ext = I(e_["NotFound"]) / nf_all * 100 if e_ and nf_all else None
+        base = BASE.get("ext_nf")
+        P(f"| 12 | Not-found answers naming an outside body ({last_full}) | {pct(ext)} of {nf_all:,}; {pct(I(a_['NotFound']) / nf_all * 100 if a_ and nf_all else None, 0)} name Citizens Information's own channels | {pct(base) if base is not None else '—'} | {status(ext, base, lower_is_better=False) if base is not None else 'baseline'} | §75: the no-results wording points at the service's own centre and phone line; a theme-aware signpost is the recommendation, this column its measure |")
     P("\n## Conclusions on record (read, not measured)\n")
     for s in ["**14 September 2026 was a model change** (§57): it matches the calibrated signature of one on every count, at twice the size of March's; the mix of what was asked accounts for none of it (§71).",
               "**The answering model applies the relevance-check instruction more readily, hardest on questions that describe a person** (§67, §71): not found rose 5 points further on personal situations than on other typed questions; retrieval cited the named page as often as before.",
@@ -131,7 +139,9 @@ def main():
               "**The rewriting step is not a main cause** (§59): follow-ups and first questions fell together.",
               "**The chip request path fails about one click in twelve, and has all year** (§64): a defect to report, not a model question.",
               "**Requests for when contact with the team resumes** (§60, §68): the current prompt set and where brief mode is used; a log extract one week either side of 14 September.",
-              "**The labelling hour** (§61, §66): 120 answers, four columns; until it is scored every outcome and intent figure since 14 September is an inference."]:
+              "**The labelling hour** (§61, §66): 120 answers, four columns; until it is scored every outcome and intent figure since 14 September is an inference.",
+              "**Every deployment changed the prompt as well as the model** (§75): the bot's fixed sentences step in March, July and September, each on a model-change date, and never otherwise; the 14 September reading has a wording change to weigh alongside the model.",
+              "**The no-results answer sends people to Citizens Information's own channels and almost nowhere else** (§75): a theme-aware signpost (RTB and Threshold for a tenancy, MABS for money, the justice pages and a centre for a neighbour dispute) is a small prompt change with a measure already in place."]:
         P(f"- {s}")
     P(f"\n---\n*tools/make_findings.py at deploy; the dated record is brief §72.*")
     md = "\n".join(out) + "\n"

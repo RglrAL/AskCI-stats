@@ -60,12 +60,43 @@ def discover(feeds, min_answers, min_convs, since):
     return keep
 
 
+def org_counts(feeds, since):
+    """local: answers naming each ORGS entry (redact_feed.py), by outcome; counts only."""
+    import os; sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+    from redact_feed import ORGS, answer_orgs, classify_rule
+    seen = set(); n = 0; by = C.defaultdict(C.Counter); any_org = C.Counter()
+    for f in feeds:
+        with open(f, encoding="utf-8-sig", newline="") as fh:
+            for row in csv.DictReader(fh):
+                k = (row.get("Conversation ID"), row.get("Turn #"))
+                if k in seen: continue
+                seen.add(k)
+                try: d = datetime.strptime((row.get("Timestamp") or "").strip(), TS).date().isoformat()
+                except ValueError: continue
+                if since and d < since: continue
+                n += 1; o = classify_rule(row)[0]
+                ids = answer_orgs(row.get("Assistant Response"))
+                if ids: any_org[o] += 1
+                for oid in ids.split(";") if ids else []: by[oid][o] += 1
+    print(f"{n:,} answers read; answers naming any organisation by outcome: " + ", ".join(f"{o} {c:,}" for o, c in any_org.most_common()))
+    low = []
+    for oid, _, _ in ORGS:
+        c = sum(by[oid].values()); flag = "  LOW" if c < 20 else ""
+        print(f"{c:7,}  {oid:24} " + ", ".join(f"{o} {v:,}" for o, v in by[oid].most_common(4)) + flag)
+        if c < 20: low.append(oid)
+    return low
+
+
 def main():
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
-    ap.add_argument("--discover", nargs="+", metavar="FEED", required=True)
+    ap.add_argument("--discover", nargs="*", metavar="FEED")
+    ap.add_argument("--org-counts", nargs="*", metavar="FEED", help="local: answers naming each organisation in redact_feed.py ORGS, by outcome (counts only)")
     ap.add_argument("--min", type=int, default=200); ap.add_argument("--min-convs", type=int, default=50); ap.add_argument("--since")
     a = ap.parse_args()
-    discover(a.discover, a.min, a.min_convs, a.since)
+    if a.discover: discover(a.discover, a.min, a.min_convs, a.since)
+    if a.org_counts:
+        low = org_counts(a.org_counts, a.since)
+        if low: sys.exit(f"{len(low)} organisation(s) named in fewer than 20 answers: {', '.join(low)}")
 
 
 if __name__ == "__main__":
