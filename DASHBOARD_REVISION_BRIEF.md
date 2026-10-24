@@ -1997,3 +1997,40 @@ their part; six pills fit one row at 1,330 px.
 content edit inside a part and can follow item 7 (outcome-over-time on Quality) without touching the navigation
 again.
 
+## 79. UI pass 3: outcomes over time at the top of Quality, with the comparison windows drawn (24 Oct 2026, night)
+
+§76 item 7. The two rates the page exists to show, cited answer rate and not-found rate, were one click away
+behind the tile's history modal; the Before / after chart showed one line with event lines and no sign of the
+windows the statements compare. Built:
+
+- **"Outcomes over time"** opens the Quality view: two daily line charts side by side, cited answer rate and
+  not-found rate over scored turns, straight lines, no fill, days under the rate floor (50 scored turns) left
+  as gaps, the confirmed events as lines, a click on a day opening the day panel. The chart-or-table toggle and
+  the copy bar come with the card as on every chart.
+- **One event chosen, its windows shaded.** A row of pills lists the confirmed events in range that take a
+  before / after (the same rule as the Before / after table: not a one-off day such as Budget Day); the latest
+  is chosen by default. Its 28-day windows are shaded on both charts, before grey and after blue, labelled
+  along the bottom when there is room, and in each window the pooled rate is drawn as a line with its
+  **day-level 95% interval as a band**. The windows follow `tools/change_report.py`: calendar days either side
+  of the event, the event day excluded (and the days to its end date when it has one), cut to the selected
+  range; a day counts when it meets the rate floor.
+- **The interval is the day-level bootstrap, in the browser.** `dayBootstrap()` resamples the days of each
+  window with replacement 2,000 times (a seeded generator, so the figure is stable between loads), recomputes
+  each window's pooled rate and the difference, and takes the 2.5th and 97.5th percentiles. On 14 September the
+  page gives cited −11.0 pts (−12.0 to −10.0) and not found +5.6 pts (+5.1 to +6.2), the same figures the
+  change report printed from the feed recount (§75), which is the check that the browser's windows and day
+  lists match the tool's. The caption under the charts states both windows, their day counts, the two rates,
+  the difference and the interval, and says descriptive only; the generated report remains the record and
+  carries the turn-level interval as well.
+- **Before / after's daily-turns chart** now shades the 28-day windows of every event in its table, with the
+  same colours and no levels, so the table's rows can be seen on the series.
+- **Mechanics.** A `windowShade` chart plugin (bands and levels by label index, drawn under the datasets) that
+  any chart can take, beside the existing event-line plugin; `eventWindows()` is the one place the window
+  dates are computed. No measure changed; the history modal stays for the other tiles.
+
+Ask bar test 311 of 311. Checked live in both themes at All and 3M.
+
+**Still open from the review's reading of this item:** the Overview's "Outcome mix" stacked bar (the same
+two lines were suggested there too); the era scorecard's wide table (item 10); the sub-nav select under
+900 px.
+

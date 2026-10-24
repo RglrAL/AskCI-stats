@@ -204,6 +204,10 @@ dated by the fixed wording, 4 candidate chip changes, launches and observed chan
   no network. Entities include day, week, month, category, page, prompt, journey, kinds of question, pages people
   named, and subjects within a category; a quick-list and a command palette sit beside it.
 - **Browser storage**: theme, range, personal event markers, a spend target; nothing else.
+- **Outcomes over time** (brief §79): the Quality view opens with daily cited and not-found rate charts; a chosen
+  confirmed event's 28-day windows are shaded with each window's pooled rate and a day-level 95% interval computed in the
+  browser (`dayBootstrap()`, 2,000 seeded resamples of the days, the same windows as `tools/change_report.py`). The
+  generated change report remains the record.
 - **Chart conventions** (brief §77): straight lines, no area fills except the cumulative burn-down, square bars,
   share charts as ranked horizontal bars; the page carries no Chart.js global overrides for radius, tension or
   gradient fills. The three standing caveats appear once, in the amber strip under the data-quality strip, not per

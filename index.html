@@ -2383,7 +2383,24 @@ const refLinePlugin={id:'refLine',afterDatasetsDraw(chart){
     const w=c.measureText(o.text).width;c.fillStyle=getComputedStyle(chart.canvas).getPropertyValue('--s2').trim()||'transparent';c.globalAlpha=.88;c.fillRect(a.right-w-6,y-15,w+6,13);c.globalAlpha=1;
     c.fillStyle=o.color;c.fillText(o.text,a.right-3,y-3);c.restore();}catch(e){}
 }};
-Chart.register(eventLinesPlugin,crosshairPlugin,dumbbellPlugin,bubbleLabelPlugin,refLinePlugin);
+// Window shading (brief §79): options.windowShade={bands:[{from,to,color,label}],levels:[{from,to,y,lo,hi,color}]}, indices
+// into the labels. A band tints the window and names it along the bottom; a level draws the window's pooled rate as a
+// line and its day-level 95% interval as a translucent band, so the reader sees the two windows the statement compares.
+const windowShadePlugin={id:'windowShade',beforeDatasetsDraw(chart){
+  const o=chart.config.options.windowShade;if(!o||!chart.scales.x||!chart.scales.y)return;
+  const x=chart.scales.x,y=chart.scales.y,a=chart.chartArea,n=chart.data.labels.length;if(n<2)return;
+  const step=Math.abs(x.getPixelForValue(1)-x.getPixelForValue(0))||0;
+  const px=(i,side)=>Math.max(a.left,Math.min(a.right,x.getPixelForValue(i)+(side<0?-step/2:step/2)));
+  const c=chart.ctx;c.save();
+  (o.bands||[]).forEach(b=>{if(b.from==null||b.to==null||b.to<b.from)return;const x0=px(b.from,-1),x1=px(b.to,1);if(x1<=x0)return;
+    c.fillStyle=b.color;c.fillRect(x0,a.top,x1-x0,a.bottom-a.top);
+    if(b.label){c.font="600 9px 'DM Mono',monospace";if(c.measureText(b.label).width+8<=x1-x0){c.fillStyle=(typeof C!=='undefined'&&C.muted)||'#888';c.textAlign='left';c.textBaseline='bottom';c.fillText(b.label,x0+4,a.bottom-3);}}});
+  (o.levels||[]).forEach(l=>{if(l.from==null||l.to==null||l.to<l.from||l.y==null)return;const x0=px(l.from,-1),x1=px(l.to,1);if(x1<=x0)return;
+    if(l.lo!=null&&l.hi!=null){const y0=y.getPixelForValue(l.hi),y1=y.getPixelForValue(l.lo);c.fillStyle=l.color+'2a';c.fillRect(x0,Math.max(a.top,y0),x1-x0,Math.min(a.bottom,y1)-Math.max(a.top,y0));}
+    const yp=y.getPixelForValue(l.y);if(yp>=a.top&&yp<=a.bottom){c.strokeStyle=l.color;c.lineWidth=1.5;c.setLineDash([]);c.beginPath();c.moveTo(x0,yp);c.lineTo(x1,yp);c.stroke();}});
+  c.restore();
+}};
+Chart.register(eventLinesPlugin,crosshairPlugin,dumbbellPlugin,bubbleLabelPlugin,refLinePlugin,windowShadePlugin);
 
 // ═══ CHART HELPERS ══════════════════════════════════════════════════
 const charts={};
@@ -6740,6 +6757,75 @@ function renderUsage(D,S){
 }
 
 // ═══ QUALITY (brief §69 item 7): the answer side of Usage, split from Volume ═══
+// ═══ OUTCOMES OVER TIME (brief §79, UI item 7) ═══════════════════════
+// The two rates that matter, by day, at the top of Quality: cited answer rate and not-found rate over scored turns, with
+// the confirmed events as lines and, for one chosen event, the 28-day windows either side shaded and each window's pooled
+// rate drawn with its day-level 95% interval. The windows follow tools/change_report.py: calendar days either side of the
+// event, the event day excluded (and the days to its end date when it has one); a day counts when it has at least
+// CONFIG.min_rate_denominator scored turns. The interval resamples the DAYS (2,000 draws, fixed seed), so the day, not the
+// turn, is the unit. The generated change report is the record; this chart shows the same comparison in place.
+function mulberry32(a){return function(){a|=0;a=a+0x6D2B79F5|0;let t=Math.imul(a^a>>>15,1|a);t=t+Math.imul(t^t>>>7,61|t)^t;return((t^t>>>14)>>>0)/4294967296;};}
+function dayBootstrap(kb,nb,ka,na,reps=2000,seed=2026){
+  const S=a=>a.reduce((x,y)=>x+y,0);if(kb.length<7||ka.length<7||!S(nb)||!S(na))return null;
+  const rnd=mulberry32(seed),diffs=[],pbs=[],pas=[];
+  for(let r=0;r<reps;r++){let k1=0,n1=0,k2=0,n2=0;
+    for(let i=0;i<kb.length;i++){const j=Math.floor(rnd()*kb.length);k1+=kb[j];n1+=nb[j];}
+    for(let i=0;i<ka.length;i++){const j=Math.floor(rnd()*ka.length);k2+=ka[j];n2+=na[j];}
+    if(!n1||!n2)continue;const pb=k1/n1,pa=k2/n2;diffs.push(pa-pb);pbs.push(pb);pas.push(pa);}
+  if(diffs.length<reps/2)return null;
+  const q=(arr,p)=>{const t=[...arr].sort((a,b)=>a-b);return t[Math.min(t.length-1,Math.max(0,Math.floor(p*t.length)))];};
+  const pb=S(kb)/S(nb),pa=S(ka)/S(na);
+  return{d:pa-pb,lo:q(diffs,.025),hi:q(diffs,.975),before:{p:pb,lo:q(pbs,.025),hi:q(pbs,.975),days:kb.length,n:S(nb)},after:{p:pa,lo:q(pas,.025),hi:q(pas,.975),days:ka.length,n:S(na)}};
+}
+function eventWindows(ev,days=28){
+  const skip=(ev.end&&ev.end.length===10)?Math.max(0,Math.round((new Date(ev.end)-new Date(ev.start))/86400000)):0;
+  return{bFrom:isoAdd(ev.start,-days),bTo:isoAdd(ev.start,-1),aFrom:isoAdd(ev.start,1+skip),aTo:isoAdd(ev.start,days+skip)};
+}
+const trendEligible=fr=>confirmedEvents().filter(e=>e.kind!=='other'&&fr.some(d=>d.date===e.start));
+let qualTrendEvent=null;
+function setQualTrendEvent(start){qualTrendEvent=start;if(DATA)renderOutcomeTrend(filterRange(DATA.merged));}
+function renderOutcomeTrend(fr){
+  const host=document.getElementById('qual-trend');if(!host)return;
+  const min=CONFIG.min_rate_denominator;
+  const scored=d=>d.ux?.scored||0;
+  if(!fr.some(d=>scored(d)>=min)){host.innerHTML='';return;}
+  const evs=trendEligible(fr);
+  let ev=evs.find(e=>e.start===qualTrendEvent)||evs[evs.length-1]||null;
+  const labels=fr.map(d=>d.label);
+  const W=ev?eventWindows(ev):null;
+  const idx=(from,to)=>{let a=null,b=null;fr.forEach((d,i)=>{if(d.date>=from&&d.date<=to){if(a==null)a=i;b=i;}});return[a,b];};
+  const [b0,b1]=W?idx(W.bFrom,W.bTo):[null,null],[a0,a1]=W?idx(W.aFrom,W.aTo):[null,null];
+  const inW=(from,to)=>fr.filter(d=>d.date>=from&&d.date<=to&&scored(d)>=min);
+  const dB=W?inW(W.bFrom,W.bTo):[],dA=W?inW(W.aFrom,W.aTo):[];
+  const metrics=[['cited','Cited answer rate',C.green,'qt-cited'],['notFound','Not-found rate',C.red,'qt-nf']];
+  const boots={};metrics.forEach(([k])=>{boots[k]=W?dayBootstrap(dB.map(d=>d.ux[k]||0),dB.map(scored),dA.map(d=>d.ux[k]||0),dA.map(scored)):null;});
+  const sgn=v=>(v>=0?'+':'−')+Math.abs(v*100).toFixed(1);
+  const short=e=>e.title.length>30?e.title.slice(0,28)+'…':e.title;
+  const picker=evs.length?`<div class="pill-group" role="tablist" aria-label="Event to compare around" style="margin:8px 0 10px">${evs.map(e=>`<button type="button" class="pill${ev&&e.start===ev.start?' active':''}" role="tab" aria-selected="${ev&&e.start===ev.start}" onclick="setQualTrendEvent('${e.start}')" title="${e.title.replace(/"/g,'&quot;')}"><span style="width:7px;height:7px;border-radius:50%;background:${eventColor(e)};display:inline-block"></span>${fmtDate(e.start)} · ${short(e)}</button>`).join('')}</div>`:'';
+  const line=(k,lbl)=>{const t=boots[k];if(!W)return'';if(!t)return`<div><b>${lbl}</b>: a window has fewer than 7 days with ${num(min)}+ scored turns inside the selected range, so no comparison.</div>`;
+    return`<div><b>${lbl}</b>: before ${spanLabel(dB[0].date,dB[dB.length-1].date,false)} (${t.before.days} days) <b>${(t.before.p*100).toFixed(1)}%</b> · after ${spanLabel(dA[0].date,dA[dA.length-1].date,false)} (${t.after.days} days) <b>${(t.after.p*100).toFixed(1)}%</b> · <b>${sgn(t.d)} pts</b> (day-level 95%: ${sgn(t.lo)} to ${sgn(t.hi)})</div>`;};
+  host.innerHTML=`<div class="card">
+    <div class="card-title">Outcomes over time<span class="card-title-note">by day · rates over scored turns · days under ${num(min)} scored turns are gaps · confirmed events as lines${W?' · the chosen event\'s 28-day windows shaded, each with its pooled rate and day-level 95% interval':''}</span></div>
+    ${picker}
+    <div class="grid2">
+      ${chartBox('qt-cited',210,'Cited answer rate','% of scored turns · click a day')}
+      ${chartBox('qt-nf',210,'Not-found rate','% of scored turns · click a day')}
+    </div>
+    <div style="font-size:.72rem;color:var(--muted);display:grid;gap:4px">${metrics.map(([k,l])=>line(k,l)).join('')}</div>
+    <div class="share-foot" style="margin-top:8px">Windows are calendar days either side of the event, the event day excluded (and the days to its end date when it has one), cut to the selected range. The interval resamples the days of each window 2,000 times and takes the 2.5th and 97.5th percentiles, so the day, not the turn, is the unit; it is wider than a turn-level interval because turns within a day share a model and a conversation. Descriptive only: a difference between the windows, not an effect of the event. The generated change report (reports/) carries both intervals and is the record.</div>
+  </div>`;
+  metrics.forEach(([k,lbl,col,id])=>{
+    const data=fr.map(d=>scored(d)>=min?+((d.ux[k]||0)/scored(d)*100).toFixed(2):null);
+    const t=boots[k];
+    const shade=W?{bands:[{from:b0,to:b1,color:(C.muted||'#888')+'14',label:'before · '+dB.length+' d'},{from:a0,to:a1,color:C.acc+'14',label:'after · '+dA.length+' d'}],
+      levels:t?[{from:b0,to:b1,y:+(t.before.p*100).toFixed(2),lo:+(t.before.lo*100).toFixed(2),hi:+(t.before.hi*100).toFixed(2),color:col},{from:a0,to:a1,y:+(t.after.p*100).toFixed(2),lo:+(t.after.lo*100).toFixed(2),hi:+(t.after.hi*100).toFixed(2),color:col}]:[]}:null;
+    mkChart(id,{type:'line',data:{labels,datasets:[{label:lbl,data,borderColor:col,backgroundColor:col,borderWidth:1.5,pointRadius:0,pointHitRadius:6,tension:0,fill:false,spanGaps:false}]},
+      options:mergeOpts(baseOpts(),{tableLabel:'Day',scales:{y:{ticks:{callback:v=>v+'%'}}},plugins:{legend:{display:false},tooltip:{callbacks:{label:cx=>{const d=fr[cx.dataIndex];return `${lbl}: ${(+cx.parsed.y).toFixed(1)}% (${num(d.ux[k]||0)} of ${num(scored(d))} scored)`;}}}},
+        eventLines:evLines(DATA.stats,labels),windowShade:shade,onClick:(e,els)=>{if(els.length)openDayPanel(fr[els[0].index].date);}})});
+  });
+  renderIcons();
+}
+
 function renderQuality(D,S){
   const el=document.getElementById('part-quality');
   const fr=filterRange(D.merged);
@@ -6777,6 +6863,7 @@ function usageOutcomesHTML(fr){
     const P=perTurnStats(fr),cited=sum('cited'),nf=sum('notFound'),cl=sum('clarification'),er=sum('error'),oos=sum('outOfScope'),gr=sum('greeting'),unc=sum('uncited'),pa=sum('partial'),sc=sum('scored');
     const rt=(n,d,col)=>{const r=rateOK(n,d);return[r.ok?(n/d*100).toFixed(1)+'%':'—',r.ok?'':r.why];};
     const T=(n,d,lbl,sub,col,key)=>{const[v,why]=rt(n,d);return uxTile(v,lbl,why||sub,col,key);};
+    h+=`<div id="qual-trend"></div>`;
     h+=`<div class="card">${outcomeCaveat(fr,false)}<div class="card-title">Answer outcomes<span class="card-title-note">one outcome per turn, rules ${DATA.usageQuality.outcomeRules||''} applied at redaction · rates over scored turns (excluding greeting, error and out of scope) · error over all turns · ${span}</span></div>
       <div class="grid4">
         ${T(cited,sc,'Cited answer rate',num(cited)+' of '+num(sc)+' scored turns'+(sum('citations')>0&&cited>0?` · ${(sum('citations')/cited).toFixed(2)} citations each`:''),C.green,'cited-answer-rate')}
@@ -6957,6 +7044,7 @@ function usageDetailHTML(fr,part='all'){
   return h;
 }
 function buildUsageDetailCharts(fr){
+  if(document.getElementById('qual-trend'))renderOutcomeTrend(fr);
   const vd=getViewData(),labels=vd.map(d=>d.label),g=(r,k)=>r.ux?.[k]||0;
   const stacked=mergeOpts(baseOpts(),{scales:{y:{stacked:true,ticks:{callback:v=>num(v)}},x:{stacked:true}},plugins:{legend:{display:true}},onClick:(e,els)=>{if(els.length)drillBucket(vd[els[0].index]);}});
   const tax=vd.some(r=>r.ux&&r.ux.cited!=null);
@@ -7289,10 +7377,10 @@ function renderImpact(D,S){
       </table>
       <div style="font-size:.63rem;color:var(--dim);margin-top:10px;font-family:'DM Mono',monospace">Descriptive only. Differences between the two windows are shown, not attributed to the event. A dash means the window has fewer than ${CONFIG.min_settled_join_days} settled join days or fewer than ${CONFIG.min_rate_denominator} turns.</div>
     </div>
-    ${chartBox('imp-chart',210,'Daily turns — full period with confirmed events','click a day · click an event row above to open its day')}
+    ${chartBox('imp-chart',210,'Daily turns — full period with confirmed events','the 28-day windows either side of each event shaded, before grey and after blue · click a day · click an event row above to open its day')}
   `;
   const allLabels=D.merged.map(d=>d.label),allQ=D.merged.map(d=>d.queries);
-  mkChart('imp-chart',{type:'line',data:{labels:allLabels,datasets:[{label:'Turns / day',data:allQ,borderColor:C.acc,backgroundColor:C.acc+'11',fill:false,borderWidth:1.5,pointRadius:0,tension:0}]},options:mergeOpts(baseOpts(),{scales:{y:{ticks:{callback:v=>num(v)}}},eventLines:evLines(S,allLabels),onClick:(e,els)=>{if(els.length)openDayPanel(D.merged[els[0].index].date);}})});
+  mkChart('imp-chart',{type:'line',data:{labels:allLabels,datasets:[{label:'Turns / day',data:allQ,borderColor:C.acc,backgroundColor:C.acc+'11',fill:false,borderWidth:1.5,pointRadius:0,tension:0}]},options:mergeOpts(baseOpts(),{scales:{y:{ticks:{callback:v=>num(v)}}},eventLines:evLines(S,allLabels),windowShade:{bands:evs.flatMap(e=>{const W=eventWindows(e),ix=(f,t)=>{let a=null,b=null;D.merged.forEach((d,i)=>{if(d.date>=f&&d.date<=t){if(a==null)a=i;b=i;}});return[a,b];},[b0,b1]=ix(W.bFrom,W.bTo),[a0,a1]=ix(W.aFrom,W.aTo);return[{from:b0,to:b1,color:(C.muted||'#888')+'12'},{from:a0,to:a1,color:C.acc+'12'}];})},onClick:(e,els)=>{if(els.length)openDayPanel(D.merged[els[0].index].date);}})});
 }
 
 // ═══ PROJECTIONS ════════════════════════════════════════════════════
