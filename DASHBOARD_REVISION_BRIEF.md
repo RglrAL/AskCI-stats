@@ -1860,3 +1860,44 @@ category, the figures result and the situation flags for every row, and stays sh
 topic-word overlap, and the figures calibration (agreement, the bound's false alarms, the rule's misses), printed as
 `CONFIG.derivation_measured` beside the outcome and intent entries. The folder of 23 October is superseded and can be
 deleted. The analyst fills the sheet; the session scores it and never reads it.
+
+**Audit response (24 Oct 2026, late).** Two agent audits ran against the repository from `brief/AUDIT_PROMPT.md`;
+the second, from a clone, reproduced every figure it quoted and found three things that broke the system's own
+rules. All fixed in one pass, with the audit at 157 checks:
+- **`costs.csv` published the production estate**: 25 globally unique resource names, which only the subscription
+  ID redaction had touched. `tools/redact_costs.py` now rewrites each name to a role label (service-openai,
+  service-search, shared-storage, admin-backend, shared-endpoint-1 …), one label per original name so scopes and
+  de-duplication hold; `--check` refuses a file with a name left; the audit checks every row. The names remain in
+  git history, which is a decision for the repository owner, not the tool.
+- **The five-row floor was skipped on "(all)" rows**: 193 situation rows (113 of them a county with a month and an
+  outcome) and 29 organisation rows sat under five. The floor now applies to every row that names a class, the two
+  totals excepted, and two audit checks enforce it.
+- **The deploy checked the canary but not for text.** The audit now sweeps every tracked CSV, JSON and Markdown
+  file for a text-column header, a free-text cell over 400 characters outside the known prose columns, identifier
+  patterns (PPS, email, IBAN, mobile) and a production resource name, reporting file and rule only. Its first run
+  found seven GA4 page paths in `ga4/categories-and-views.csv`, four carrying an email address in the path; those
+  cells are masked. The deploy fails on any hit.
+- **The partial rise is July's, not September's.** Until June, 60–92% of partials fired on "does not provide", a
+  phrase ordinary sentences also use; from 1 July, when the fixed no-results sentence was retired, 88% fire on
+  "could not find" inside a cited answer, and the count went from 558 in June to 2,236 in July. The series measures
+  the model's phrasing of a gap as much as the gap. A card on Answer wording shows partials by deciding phrase and
+  month; the page's configuration note and §67's reading are corrected accordingly; the labelling sheet's partial
+  rows, by phrase, will say which are real gaps.
+- Also from the audit: the Ask bar test exited green with no browser (it now fails unless `--allow-skip`, which the
+  pre-commit hook passes and the deploy does not); the guard could be passed with a glob or a shell variable (denied
+  now, six cases added, 34 in all); findings item 12 mislabelled "any organisation" as the service's own channels;
+  the era footer said prompts were assumed constant; the page-detail threshold was hard-coded (now `page_partial`
+  in `register-config.json`) and a person was named as owner in a public config (now a role); the page now shows
+  the derivation version in its strip and carries a `derivation_measured` slot wired into the topic and figures
+  caveats; the September system brief is archived under `brief/`; parsed log turns are ignored wherever they sit.
+- Two corrections to this brief: the whole-period figures in the third and fourth legs above (77,422 answers
+  naming an organisation; 47,343 answers and 142,801 figures; centre 7,331, phone 7,275) were written before
+  derivation 2026.10.24-6 excluded the 46 pasted-letter answers; the files now read 77,389; 47,334 and 142,783;
+  7,323 and 7,268. `reports/findings.md` is the live record. And "a detail halves the chance of being asked back"
+  in the sixth leg is a comparison of two groups that also differ in length and in naming a scheme; read it as what
+  moved, not as an effect.
+- Accepted for later, in the audit's order: day-level intervals calibrated on the August null date; a sequential
+  change-point test feeding candidate events; figures by kind with years out of the headline; a refresh runner with
+  a manifest and one versions file; a data-protection note in the repo. Declined: splitting the page into
+  concatenated source files (a build step by another name). The second audit's closing line stands: no new
+  derivation layer until the sheet is scored.

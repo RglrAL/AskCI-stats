@@ -1,6 +1,6 @@
 # AskCI Cost and Usage Intelligence: technical brief for audit
 
-Prepared 24 October 2026 at commit `e17abd1` (177 commits). This is the current description of the whole system for
+Prepared 24 October 2026 at commit `e17abd1` (177 commits); counts and versions refreshed after the audit response of the same day (brief §76, commit 165b383). This is the current description of the whole system for
 an agent or a person auditing it. It is written to be read on its own. The dated journal of every decision is
 `DASHBOARD_REVISION_BRIEF.md` (§1–§76); this brief points into it rather than repeating it. Three older documents in
 `brief/` describe the system as it was in September and are superseded where they differ.
@@ -18,7 +18,7 @@ The analyst's machine runs a local pipeline that turns three private inputs into
 | Input | Holds | Kept where |
 |---|---|---|
 | AskCI QA feed exports (`exports/qa-feed_*.csv`) | every conversation turn: the citizen's question, the bot's answer, citations, timestamps, feedback | analyst's machine only, git-ignored |
-| Azure Cost Management export (`costs.csv`) | billed cost per meter per day | committed, with the subscription ID redacted |
+| Azure Cost Management export (`costs.csv`) | billed cost per meter per day | committed, with the subscription ID and the resource names redacted to role labels |
 | GA4 exports (`ga4/*.csv`) | site sessions, searches, and click-throughs from AskCI citation links | committed, aggregate |
 
 ## 2. The governing rules
@@ -31,7 +31,9 @@ These are design rules, not preferences. An audit should check each holds.
 2. **A model session is not the machine.** `tools/hooks/guard_feed_text.py`, installed by `.claude/settings.json` as a
    PreToolUse hook, denies any Read, Grep or Bash call in a Claude Code session that would print feed text (any
    `qa-feed*.csv`, any labelling sheet, the backend logs). Only the pipeline tools in `tools/` may open those files;
-   they print counts. `tools/hooks/test_guard.py` has 30 cases. One exception, on 24 October 2026 before the guard
+   they print counts; a glob, a shell variable or a substitution under the private folders is denied too.
+   `tools/hooks/test_guard.py` has 34 cases. The guard is accident-grade, not a security boundary: the boundary is
+   that the private inputs exist only on the analyst's machine. One exception, on 24 October 2026 before the guard
    existed, is logged in brief §75 with what was read and what was published (theme names and counts only).
 3. **Prompt text never enters tracked files.** The system prompts live in the git-ignored `ask review/` folder; a
    canary string is checked by the pre-commit hook and the audit. `prompts.json` holds a fingerprint and dates only.
@@ -39,9 +41,13 @@ These are design rules, not preferences. An audit should check each holds.
    public brief or page.
 5. **The page shows figures and claims no causes.** Change reports and the page say what moved and by how much, with
    intervals; attribution is the reader's, done with the events list.
-6. **Counts, not suppression, with small-cell rules.** Published rows naming a page, a topic, a county or an
-   organisation need five or more; topic keywords need 20 or more matching questions; fixed-wording sentences need
-   200 or more answers and 50 or more conversations before they are named.
+6. **Counts, not suppression, with small-cell rules.** Published rows naming a class of person (a county, an age
+   band, a year, a shape), a topic or an organisation need five or more, "(all)" rows included; topic keywords need
+   20 or more matching questions; fixed-wording sentences need 200 or more answers and 50 or more conversations
+   before they are named. Rows naming a public page are not floored: a page is not a person.
+8. **The deploy enforces the rules it can.** The audit sweeps every tracked CSV, JSON and Markdown file for a
+   text-column header, a long free-text cell outside the known prose columns, identifier patterns and a production
+   resource name, and fails the deploy on a hit, reporting file and rule only.
 7. **Every derivation is versioned**, and the version travels in the files: outcome rules, style, safety, intent, the
    lexicon, and one `derivation_version` bundling the topic layer, the response rules and the template list.
 
@@ -139,7 +145,9 @@ dated by the fixed wording, 4 candidate chip changes, launches and observed chan
 - **Outcome** of an answer, by rule on its wording (`redact_feed.py` `RULES`, version 2026.10.23-2): Cited answer,
   Not found, Clarification, Error (empty), Out of scope, Greeting, Uncited answer. **Partial**: a cited answer that
   also says something is missing. The rules were checked against the system prompts of 28 August (brief §60) and are
-  unvalidated against a reader since 14 September; the page says so wherever an outcome figure appears.
+  unvalidated against a reader since 14 September; the page says so wherever an outcome figure appears. The partial
+  series changed what it measures on 1 July, when the deciding phrase moved from "does not provide" to "could not
+  find" with that day's wording change and the count quadrupled (brief §76); Answer wording shows partials by phrase.
 - **Typed**: a question a person typed. Chip flag 0 typed, 1 a starter prompt, 2 a model-written suggested follow-up,
   which is never counted as typed (brief §71).
 - **Intent**, by rule on the question: status, contact, documents, apply, rate, eligibility, timing, statement,
@@ -198,10 +206,10 @@ dated by the fixed wording, 4 candidate chip changes, launches and observed chan
 
 | Check | Where | Count at this commit |
 |---|---|---|
-| Data audit, files-only (schema, cross-file sums, bounds, versions, lexicon, register, canary) | `tools/audit_data.py --files-only`, run by the workflow | 153 pass |
-| Data audit with the feed recount | `tools/audit_data.py DIR`, local | 161 pass at the last recount |
-| Ask bar regression | `tools/test_ask.py`, headless Chrome, data frozen at `tests/ask_fixture_ref` (54dc360) | 311 pass |
-| Feed-text guard | `tools/hooks/test_guard.py` | 30 cases |
+| Data audit, files-only (schema, cross-file sums, bounds, floors, versions, lexicon, register, canary, privacy sweep, cost labels) | `tools/audit_data.py --files-only`, run by the workflow | 157 pass |
+| Data audit with the feed recount | `tools/audit_data.py DIR`, local | more checks; run before each refresh is committed |
+| Ask bar regression | `tools/test_ask.py`, headless Chrome, data frozen at `tests/ask_fixture_ref` (54dc360); fails without a browser unless `--allow-skip` | 311 pass |
+| Feed-text guard | `tools/hooks/test_guard.py` | 34 cases |
 | Pre-commit | `tools/hooks/pre-commit` (`git config core.hooksPath tools/hooks`): canary, costs redaction, Ask bar test on the staged page | |
 | Deploy | `.github/workflows/publish.yml`: redact costs, audit, test, stamp, fact sheet, change reports, incidents, findings, register, Pages | every step green at `e17abd1` |
 
