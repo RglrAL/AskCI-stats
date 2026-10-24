@@ -1573,3 +1573,34 @@ question is housing if the answer cited a housing page, or the question named on
 - **Dashboard.** Usage › What people ask gains "One category, from the question": a category picker; the category's typed questions and share, not-found, partial and clarification; the definition with the three tests and their counts; topics with not-found, partial and clarification rates; the intent mix; the months; and the register rows for that category. Ask bar: "topics in housing", "what can't be answered in housing", "unanswered topics in employment" (entity `topic`, by questions or by not-found answers). A sub-view opens from a link as `#tab=<sub id>` (`#tab=asked`).
 - **Housing on the broad cut, January–22 October:** 10,544 typed questions, 10.0% of 105,110; cited a housing page 2,888, named a housing page 3,561, topic only 4,095. Not found 6.4%, partial 18.4% of cited, clarification 3.1%. Site-wide residue, no page cited, none named, no topic: 13,187 typed questions (12.5%), 3,840 of them not found. Largest topics: housing in general 3,123; landlord and tenant 1,400 (8.1% not found); social and council housing 978 (13.3%); grants and energy upgrades 863 (3.2%); HAP, Rent Supplement and RAS 722; buying a home 606; planning 375 (10.7%); neighbours 307 (17.9%). The broad-cut figure is lower than the pass's 13,319 because the pruned vocabulary is narrower; the pass's number is superseded.
 - **Next legs, in order:** the fixed-wording templates on the response side; the organisations list; figures with page snapshots; then social welfare, employment, money and tax, moving country and health topic tables; the labelling sheet gains topic and figure-match columns.
+
+**Second leg: the bot's fixed wording (24 Oct 2026).** `tools/answer_templates.py --discover FEEDS` prints every
+sentence that appears verbatim in 200+ answers and 50+ conversations after normalising case, digits and links; the two
+thresholds are the privacy rule (a sentence that common across that many conversations is the bot's own, never one
+person's), and nothing under them is printed. Across 134,697 answers it found 49 such sentences. Eighteen are prompt
+formulas rather than content, and they are now `TEMPLATES` in `redact_feed.py` (families: sign-off, read more,
+signpost, clarification, no results, out of scope, greeting), written to **`answer-templates.json`** by
+`--write-templates`, recorded per answer in an Answer Templates column, and counted per day with outcomes in
+**`answer-templates-daily.csv`** ("(none)" = answers carrying no template). Derivation version 2026.10.24-2 in the
+redaction, the lexicon and the templates file; the audit checks the three agree and that every id in the daily file is
+in the list. Usage › Answer wording opens with a **Fixed wording** card: each sentence's answers, share, first and last
+date and status, and the dates the wording changed, each marked "with the model change of …" or "no model event: a
+prompt change".
+
+**What the sentences date.** By month share (the rule below), the fixed sentences give three wording changes: **10 March** ("Thank you
+for your query", 10,587 answers, ends; "Thank you for using …", "Thanks for visiting …", "Thanks for checking …" and
+the "for example, are you asking about" clarification form start; the "most up-to-date information" read-more line
+falls away here too, its last 28 days before its final sighting on 9 April holding one answer), **30 June** (the
+"accurate and up-to-date guidance" signpost and the fixed no-results sentence end; the read-more line changes) and
+**14 September** (two new out-of-scope sentences start, the read-more line ends, "Thanks for checking …" returns).
+All three fall on a confirmed model-change date (9 March, 1 July, 14 September): every deployment so far changed the
+prompt as well as the model, and the data shows no prompt-only edit. That is what the 14 September reading (§67, §71)
+must now weigh: the out-of-scope wording and the no-results handling changed the same day the model did. Three
+candidate `prompt` events carry these dates in `events.json` for the AskCI team to confirm.
+On the card each sentence is a share of the month's answers (a share, so traffic growth does not move the dates), and a
+month-on-month step of two points or more that is also a quarter of the level, or a threefold change from 1%+, is a change, read against the model events:
+in a month with one, settling in the 45 days after one, or neither. First and last sightings were tried and rejected:
+a rare sentence's first or last day is noise, and a thin tail after a real drop dates it wrong (the "most up-to-date"
+line was last seen 9 April with one answer in the 28 days before, which is not an April change).
+`answer-templates-daily.csv`: 18 ids plus "(none)"; 90,007 of 136,752 answers carry no
+template, which is the room the response layers that follow (organisations, figures) have to work in.

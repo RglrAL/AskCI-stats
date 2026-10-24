@@ -59,6 +59,7 @@ SCHEMA = {
     'question-categories-monthly.csv': 'Month Category Source Turns Cited NotFound Clarification Error OutOfScope Greeting Uncited Partial',
     'question-intent-category-monthly.csv': 'Month Category Intent Turns Cited NotFound Clarification Error OutOfScope Greeting Uncited Partial',
     'content-gaps.csv': 'kind page category intent evidence asks rate priority team period rules_version lexicon_version built',
+    'answer-templates-daily.csv': 'Date Template Turns Cited NotFound Clarification Error OutOfScope Greeting Uncited Partial',
     'setback-intents-monthly.csv': 'Month Setback Intent Turns Ended SameIntentNext OtherIntentNext',
     'repeat-questions-monthly.csv': 'Month Turns FirstTurns StarterFirstTurns DistinctFirstTurnTexts TextsAskedTwicePlus FirstTurnsOnRepeatedTexts Top10 Top25 Top50 Top100 Top250 SuggestedClicks DistinctSuggestedTexts SuggestedTop25',
     'journeys-monthly.csv': 'From To Conversations',
@@ -452,6 +453,17 @@ if QCM:
           and all(sum(I(r['Turns']) for r in QCM if r['Month'] == m and r['Source'] in ('none', 'cited')) <= qim[m] for m in qcm), str([(m, qcm[m], qim[m]) for m in qcm if qcm[m] > 2 * qim[m]][:3]))
     check('question topics monthly: a topic\'s turns in a month <= the topic-or-page turns of its category that month',
           all(I(r['Turns']) <= sum(I(x['Turns']) for x in QCM if x['Month'] == r['Month'] and x['Category'] == r['Category']) for r in QTM))
+TMPL = rd('answer-templates-daily.csv')
+try: _tj = _j.load(open(f'{REPO}/answer-templates.json', encoding='utf-8')); _tids = {t['id'] for t in _tj['templates']}; _tver = _tj.get('derivation_version', '')
+except (OSError, ValueError, KeyError): _tids = set(); _tver = ''
+if TMPL:
+    tnone = C.Counter()
+    for r in TMPL:
+        if r['Template'] == '(none)': tnone[r['Date']] += I(r['Turns'])
+    check('answer templates: every id is in answer-templates.json, outcomes sum to Turns, and the (none) row never exceeds the day\'s turns',
+          all((r['Template'] == '(none)' or r['Template'] in _tids) and sum(I(r[k]) for k in OUT7) == I(r['Turns']) for r in TMPL) and all(tnone[d] <= I(U[d]['Questions']) for d in tnone if d in U),
+          str([r['Template'] for r in TMPL if r['Template'] != '(none)' and r['Template'] not in _tids][:3]))
+    check('answer templates: derivation version agrees with the lexicon', _tver == _lx.get('derivation_version', ''), f'{_tver} vs {_lx.get("derivation_version", "")}')
 GAPSF = rd('content-gaps.csv')
 try: _rc = _j.load(open(f'{REPO}/register-config.json', encoding='utf-8')); _kinds = set(_rc.get('teams', {}))
 except (OSError, ValueError): _kinds = set()

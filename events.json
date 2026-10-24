@@ -23,6 +23,15 @@
       "era_before": "gpt-4o"
     },
     {
+      "start": "2026-03-10",
+      "kind": "prompt",
+      "status": "candidate",
+      "evidence": "QA feed: fixed wording (answer-templates-daily.csv)",
+      "applies_to": "AskCI answering prompt",
+      "title": "Wording change: sign-off and no-results sentences",
+      "detail": "'Thank you for your query' (10,587 answers since 1 Jan) last seen 9 Mar; 'Thank you for using <link>' and 'Thanks for visiting <link>' first seen 10 Mar, and the fixed no-results sentence first seen 10 Mar. The day after the 9 Mar model change, so prompt and model changed together. Inferred from the feed; confirm with the AskCI team."
+    },
+    {
       "start": "2026-03-24",
       "end": "2026-04-07",
       "kind": "observed change",
@@ -88,6 +97,15 @@
       "detail": "79 errors in 710 turns. Confirm with the service team."
     },
     {
+      "start": "2026-06-30",
+      "kind": "prompt",
+      "status": "candidate",
+      "evidence": "QA feed: fixed wording (answer-templates-daily.csv)",
+      "applies_to": "AskCI answering prompt",
+      "title": "Wording change: read-more and signpost lines replaced",
+      "detail": "'For more information/details, please visit <link>' and 'To get accurate and up-to-date guidance...' last seen 29 Jun; 'You can read more on the Citizens Information website: <link>' first seen 1 Jul; the fixed no-results sentence last seen 1 Jul. Around the 1 Jul model change. Inferred from the feed; confirm with the AskCI team."
+    },
+    {
       "start": "2026-07-01",
       "kind": "model",
       "status": "confirmed",
@@ -134,6 +152,15 @@
       "applies_to": "Answer outcomes",
       "title": "Outcome shift with the 14 Sep model change",
       "detail": "26 Aug-13 Sep vs 14 Sep-22 Oct: cited answer 92.7% -> 82.2% of scored turns, not found 2.7% -> 8.2%, clarification 4.6% -> 9.4%, partial 13.9% -> 26.2% of cited; errors unchanged. Not yet known whether answers changed or the text rules misread the new model's wording; a hand-labelled sample will settle it."
+    },
+    {
+      "start": "2026-09-14",
+      "kind": "prompt",
+      "status": "candidate",
+      "evidence": "QA feed: fixed wording (answer-templates-daily.csv)",
+      "applies_to": "AskCI answering prompt",
+      "title": "Wording change: new out-of-scope sentences, read-more line ends",
+      "detail": "'I can provide information from Citizens Information sources about Irish public services and entitlements' and 'That topic isn't covered by the information I can provide' first seen 14 Sep; 'You can read more on the Citizens Information website' last seen 14 Sep; 'Thanks for checking <link>' first seen 15 Sep. The same day as the 14 Sep model change, so the September reading has a prompt change to weigh as well as the model. Inferred from the feed; confirm with the AskCI team."
     },
     {
       "start": "2026-09-29",

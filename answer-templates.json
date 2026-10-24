@@ -1,0 +1,96 @@
+{
+ "_comment": "The bot's fixed-wording templates (brief §75): sentences the answering model is told to use, found as sentences in 200+ answers and 50+ conversations. redact_feed.py records which an answer carries; make_usage.py counts them per day (answer-templates-daily.csv). Configuration, not citizen text.",
+ "derivation_version": "2026.10.24-2",
+ "templates": [
+  {
+   "id": "signoff.query",
+   "family": "sign-off",
+   "pattern": "thank you for your query\\."
+  },
+  {
+   "id": "signoff.using",
+   "family": "sign-off",
+   "pattern": "thank you for using <link>"
+  },
+  {
+   "id": "signoff.visiting",
+   "family": "sign-off",
+   "pattern": "thank(?:s| you) for visiting <link>"
+  },
+  {
+   "id": "signoff.checking",
+   "family": "sign-off",
+   "pattern": "thank(?:s| you) for checking(?: with)? <link>"
+  },
+  {
+   "id": "more.uptodate",
+   "family": "read more",
+   "pattern": "for the most up.to.date information, please visit"
+  },
+  {
+   "id": "more.visit",
+   "family": "read more",
+   "pattern": "for (?:more|full|further) (?:information|details|detailed guidance), (?:please )?(?:visit|see)"
+  },
+  {
+   "id": "more.readmore",
+   "family": "read more",
+   "pattern": "you can read more (?:on|about)"
+  },
+  {
+   "id": "more.website",
+   "family": "read more",
+   "pattern": "you can read more on the citizens information (?:website|page)"
+  },
+  {
+   "id": "guidance.accurate",
+   "family": "signpost",
+   "pattern": "to get accurate and up.to.date guidance"
+  },
+  {
+   "id": "guidance.centre",
+   "family": "signpost",
+   "pattern": "contact your local citizens information centre"
+  },
+  {
+   "id": "guidance.phone",
+   "family": "signpost",
+   "pattern": "call the citizens information phone service"
+  },
+  {
+   "id": "clar.asking_about",
+   "family": "clarification",
+   "pattern": "for example, are you asking about:"
+  },
+  {
+   "id": "clar.do_you_mean",
+   "family": "clarification",
+   "pattern": "for example, do you mean:"
+  },
+  {
+   "id": "nf.sorry_template",
+   "family": "no results",
+   "pattern": "i'm sorry, i couldn't find specific information about this topic in the citizens information content available to me"
+  },
+  {
+   "id": "oos.sources",
+   "family": "out of scope",
+   "pattern": "i can provide information from citizens information sources about irish public services and entitlements"
+  },
+  {
+   "id": "oos.not_covered",
+   "family": "out of scope",
+   "pattern": "that topic isn't covered by the information i can provide"
+  },
+  {
+   "id": "greet.assist",
+   "family": "greeting",
+   "pattern": "how can i assist you today\\?"
+  },
+  {
+   "id": "greet.happy",
+   "family": "greeting",
+   "pattern": "i'd be happy to help with that\\."
+  }
+ ]
+}

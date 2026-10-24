@@ -60,6 +60,8 @@ Outputs (all daily counts; nothing per-turn and no text crosses into the dashboa
   asked-pages-monthly.csv   Month, URL, Category, Asked, CitedSame, CitedSameCategory, CitedOther, NotFound, Clarification,
                             Other, CitedUnderHub, Hub: the page a typed question named and what the answer did; pages
                             asked under 5 times a month left out (brief §66, §71)
+  answer-templates-daily.csv       Date, Template, Turns, outcomes, Partial: the bot's fixed-wording templates
+                                   (redact_feed.py TEMPLATES) per day; "(none)" = answers carrying none (brief §75)
   question-topics-monthly.csv      Month, Category, Topic, Turns, outcomes, Partial: the lexicon's topic layer on typed
                                    questions; rows under 5 turns left out (brief §75)
   question-categories-monthly.csv  Month, Category, Source, Turns, outcomes, Partial: typed questions by category and by
@@ -205,6 +207,7 @@ def aggregate(files, skip_days=frozenset()):
     has_words = False
     rulesd = defaultdict(int)                        # (date, outcome rule id) -> turns (brief §53)
     style = defaultdict(lambda: defaultdict(int))    # (date, outcome) -> wording fingerprint sums
+    tmpl = defaultdict(lambda: defaultdict(int))     # (date, template id or "(none)") -> answers, outcomes (brief §75)
     safety = defaultdict(lambda: defaultdict(int))   # (date, flag) -> turns and their outcomes (brief §65)
     intent = defaultdict(lambda: defaultdict(int))   # (date, intent, chip) -> turns, outcomes, form flags (brief §66)
     asked = defaultdict(lambda: defaultdict(int))    # (month, page asked about) -> what the answer did (brief §66)
@@ -289,6 +292,10 @@ def aggregate(files, skip_days=frozenset()):
                     o3 = (row.get("Outcome") or "").strip()
                     rulesd[(d, row["Outcome Rule"].strip())] += 1
                     e = style[(d, o3)]; e["Turns"] += 1
+                    if "Answer Templates" in row:   # the bot's fixed wording (brief §75): every template the answer carries, else "(none)"
+                        for tid in ((row.get("Answer Templates") or "").split(";") if (row.get("Answer Templates") or "").strip() else ["(none)"]):
+                            e9 = tmpl[(d, tid)]; e9["Turns"] += 1; e9["o:" + o3] += 1
+                            if (row.get("Partial") or "").strip().lower() == "yes": e9["o:partial"] += 1
                     try: e["Words"] += int(row.get("Response Words") or 0)
                     except ValueError: pass
                     for k in STYLE_COLS:
@@ -455,7 +462,7 @@ def aggregate(files, skip_days=frozenset()):
                         cat_dropped += sum(1 for x in slugs if x is None)
                         toks = [x for x in slugs if x]
                     for s in set(toks): cats[d][s] += 1
-    return D, sess, lat, hours, hour_sess, cats, bad, has_voice, dupes, cat_dropped, has_outcome, rules, has_starter, has_script, recs, (cites_m, cites_x, pages), latb, rulesd, (style, safety, intent, asked, qtopic, cint, askw, qtop, qcat, qic)
+    return D, sess, lat, hours, hour_sess, cats, bad, has_voice, dupes, cat_dropped, has_outcome, rules, has_starter, has_script, recs, (cites_m, cites_x, pages), latb, rulesd, (style, safety, intent, asked, qtopic, cint, askw, qtop, qcat, qic, tmpl)
 
 
 STYLE_COLS = ["Lines", "Hedges", "Apologies", "Signposts", "Questions", "Links", "Openers", "Invitations", "Absolutes", "Emphasis", "Nested", "External", "Freshness", "Signoff"]
@@ -555,6 +562,14 @@ def safety_rows(safety):
 def rule_rows(rulesd):
     """outcome-rules-daily.csv: which phrase decided each outcome, per day (no text)."""
     return ["Date", "Rule", "Turns"], [[d.isoformat(), r, n] for (d, r), n in sorted(rulesd.items())]
+
+
+def tmpl_rows(tmpl):
+    """answer-templates-daily.csv: per day and fixed-wording template id (redact_feed.py TEMPLATES; "(none)" for answers
+    carrying none): answers and their outcomes. A template that starts or stops on a date with no model event is the
+    trace of a prompt change (brief §75)."""
+    cols = ["Date", "Template", "Turns"] + OUT7 + ["Partial"]
+    return cols, [[d.isoformat(), t, e["Turns"]] + [e[k] for k in OUT7_SRC] + [e["o:partial"]] for (d, t), e in sorted(tmpl.items())]
 
 
 def style_rows(style):
@@ -911,7 +926,7 @@ def main():
     # An export taken on day X contains only part of day X; skip those rows unless asked to keep them.
     export_days = {datetime.strptime(m.group(1), "%Y%m%d").date() for m in (re.search(r"(\d{8})_\d{6}", os.path.basename(f)) for f in a.files) if m}
     skip = frozenset() if (a.keep_partial or not export_days) else frozenset({max(export_days)})  # only the newest export's own day is partial
-    D, sess, lat, hours, hour_sess, cats, bad, has_voice, dupes, cat_dropped, has_outcome, rules, has_starter, has_script, recs, (cites_m, cites_x, pages), latb, rulesd, (style, safety, intent, asked, qtopic, cint, askw, qtop, qcat, qic) = aggregate(a.files, skip)
+    D, sess, lat, hours, hour_sess, cats, bad, has_voice, dupes, cat_dropped, has_outcome, rules, has_starter, has_script, recs, (cites_m, cites_x, pages), latb, rulesd, (style, safety, intent, asked, qtopic, cint, askw, qtop, qcat, qic, tmpl) = aggregate(a.files, skip)
     rules = ", ".join(sorted(r for r in rules if r))
     if skip and any(True for _ in skip): print(f"note: export day(s) {', '.join(str(x) for x in sorted(skip))} skipped as partial (--keep-partial to keep)")
     cd, co, jm, sp, cstats = conversation_pass(recs)
@@ -947,6 +962,7 @@ def main():
         if rulesd:   # needs feeds redacted with Outcome Rule (redact_feed.py from 23 Oct 2026)
             write(os.path.join(a.out_dir, "outcome-rules-daily.csv"), *rule_rows(rulesd))
             write(os.path.join(a.out_dir, "answer-style-daily.csv"), *style_rows(style))
+            if tmpl: write(os.path.join(a.out_dir, "answer-templates-daily.csv"), *tmpl_rows(tmpl))
         if safety: write(os.path.join(a.out_dir, "safety-daily.csv"), *safety_rows(safety))
         if intent:
             write(os.path.join(a.out_dir, "question-intent-daily.csv"), *intent_rows(intent))

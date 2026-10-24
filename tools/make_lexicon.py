@@ -128,7 +128,7 @@ def build():
 # matches (counts only) and the build refuses a keyword under TOPIC_MIN_MATCHES, so nothing rare and identifying can
 # enter this public file. A question's topic is the matching keyword that is longest; a topic marked general applies
 # only when no other does. DERIVATION_VERSION bundles this key with redact_feed.py's response rules and template list.
-DERIVATION_VERSION = "2026.10.24-1"
+DERIVATION_VERSION = "2026.10.24-2"   # bumped with redact_feed.py's: 2026.10.24-2 added the fixed-wording templates
 TOPIC_MIN_MATCHES = 20
 TOPICS = {
     "housing": {

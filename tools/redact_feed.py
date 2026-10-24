@@ -128,7 +128,43 @@ INTENT_VERSION = "2026.10.24-2"
 # One derivation version (brief §75) bundles the lexicon's topic layer, the response rules and the template list; it is
 # checked against the lexicon's derivation_version at run time. Changelog, one line per bump:
 #   2026.10.24-1  topic layer (housing, 20 topics), Query Topic and Category Source columns
-DERIVATION_VERSION = "2026.10.24-1"
+#   2026.10.24-2  fixed-wording templates (TEMPLATES below), Answer Templates column
+DERIVATION_VERSION = "2026.10.24-2"
+
+# The bot's fixed wording (brief §75, response layer 1): sentences the answering model is told to use, found by
+# tools/answer_templates.py --discover (a sentence in 200+ answers and 50+ conversations, so the bot's own words, never
+# an echo of one person's). Each answer records every template id it carries; make_usage.py counts them per day. A
+# template that starts or stops on a date with no model event is the trace of a prompt change. Matched on the answer
+# lower-cased with straight apostrophes and single spaces; links are replaced by <link> first.
+TEMPLATES = [
+    ("signoff.query", "sign-off", r"thank you for your query\."),
+    ("signoff.using", "sign-off", r"thank you for using <link>"),
+    ("signoff.visiting", "sign-off", r"thank(?:s| you) for visiting <link>"),
+    ("signoff.checking", "sign-off", r"thank(?:s| you) for checking(?: with)? <link>"),
+    ("more.uptodate", "read more", r"for the most up.to.date information, please visit"),
+    ("more.visit", "read more", r"for (?:more|full|further) (?:information|details|detailed guidance), (?:please )?(?:visit|see)"),
+    ("more.readmore", "read more", r"you can read more (?:on|about)"),
+    ("more.website", "read more", r"you can read more on the citizens information (?:website|page)"),
+    ("guidance.accurate", "signpost", r"to get accurate and up.to.date guidance"),
+    ("guidance.centre", "signpost", r"contact your local citizens information centre"),
+    ("guidance.phone", "signpost", r"call the citizens information phone service"),
+    ("clar.asking_about", "clarification", r"for example, are you asking about:"),
+    ("clar.do_you_mean", "clarification", r"for example, do you mean:"),
+    ("nf.sorry_template", "no results", r"i'm sorry, i couldn't find specific information about this topic in the citizens information content available to me"),
+    ("oos.sources", "out of scope", r"i can provide information from citizens information sources about irish public services and entitlements"),
+    ("oos.not_covered", "out of scope", r"that topic isn't covered by the information i can provide"),
+    ("greet.assist", "greeting", r"how can i assist you today\?"),
+    ("greet.happy", "greeting", r"i'd be happy to help with that\."),
+]
+_TRX = [(tid, fam, re.compile(rx)) for tid, fam, rx in TEMPLATES]
+_TLINK = re.compile(r"\[[^\]]*\]\([^)]*\)|https?://\S+")
+
+
+def answer_templates(a):
+    """';'-joined ids of every TEMPLATES sentence the answer carries, or ''."""
+    t = (a or "").translate(APOS).lower().replace("‑", "-")
+    t = re.sub(r"\s+", " ", _TLINK.sub("<link>", t))
+    return ";".join(tid for tid, _, rx in _TRX if rx.search(t))
 INTENT_RULES = [   # in precedence order: the first that matches wins
     ("status", re.compile(r"\b(?:my (?:claim|application|appeal|payment|case|form|request|renewal)\b.{0,40}\b(?:status|approved|decision|delayed|late|not (?:been )?(?:paid|received|processed)|still waiting|how long more|when will (?:i|it))|why (?:haven'?t|hasn'?t|have i not|has my|did my|was my)|(?:where|what) is my (?:payment|money|claim|application)|has my (?:claim|application|payment)|track my|check (?:the )?status|(?:i|we) (?:applied|submitted|sent).{0,30}\b(?:weeks?|months?|days?) ago|my (?:\w+ ){0,2}(?:claim|application|appeal|payment|renewal|form)\b.{0,80}\b(?:ago|still|yet|waiting|heard|no (?:reply|response|update|word)))\b", re.I)),
     ("contact", re.compile(r"\b(?:phone number|contact (?:number|details)|email address|opening hours|open(?:ing)? (?:times?|hours)|where is (?:the|my)? ?(?:nearest|local)|nearest (?:office|centre|center|intreo|cic)|(?:intreo|citizens information) (?:office|centre|center)|how (?:do|can) i (?:contact|reach|ring|call|phone|talk to|speak to)|address (?:of|for) the|who (?:do|can|should) i (?:contact|ring|call|talk to|speak to)|helpline)\b", re.I)),
@@ -307,7 +343,7 @@ def redact(src, dst):
         keep = [c for c in r.fieldnames if c not in DROP] + ["Outcome", "Partial", "Outcome Rules", "Starter Prompt", "Query Script", "Response Words",
                                                           "Outcome Rule", "Style Version"] + list(STYLE) + ["Answer Signoff", "Safety Version"] + list(SAFETY) + ["Query Theme",
                                                           "Intent Version", "Query Intent", "Query Form", "Query Page", "Query Category", "Query Schemes",
-                                                          "Derivation Version", "Query Topic", "Category Source"]
+                                                          "Derivation Version", "Query Topic", "Category Source", "Answer Templates"]
         dropped = [c for c in r.fieldnames if c in DROP]
         w = csv.DictWriter(fo, fieldnames=keep, extrasaction="ignore")
         w.writeheader()
@@ -331,6 +367,7 @@ def redact(src, dst):
             row["Query Page"], row["Query Category"], row["Query Schemes"] = topic_of(q)
             # topic layer (brief §75): a question naming no page takes its category from its topic; Category Source says which
             row["Derivation Version"] = DERIVATION_VERSION
+            row["Answer Templates"] = answer_templates(row.get("Assistant Response"))
             row["Query Topic"], tcat = question_topic(q)
             if row["Query Category"]: row["Category Source"] = "page"
             elif tcat: row["Query Category"], row["Category Source"] = tcat, "topic"
@@ -343,10 +380,17 @@ def redact(src, dst):
 
 def main():
     ap = argparse.ArgumentParser(description=__doc__.split("\n")[0])
-    ap.add_argument("files", nargs="+")
+    ap.add_argument("files", nargs="*")
     ap.add_argument("--out-dir", help="directory for the redacted files (default: beside each input)")
     ap.add_argument("--force", action="store_true", help="overwrite an existing output file")
+    ap.add_argument("--write-templates", metavar="PATH", help="write the TEMPLATES list (id, family, pattern) as JSON for the dashboard, then exit")
     a = ap.parse_args()
+    if a.write_templates:
+        json.dump({"_comment": "The bot's fixed-wording templates (brief §75): sentences the answering model is told to use, found as sentences in 200+ answers and 50+ conversations. "
+                               "redact_feed.py records which an answer carries; make_usage.py counts them per day (answer-templates-daily.csv). Configuration, not citizen text.",
+                   "derivation_version": DERIVATION_VERSION, "templates": [{"id": t, "family": f, "pattern": p} for t, f, p in TEMPLATES]},
+                  open(a.write_templates, "w", encoding="utf-8"), indent=1, ensure_ascii=False); open(a.write_templates, "a").write("\n")
+        print(f"wrote {a.write_templates}: {len(TEMPLATES)} templates, derivation {DERIVATION_VERSION}"); return
     if lexicon()["derivation"] and lexicon()["derivation"] != DERIVATION_VERSION:
         sys.exit(f"derivation version mismatch: redact_feed.py {DERIVATION_VERSION}, question-lexicon.json {lexicon()['derivation']}; bump both together (brief §75)")
     for f in a.files:

@@ -2748,6 +2748,7 @@ async function loadHoursFile(){
 // citations-monthly.csv (normalised URL), journeys-monthly.csv (category steps), starter-prompts-monthly.csv.
 // script-outcomes-daily.csv: SCRIPTOUT[date][script] = {t, s, c, nf, cl} (turns, scored, cited, not found, clarification)
 let SCRIPTOUT={},hasScriptOut=false;
+let OTMPL={},TMPL_META={},hasTmpl=false;   // the bot's fixed wording per day and the template list (brief §75)
 let ORULES={},OSTYLE={},ONEXT={},hasRules=false;   // outcome rule ids, the wording fingerprint and what people do next (brief §53)
 let PAGESC={},hasPagesC=false,REPEATS={},hasRepeats=false,SAFETY={},hasSafety=false,QINTENT={},ASKED={},QTOPIC={},hasIntent=false,LEXICON=null,IJOUR={},SETBI={},GAPS=[],GAPSTAT={},REGCFG=null,QCATM={},QTOPM={},QICM={},hasTopics=false,ASKED_CAT='housing';   // the topic layer (brief §75)
 let CONV={},CATOUT={},CITES={},JOURNEYS={},STARTERS={},LATB={},CATDAY={},hasCatDay=false,hasConv=false,hasCatOut=false,hasCites=false,hasJourneys=false,hasStarters=false,hasLatB=false;
@@ -2793,6 +2794,8 @@ async function loadConversationFiles(){
   hasLatB=Object.keys(LATB).length>0;
   try{(await loadCSV('outcome-rules-daily.csv')).forEach(r=>{const d=parseDate(r['Date']);if(!d)return;(ORULES[d]||(ORULES[d]={}))[String(r['Rule']||'').trim()]=nInt(r['Turns']);});}catch(e){}
   try{(await loadCSV('answer-style-daily.csv')).forEach(r=>{const d=parseDate(r['Date']);if(!d)return;const o={};Object.entries(r).forEach(([k,v])=>{if(k!=='Date'&&k!=='Outcome')o[k]=nInt(v);});(OSTYLE[d]||(OSTYLE[d]={}))[String(r['Outcome']||'').trim()]=o;});}catch(e){}
+  try{(await loadCSV('answer-templates-daily.csv')).forEach(r=>{const d=parseDate(r['Date']);if(!d)return;const o={};Object.entries(r).forEach(([k,v])=>{if(k!=='Date'&&k!=='Template')o[k]=nInt(v);});(OTMPL[d]||(OTMPL[d]={}))[String(r['Template']||'').trim()]=o;});hasTmpl=Object.keys(OTMPL).length>0;}catch(e){}
+  try{const j=await(await fetch('answer-templates.json',{cache:'no-store'})).json();(j.templates||[]).forEach(t=>{TMPL_META[t.id]={family:t.family,pattern:t.pattern};});TMPL_META._version=j.derivation_version||'';}catch(e){}
   // answer-next-daily.csv (tools/next_step.py, on the raw feed): ONEXT[date][class] = counts of what came after each answer
   try{(await loadCSV('answer-next-daily.csv')).forEach(r=>{const d=parseDate(r['Date']);if(!d)return;const o={};Object.entries(r).forEach(([k,v])=>{if(k!=='Date'&&k!=='Class')o[k]=nInt(v);});(ONEXT[d]||(ONEXT[d]={}))[String(r['Class']||'').trim()]=o;});}catch(e){}
   hasRules=Object.keys(ORULES).length>0;
@@ -4889,7 +4892,37 @@ function renderWording(D,S){
   const flagged=RW.filter(x=>x.drift!=null&&x.drift>=WORDING_DRIFT&&x.w>=weekStart(from)&&x.w<=to);
   const flagList=flagged.length?flagged.map(x=>`<li><b>w/c ${fmtDate(x.w)}</b>: phrase mix ${(x.drift*100).toFixed(0)}% different from the 4 weeks before; most moved ${x.movers.map(m=>escH(ruleLabel(m.k))+' '+(m.d>=0?'▲':'▼')).join(', ')}. `+
     (x.ev.length?`Model change in the billing: ${x.ev.map(e=>escH(e.title)+' ('+fmtDate(e.start)+')').join('; ')}.`:x.after.length?`Settling after the model change on ${x.after.map(e=>fmtDate(e.start)).join(', ')}: the 4 weeks it is compared with still include the earlier wording.`:`<span style="color:var(--amber)"><b>No model change in the billing within a week</b>: a candidate prompt or configuration change.</span>`)+'</li>').join(''):'<li>No week in the range moved past the threshold.</li>';
+  // the bot's fixed wording (brief §75): which prescribed sentences appear, when each starts and stops, and whether a
+  // model event explains the date; a start or stop with no model event is the trace of a prompt change
+  let tmplCard='';
+  if(hasTmpl){
+    const days=Object.keys(OTMPL).sort(),d0=days[0],d1=days[days.length-1];
+    const ids=[...new Set(days.flatMap(d=>Object.keys(OTMPL[d])))].filter(t=>t!=='(none)');
+    const ansIn=(a,b)=>D.merged.filter(d=>d.date>=a&&d.date<=b).reduce((s,d)=>s+(d.queries||0),0);
+    // share of each month's answers per sentence; a month-on-month step (2+ points, or a threefold change from 1%+)
+    // is a change, read against the model events: in a month with one, settling in the 45 days after one, or neither
+    const mons=[...new Set(days.filter(d=>d>=from&&d<=to).map(d=>d.slice(0,7)))].sort();
+    const ansM={};D.merged.forEach(d=>{if(d.date>=from&&d.date<=to)ansM[d.date.slice(0,7)]=(ansM[d.date.slice(0,7)]||0)+(d.queries||0);});
+    const shareM=(t,m)=>{const n=ansM[m]||0;return n?days.filter(d=>d.slice(0,7)===m&&d>=from&&d<=to&&OTMPL[d][t]).reduce((s,d)=>s+OTMPL[d][t].Turns,0)/n*100:null;};
+    const stat=ids.map(t=>({t,meta:TMPL_META[t]||{family:t.split('.')[0],pattern:t},n:days.filter(d=>d>=from&&d<=to&&OTMPL[d][t]).reduce((s,d)=>s+OTMPL[d][t].Turns,0),sh:mons.map(m=>shareM(t,m))})).filter(s=>s.n).sort((a,b)=>b.n-a.n);
+    const rangeAns=ansIn(from,to);
+    const plain=p=>p.replace(/\(\?:|[()\\?]|\.\*/g,'').replace(/\|/g,' / ').replace(/up\.to\.date/g,'up-to-date');
+    const cell=v=>v==null?td('—'):td(v<0.05?'<span style="color:var(--muted)">·</span>':v.toFixed(1),{style:v>=1?`background:${C.acc}${v>=20?'66':v>=5?'40':'22'}`:''});
+    const trows=stat.map(s=>`<tr style="border-bottom:1px solid var(--b2)">${td(`<span style="color:var(--muted)">${escH(s.meta.family)}</span> · <span title="${escH(s.meta.pattern)}">${escH(plain(s.meta.pattern).slice(0,60))}</span>`,{left:true})}${td(num(s.n))}${td(rangeAns?(s.n/rangeAns*100).toFixed(1)+'%':'—')}${s.sh.map(cell).join('')}</tr>`).join('');
+    const model=(EVENTS.confirmed||[]).filter(e=>e.kind==='model');
+    const inMonth=m=>model.filter(e=>e.start.slice(0,7)===m),before=m=>model.filter(e=>{const d=new Date(m+'-01T00:00:00Z'),x=new Date(e.start+'T00:00:00Z');return x<d&&(d-x)/864e5<=45;});
+    const steps={};mons.forEach((m,i)=>{if(!i)return;stat.forEach(s=>{const a=s.sh[i-1],b=s.sh[i];if(a==null||b==null)return;const hi=Math.max(a,b),lo=Math.max(Math.min(a,b),0.05);if((Math.abs(b-a)>=2&&hi>=1.25*lo)||(hi>=1&&hi>=3*lo))(steps[m]||(steps[m]=[])).push({s,a,b});});});
+    const changes=Object.entries(steps).map(([m,xs])=>{const ev=inMonth(m),bf=before(m);return `<li><b>${fmtMonth(m)}</b>: ${xs.map(x=>`${escH(x.s.meta.family)} ${x.a.toFixed(1)}→${x.b.toFixed(1)}%`).join('; ')} · ${ev.length?`model change ${ev.map(e=>fmtDate(e.start)).join(', ')}`:bf.length?`settling after the model change of ${fmtDate(bf[0].start)}`:`<span style="color:${C.amber}">no model event: a prompt change</span>`}</li>`;}).join('');
+    const nCh=Object.keys(steps).length,withModel=Object.keys(steps).filter(m=>inMonth(m).length).length;
+    tmplCard=`<div class="card"><div class="card-title">Fixed wording<span class="card-title-note">${ids.length} sentences the prompt prescribes · each found in 200+ answers and 50+ conversations · derivation ${escH(TMPL_META._version||'')} · share of the month's answers · ${spanLabel(from,to)}</span></div>
+      <div class="tbl-wrap"><table style="width:100%;border-collapse:collapse"><thead><tr style="border-bottom:1px solid var(--b2)">${th('Sentence',true)}${th('Answers')}${th('Share')}${mons.map(m=>th(fmtMonth(m))).join('')}</tr></thead><tbody>${trows}</tbody></table></div>
+      <div class="card-title" style="font-size:.8rem;margin-top:12px">Months the wording changed<span class="card-title-note">a month-on-month step of 2+ points and a quarter of the level, or threefold from 1%+</span></div>
+      <ul style="margin:0;padding-left:18px;font-size:.82rem;line-height:1.6">${changes||'<li>No step inside the range</li>'}</ul>
+      <div class="share-foot">A step in a month with no model event, and not in the weeks after one, is the trace of a prompt change; ${num(withModel)} of ${num(nCh)} change months hold a model-change date, so those deployments changed the prompt as well as the model. Configuration, not citizen text: the sentences are the bot's own, listed in <code>answer-templates.json</code>.</div>
+    </div>`;
+  }
   el.innerHTML=`
+    ${tmplCard}
     <div class="reach-note"><i data-lucide="info" class="i-sm"></i><span><b>Which phrase decided each outcome.</b> The outcome rules read each answer for set phrases; this shows which phrase fired, and how the answers are written. A shift on a date with a model change is that model’s wording. A shift with no model change in the billing points to a prompt or configuration change: the data can show <i>that</i> the wording changed, not <i>what</i> changed. It cannot say whether a label is right; that needs the hand-labelled sample.${CONFIG.outcome_rules_unvalidated_from&&!CONFIG.outcome_rules_measured?` Outcome figures from ${fmtDate(CONFIG.outcome_rules_unvalidated_from)} are unvalidated.`:''}</span></div>
     ${chartBox('wd-mix',300,'Deciding phrases, per 1,000 turns','weekly · the seven most common over all the data, besides a plain cited answer · hollow bar = part week')}
     ${chartBox('wd-drift',220,'Wording drift: phrase mix against the 4 weeks before','weekly · not-found, clarification and partial phrases · share of the mix that moved · dashed line = flag at '+(WORDING_DRIFT*100)+'% · blank = under '+WORDING_MIN+' phrases')}
