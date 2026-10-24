@@ -18,7 +18,7 @@ from datetime import datetime
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 REPO = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-LEXICON_VERSION = "2026.10.24-2"
+LEXICON_VERSION = "2026.10.24-3"
 MIN_CHARS = 6            # a phrase shorter than this never matches on its own ("tax" would match everything)
 CI = "https://www.citizensinformation.ie/en/"
 # What people call things → the page slug (or full path) it means. Checked against the unmatched report.
@@ -80,7 +80,7 @@ STOP = {"overview", "introduction", "rights", "housing", "employment", "health",
 # status → cited: AskCI explaining how to check a claim is the right outcome (brief §71, reversing §66). Clarification is
 # the expected outcome for a "what is" question that names no scheme; the dashboard applies that second dimension.
 INTENTS = {"status": "cited", "contact": "cited", "documents": "cited", "apply": "cited", "rate": "cited", "eligibility": "cited",
-           "timing": "cited", "definition": "cited", "other": None}
+           "timing": "cited", "definition": "cited", "statement": "cited", "other": None}
 TS = "%b %d, %Y %H:%M"
 
 

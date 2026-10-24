@@ -5993,14 +5993,14 @@ function intentJourneyCards(months,cohort){
       <div class="grid4" style="margin-bottom:10px">${path.map(([a,b,r])=>uxTile(r?rateText(r.n,r.d):'—',`${lab(a)} → ${lab(b)}`,r?`of ${num(r.d)} ${lab(a)} questions followed by another`:'',C.acc)).join('')}${uxTile(rateText(J.filter(r=>r.to==='END').reduce((a,r)=>a+r.n,0),J.reduce((a,r)=>a+r.n,0)),'Turns that were the last','of all turns in mature conversations',C.muted)}</div>
       <div class="tbl-wrap"><table style="width:100%;border-collapse:collapse"><thead><tr style="border-bottom:1px solid var(--b2)">${th('After a … question',true)}${th('Turns')}${th('Ended there')}${th('Same kind again')}${th('Most often next',true)}</tr></thead><tbody>${rows}</tbody></table></div>
       ${sb}
-      <div class="share-foot">The designed path is what is X → can I get it → how do I apply → what do I need. Intents are by rule from the question (${LEXICON?escH(LEXICON.version):'—'}); "asked the same kind again" after a not-found is the retry a rephrase would show; months overlapping the range (${months.map(fmtMonth).join(', ')}).</div></div>`;
+      <div class="share-foot">The designed path is what is X → can I … → how do I … → what do I need. Intents are by rule from the question (${LEXICON?escH(LEXICON.version):'—'}); "asked the same kind again" after a not-found is the retry a rephrase would show; months overlapping the range (${months.map(fmtMonth).join(', ')}).</div></div>`;
 }
 
 // ═══ WHAT PEOPLE ASK (brief §66) ═══════════════════════════════════════════════
 // Intent and form by rule on the question, the scheme it names from the lexicon, what the answer did. Every figure is
 // a count from the redaction step; no question text reaches the page. "Unexpected" = an outcome the design does not
 // expect for that intent (lexicon.intents): a not-found on a rate question is unexpected, on a status question it is not.
-const INTENT_ORDER=['eligibility','rate','apply','definition','timing','documents','contact','status','other'];
+const INTENT_ORDER=['eligibility','definition','apply','statement','rate','timing','documents','contact','status','other'];
 // Unexpected outcomes for one intent row (brief §71): where a cited answer is expected, a not-found or uncited answer
 // always is unexpected, and a clarification only when the question named a scheme (a clarification on "what is the
 // benefit?" is the designed outcome); where a redirect is expected, a cited answer is.
@@ -6008,7 +6008,7 @@ function unexpectedOf(r,e){return e==='cited'?(r.NotFound+r.Uncited+(r.NamedClar
 // The caveat every intent figure carries (brief §69): the rules version, and the reader agreement from the labelling or
 // "not yet measured". CONFIG.intent_measured is filled from score_labels.py when the sample is scored.
 function intentCaveat(){const m=CONFIG.intent_measured;return `by rule from the question${LEXICON?' ('+escH(LEXICON.version)+')':''} · reader agreement ${m&&m.n?`${Math.round(m.agreement*100)}% on ${m.n} labelled questions`:'not yet measured'}`;}
-const INTENT_LABEL={status:'Own claim or application',contact:'Contact or office',documents:'Documents needed',apply:'How to apply',rate:'Rate or amount',eligibility:'Eligibility',timing:'Timing',definition:'What is …',other:'Other'};
+const INTENT_LABEL={status:'Own claim or application',contact:'Contact or office',documents:'Documents needed',apply:'How do I …',rate:'Rate or amount',eligibility:'Can I … (eligibility)',timing:'Timing',definition:'What is …',statement:'A situation, no question',other:'Other'};
 function renderAsked(D,S){
   const el=document.getElementById('pane-asked');
   const fr=filterRange(D.merged).filter(d=>QINTENT[d.date]);
@@ -8301,7 +8301,8 @@ init();
     ['apply',/\b((for|of|on|among|in)\s+(the\s+)?)?(how[- ]to[- ]apply|apply|application) questions?\b/,'how-to-apply questions'],['timing',/\b((for|of|on|among|in)\s+(the\s+)?)?(timing|when|how[- ]long) questions?\b/,'timing questions'],
     ['definition',/\b((for|of|on|among|in)\s+(the\s+)?)?(definition|what[- ]is) questions?\b/,'what-is questions'],['documents',/\b((for|of|on|among|in)\s+(the\s+)?)?documents? questions?\b/,'documents questions'],
     ['contact',/\b((for|of|on|among|in)\s+(the\s+)?)?contact questions?\b/,'contact questions'],['status',/\b((for|of|on|among|in)\s+(the\s+)?)?(status|own[- ]claim|my[- ]claim) questions?\b/,'own-claim questions'],
-    ['situation',/\b((for|of|on|among|in)\s+(the\s+)?)?personal (situations?|stories|cases)\b/,'personal situations']];
+    ['situation',/\b((for|of|on|among|in)\s+(the\s+)?)?personal (situations?|stories|cases)\b/,'personal situations'],
+    ['statement',/\b((for|of|on|among|in)\s+(the\s+)?)?(statements?|statement questions?|questions? with no question word)\b/,'statements']];
   function parseFilter(q){
     for(const[key,rx,label]of ASKED_FILTERS){const m=q.match(rx);if(m&&hasIntent)return{key:'asked',asked:key,label,phrase:m[0].replace(/\s*questions?\s*$/,'')};}   // what the question asked for (brief §69); "questions" stays so the measure can still be read
     // a follow-up naming only a source: "and the pop-up?" (read as modal), "what about the standalone site?"

@@ -1,6 +1,6 @@
 {
  "_comment": "Scheme names a question can be matched on (brief §66): the site's English information page slugs as phrases, plus aliases, minus generic slugs and ordinary-phrase titles. redact_feed.py tags each question with the longest phrase it contains, as the page address and category. hub = other pages sit beneath it, so a citation of any of them counts as a hit (brief §71). Public data: the site's own addresses. INTENTS carries the outcome the design expects per intent.",
- "version": "2026.10.24-2",
+ "version": "2026.10.24-3",
  "min_chars": 6,
  "intents": {
   "status": "cited",
@@ -11,6 +11,7 @@
   "eligibility": "cited",
   "timing": "cited",
   "definition": "cited",
+  "statement": "cited",
   "other": null
  },
  "phrases": {
