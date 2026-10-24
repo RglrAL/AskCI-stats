@@ -1856,6 +1856,7 @@ Date,Questions,Sessions
     <div id="pane-timeline"    class="pane"></div>
     <div id="pane-breakdown"   class="pane"></div>
     <div id="pane-usage"       class="pane"></div>
+    <div id="pane-quality"     class="pane"></div>
     <div id="pane-reach"       class="pane"></div>
     <div id="pane-categories"  class="pane"></div>
     <div id="pane-convs"       class="pane"></div>
@@ -2761,7 +2762,7 @@ async function loadConversationFiles(){
   hasPagesC=Object.keys(PAGESC).length>0;
   try{(await loadCSV('journeys-monthly.csv')).forEach(r=>{const m=String(r['Month']||'').trim();if(!/^\d{4}-\d{2}$/.test(m))return;(JOURNEYS[m]||(JOURNEYS[m]=[])).push({from:r['From'],to:r['To'],n:nInt(r['Conversations'])});});}catch(e){}
   try{(await loadCSV('starter-prompts-monthly.csv')).forEach(r=>{const m=String(r['Month']||'').trim();if(!/^\d{4}-\d{2}$/.test(m))return;(STARTERS[m]||(STARTERS[m]=[])).push({prompt:r['Prompt'],n:nInt(r['Count']),cited:nInt(r['Cited']),typed:nInt(r['FollowedByTyped']),sugg:nInt(r['FollowedBySuggested']),
-    partial:nInt(r['Partial']),nf:nInt(r['NotFound']),clar:nInt(r['Clarification']),dis:nInt(r['Disliked']),words:nInt(r['Words']),timed:nInt(r['TimedTurns']),ms:nInt(r['ResponseMsSum']),mature:nInt(r['Mature']),ended:nInt(r['EndedThere']),score:r['EndedThere']!=null});});}catch(e){}
+    partial:nInt(r['Partial']),nf:nInt(r['NotFound']),clar:nInt(r['Clarification']),dis:nInt(r['Disliked']),words:nInt(r['Words']),timed:nInt(r['TimedTurns']),ms:nInt(r['ResponseMsSum']),mature:nInt(r['Mature']),ended:nInt(r['EndedThere']),score:r['EndedThere']!=null,intent:String(r['Intent']||'').trim()});});}catch(e){}
   // repeat-questions-monthly.csv (tools/cache_coverage.py, counts only): how much of the traffic a cache of fixed question texts would cover (brief §63)
   try{(await loadCSV('repeat-questions-monthly.csv')).forEach(r=>{const m=String(r['Month']||'').trim();if(!/^\d{4}-\d{2}$/.test(m))return;const o={};Object.entries(r).forEach(([k,v])=>{if(k!=='Month')o[k]=nInt(v);});REPEATS[m]=o;});}catch(e){}
   hasRepeats=Object.keys(REPEATS).length>0;
@@ -3225,7 +3226,8 @@ function eraStats(x){
   const cited=ux('cited'),sc=ux('scored'),pa=ux('partial'),cw=ux('citedWords'),cn=ux('citedWordsN'),ci=ux('citations');
   const ck=u.filter(d=>CLICKS[d.date]),ckv=ck.reduce((s,d)=>{const c=CLICKS[d.date];return s+c.embed+c.app+c.other;},0),ckc=ck.reduce((s,d)=>s+(d.ux?.cited||0),0);
   const inside=confirmedEvents().filter(e=>e!==x.ev&&e.kind!=='model'&&e.kind!=='prompt'&&e.start>=x.from&&e.start<=x.to);
-  return{...x,P,scored:sc,cleanRate:rate(cited-pa,sc),wordsPerCited:cn?cw/cn:null,pagesPerCited:cited?ci/cited:null,clicksPer100:ck.length>=7&&ckc?ckv/ckc*100:null,clickDays:ck.length,usageDays:u.length,inside};
+  let typed=0,sit=0;rows.forEach(d=>(QINTENT[d.date]||[]).forEach(r=>{if(r.chip)return;typed+=r.Turns;sit+=r.Situation;}));
+  return{...x,P,scored:sc,cleanRate:rate(cited-pa,sc),wordsPerCited:cn?cw/cn:null,pagesPerCited:cited?ci/cited:null,clicksPer100:ck.length>=7&&ckc?ckv/ckc*100:null,clickDays:ck.length,usageDays:u.length,inside,sitShare:typed?sit/typed*100:null,unexpected:P.unexpectedRate};
 }
 function eraCardHTML(){
   const eras=eraSpans().map(eraStats);
@@ -3238,16 +3240,16 @@ function eraCardHTML(){
   const rows=eras.map(x=>`<tr style="border-bottom:1px solid var(--b2)">
       ${td(`<b>${escH(x.name)}</b><div style="font-size:.64rem;color:var(--muted);font-weight:400;margin-top:2px">${x.kind?`<span style="color:${eventColor(x.ev)}">${escH(x.kind)}</span> · confirmed · `:''}${spanLabel(x.from,x.to,true)}</div>`,{left:true})}
       ${td(n0(x.P.uturns))}${td(f(x.P.citedRate,pc))}${td(f(x.P.notFoundRate,pc))}${td(f(x.P.clarRate,pc))}${td(f(x.P.partialRate,pc))}${td(f(x.cleanRate,pc),{style:'font-weight:600'})}
-      ${td(f(x.wordsPerCited,n0))}${td(f(x.pagesPerCited,d2))}${td(f(x.P.latP50,s1))}${td(f(x.P.genPT,p2))}${td(f(x.P.dislikesPerK,d1))}${td(f(x.clicksPer100,d1))}${td(f(x.P.turnsPerConv,d2))}${td(f(x.P.reachedCited,pc))}
+      ${td(f(x.wordsPerCited,n0))}${td(f(x.pagesPerCited,d2))}${td(f(x.P.latP50,s1))}${td(f(x.P.genPT,p2))}${td(f(x.P.dislikesPerK,d1))}${td(f(x.clicksPer100,d1))}${td(f(x.P.turnsPerConv,d2))}${td(f(x.P.reachedCited,pc))}${hasIntent?td(f(x.sitShare,pc))+td(f(x.unexpected,pc)):''}
     </tr>`).join('');
   const notes=eras.filter(x=>x.inside.length).map(x=>`<li><b>${escH(x.name)}</b> holds ${x.inside.map(e=>escH(e.title)+' ('+fmtDate(e.start)+')').join('; ')}.</li>`).join('');
   return`<div class="card" style="margin-bottom:14px;overflow-x:auto">
       <div class="card-title">Era scorecard<span class="card-title-note">one row per model or prompt era, cut at confirmed events · each era's own sums · the change day belongs to neither era</span></div>
       <table style="width:100%;border-collapse:collapse;min-width:1040px">
-        <thead><tr style="border-bottom:2px solid var(--b2)">${th('Era','left')}${th('Turns')}${th('Cited')}${th('Not found')}${th('Clarifi-<br>cation')}${th('Partial,<br>of cited')}${th('Cited, not<br>partial')}${th('Words /<br>cited')}${th('Pages /<br>cited')}${th('Response<br>p50')}${th('Generation<br>p / turn')}${th('Dislikes /<br>1,000 cited')}${th('Clicks /<br>100 cited')}${th('Turns /<br>conv.')}${th('Reached<br>cited')}</tr></thead>
+        <thead><tr style="border-bottom:2px solid var(--b2)">${th('Era','left')}${th('Turns')}${th('Cited')}${th('Not found')}${th('Clarifi-<br>cation')}${th('Partial,<br>of cited')}${th('Cited, not<br>partial')}${th('Words /<br>cited')}${th('Pages /<br>cited')}${th('Response<br>p50')}${th('Generation<br>p / turn')}${th('Dislikes /<br>1,000 cited')}${th('Clicks /<br>100 cited')}${th('Turns /<br>conv.')}${th('Reached<br>cited')}${hasIntent?th('Personal<br>situations')+th('Not what<br>was needed'):''}</tr></thead>
         <tbody>${rows}</tbody></table>
       ${notes?`<ul class="wd-flags" style="margin-top:10px">${notes}</ul>`:''}
-      <div style="font-size:.63rem;color:var(--dim);margin-top:10px;font-family:'DM Mono',monospace">Descriptive only. Rates are of scored turns (partial of cited answers); response time is the turn-weighted mean of daily medians; generation cost a turn is over settled join days; click-throughs need GA4 on 7+ days of the era. An era that holds a launch or a chip change carries that change inside it. Eras are model eras: the prompts are assumed constant${PROMPTS?` and are unverified since the ${fmtDate(PROMPTS.snapshot)} snapshot`:''}. Outcome labels from 14 Sep 2026 are unvalidated until the hand-labelled sample.</div>
+      <div style="font-size:.63rem;color:var(--dim);margin-top:10px;font-family:'DM Mono',monospace">Descriptive only. Rates are of scored turns (partial of cited answers); response time is the turn-weighted mean of daily medians; generation cost a turn is over settled join days; click-throughs need GA4 on 7+ days of the era. An era that holds a launch or a chip change carries that change inside it. Eras are model eras: the prompts are assumed constant${PROMPTS?` and are unverified since the ${fmtDate(PROMPTS.snapshot)} snapshot`:''}.${hasIntent?' Personal situations = share of typed questions; not what was needed = typed questions whose outcome is not the one their intent expects, both by rule from the question.':''} Outcome labels from 14 Sep 2026 are unvalidated until the hand-labelled sample.</div>
     </div>`;
 }
 
@@ -3385,6 +3387,7 @@ const TAB_GROUPS=[
   // Usage is optional: shown only when usage.csv is loaded; Reach / Categories only when their files are present.
   {id:'usage',      label:'Usage',       icon:'users',       when:()=>!!(DATA&&DATA.hasUsage), subs:[
     {id:'usage',    label:'Volume',        icon:'users'},
+    {id:'quality',  label:'Quality',       icon:'badge-check', when:()=>!!(DATA&&DATA.usageQuality&&DATA.usageQuality.columns&&(DATA.usageQuality.columns.outcomes||DATA.usageQuality.columns.taxonomy))},
     {id:'impact',   label:'Before / after',icon:'git-compare'},
     {id:'reach',    label:'Reach',         icon:'globe',  when:()=>hasGa4},
     {id:'convs',    label:'Conversations', icon:'messages-square', when:()=>hasConv},
@@ -4775,6 +4778,7 @@ function renderPane(id){
   if(id==='overview')   renderOverview(D,S);
   if(id==='breakdown')  renderBreakdown(D,S);
   if(id==='usage')      renderUsage(D,S);
+  if(id==='quality')    renderQuality(D,S);
   if(id==='reach')      renderReach(D,S);
   if(id==='clicks')     renderClicks(D,S);
   if(id==='pages')      renderPages(D,S);
@@ -6237,7 +6241,11 @@ function renderConvs(D,S){
   const sfC=fr.reduce((a,d)=>a+(d.ux?.sfCited||0),0),sfN=fr.reduce((a,d)=>a+(d.ux?.sfNotFound||0),0),sfS=fr.reduce((a,d)=>a+(d.ux?.sfScored||0),0);
   // Starter prompts, months overlapping the range
   const months=monthsIn(fr),sp={};
-  months.forEach(m=>(STARTERS[m]||[]).forEach(r=>{const o=sp[r.prompt]||(sp[r.prompt]={n:0,cited:0,typed:0,sugg:0,partial:0,nf:0,clar:0,dis:0,words:0,timed:0,ms:0,mature:0,ended:0,score:false});o.n+=r.n;o.cited+=r.cited;o.typed+=r.typed;o.sugg+=r.sugg;o.partial+=r.partial;o.nf+=r.nf;o.clar+=r.clar;o.dis+=r.dis;o.words+=r.words;o.timed+=r.timed;o.ms+=r.ms;o.mature+=r.mature;o.ended+=r.ended;o.score=o.score||r.score;}));
+  months.forEach(m=>(STARTERS[m]||[]).forEach(r=>{const o=sp[r.prompt]||(sp[r.prompt]={n:0,cited:0,typed:0,sugg:0,partial:0,nf:0,clar:0,dis:0,words:0,timed:0,ms:0,mature:0,ended:0,score:false});o.n+=r.n;o.cited+=r.cited;o.typed+=r.typed;o.sugg+=r.sugg;o.partial+=r.partial;o.nf+=r.nf;o.clar+=r.clar;o.dis+=r.dis;o.words+=r.words;o.timed+=r.timed;o.ms+=r.ms;o.mature+=r.mature;o.ended+=r.ended;o.score=o.score||r.score;o.intent=o.intent||r.intent;}));
+  // which kinds of question the chips cover, against what people type (brief §69 item 6)
+  const chipIntents=new Set(Object.values(sp).map(o=>o.intent).filter(Boolean)),typedMix={};let typedTot=0;
+  if(hasIntent)fr.forEach(d=>(QINTENT[d.date]||[]).forEach(r=>{if(r.chip)return;typedMix[r.intent]=(typedMix[r.intent]||0)+r.Turns;typedTot+=r.Turns;}));
+  const uncovered=INTENT_ORDER.filter(i=>i!=='other'&&typedMix[i]&&!chipIntents.has(i)).map(i=>`${INTENT_LABEL[i]} ${rateText(typedMix[i],typedTot)}`);
   const spScore=Object.values(sp).some(o=>o.score);
   // cache coverage and clarification loops (brief §63)
   const RP=months.map(m=>REPEATS[m]).filter(Boolean),rpSum=k=>RP.reduce((a,r)=>a+(r[k]||0),0);
@@ -6328,9 +6336,10 @@ function renderConvs(D,S){
     </div>
     ${spRows.length?`<div class="card" style="overflow-x:auto"><div class="card-title">Starter prompt scorecard<span class="card-title-note">configured chips matched on first turns · months overlapping the range (${months.map(fmtMonth).join(', ')}) · ${rateText(spTotal,spStarted)} of ${num(spStarted)} conversations started in those months · a dash = under the small-sample minimum</span></div>
       <table style="width:100%;border-collapse:collapse;min-width:${spScore?'1100px':'640px'}"><thead><tr style="border-bottom:1px solid var(--b2)">${th('Prompt',false)}${th('Count')}${th('Share of first turns')}${th('Cited')}${spScore?th('Cited, not partial')+th('Not found')+th('Clarification'):''}${th('Then typed')}${th('Then chip')}${spScore?th('Ended there')+th('Disliked')+th('Words')+th('Response p-mean'):''}</tr></thead>
-      <tbody>${spRows.map(([pr,o])=>`<tr style="border-bottom:1px solid var(--b2)">${td(pr,C.acc,false)}${td(num(o.n))}${td(rateText(o.n,spStarted))}${td(rateText(o.cited,o.n),C.green)}${spScore?td(rateText(o.cited-o.partial,o.n),C.green)+td(rateText(o.nf,o.n),C.red)+td(rateText(o.clar,o.n),C.amber):''}${td(rateText(o.typed,o.n))}${td(rateText(o.sugg,o.n))}${spScore?td(rateText(o.ended,o.mature))+td(o.dis?num(o.dis):'0')+td(o.n?Math.round(o.words/o.n).toLocaleString():'—')+td(o.timed?(o.ms/o.timed/1000).toFixed(1)+'s':'—'):''}</tr>`).join('')}</tbody></table>
+      <tbody>${spRows.map(([pr,o])=>`<tr style="border-bottom:1px solid var(--b2)">${td(pr+(o.intent?` <span style="color:var(--muted);font-size:.66rem">· ${INTENT_LABEL[o.intent]||o.intent}</span>`:''),C.acc,false)}${td(num(o.n))}${td(rateText(o.n,spStarted))}${td(rateText(o.cited,o.n),C.green)}${spScore?td(rateText(o.cited-o.partial,o.n),C.green)+td(rateText(o.nf,o.n),C.red)+td(rateText(o.clar,o.n),C.amber):''}${td(rateText(o.typed,o.n))}${td(rateText(o.sugg,o.n))}${spScore?td(rateText(o.ended,o.mature))+td(o.dis?num(o.dis):'0')+td(o.n?Math.round(o.words/o.n).toLocaleString():'—')+td(o.timed?(o.ms/o.timed/1000).toFixed(1)+'s':'—'):''}</tr>`).join('')}</tbody></table>
       ${spScore?(()=>{const ce=fr.reduce((a,d)=>a+(d.ux?.starterErr||0),0),cn=fr.reduce((a,d)=>a+(d.ux?.starter||0),0),oe=fr.reduce((a,d)=>a+(d.ux?.organicErr||0),0),on=fr.reduce((a,d)=>a+(d.ux?.organic||0),0);
         return cn&&on?`<div class="grid2" style="margin:12px 0 0">${uxTile(rateText(ce,cn),'Chip clicks that got an empty answer',`${num(ce)} of ${num(cn)} chip first turns in range · a standing defect in the chip path, in every month since January (brief §64)`,C.red)}${uxTile(rateText(oe,on),'Typed first questions that got an empty answer',`${num(oe)} of ${num(on)} typed first turns · the same text typed by hand is answered`,C.muted)}</div>`:'';})():''}
+      ${hasIntent&&typedTot?`<div class="share-foot" style="margin-top:8px"><b>Kinds of question the chips cover:</b> ${[...chipIntents].map(i=>INTENT_LABEL[i]||i).join(', ')||'—'}.${uncovered.length?` <b>Typed, with no chip:</b> ${uncovered.join(', ')} of typed questions in range.`:''} A chip for the biggest uncovered kind is the one to add.</div>`:''}
       ${spScore?`<div class="share-foot">Each chip's own first-turn answer: cited (and cited without a "couldn't find" phrase), not found, clarification; what the person did next; of the mature conversations it started, the share that ended there; dislikes on the answer; answer length and mean response time. A chip is a fixed question, so a change in its row is a change in the system (brief §55). The rest of each row (not cited, not found, nor clarification) is empty answers.</div>`:''}
     </div>`:''}
     ${hasRepeats&&RP.length?(()=>{const ft=rpSum('FirstTurns'),ch=rpSum('StarterFirstTurns'),t=rpSum('Turns'),sg=rpSum('SuggestedClicks');
@@ -6397,7 +6406,7 @@ function renderUsage(D,S){
   const peakD=fr.reduce((b,d)=>d.queries>b.queries?d:b,fr[0]||{queries:0});
 
   el.innerHTML=`
-    ${usageOutcomesHTML(fr)}
+
     <div class="grid4" style="margin-bottom:14px">
       ${kpi(num(totQ),'Total turns','selected period',C.acc)}
       ${kpi(num(totS),'Conversations','selected period',C.green)}
@@ -6420,7 +6429,7 @@ function renderUsage(D,S){
       <div id="cal-wrap" style="overflow-x:auto;padding-bottom:6px"></div>
       <div class="cal-legend"><span>Less</span><div style="display:flex;gap:2px;margin:0 5px" id="cal-legend-cells"></div><span>More</span></div>
     </details>
-    ${usageDetailHTML(fr)}
+    ${usageDetailHTML(fr,'volume')}
   `;
 
   const usOpts=mergeOpts(baseOpts(),{scales:{y:{ticks:{callback:v=>num(v)}}}});
@@ -6429,6 +6438,19 @@ function renderUsage(D,S){
   mkChart('us-wdwe',{type:'bar',data:{labels:fm.map(m=>m.label),datasets:[{label:'Weekday avg',data:fm.map(m=>m.wdQ.length?Math.round(m.wdQ.reduce((a,b)=>a+b,0)/m.wdQ.length):0),backgroundColor:C.acc+'88'},{label:'Weekend avg',data:fm.map(m=>m.weQ.length?Math.round(m.weQ.reduce((a,b)=>a+b,0)/m.weQ.length):0),backgroundColor:C.purple+'88'}]},options:mergeOpts(usOpts,{onClick:(e,els)=>{if(els.length)openMonthPanel(fm[els[0].index].month);}})});
   buildCalendar(D);
   buildUsageDetailCharts(fr);
+}
+
+// ═══ QUALITY (brief §69 item 7): the answer side of Usage, split from Volume ═══
+function renderQuality(D,S){
+  const el=document.getElementById('pane-quality');
+  const fr=filterRange(D.merged);
+  if(!fr.length||!D.hasUsage){el.innerHTML=emptyState('badge-check','No usage data in range','Widen the date range, or add usage.csv with outcome columns.');renderIcons();return;}
+  el.innerHTML=`
+    <div class="reach-note"><i data-lucide="info" class="i-sm"></i><span><b>How the answers did.</b> Outcomes, what people thought of them, response time and length, the incident candidates and the safety counts, for the selected range. Traffic, question types, sources and hours are on Volume; what people asked for is on What people ask.</span></div>
+    ${usageOutcomesHTML(fr)}
+    ${usageDetailHTML(fr,'quality')}`;
+  buildUsageDetailCharts(fr);
+  renderIcons();
 }
 
 // ── Usage detail: cards that switch on when usage.csv carries the feed-generated columns ──
@@ -6486,15 +6508,18 @@ function usageOutcomesHTML(fr){
   }
   return h;
 }
-function usageDetailHTML(fr){
+// part: 'volume' (question types, source, script, hours), 'quality' (feedback, outcome by source and type, response
+// time, answer length, incidents, safety) or 'all'. Usage › Volume and Usage › Quality each take their half (brief §69).
+function usageDetailHTML(fr,part='all'){
   const cols=(DATA.usageQuality&&DATA.usageQuality.columns)||{};
   if(!fr.length)return'';
+  const V=part!=='quality',Q=part!=='volume';
   const sum=k=>fr.reduce((s,d)=>s+(d.ux?.[k]||0),0);
   const turns=fr.reduce((s,d)=>s+d.queries,0),convs=fr.reduce((s,d)=>s+d.sessions,0);
   const pc=(a,b)=>b>0?(a/b*100).toFixed(1)+'%':'—';
   const span=usageSpan(fr);
   let h='';
-  if(cols.feedback){
+  if(cols.feedback&&Q){
     const li=sum('likes'),di=sum('dislikes'),dk=sum('dislikesCited'),ci=sum('cited');
     const fbr=rateOK(li+di,turns),dpk=rateOK(dk,ci);
     h+=`<div class="card"><div class="card-title">Feedback<span class="card-title-note">likes and dislikes are ${rateText(li+di,turns,2)} of turns, so every rate here is shown beside its counts · ${span}</span></div>
@@ -6506,7 +6531,7 @@ function usageDetailHTML(fr){
       </div>
     </div>`;
   }
-  if(cols.types){
+  if(cols.types&&V){
     const nt=sum('newTopic'),uf=sum('userFollowup'),sf=sum('suggestedFollowup');
     h+=`<div class="card"><div class="card-title">Question types<span class="card-title-note">from the feed's Question Type column · suggested follow-ups are the chips · ${span}</span></div>
       <div class="grid4">
@@ -6521,7 +6546,7 @@ function usageDetailHTML(fr){
       ${chartBox('ux-types',180,'Question types — selected range','turns, stacked · click a bar')}
     </div>`;
   }
-  if(cols.sources){
+  if(cols.sources&&V){
     const ms=sum('modalSessions'),ws=sum('webSessions'),mt=sum('modalTurns'),wt=sum('webTurns'),ot=sum('otherTurns');
     h+=`<div class="card"><div class="card-title">Source<span class="card-title-note">conversations by where they started · ${span}</span></div>
       <div class="grid4">
@@ -6533,7 +6558,7 @@ function usageDetailHTML(fr){
       ${chartBox('ux-sources',180,'Conversations by source — selected range','stacked · click a bar')}
     </div>`;
   }
-  if(cols.script){
+  if(cols.script&&V){
     const keys=[['scLatin','Latin',C.acc],['scCyrillic','Cyrillic',C.purple],['scArabic','Arabic',C.amber],['scCJK','CJK',C.teal],['scDevanagari','Devanagari',C.pink],['scOther','Other',C.muted],['scNone','No letters',C.dim]];
     const tot=keys.reduce((a,[k])=>a+sum(k),0),nonLatin=tot-sum('scLatin')-sum('scNone');
     h+=`<div class="card"><div class="card-title">Query script<span class="card-title-note">Unicode script of the first letter of each query · a script, not a language · ${span}</span></div>
@@ -6552,7 +6577,7 @@ function usageDetailHTML(fr){
           <div class="share-foot">Outcome by the alphabet a question starts in, over scored turns. A dash means too few to show (small-sample rule). “No letters” is questions of digits or symbols only.</div>`;})():''}
     </div>`;
   }
-  if(cols.cross){
+  if(cols.cross&&Q){
     const R=(n,d)=>rateText(n,d);
     const row=(label,p)=>`<tr><td style="padding:6px 10px;font-size:.72rem;color:var(--text)">${label}</td><td class="num" style="text-align:right;padding:6px 10px;font-family:'DM Mono',monospace;color:${C.green}">${R(sum(p+'Cited'),sum(p+'Scored'))}</td><td class="num" style="text-align:right;padding:6px 10px;font-family:'DM Mono',monospace;color:${C.red}">${R(sum(p+'NotFound'),sum(p+'Scored'))}</td><td class="num" style="text-align:right;padding:6px 10px;font-family:'DM Mono',monospace;color:var(--muted)">${num(sum(p+'Scored'))}</td></tr>`;
     const head=`<thead><tr style="border-bottom:1px solid var(--b2)"><th style="text-align:left;padding:6px 10px;font-size:.6rem;color:var(--muted);text-transform:uppercase;letter-spacing:.08em"></th><th style="text-align:right;padding:6px 10px;font-size:.6rem;color:var(--muted);text-transform:uppercase;letter-spacing:.08em">Cited</th><th style="text-align:right;padding:6px 10px;font-size:.6rem;color:var(--muted);text-transform:uppercase;letter-spacing:.08em">Not found</th><th style="text-align:right;padding:6px 10px;font-size:.6rem;color:var(--muted);text-transform:uppercase;letter-spacing:.08em">Scored</th></tr></thead>`;
@@ -6563,7 +6588,7 @@ function usageDetailHTML(fr){
       </div>
     </div>`;
   }
-  if(cols.latency){
+  if(cols.latency&&Q){
     const w=k=>{const q=fr.reduce((s,d)=>s+(d.ux?.[k]?d.queries:0),0);return q>0?fr.reduce((s,d)=>s+((d.ux?.[k]||0)*d.queries),0)/q:null;};
     const p50=w('latP50'),p90=w('latP90'),p99=cols.p99?w('latP99'):null;
     const bands=cols.bands?[['latU10','Under 10 s',C.green],['lat1020','10 to 20 s',C.amber],['lat2030','20 to 30 s',C.pink],['latO30','Over 30 s',C.red]]:null;
@@ -6582,7 +6607,7 @@ function usageDetailHTML(fr){
       ${cols.taxonomy?chartBox('ux-errors',140,'Errors — empty response, 0 ms',num(errs)+' in range · click a bar'):''}
     </div>`;
   }
-  if(cols.words){
+  if(cols.words&&Q){
     // Answer length: a model change can make answers longer or shorter; words summed then divided by answers.
     const cw=sum('citedWords'),cn=sum('citedWordsN'),aw=sum('ansWords'),an=sum('ansWordsN');
     h+=`<div class="card"><div class="card-title">Answer length<span class="card-title-note">words in AskCI's answer, summed then divided by answers · ${span}</span></div>
@@ -6593,7 +6618,8 @@ function usageDetailHTML(fr){
       ${chartBox('ux-words',170,'Average answer length','words per answer · confirmed events marked · click a bar')}
     </div>`;
   }
-  if(hasHours){
+  if(Q){h+=incidentCardHTML(fr);h+=safetyCardHTML(fr);}
+  if(hasHours&&V){
     const ps=CONFIG.phone_service,grid=Array.from({length:7},()=>Array(24).fill(0)),den=Array.from({length:7},()=>Array(24).fill(0));
     const MODES={turns:['t',null,'turns'],sessions:['s',null,'conversations'],notfound:['nf','t','not-found share of turns'],errors:['err','t','error rate'],latency:['lat','timed','mean response time']};
     const [nk,dk,unit]=MODES[hoursMode]||MODES.turns,isRate=!!dk,hk=isRate?'t':nk;
@@ -6613,8 +6639,6 @@ function usageDetailHTML(fr){
       const col=hoursMode==='notfound'||hoursMode==='errors'?C.red:hoursMode==='latency'?C.amber:C.acc;
       const cell=(k,hh)=>{const v=val(k,hh),b=best[k][hh];const t=max>min?((v==null?0:(v-min))/(max-min)):0;const a=v==null?0x08:Math.round(0x12+(0xee-0x12)*t);
         return`<div title="${names[k]} ${String(hh).padStart(2,'0')}:00 · ${fmtV(v)}${isRate?` (${num(grid[k][hh])} of ${num(den[k][hh])})`:' '+unit}${b?` · busiest ${fmtDate(b.date)} (${num(b.t)} turns) — click to open`:''}"${b?` onclick="openDayPanel('${b.date}')"`:''} style="height:16px;border-radius:2px;background:${col}${a.toString(16).padStart(2,'0')}${b?';cursor:pointer':''};font-size:.5rem;line-height:16px;text-align:center;color:var(--muted);overflow:hidden">${!isRate&&max<10000&&v>0&&t>0.55?num(v):''}</div>`;};
-      h+=incidentCardHTML(fr);
-      h+=safetyCardHTML(fr);
       h+=`<div class="card"><div class="card-title">Hour of day<span class="card-title-note">${unit} by weekday and hour, Irish time · ${days} day${days===1?'':'s'} with hourly data in range</span>
           <span class="pill-group" style="margin-left:auto"><button class="pill${hoursMode==='turns'?' active':''}" onclick="setHoursMode('turns')">Turns</button><button class="pill${hoursMode==='sessions'?' active':''}" onclick="setHoursMode('sessions')">Conversations</button>${Object.values(HOURS)[0]?.find(x=>x&&x.detail)?`<button class="pill${hoursMode==='notfound'?' active':''}" onclick="setHoursMode('notfound')">Not-found rate</button><button class="pill${hoursMode==='errors'?' active':''}" onclick="setHoursMode('errors')">Error rate</button><button class="pill${hoursMode==='latency'?' active':''}" onclick="setHoursMode('latency')">Mean response</button>`:''}</span></div>
         <div class="grid4">
@@ -7379,6 +7403,18 @@ function drillBucket(row,gran=granularity){
   openDayPanel(row.date);
 }
 
+// Day panel: what kinds of question the day brought, against the trailing 28 days (brief §69): Budget Day was rate
+// questions; the next unusual day will be something else and the panel should say so.
+function dayIntentHTML(day){
+  const rows=QINTENT[day.date]||[],typed=rows.filter(r=>!r.chip),tot=typed.reduce((a,r)=>a+r.Turns,0);if(tot<CONFIG.min_rate_denominator)return'';
+  const idx=DATA.merged.findIndex(d=>d.date===day.date),base={};let bt=0;
+  DATA.merged.slice(Math.max(0,idx-28),idx).forEach(d=>(QINTENT[d.date]||[]).forEach(r=>{if(r.chip)return;base[r.intent]=(base[r.intent]||0)+r.Turns;bt+=r.Turns;}));
+  const mix={};typed.forEach(r=>{mix[r.intent]=(mix[r.intent]||0)+r.Turns;});
+  const sit=typed.reduce((a,r)=>a+r.Situation,0),nf=typed.reduce((a,r)=>a+r.NotFound,0);
+  const items=INTENT_ORDER.filter(i=>mix[i]).map(i=>{const sh=mix[i]/tot,b=bt?(base[i]||0)/bt:null;return`<div style="display:flex;justify-content:space-between;gap:8px;font-size:.74rem;padding:2px 0"><span>${INTENT_LABEL[i]}</span><span style="font-family:'DM Mono',monospace">${(sh*100).toFixed(0)}%${b!=null?` <span style="color:${sh-b>=0.05?'var(--amber)':sh-b<=-0.05?'var(--acc)':'var(--dim)'}">(${sh>=b?'+':'−'}${Math.abs((sh-b)*100).toFixed(0)})</span>`:''}</span></div>`;}).join('');
+  return`<div class="day-section"><div class="day-section-title">What people asked <span style="font-weight:400;text-transform:none;letter-spacing:0;color:var(--dim)">· ${num(tot)} typed questions · in brackets the change in points against the 28 days before · by rule</span></div>${items}
+    <div style="font-size:.7rem;color:var(--muted);margin-top:6px">Personal situations ${rateText(sit,tot)} · not found ${rateText(nf,tot)} of typed questions</div></div>`;
+}
 // Day panel: that day's click-throughs, matched rate and top pages (Click-throughs data only).
 function dayClicksHTML(day){
   const c=CLICKS[day.date],x=clickDay(day,'all'),pages={};
@@ -7502,6 +7538,7 @@ function renderDayPanel(day){
     </div>
 
     ${hasClicks&&CLICKS[day.date]?dayClicksHTML(day):''}
+    ${hasIntent&&QINTENT[day.date]?dayIntentHTML(day):''}
 
     <!-- Cost by service -->
     ${svcEntries.length?`<div class="day-section">

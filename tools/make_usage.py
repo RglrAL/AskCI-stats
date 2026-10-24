@@ -673,10 +673,14 @@ def starter_rows(sp):
     """starter-prompts-monthly.csv: each configured chip as a first turn, by month (brief §63): its own outcome
     (Cited, of which Partial; NotFound; Clarification), what followed, dislikes, answer words and response time
     sums, and of the mature conversations it started, how many ended there."""
+    try:
+        from redact_feed import intent_of   # the chip's own intent, by the same rules as every question (brief §69)
+    except ImportError:
+        intent_of = lambda q: ("", "")
     return ["Month", "Prompt", "Count", "Cited", "FollowedByTyped", "FollowedBySuggested", "Partial", "NotFound", "Clarification", "Disliked",
-            "Words", "TimedTurns", "ResponseMsSum", "Mature", "EndedThere"], \
+            "Words", "TimedTurns", "ResponseMsSum", "Mature", "EndedThere", "Intent"], \
            [[m, p, c["count"], c["cited"], c["typed2"], c["suggested2"], c["partial"], c["notfound"], c["clarification"], c["disliked"],
-             c["words"], c["timed"], c["ms"], c["mature"], c["ended"]] for (m, p), c in sorted(sp.items(), key=lambda kv: (kv[0][0], -kv[1]["count"]))]
+             c["words"], c["timed"], c["ms"], c["mature"], c["ended"], intent_of(p)[0]] for (m, p), c in sorted(sp.items(), key=lambda kv: (kv[0][0], -kv[1]["count"]))]
 
 
 OUTCOME_COLS = [("Cited", "o:Cited answer"), ("NotFound", "o:Not found"), ("Clarification", "o:Clarification"), ("Error", "o:Error"),

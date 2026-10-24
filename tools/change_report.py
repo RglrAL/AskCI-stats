@@ -450,6 +450,13 @@ def report(ds, days, skip, EV, D):
             rate = next((x for x in spread if x[0] == "rate"), None)
             if rate and abs(tc_all[0]) >= 0.02:
                 P(f"Rate questions moved {rate[1] * 100:+.1f} points against {tc_all[0] * 100:+.1f} for all typed questions: " + ("**more than the rest**, which points at the figure-needs-a-link rule meeting pages whose rates are in tables." if rate[1] < tc_all[0] - 0.02 else "no more than the rest, so the figure-needs-a-link rule is not where it landed."))
+        # mix adjustment on intent, as on topic: the after window's typed cited rate re-weighted to the before window's intent mix
+        both = [k for k in order if QB[k]["Turns"] and QA[k]["Turns"]]; wsum = sum(QB[k]["Turns"] for k in both)
+        if wsum and alla["Turns"] and allb["Turns"]:
+            std = sum(QB[k]["Turns"] / wsum * (QA[k]["Cited"] / QA[k]["Turns"]) for k in both); pa, pb = alla["Cited"] / alla["Turns"], allb["Cited"] / allb["Turns"]
+            share = (pa - std) / (pa - pb) if abs(pa - pb) >= 0.005 else None
+            P(f"\nRe-weighted to the before window's mix of intents, the after window's typed cited rate is {pct(std)} against {pct(pa)} as observed, so the mix of what was asked accounts for "
+              + (("none" if abs(share) < 0.05 else f"{share * 100:.0f}%") + " of the change." if share is not None else "— (the change is under half a point)."))
         sb, sa = allb, alla
         if sb["Situation"] >= MIN_N and sa["Situation"] >= MIN_N:
             tsn = newcombe(sb["SituationNotFound"], sb["Situation"], sa["SituationNotFound"], sa["Situation"])
