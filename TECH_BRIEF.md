@@ -208,6 +208,9 @@ dated by the fixed wording, 4 candidate chip changes, launches and observed chan
   confirmed event's 28-day windows are shaded with each window's pooled rate and a day-level 95% interval computed in the
   browser (`dayBootstrap()`, 2,000 seeded resamples of the days, the same windows as `tools/change_report.py`). The
   generated change report remains the record.
+- **Type floor and definitions** (brief §80): nothing a reader reads is under 12px (chart badges 11px, stated);
+  card-title notes over 90 characters are moved under the title by one observer (`liftLongNotes`); copied text carries
+  the data stamp on its first line.
 - **Chart conventions** (brief §77): straight lines, no area fills except the cumulative burn-down, square bars,
   share charts as ranked horizontal bars; the page carries no Chart.js global overrides for radius, tension or
   gradient fills. The three standing caveats appear once, in the amber strip under the data-quality strip, not per

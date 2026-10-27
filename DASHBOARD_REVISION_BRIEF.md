@@ -2034,3 +2034,32 @@ Ask bar test 311 of 311. Checked live in both themes at All and 3M.
 two lines were suggested there too); the era scorecard's wide table (item 10); the sub-nav select under
 900 px.
 
+## 80. UI pass 4: a 12px floor, long definitions out of card titles, the data stamp first (27 Oct 2026)
+
+§76 item 8. The design review found card notes, footers and table cells at 9.6 to 10.9 px, definitions of up
+to 200 characters squeezed into the right-hand half of card titles, and the copied text carrying its data
+stamp on its last line, the one a paste into chat loses. Built:
+
+- **A 12px floor for anything a reader reads.** The smallest type token is now 12px (was 11), and every
+  hard-coded size that computed below 12px is raised to it: 150 literals, because the page's root font is
+  14px and `.6rem` to `.85rem` all fell under the floor. Chart.js axis ticks, legends, tooltips and axis
+  titles are 12px (were 8 to 11). A scan of every visible text element in the ten views, live, finds none
+  under 12px. **One exception, stated:** the badges drawn inside charts (event names, window labels,
+  reference-line labels) are 11px (were 9 and 10), because three stacked rows of 12px badges would cover about
+  a fifth of a 210px chart; their text is repeated in the event list and the captions. Clipboard HTML keeps
+  literal sizes, since Word and email cannot resolve the page's CSS variables.
+- **Definitions once, under the title.** A card-title note longer than 90 characters is a definition, not a
+  tag; it now moves out of the title into a full-width line beneath it in the prose face at 12px. Short notes
+  ("click a bar", the period) stay in the title. One observer does this for every card the page renders,
+  panes, modals and day panels alike, so the 70 templates were not edited; about half the notes move. The
+  Answer outcomes note no longer repeats the outcome-rules version, which the strip carries.
+- **Copy with definition puts the stamp first.** The copied title line now ends with the usage-data date and
+  the page and data commits; the full footer stays at the end. One Ask bar test case that quoted the old first
+  line was updated to check the stamp is there.
+
+Ask bar test 311 of 311. Checked live in both themes.
+
+**Not done here:** the 681 inline `style` attributes the review suggested lifting into classes (mechanical,
+no visible change, better done with item 12's accessibility pass); a title-hover form of the definition
+(the lifted line is visible without hovering, which suits the readers who must trust it).
+

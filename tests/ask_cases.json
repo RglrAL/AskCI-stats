@@ -2555,7 +2555,8 @@
   "note": "copy carries the definition, the unvalidated caveat and the footer",
   "expect": [
    "86.5% cited answer rate in September 2026",
-   "|| COPY **Q: cited answer rate in September** **86.5%**",
+   "|| COPY **Q: cited answer rate in September** · usage data to ",
+   "**86.5%**",
    "| 15 Sep | 81.7% |",
    "Definition: Answers that cite at least one citizensinformation.ie page",
    "Caveats: - Outcome figures from 14 Sep are unvalidated",
