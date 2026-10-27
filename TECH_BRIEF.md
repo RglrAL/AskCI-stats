@@ -215,6 +215,9 @@ dated by the fixed wording, 4 candidate chip changes, launches and observed chan
   fixed-wording sentences (own scales) and the categories' weekly not-found rate (one scale).
 - **Show all** (brief §82): ranked tables render up to 200 rows (`ROW_CAP`) and show the first few, with "Show all N"
   from `applyShowAll()`; the era scorecard has eight columns, a weekly sparkline and a per-row expand.
+- **Accessibility** (brief §84): every chart canvas has role img, a name and its data table kept in the page;
+  overlays take and return focus and trap Tab (one focus manager wraps their open/close functions); text tokens are
+  4.5:1 or better on every surface in both themes; no view scrolls sideways at 390 px.
 - **Chart conventions** (brief §77): straight lines, no area fills except the cumulative burn-down, square bars,
   share charts as ranked horizontal bars; the page carries no Chart.js global overrides for radius, tension or
   gradient fills. The three standing caveats appear once, in the amber strip under the data-quality strip, not per

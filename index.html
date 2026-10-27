@@ -23,7 +23,7 @@
   --bg:#070a12;--s1:#0e131c;--s2:#141b27;--s3:#1c2532;
   --border:#283041;--b2:#1a2230;
   /* Foreground */
-  --text:#e6edf3;--muted:#7d8590;--dim:#737e89; /* --dim raised to meet WCAG AA (4.5:1) for small text */
+  --text:#e6edf3;--muted:#858c97;--dim:#848d97; /* 4.5:1 or better on every surface, --s3 included (brief §84) */
   /* Accent + state */
   --acc:#5b9dff;--acc-2:#8fb8ff;
   --green:#3fb950;--amber:#d29922;--red:#f85149;
@@ -46,9 +46,9 @@
   --bg:#eef1f6;--s1:#ffffff;--s2:#f5f8fc;--s3:#e9eef5;
   --border:#d0d7de;--b2:#eaeef2;
   --text:#1f2328;--muted:#59636e;--dim:#646b75; /* AA-contrast dim on the light surface */
-  --acc:#0969da;--acc-2:#218bff;
-  --green:#1a7f37;--amber:#9a6700;--red:#cf222e;
-  --purple:#8250df;--pink:#cf222e;--teal:#0d6e2b;
+  --acc:#0967d6;--acc-2:#218bff;   /* acc, green, amber, purple darkened a step: 4.5:1 as text on every light surface (brief §84) */
+  --green:#197b35;--amber:#916100;--red:#cf222e;
+  --purple:#7d4dd6;--pink:#cf222e;--teal:#0d6e2b;
   --cal-0:#eaeef2;--cal-1:#cfe2ff;--cal-2:#84afff;--cal-3:#2f7eea;--cal-4:#0969da;--cal-5:#054ea8;
   --shadow:0 10px 30px rgba(40,60,120,.10);
   --glass-bg:color-mix(in srgb,#ffffff 72%,transparent);
@@ -124,6 +124,8 @@ button:focus-visible,.pill:focus-visible{outline-offset:1px}
 #sticky-bar.visible{display:flex}
 .tc-label{font-size:var(--t-2xs);color:var(--muted);text-transform:uppercase;letter-spacing:.1em;font-family:'DM Mono',monospace;font-weight:500}
 .pill-group{display:inline-flex;gap:2px;background:var(--s2);border-radius:var(--r-md);padding:2px;border:1px solid var(--b2);height:32px}
+/* the Usage sub-nav wraps on narrow screens instead of pushing the page sideways (brief §84) */
+@media(max-width:900px){#subnav .pill-group{flex-wrap:wrap;height:auto;max-width:100%}}
 .pill{
   background:transparent;border:none;color:var(--muted);
   padding:0 12px;border-radius:var(--r-sm);cursor:pointer;
@@ -251,9 +253,11 @@ button:focus-visible,.pill:focus-visible{outline-offset:1px}
 .chart-toggle-btn.active{background:var(--s3);color:var(--text)}
 .chart-toggle-btn:hover:not(.active){color:var(--text)}
 .chart-data-table{
-  display:none;width:100%;
+  width:100%;
   font-size:var(--t-xs);max-height:340px;overflow:auto;
 }
+/* in chart mode the table stays in the page for screen readers, visually hidden (brief §84) */
+.chart-data-table:not(.show){position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0}
 .chart-data-table.show{display:block}
 .chart-data-table thead{position:sticky;top:0;background:var(--s2);z-index:1}
 .chart-data-table th{
@@ -1906,7 +1910,7 @@ Date,Questions,Sessions
 <div class="cal-tooltip" id="cal-tip"></div>
 
 <!-- KPI history modal -->
-<div id="kpi-modal-overlay" role="dialog" aria-modal="true" aria-label="KPI history" onclick="if(event.target===this)closeKpiModal()">
+<div id="kpi-modal-overlay" role="dialog" aria-modal="true" aria-labelledby="kpi-modal-title" onclick="if(event.target===this)closeKpiModal()">
   <div id="kpi-modal">
     <div class="kpi-modal-header">
       <div class="kpi-modal-icon" id="kpi-modal-icon"><i data-lucide="trending-up" class="i-lg"></i></div>
@@ -1945,7 +1949,7 @@ Date,Questions,Sessions
 
 <!-- Day drill-down overlay -->
 <div id="day-panel-overlay" onclick="closeDayPanel()"></div>
-<div id="day-panel" role="dialog" aria-label="Day detail">
+<div id="day-panel" role="dialog" aria-modal="true" aria-label="Day detail">
   <div id="day-panel-header">
     <div style="flex:1;min-width:0">
       <div style="font-size:var(--t-2xs);color:var(--muted);font-family:'DM Mono',monospace;text-transform:uppercase;letter-spacing:.1em;margin-bottom:var(--sp-1);font-weight:500">Day Detail</div>
@@ -1963,7 +1967,7 @@ Date,Questions,Sessions
 <script>
 // ═══ COLOURS ═══════════════════════════════════════════════════════
 const DARK={bg:'#07090f',s1:'#0d1117',s2:'#161b22',s3:'#21262d',border:'#30363d',b2:'#21262d',text:'#e6edf3',muted:'#8b949e',dim:'#8b949e',acc:'#58a6ff',green:'#3fb950',amber:'#d29922',red:'#f85149',purple:'#bc8cff',pink:'#ff7b72',teal:'#39d353'};
-const LIGHT={bg:'#f6f8fa',s1:'#ffffff',s2:'#f0f2f5',s3:'#e6eaef',border:'#d0d7de',b2:'#e6eaef',text:'#1f2328',muted:'#57606a',dim:'#57606a',acc:'#0969da',green:'#1a7f37',amber:'#9a6700',red:'#cf222e',purple:'#8250df',pink:'#e85c41',teal:'#0d6e2b'};
+const LIGHT={bg:'#f6f8fa',s1:'#ffffff',s2:'#f0f2f5',s3:'#e6eaef',border:'#d0d7de',b2:'#e6eaef',text:'#1f2328',muted:'#57606a',dim:'#57606a',acc:'#0967d6',green:'#197b35',amber:'#916100',red:'#cf222e',purple:'#7d4dd6',pink:'#e85c41',teal:'#0d6e2b'};
 let isDark=true, C=DARK;
 // Charts read their palette from the live CSS :root — one source of truth shared
 // with the chrome. DARK/LIGHT above are only fallbacks if a var reads empty.
@@ -2456,6 +2460,17 @@ function mkChart(id,cfg){
   if(charts[id]){charts[id].destroy();delete charts[id]}
   const el=document.getElementById(id);if(!el)return;
   charts[id]=new Chart(el,cfg);
+  // A text alternative for every chart (brief §84): the canvas is an image named after its card, and its data table is
+  // built now and kept in the page (visually hidden until the table toggle shows it), so a screen reader reaches the
+  // same numbers straight after the chart.
+  try{
+    const card=el.closest('.card'),t=card&&card.querySelector('.card-title');
+    const name=t?[...t.childNodes].filter(n=>n.nodeType===3||!n.classList||!n.classList.contains('card-title-note')).map(n=>n.textContent).join(' ').replace(/\s+/g,' ').trim():id;
+    const host=document.getElementById(id+'-table');
+    el.setAttribute('role','img');
+    el.setAttribute('aria-label',name+(host?'. The values are in the table that follows.':''));
+    if(host){host.setAttribute('role','region');host.setAttribute('aria-label',name+', as a table');buildChartTable(id);}
+  }catch(e){}
 }
 function baseOpts(){return{
   responsive:true,maintainAspectRatio:false,animation:{duration:350},
@@ -2540,7 +2555,7 @@ function toggleChartView(id,mode){
   const wrap=document.getElementById(id+'-wrap');
   const tbl=document.getElementById(id+'-table');
   if(!wrap||!tbl)return;
-  card.querySelectorAll('.chart-toggle-btn').forEach(b=>b.classList.toggle('active',b.dataset.mode===mode));
+  card.querySelectorAll('.chart-toggle-btn').forEach(b=>{const on=b.dataset.mode===mode;b.classList.toggle('active',on);b.setAttribute('aria-pressed',String(on));});
   if(mode==='table'){
     wrap.style.display='none';
     tbl.classList.add('show');
@@ -8371,6 +8386,51 @@ document.addEventListener('keydown',e=>{
     if(e.key==='Escape')closeDayPanel();
   }
 });
+
+// ═══ FOCUS IN OVERLAYS (brief §84) ═══════════════════════════════════
+// Every overlay takes focus when it opens, keeps Tab inside it, and gives focus back to the control that opened it
+// when it closes, by Escape, its close button or a click outside. The open/close functions are wrapped, not edited.
+const FOCUSABLE='a[href],button:not([disabled]),input:not([disabled]),select:not([disabled]),textarea,[tabindex]:not([tabindex="-1"])';
+const OVL=[];
+function ovlOpen(el,isOpen){
+  if(!el)return;const top=OVL[OVL.length-1];if(top&&top.el===el)return;
+  OVL.push({el,isOpen,opener:document.activeElement});
+  requestAnimationFrame(()=>{if(el.contains(document.activeElement))return;const f=[...el.querySelectorAll(FOCUSABLE)].find(x=>x.offsetParent!==null);
+    if(f)f.focus();else{el.setAttribute('tabindex','-1');el.focus();}});
+}
+function ovlClose(el,restore=true){
+  const i=OVL.findIndex(o=>o.el===el);if(i<0)return;const {opener}=OVL[i];OVL.splice(i,1);
+  if(restore&&opener&&document.contains(opener)&&opener.offsetParent!==null){try{opener.focus();}catch(e){}}
+}
+function ovlSweep(restore){for(let i=OVL.length-1;i>=0;i--){const o=OVL[i];if(!o.isOpen())ovlClose(o.el,restore);}}
+(function(){
+  const $=id=>document.getElementById(id);
+  const wrap=(name,after)=>{const orig=window[name];if(typeof orig!=='function')return;window[name]=function(...a){const r=orig.apply(this,a);try{after(...a);}catch(e){}return r;};};
+  const kpi=()=>$('kpi-modal'),kpiOpen=()=>$('kpi-modal-overlay').classList.contains('open');
+  const day=()=>$('day-panel'),dayOpen=()=>$('day-panel').classList.contains('open');
+  const pal=()=>$('palette-overlay'),palOpen=()=>$('palette-overlay').classList.contains('open');
+  const rep_=()=>$('report-mode-container'),repOpen=()=>typeof reportModeActive!=='undefined'&&reportModeActive;
+  const ev=()=>$('events-popover'),evOpen=()=>$('events-popover').classList.contains('open');
+  wrap('openKpiModal',()=>{if(kpiOpen())ovlOpen(kpi(),kpiOpen);});wrap('closeKpiModal',()=>ovlClose(kpi()));
+  ['openDayPanel','openServicePanel','openMeterPanel'].forEach(n=>wrap(n,()=>{if(dayOpen())ovlOpen(day(),dayOpen);}));wrap('closeDayPanel',()=>ovlClose(day()));
+  wrap('openPalette',()=>ovlOpen(pal(),palOpen));wrap('closePalette',()=>ovlClose(pal()));
+  wrap('openReportMode',()=>{if(repOpen())ovlOpen(rep_(),repOpen);});wrap('closeReportMode',()=>ovlClose(rep_()));
+  wrap('toggleEventsPopover',()=>{if(evOpen())ovlOpen(ev(),evOpen);else ovlClose(ev());});
+  document.addEventListener('keydown',e=>{
+    if(e.key==='Escape'){
+      if(repOpen()&&!palOpen()){closeReportMode();return;}   // report mode had no way out by keyboard
+      setTimeout(()=>ovlSweep(true),0);                      // whatever Escape closed gives focus back
+      return;
+    }
+    if(e.key!=='Tab')return;
+    ovlSweep(false);const top=OVL[OVL.length-1];if(!top)return;
+    const f=[...top.el.querySelectorAll(FOCUSABLE)].filter(x=>x.offsetParent!==null);if(!f.length)return;
+    const first=f[0],last=f[f.length-1],a=document.activeElement;
+    if(!top.el.contains(a)){e.preventDefault();first.focus();}
+    else if(e.shiftKey&&a===first){e.preventDefault();last.focus();}
+    else if(!e.shiftKey&&a===last){e.preventDefault();first.focus();}
+  });
+})();
 
 // ═══ BUILD & INIT ════════════════════════════════════════════════════
 let costFile=null,usageFile=null;

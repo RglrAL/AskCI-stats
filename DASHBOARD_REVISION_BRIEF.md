@@ -2139,3 +2139,40 @@ not once per visit.
 
 Ask bar test 311 of 311.
 
+## 84. UI pass 8: accessibility (27 Oct 2026)
+
+§76 item 12, the last of the UI review's twelve. Both reviews asked for chart-table parity, keyboard focus that
+behaves around overlays, contrast measured on the rendered colours, and no sideways scroll on a phone.
+Built and measured:
+
+- **Every chart has a text alternative.** Each canvas is an image named after its card ("Conversations by source
+  per period. The values are in the table that follows."), and its data table is built when the chart is drawn
+  and kept in the page, visually hidden, instead of being created only when the table toggle is pressed. A screen
+  reader reaches the same numbers straight after the chart; the toggle now reports which view is pressed.
+- **Focus in overlays.** One focus manager wraps the detail modal, the day, service and meter panels, the command
+  palette, report mode and the events popover: opening one moves focus into it, Tab and Shift-Tab stay inside it,
+  and closing it by Escape, its button or the overlay gives focus back to the control that opened it. Report mode
+  had no keyboard exit and now closes on Escape. The day panel is marked modal; the detail modal takes its name
+  from its title. Checked by script in the browser for each overlay: focus in, Tab wraps, Escape closes, focus
+  returns.
+- **Contrast, measured.** Every text colour against every surface (background and the three card levels) in both
+  themes, from the computed styles. Six fell under 4.5:1 on at least one surface: in dark, the two secondary greys
+  (4.14 and 3.73 on the lightest surface); in light, the accent blue, green, amber and purple (4.18 to 4.45).
+  Each was moved the smallest step that clears 4.5:1 everywhere (2 to 12% toward white or black; the hues are
+  unchanged to the eye) and the light chart palette used for copied images follows. After: the lowest text
+  contrast in either theme is 4.56. Chart series colours were already 4.2:1 or better against every card surface,
+  above the 3:1 graphics need.
+- **No sideways scroll on a phone.** Every view loaded at 390 px wide and the page's scroll width compared with
+  the window: the Usage sub-nav (six pills) pushed five views 7 to 8 px wide. It now wraps to two lines under
+  900 px, which also settles the "sub-nav on narrow screens" item deferred in §78. After: zero overflow on all
+  eleven views. Wide tables and the calendar keep scrolling inside their own boxes, as before.
+
+Ask bar test 311 of 311.
+
+**Not done:** a session with an actual screen reader (VoiceOver, NVDA). The checks above are by script and
+measurement; how a screen reader announces the hidden tables and the canvases' names should be heard once
+before this item is called closed. Colour as the only channel: a search for multi-series charts with the legend
+hidden finds two, the topic-mix dumbbell and the topic-mix gap; the first names its two colours in its title
+("AskCI citations (green) vs site browsing (purple)") and the second encodes by position (left and right of
+parity), so no chart is left where colour carries meaning with no words beside it.
+
