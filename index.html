@@ -2936,13 +2936,17 @@ let VERSIONS=null;   // VERSIONS.json: the refresh manifest (brief §76)
 let QSIT={},QASK={},QPERS={},hasSit=false,hasAsk=false;   // layer 2: what the question says about the person, what the clarification asked for, personalisation (brief §75)
 let ORULES={},OSTYLE={},ONEXT={},hasRules=false;   // outcome rule ids, the wording fingerprint and what people do next (brief §53)
 let PAGESC={},hasPagesC=false,REPEATS={},hasRepeats=false,SAFETY={},hasSafety=false,QINTENT={},ASKED={},QTOPIC={},hasIntent=false,LEXICON=null,IJOUR={},SETBI={},GAPS=[],GAPSTAT={},REGCFG=null,QCATM={},QTOPM={},QICM={},hasTopics=false,ASKED_CAT='housing';   // the topic layer (brief §75)
-let CONV={},CATOUT={},CITES={},JOURNEYS={},STARTERS={},LATB={},CATDAY={},hasCatDay=false,hasConv=false,hasCatOut=false,hasCites=false,hasJourneys=false,hasStarters=false,hasLatB=false;
+let CINT={},hasCint=false,ASKW={},hasAskw=false,CONV={},CATOUT={},CITES={},JOURNEYS={},STARTERS={},LATB={},CATDAY={},hasCatDay=false,hasConv=false,hasCatOut=false,hasCites=false,hasJourneys=false,hasStarters=false,hasLatB=false;
 async function loadConversationFiles(){
   try{(await loadCSV('script-outcomes-daily.csv')).forEach(r=>{const d=parseDate(r['Date']);if(!d)return;(SCRIPTOUT[d]||(SCRIPTOUT[d]={}))[r['Script']]={t:nInt(r['Turns']),s:nInt(r['Scored']),c:nInt(r['Cited']),nf:nInt(r['NotFound']),cl:nInt(r['Clarification'])};});}catch(e){}
   hasScriptOut=Object.keys(SCRIPTOUT).length>0;
   try{(await loadCSV('conversations-daily.csv')).forEach(r=>{const d=parseDate(r['Date']);if(!d)return;const o={};Object.entries(r).forEach(([k,v])=>{if(k!=='Date')o[k]=nInt(v);});CONV[d]=o;});}catch(e){}
   try{(await loadCSV('category-outcomes-daily.csv')).forEach(r=>{const d=parseDate(r['Date']);if(!d)return;const o={};Object.entries(r).forEach(([k,v])=>{if(k!=='Date'&&k!=='Category')o[k]=nInt(v);});(CATOUT[d]||(CATOUT[d]={}))[r['Category']||'unknown']=o;});}catch(e){}
   try{(await loadCSV('citations-monthly.csv')).forEach(r=>{const m=String(r['Month']||'').trim();if(!/^\d{4}-\d{2}$/.test(m))return;(CITES[m]||(CITES[m]=[])).push({url:r['URL'],n:nInt(r['Citations']),cat:r['Category']||'',ans:r['Answers']!=null?nInt(r['Answers']):null,partial:nInt(r['Partial']),dis:nInt(r['Dislikes'])});});}catch(e){}
+  // citations-intent-monthly.csv (brief §89): per page and month, the answers citing it by the intent of the question, and how many said something was missing
+  try{(await loadCSV('citations-intent-monthly.csv')).forEach(r=>{const m=String(r['Month']||'').trim();if(!/^\d{4}-\d{2}$/.test(m))return;(CINT[m]||(CINT[m]=[])).push({url:r['URL'],intent:r['Intent'],ans:nInt(r['Answers']),partial:nInt(r['Partial'])});});hasCint=Object.keys(CINT).length>0;}catch(e){}
+  // asked-pages-weekly.csv (brief §89): summed over pages to one weekly hit rate; per page the weekly cells are too thin
+  try{(await loadCSV('asked-pages-weekly.csv')).forEach(r=>{const w=String(r['Week']||'').trim();if(!/^\d{4}-\d{2}-\d{2}$/.test(w))return;const o=ASKW[w]||(ASKW[w]={asked:0,hit:0,nf:0});o.asked+=nInt(r['Asked']);o.hit+=nInt(r['CitedIt']);o.nf+=nInt(r['NotFound']);});hasAskw=Object.keys(ASKW).length>0;}catch(e){}
   // pages-cited.csv: one row per cited page over all the data, with the page's LastMod and its first citation after it (brief §62)
   try{(await loadCSV('pages-cited.csv')).forEach(r=>{const u=ciKey(r['URL']);if(!u)return;PAGESC[u]={first:r['FirstCited'],last:r['LastCited'],n:nInt(r['Citations']),ans:nInt(r['Answers']),partial:nInt(r['Partial']),dis:nInt(r['Dislikes']),mod:r['LastMod']||'',firstAfter:r['FirstCitedAfterLastMod']||'',ansAfter:nInt(r['AnswersAfterLastMod'])};});}catch(e){}
   hasPagesC=Object.keys(PAGESC).length>0;
@@ -6539,13 +6543,52 @@ function renderAsked(D,S){
           ${uxTile(pc(tot2('nf'),apN),'Not found','the page exists and the question named it',C.red)}
         </div></div>
     </div>
+    ${hasAskw?chartBox('ask-hit-week',220,'Named-page hit rate, week by week','typed questions naming a page named 30+ times in some month · cited it = that page or one beneath a named hub · whole weeks only · weeks under the small-sample rule are gaps'):''}
     <div class="card"><div class="card-title">Pages people name and are not answered from<span class="card-title-note">asked 30+ times in the months in range · highest not-found share first · cells under 5 shown as &lt;5</span></div>
       <div class="tbl-wrap"><table style="width:100%;border-collapse:collapse"><thead><tr style="border-bottom:1px solid var(--b2)">${th('Page named',true)}${th('Asked')}${th('Cited it (or beneath it)')}${th('Same category')}${th('Other category')}${th('Not found')}${th('Clarification')}</tr></thead><tbody${showAttr(10,ap30.length)}>${byNf.map(pageRow).join('')}</tbody></table></div>
       <div class="share-foot">A page people name that retrieval does not return is a chunking or indexing list, not a content list: the content exists. Counts are of questions, not people; a rate shows a dash under the small-sample rule.</div></div>
     <div class="card"><div class="card-title">Pages people name that the answer rarely cites<span class="card-title-note">asked 30+ times · lowest same-page share first · "cited it" counts a page beneath a named hub as a hit</span></div>
       <div class="tbl-wrap"><table style="width:100%;border-collapse:collapse"><thead><tr style="border-bottom:1px solid var(--b2)">${th('Page named',true)}${th('Asked')}${th('Cited it')}${th('Same category')}${th('Other category')}${th('Not found')}${th('Clarification')}</tr></thead><tbody${showAttr(10,ap30.length)}>${byMiss.map(pageRow).join('')}</tbody></table></div></div>`;
   drawFunnel();
+  drawAskHitWeek(from,to);
   renderIcons();
+}
+
+// Named-page hit rate by week (brief §89): asked-pages-weekly.csv summed over its pages (named 30+ times in some
+// month), the share of questions naming a page whose answer cited it or a page beneath a named hub. Weeks not wholly
+// inside the data are left out, and a week under the small-sample rule is a gap. Shows a change within days of it.
+function drawAskHitWeek(from,to){
+  if(!hasAskw||!document.getElementById('ask-hit-week'))return;
+  const first=DATA.merged[0].date,last=DATA.merged[DATA.merged.length-1].date;
+  const wks=weeksIn(from,to).filter(w=>w>=first&&isoAdd(w,6)<=last&&ASKW[w]);
+  const labels=wks.map(w=>fmtWeek(w)),val=k=>wks.map(w=>{const o=ASKW[w];return rateOK(o[k],o.asked).ok?+(o[k]/o.asked*100).toFixed(2):null;});
+  mkChart('ask-hit-week',{type:'line',data:{labels,datasets:[
+      {label:'Answer cited the page named',data:val('hit'),borderColor:C.green,backgroundColor:C.green,borderWidth:1.5,pointRadius:2,tension:0,spanGaps:false},
+      {label:'Not found',data:val('nf'),borderColor:C.red,backgroundColor:C.red,borderWidth:1.5,pointRadius:2,tension:0,spanGaps:false}]},
+    options:mergeOpts(baseOpts(),{tableLabel:'Week of',scales:{y:{min:0,ticks:{callback:v=>v+'%'}}},plugins:{legend:{display:true},tooltip:{callbacks:{label:cx=>{const o=ASKW[wks[cx.dataIndex]];return`${cx.dataset.label}: ${(+cx.parsed.y).toFixed(1)}% (${num(cx.datasetIndex?o.nf:o.hit)} of ${num(o.asked)})`;}}}},eventLines:evLines(DATA.stats,labels)})});
+}
+
+// Partial share by intent, per page (brief §89): pages × intent of the question, each cell the share of the page's
+// answers to that kind of question that said something was missing, shaded on one amber scale; cells under the
+// small-sample rule show a dash with the counts in a tooltip; a cell at 1.5× the page's own share or more is outlined.
+// The intent comes from rules on the question, and partial from rules on the answer: both notes are carried.
+function partialByIntentHTML(months,span,link,th){
+  const P={};months.forEach(m=>(CINT[m]||[]).forEach(r=>{if(!/citizensinformation\.ie/.test(r.url))return;const u=ciKey(r.url),o=P[u]||(P[u]={ans:0,partial:0,by:{}});o.ans+=r.ans;o.partial+=r.partial;const c=o.by[r.intent]||(o.by[r.intent]={ans:0,partial:0});c.ans+=r.ans;c.partial+=r.partial;}));
+  const rows=Object.entries(P).filter(([,o])=>o.ans>=100).sort((a,b)=>b[1].ans-a[1].ans);if(!rows.length)return'';
+  const ints=INTENT_ORDER.filter(i=>rows.some(([,o])=>o.by[i]&&rateOK(o.by[i].partial,o.by[i].ans).ok));
+  const max=Math.max(.3,...rows.flatMap(([,o])=>ints.map(i=>{const c=o.by[i];return c&&rateOK(c.partial,c.ans).ok?c.partial/c.ans:0;})));
+  const cell=(c,base)=>{if(!c||!c.ans)return`<td style="padding:6px 8px;text-align:center;color:var(--dim)">·</td>`;const r=rateOK(c.partial,c.ans);
+    if(!r.ok)return`<td style="padding:6px 8px;text-align:center;color:var(--dim)" title="${num(c.partial)} of ${num(c.ans)}: ${r.why}">—</td>`;
+    const v=c.partial/c.ans,a=Math.round(Math.min(1,v/max)*0xb0).toString(16).padStart(2,'0'),hi=base>0&&v>=base*1.5;
+    return`<td style="padding:6px 8px;text-align:right;font-family:'DM Mono',monospace;font-size:var(--t-xs);background:${C.amber}${a};${hi?`outline:2px solid ${C.amber};outline-offset:-2px;font-weight:600`:''}" title="${num(c.partial)} of ${num(c.ans)} answers">${(v*100).toFixed(0)}%</td>`;};
+  const f=CONFIG.outcome_rules_unvalidated_from,unval=f&&!CONFIG.outcome_rules_measured&&months[months.length-1]>=f.slice(0,7);
+  const intentNote=!(CONFIG.intent_measured&&CONFIG.intent_measured.n)?` · intent read by rule from the question${LEXICON?' ('+escH(LEXICON.version)+')':''}, not yet reader-checked`:'';
+  const flagged=rows.reduce((s,[,o])=>s+ints.filter(i=>{const c=o.by[i];return c&&rateOK(c.partial,c.ans).ok&&o.ans&&c.partial/c.ans>=1.5*o.partial/o.ans;}).length,0);
+  return`<div class="card"><div class="card-title">Says something is missing, by what was asked<span class="card-title-note">pages cited in 100+ answers · ${span}${intentNote}${unval?` · <span style="color:var(--amber)">partial is read by rule, unvalidated from ${fmtDate(f)}</span>`:''}</span></div>
+    <div class="card-note" style="margin-top:0">Each cell is the share of the page's answers, to that kind of question, that said something was missing; darker is higher, on one scale. An outlined cell is at least 1.5× the page's own share (${num(flagged)} cells): the page is found for that question and does not carry what it asks for, or carries it in a form the answer did not pick up (a rates table). A dash is under the small-sample rule (hover for the counts); a dot, no answers.</div>
+    <div class="tbl-wrap"><table style="width:100%;border-collapse:collapse;min-width:${420+ints.length*96}px"><thead><tr style="border-bottom:1px solid var(--b2)">${th('Page',true)}${th('Answers')}${th('All questions')}${ints.map(i=>th(INTENT_LABEL[i]||i)).join('')}</tr></thead>
+    <tbody${showAttr(12,rows.length)}>${rows.slice(0,ROW_CAP).map(([u,o])=>{const base=o.ans?o.partial/o.ans:0;return`<tr style="border-bottom:1px solid var(--b2)"><td style="padding:6px 10px;font-size:var(--t-xs);min-width:240px">${link(u)}</td><td style="padding:6px 10px;text-align:right;font-family:'DM Mono',monospace;font-size:var(--t-xs)">${num(o.ans)}</td><td style="padding:6px 10px;text-align:right;font-family:'DM Mono',monospace;font-size:var(--t-xs);font-weight:600">${(base*100).toFixed(0)}%</td>${ints.map(i=>cell(o.by[i],base)).join('')}</tr>`;}).join('')}</tbody></table></div>
+    <div class="share-foot">From citations-intent-monthly.csv: answers that cited the page, by the intent of the question they answered. A question can cite several pages, so a question counts once for each. Descriptive: a high cell says where to look on the page, not why the answer missed it.</div></div>`;
 }
 
 // The four kinds of page as a 2x2 (brief §88): pages are the headline in every box, since "cited, never named" can
@@ -6697,6 +6740,8 @@ function contentLists(months,fr,td,th){
       ${tbl(['Page','Answers','Say something is missing','vs typical','Disliked'],rows.slice(0,PAGES_LIST).map(([u,a])=>[link(u),num(a.ans),(a.partial/a.ans*100).toFixed(0)+'%',typ?(a.partial/a.ans/typ).toFixed(1)+'×':'—',num(a.dis)]))}
       <div class="share-foot">A cited answer that also says it couldn't find a detail. The page exists and was found; what was asked may not be on it, or may be in a form the answer did not pick up (a table of rates). Budget pages for past years and the AskCI “about” page lead this list in every month.</div></div>`;
   }
+  // 1b. the same, by what the question asked (brief §89): a page that is fine overall can fail one kind of question
+  if(hasCint)h+=partialByIntentHTML(months,span,link,th);
   // 2. lost and gained at the latest confirmed model change: the full month before against the latest month after
   const ev=confirmedEvents().filter(e=>e.kind==='model'&&e.start.length===10).sort((a,b)=>b.start.localeCompare(a.start))[0];
   if(ev){

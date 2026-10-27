@@ -2273,3 +2273,27 @@ dimensions, and the boxes keep the tables' order.
 Both charts have their table in the page and an aria-label naming where it is (`pointLabels` is a new direct-label
 plugin that skips a label that would overlap; the table has every row). No sideways scroll at 390 px. Ask bar test 311
 of 311.
+
+## 89. The two unused files: partial by intent per page, and the weekly named-page hit rate (27 Oct 2026)
+
+`citations-intent-monthly.csv` and `asked-pages-weekly.csv` were built by make_usage.py and read only by the register
+tool and the Ask bar test. Both are now on the page, each in the form that suits it.
+
+**Says something is missing, by what was asked** (Pages view, after "Answers that say something is missing, by
+page"). Pages cited in 100+ answers in the months in range, by volume; columns are the page's share overall and then
+one per intent of the question (those with at least one cell passing the small-sample rule). Each cell is the share of
+the page's answers to that kind of question that said something was missing, shaded on one amber scale; a cell under
+the rule is a dash with the counts on hover; a cell at 1.5× the page's own share or more is outlined (37 on the full
+range). The intent mix alone would hide the useful reading, which is a page fine overall and failing one kind of
+question: Housing Assistance Payment is 17% overall and 36% on rate questions, the housing pass's finding (the rates
+table is not being read). Both rule notes are in the title: intent by rule from the question, not yet reader-checked,
+and partial by rule, unvalidated from 14 Sep. A question that cites several pages counts once for each.
+
+**Named-page hit rate, week by week** (Questions view, after "Where the question named a page"). Per page the weekly
+file is too thin (the 30-a-month threshold is about 7 a week, so most cells would be dashes); summed over its pages it
+is one weekly line: the share of typed questions naming a page whose answer cited it or a page beneath a named hub,
+with not found beside it. Whole weeks inside the data only (5 Jan to 12 Oct on the full range); a week under the
+small-sample rule is a gap; confirmed events as lines. It shows a change within days rather than months, which is what
+the register's closure measurement needs. On the full range the not-found share of named-page questions steps from
+about 3% to about 9% in the week of 14 Sep while the hit rate holds near its summer level. The per-page tables stay
+monthly. Ask bar test 311 of 311.
