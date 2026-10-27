@@ -2503,6 +2503,8 @@ function baseOpts(){return{
     },
   },
 };}
+// Daily series stacked one above the other share a fixed y-axis width, so a given day sits at the same x in each (brief §86).
+function alignY(o,w=56){o.scales=o.scales||{};o.scales.y={...(o.scales.y||{}),afterFit:sc=>{sc.width=w;}};return o;}
 function mergeOpts(a,b){
   function mg(x,y){const r={...x};for(const k in y){if(y[k]&&typeof y[k]==='object'&&!Array.isArray(y[k]))r[k]=mg(x[k]||{},y[k]);else r[k]=y[k]}return r}
   return mg(a,b);
@@ -5213,7 +5215,7 @@ function outcomeMixChart(id,vd,extra={}){
   const g=(r,k)=>r.ux?.[k]||0,sh=(r,k)=>r.queries>0?+((g(r,k))/r.queries*100).toFixed(2):null;
   const series=[['cited','Cited answer',C.green],['notFound','Not found',C.red],['clarification','Clarification',C.amber],['error','Error',C.pink],['outOfScope','Out of scope',C.purple],['greeting','Greeting',C.dim],['uncited','Uncited answer',C.acc]];
   mkChart(id,{type:'bar',data:{labels:vd.map(d=>d.label),datasets:series.map(([k,l,c])=>({label:l,data:vd.map(r=>sh(r,k)),backgroundColor:c+'cc',stack:'o',maxBarThickness:28}))},
-    options:mergeOpts(baseOpts(),{scales:{y:{stacked:true,max:100,ticks:{callback:v=>v+'%'}},x:{stacked:true}},plugins:{legend:{display:true},tooltip:{callbacks:{label:cx=>`${cx.dataset.label}: ${(+cx.parsed.y).toFixed(1)}% (${num(g(vd[cx.dataIndex],series[cx.datasetIndex][0]))})`}}},onClick:(e,els)=>{if(els.length)drillBucket(vd[els[0].index]);},...extra})});
+    options:alignY(mergeOpts(baseOpts(),{scales:{y:{stacked:true,max:100,ticks:{callback:v=>v+'%'}},x:{stacked:true}},plugins:{legend:{display:true},tooltip:{callbacks:{label:cx=>`${cx.dataset.label}: ${(+cx.parsed.y).toFixed(1)}% (${num(g(vd[cx.dataIndex],series[cx.datasetIndex][0]))})`}}},onClick:(e,els)=>{if(els.length)drillBucket(vd[els[0].index]);},...extra}))});
 }
 // Overview tile: combined click-through rate with the minimum caveat on the tile itself; opens the sub-tab.
 // win: the What-changed windows {a,b}, so the change is measured exactly as on the other tiles.
@@ -5271,10 +5273,8 @@ function renderHome(D,S){
     <div class="card"><div class="home-headline">${parts.join(' ')}</div>${compare?`<div class="home-sub">${compare}</div>`:''}</div>
     <div class="kpi-grid${tileCols===4?' kpi-grid-4':''}" style="margin-bottom:var(--sp-4)">${tiles.join('')}</div>
     <div class="card"><div class="card-title">What changed<span class="card-title-note">service metrics · deterministic · no causes claimed · cost changes are on the Cost tab</span></div>${ins.join('')}</div>
-    <div class="grid2">
-      ${D.hasUsage?chartBox('home-vol',220,cols.sources?'Conversations by source':'Conversations','per period · click a bar'):''}
-      ${cols.taxonomy?chartBox('home-mix',220,'Outcome mix','shares of turns · click a bar'):''}
-    </div>
+    ${D.hasUsage?chartBox('home-vol',220,cols.sources?'Conversations by source':'Conversations','per period · click a bar'):''}
+    ${cols.taxonomy?chartBox('home-mix',220,'Outcome mix','shares of turns · click a bar'):''}
     ${hasCatOut?`<div class="card"><div class="card-title">Organic demand by topic<span class="card-title-note"><span class="wc-chip">organic only</span> first turns that are not starter prompts, by attributed category, segmented by their outcome · top 8 plus Unknown · click a bar for the category tables</span></div><div id="home-topic-note" style="font-size:var(--t-xs);color:var(--muted);margin-bottom:6px"></div><div class="chart-wrap" style="height:260px"><canvas id="home-topic"></canvas></div></div>`:''}`;
   const vd=getViewData(),labels=vd.map(d=>d.label);
   if(document.getElementById('home-vol')){
@@ -5282,7 +5282,7 @@ function renderHome(D,S){
       {label:'Modal',data:vd.map(r=>r.ux?.modalSessions||0),backgroundColor:C.acc+'cc',stack:'s',maxBarThickness:28},
       {label:'Web',data:vd.map(r=>r.ux?.webSessions||0),backgroundColor:C.teal+'cc',stack:'s',maxBarThickness:28}]
       :[{label:'Conversations',data:vd.map(r=>r.sessions),backgroundColor:C.acc+'cc',maxBarThickness:28}];
-    mkChart('home-vol',{type:'bar',data:{labels,datasets:ds},options:mergeOpts(baseOpts(),{scales:{y:{stacked:true,ticks:{callback:v=>num(v)}},x:{stacked:true}},plugins:{legend:{display:cols.sources}},eventLines:evLines(S,labels),onClick:(e,els)=>{if(els.length)drillBucket(vd[els[0].index]);}})});
+    mkChart('home-vol',{type:'bar',data:{labels,datasets:ds},options:alignY(mergeOpts(baseOpts(),{scales:{y:{stacked:true,ticks:{callback:v=>num(v)}},x:{stacked:true}},plugins:{legend:{display:cols.sources}},eventLines:evLines(S,labels),onClick:(e,els)=>{if(els.length)drillBucket(vd[els[0].index]);}}))});
   }
   outcomeMixChart('home-mix',vd);
   if(hasCatOut&&document.getElementById('home-topic')){
@@ -5314,10 +5314,8 @@ function renderOverview(D,S){
   el.innerHTML=`
     ${D.hasBoth?`<div class="card cpq-card"><div class="card-title">What a turn costs</div><div id="ov-cpq-breakdown"></div></div>`:''}
     <div id="ov-timeline"></div>
-    <div class="grid2">
-      ${chartBox('ov-donut',170,'Fixed / variable / generation — selected period')}
-      <div class="card"><div class="card-title">What changed<span class="card-title-note">settled join days · the comparison window is named in each statement</span></div><div id="ov-ins"></div></div>
-    </div>
+    ${chartBox('ov-donut',170,'Fixed / variable / generation — selected period')}
+    <div class="card"><div class="card-title">What changed<span class="card-title-note">settled join days · the comparison window is named in each statement</span></div><div id="ov-ins"></div></div>
     <div class="card"><div class="card-title">Cost by Service — Selected Period</div><div id="ov-svc-bars"></div></div>
     <div id="ov-detail"></div>
   `;
@@ -6956,10 +6954,8 @@ function renderOutcomeTrend(fr){
   host.innerHTML=`<div class="card">
     <div class="card-title">Outcomes over time<span class="card-title-note">by day · rates over scored turns · days under ${num(min)} scored turns are gaps · confirmed events as lines${W?' · the chosen event\'s 28-day windows shaded, each with its pooled rate and day-level 95% interval':''}</span></div>
     ${picker}
-    <div class="grid2">
-      ${chartBox('qt-cited',210,'Cited answer rate','% of scored turns · click a day')}
-      ${chartBox('qt-nf',210,'Not-found rate','% of scored turns · click a day')}
-    </div>
+    ${chartBox('qt-cited',210,'Cited answer rate','% of scored turns · click a day')}
+    ${chartBox('qt-nf',210,'Not-found rate','% of scored turns · click a day')}
     <div style="font-size:var(--t-xs);color:var(--muted);display:grid;gap:4px">${metrics.map(([k,l])=>line(k,l)).join('')}</div>
     <div class="share-foot" style="margin-top:8px">Windows are calendar days either side of the event, the event day excluded (and the days to its end date when it has one), cut to the selected range. The interval resamples the days of each window 2,000 times and takes the 2.5th and 97.5th percentiles, so the day, not the turn, is the unit; it is wider than a turn-level interval because turns within a day share a model and a conversation. Descriptive only: a difference between the windows, not an effect of the event. The generated change report (reports/) carries both intervals and is the record.</div>
   </div>`;
@@ -6969,8 +6965,8 @@ function renderOutcomeTrend(fr){
     const shade=W?{bands:[{from:b0,to:b1,color:(C.muted||'#888')+'14',label:'before · '+dB.length+' d'},{from:a0,to:a1,color:C.acc+'14',label:'after · '+dA.length+' d'}],
       levels:t?[{from:b0,to:b1,y:+(t.before.p*100).toFixed(2),lo:+(t.before.lo*100).toFixed(2),hi:+(t.before.hi*100).toFixed(2),color:col},{from:a0,to:a1,y:+(t.after.p*100).toFixed(2),lo:+(t.after.lo*100).toFixed(2),hi:+(t.after.hi*100).toFixed(2),color:col}]:[]}:null;
     mkChart(id,{type:'line',data:{labels,datasets:[{label:lbl,data,borderColor:col,backgroundColor:col,borderWidth:1.5,pointRadius:0,pointHitRadius:6,tension:0,fill:false,spanGaps:false}]},
-      options:mergeOpts(baseOpts(),{tableLabel:'Day',scales:{y:{ticks:{callback:v=>v+'%'}}},plugins:{legend:{display:false},tooltip:{callbacks:{label:cx=>{const d=fr[cx.dataIndex];return `${lbl}: ${(+cx.parsed.y).toFixed(1)}% (${num(d.ux[k]||0)} of ${num(scored(d))} scored)`;}}}},
-        eventLines:evLines(DATA.stats,labels),windowShade:shade,onClick:(e,els)=>{if(els.length)openDayPanel(fr[els[0].index].date);}})});
+      options:alignY(mergeOpts(baseOpts(),{tableLabel:'Day',scales:{y:{ticks:{callback:v=>v+'%'}}},plugins:{legend:{display:false},tooltip:{callbacks:{label:cx=>{const d=fr[cx.dataIndex];return `${lbl}: ${(+cx.parsed.y).toFixed(1)}% (${num(d.ux[k]||0)} of ${num(scored(d))} scored)`;}}}},
+        eventLines:evLines(DATA.stats,labels),windowShade:shade,onClick:(e,els)=>{if(els.length)openDayPanel(fr[els[0].index].date);}}))});
   });
   renderIcons();
 }

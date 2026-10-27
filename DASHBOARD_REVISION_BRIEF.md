@@ -2201,3 +2201,22 @@ whole of May is now the event, and "after" is June, where before it was May itse
 happened on a day nobody has recorded. That is the honest reading for a month-dated event; giving it a day in
 `events.json` would let it use 28 days either side of that day instead. Ask bar test 311 of 311.
 
+
+## 86. Daily series at full width (27 Oct 2026)
+
+Measured every side-by-side pair in each view at 1508 px: the cramped ones were the daily series. At half width a
+chart of the full range gives each of 296 days about 2 px, and the event labels overlap. Three changes:
+
+- **Overview**: Conversations by source and Outcome mix now sit one above the other at full width.
+- **Quality, Outcomes over time**: Cited answer rate and Not-found rate, likewise; a model change now falls at the
+  same x in both.
+- **Cost Summary**: the Fixed / variable / generation chart (170 px) and What changed no longer share a row. What
+  changed set the row's height (about 1,440 px), which left about 1,250 px of the chart's card empty. Both are now
+  full width, the chart taking only its own height.
+
+Stacked pairs share a fixed y-axis width (`alignY()`, 56 px), so their plot areas start and end at the same x
+(checked: identical chart areas in the day, week and month views). Everything else stays paired: ranked
+horizontal bars of 4 to 15 items, short categorical bars, the 12-point scenario charts, the AskCI citations / site
+views pair (side by side so they can be read across) and the table pairs, which are long rather than narrow. Rule
+for new cards: a daily series gets the full width; a ranked or categorical chart can share a row. Phones were
+already one column. Ask bar test 311 of 311.
