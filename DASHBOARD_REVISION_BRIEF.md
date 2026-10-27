@@ -2340,3 +2340,34 @@ Pages view, Click-throughs, "Cited vs clicked pages": a scatter above the sortab
 
 Pages cited 20+ times in the window are plotted (677 with a click, 251 without); every page stays in the table. Both
 canvases name the table in their aria-label. Ask bar test 311 of 311.
+
+## 92. Lost and gained as a diverging dot plot, and a real 390 px check (27 Oct 2026)
+
+**Pages lost and gained at the 14 Sep model change** (Pages view). Two lists of pages cited in one month and never in
+the other are now behind a disclosure; the card leads with the pages whose share moved most:
+
+- **Per 1,000 citations, not counts**, so volume growth (about 4× this year) is not read as a gain. The base is
+  the month's citations to non-Budget pages (28,819 in August, 27,599 in October to the 22nd).
+- **Budget pages are left out** of both months and of the base. Budget Day (6 Oct) falls in October, and per-page
+  citations exist only by month (`citations-monthly.csv`), so the Budget week cannot be cut out by day, and the two
+  windows cannot be made equal in length (August, 31 days; October, 22). A share is not affected by window length,
+  only made noisier by a short one. A per-page daily citation file from make_usage.py would allow equal windows with
+  the Budget week dropped; that is a refresh step on the analyst's machine, not done here.
+- **A diverging dot plot**, not a slope chart: a stick from no change to the page's change and a dot at the end,
+  rises blue and falls amber, the 12 largest each way among pages cited 30+ times in one of the two months. Fuel
+  Allowance (+24.5 per 1,000) and Household Benefits Package (+18.5) lead the rises, which are seasonal and match
+  the chip change of 14 Oct as much as the model; the card says other things changed between the months (chips,
+  the season) and claims nothing. Every value is in the table under the disclosure; a click opens the page.
+
+**A real phone-width check.** The browser window used for the earlier checks would not go below 500 px, so "no
+sideways scroll at 390 px" (§84, §86, §87) was in fact measured at 500. Rendering the page in a 390 px frame found
+four views scrolling sideways by 84 to 343 px, none of them from today's charts:
+
+- grid cells could not shrink below a wide table inside them, so one wide table widened the whole column;
+  `.grid2/3/4 > * {min-width:0}` lets the table scroll inside its card;
+- the Quality event picker and the Hour of day pills did not wrap; pill groups and card titles now wrap under
+  600 px;
+- five tables were written without a scroll box; `wrapTables()`, on the page's one observer, wraps any card table
+  that lacks one.
+
+All 11 views now measure no sideways scroll in a 390 px frame. Ask bar test 311 of 311.

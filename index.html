@@ -1179,6 +1179,8 @@ details.card:not([open])>summary.card-title{margin-bottom:0}
 .grid2{display:grid;grid-template-columns:1fr 1fr;gap:var(--sp-4);margin-bottom:var(--sp-4)}
 .grid3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:var(--sp-3);margin-bottom:var(--sp-4)}
 .grid4{display:grid;grid-template-columns:repeat(4,1fr);gap:var(--sp-3);margin-bottom:var(--sp-4)}
+.grid2>*,.grid3>*,.grid4>*{min-width:0}
+@media(max-width:600px){.pill-group{flex-wrap:wrap}.card-title{flex-wrap:wrap}}   /* pickers wrap on a phone instead of widening the page */   /* a wide table scrolls inside its card instead of widening the column (brief §92) */
 
 /* ── Charts ── */
 .chart-wrap{position:relative;cursor:crosshair}
@@ -2509,7 +2511,11 @@ function liftLongNotes(root){
   });
 }
 let _liftQueued=false;
-new MutationObserver(()=>{if(_liftQueued)return;_liftQueued=true;requestAnimationFrame(()=>{_liftQueued=false;liftLongNotes();applyShowAll();});})
+// Every table in a card scrolls inside its own box on a narrow screen (brief §92): one written without a .tbl-wrap
+// is wrapped in one here, so a wide table never widens the page.
+function wrapTables(){document.querySelectorAll('.card table').forEach(t=>{if(t.closest('.tbl-wrap,.chart-data-table,.chart-wrap'))return;
+  const w=document.createElement('div');w.className='tbl-wrap';t.parentNode.insertBefore(w,t);w.appendChild(t);});}
+new MutationObserver(()=>{if(_liftQueued)return;_liftQueued=true;requestAnimationFrame(()=>{_liftQueued=false;liftLongNotes();applyShowAll();wrapTables();});})
   .observe(document.documentElement,{childList:true,subtree:true});
 function mkChart(id,cfg){
   if(charts[id]){charts[id].destroy();delete charts[id]}
@@ -6367,6 +6373,7 @@ function renderPages(D,S){
                 y:{type:'logarithmic',title:{display:true,text:'AskCI citations',color:C.muted,font:{size:12,family:'DM Mono'}},ticks:{callback:logTick,autoSkip:false,maxTicksLimit:20}}},
         onClick:(e,els)=>{if(!els.length)return;const p=els[0].element.$context.raw;if(p&&p.u)window.open(p.u,'_blank','noopener');}})});
   }
+  drawMovers();
   renderIcons();
 }
 
@@ -6793,7 +6800,23 @@ function incidentCardHTML(fr){
 // Five lists that name pages rather than rates: answers that say something is missing by page; pages lost and gained
 // at the latest model change; addresses off the site's list and old pages; pages cited often and never clicked; and
 // the index lag from a page's LastMod to its first citation after it. Months are the ones overlapping the range.
+// The movers at the model change as a diverging dot plot (brief §92): a stick from 0 to each page's change in share,
+// per 1,000 citations to non-Budget pages, a dot at the end; falls amber, rises blue; one row per page.
+let MOVERS=null;
+function drawMovers(){
+  if(!MOVERS||!MOVERS.rows.length||!document.getElementById('pg-movers'))return;
+  const R=MOVERS.rows,labels=R.map(x=>{const t=ciPageTitle(x.u);return t.length>36?t.slice(0,34)+'…':t;}),col=R.map(x=>x.d<0?C.amber:C.acc);
+  mkChart('pg-movers',{type:'bar',data:{labels,datasets:[
+      {label:'Change',data:R.map(x=>+x.d.toFixed(2)),backgroundColor:col,barThickness:2,order:2},
+      {type:'scatter',label:'Change',data:R.map((x,i)=>({x:+x.d.toFixed(2),y:labels[i]})),backgroundColor:col,borderColor:col,pointRadius:5,pointHoverRadius:7,order:1}]},
+    options:alignY(mergeOpts(baseOpts(),{indexAxis:'y',interaction:{mode:'nearest',axis:'y',intersect:false},
+      scales:{x:{title:{display:true,text:'change per 1,000 citations, '+fmtMonth(MOVERS.before)+' → '+fmtMonth(MOVERS.after)},ticks:{callback:v=>(v>0?'+':'')+v}},y:{type:'category',labels,ticks:{autoSkip:false,callback:function(v){return this.getLabelForValue(v);}}}},
+      plugins:{legend:{display:false},tooltip:{filter:it=>it.datasetIndex===1,callbacks:{title:it=>ciPageTitle(R[it[0].dataIndex].u),label:cx=>{const x=R[cx.dataIndex];return[`${fmtMonth(MOVERS.before)}: ${x.b.toFixed(1)} per 1,000 (${num(x.nb)} citations)`,`${fmtMonth(MOVERS.after)}: ${x.a.toFixed(1)} per 1,000 (${num(x.na)} citations)`];}}}},
+      onClick:(e,els)=>{if(els.length)window.open(R[els[0].index].u,'_blank','noopener');}}),isNarrow()?150:300)});
+  document.getElementById('pg-movers').setAttribute('aria-label',`Pages lost and gained at the model change: the ${R.length} largest changes in share of citations, ${fmtMonth(MOVERS.before)} to ${fmtMonth(MOVERS.after)}. The values are in the table under "The movers as a table", after the chart.`);
+}
 function contentLists(months,fr,td,th){
+  MOVERS=null;
   if(!months.length)return'';
   const A={};months.forEach(m=>(CITES[m]||[]).forEach(r=>{if(!/citizensinformation\.ie/.test(r.url))return;const u=ciKey(r.url),a=A[u]||(A[u]={n:0,ans:0,partial:0,dis:0});a.n+=r.n;a.ans+=r.ans||0;a.partial+=r.partial||0;a.dis+=r.dis||0;}));
   const hasAns=Object.values(A).some(a=>a.ans>0);
@@ -6820,12 +6843,24 @@ function contentLists(months,fr,td,th){
       const agg=m=>{const o={};(CITES[m]||[]).forEach(r=>{if(/citizensinformation\.ie/.test(r.url)){const u=ciKey(r.url);o[u]=(o[u]||0)+r.n;}});return o;};
       const B=agg(before),Af=agg(after);
       const lost=Object.entries(B).filter(([u,n])=>n>=10&&!Af[u]).sort((x,y)=>y[1]-x[1]),gained=Object.entries(Af).filter(([u,n])=>n>=10&&!B[u]).sort((x,y)=>y[1]-x[1]);
-      h+=`<div class="card"><div class="card-title">Pages lost and gained at the ${fmtDate(ev.start)} model change<span class="card-title-note">${fmtMonth(before)} against ${fmtMonth(after)} · cited 10+ times in one month and never in the other · ${num(Object.keys(B).length)} pages cited in ${fmtMonth(before)}, ${num(Object.keys(Af).length)} in ${fmtMonth(after)}</span></div>
+      // the movers (brief §92): each page's share of the month's citations to non-Budget pages, per 1,000, after
+      // minus before; Budget pages are left out of both months and of the base, since Budget Day falls in the
+      // after month and per-page citations are monthly, so the week cannot be cut out by day
+      const isBudget=u=>/\/budget/i.test(u),base=o=>Object.entries(o).filter(([u])=>!isBudget(u)).reduce((a,[,n])=>a+n,0),nb=base(B),na=base(Af);
+      const mv=[...new Set([...Object.keys(B),...Object.keys(Af)])].filter(u=>!isBudget(u)&&Math.max(B[u]||0,Af[u]||0)>=30).map(u=>({u,b:(B[u]||0)/nb*1000,a:(Af[u]||0)/na*1000,nb:B[u]||0,na:Af[u]||0})).map(x=>({...x,d:x.a-x.b}));
+      const down=mv.filter(x=>x.d<0).sort((x,y)=>x.d-y.d).slice(0,12),up=mv.filter(x=>x.d>0).sort((x,y)=>y.d-x.d).slice(0,12);
+      MOVERS={rows:[...up,...down.reverse()].sort((x,y)=>y.d-x.d),before,after,nb,na};
+      h+=`<div class="card"><div class="card-title">Pages lost and gained at the ${fmtDate(ev.start)} model change<span class="card-title-note">${fmtMonth(before)} against ${fmtMonth(after)} · per 1,000 citations to non-Budget pages (${num(nb)} and ${num(na)})</span></div>
+        <div class="card-note" style="margin-top:0">The pages whose share of citations moved most between the last whole month before the change and the latest month after it: each line runs from no change to the page's change, per 1,000 citations, so growth in volume (about 4× this year) does not count as a gain. Pages cited 30+ times in one of the two months; the 12 largest falls and 12 largest rises. Budget pages are left out of both months and of the base: Budget Day (6 Oct) falls in ${fmtMonth(after)}, and citations by page are monthly, so the week cannot be cut out by day. Other things changed between the months besides the model (chips, the season); descriptive only.</div>
+        <div class="chart-wrap" style="height:${Math.max(220,MOVERS.rows.length*22+50)}px"><canvas id="pg-movers"></canvas></div>
+        <details class="sm-details" style="margin-top:8px"><summary style="cursor:pointer;font-size:var(--t-xs);color:var(--muted);margin-bottom:8px">The movers as a table, and pages cited in only one of the two months</summary>
+        ${tbl(['Page',fmtMonth(before)+' per 1,000',fmtMonth(after)+' per 1,000','Change','Citations, before → after'],MOVERS.rows.map(x=>[link(x.u),x.b.toFixed(1),x.a.toFixed(1),(x.d>0?'+':'−')+Math.abs(x.d).toFixed(1),num(x.nb)+' → '+num(x.na)]))}
+        <div style="font-size:var(--t-xs);color:var(--muted);margin:12px 0 6px">Cited 10+ times in one month and never in the other · ${num(Object.keys(B).length)} pages cited in ${fmtMonth(before)}, ${num(Object.keys(Af).length)} in ${fmtMonth(after)}</div>
         <div class="grid2">
           <div><div style="font-size:var(--t-xs);color:var(--muted);text-transform:uppercase;letter-spacing:.08em;margin-bottom:6px">Lost · ${num(lost.length)}</div>${tbl(['Page',fmtMonth(before)],lost.slice(0,ROW_CAP).map(([u,n])=>[link(u),num(n)]),8,lost.length)}</div>
           <div><div style="font-size:var(--t-xs);color:var(--muted);text-transform:uppercase;letter-spacing:.08em;margin-bottom:6px">Gained · ${num(gained.length)}</div>${tbl(['Page',fmtMonth(after)],gained.slice(0,ROW_CAP).map(([u,n])=>[link(u),num(n)]),8,gained.length)}</div>
         </div>
-        <div class="share-foot">A page lost at a model change is one the new model no longer reaches for; a page gained may be new content (Budget pages) or a new preference. Small lists mean the change was in how pages are used, not which.</div></div>`;
+        <div class="share-foot">A page lost at a model change is one the new model no longer reaches for; a page gained may be new content (Budget pages) or a new preference. Small lists mean the change was in how pages are used, not which.</div></details></div>`;
     }
   }
   // 3. off the site's list, and old pages
@@ -6993,8 +7028,8 @@ function renderConvs(D,S){
     ${SB.length?`<div class="grid2 grid-wide-left">
       ${chartBox('cv-setback',Math.max(150,SB.length*46+50),'After a not-found, clarification or error answer','per answer · a later cited answer may be to a different question')}
       <div class="card"><div class="card-title">What came next<span class="card-title-note">the next question, per answer</span></div>
-        <table class="nq-table"><thead><tr style="border-bottom:1px solid var(--b2)">${th('After',false)}${th('Typed')}${th('Chip')}${th('New topic')}${hasOth?th('Other'):''}${th('Ended there')}</tr></thead>
-        <tbody>${SB.map(r=>`<tr style="border-bottom:1px solid var(--b2)">${td(`<span class="sw" style="background:${r.c}"></span>${r.l}`,'',false)}${nq(r.typed,r.t)}${nq(r.chip,r.t)}${nq(r.nw,r.t)}${hasOth?nq(r.oth,r.t):''}${nq(r.en,r.t)}</tr>`).join('')}</tbody></table>
+        <div class="tbl-wrap"><table class="nq-table"><thead><tr style="border-bottom:1px solid var(--b2)">${th('After',false)}${th('Typed')}${th('Chip')}${th('New topic')}${hasOth?th('Other'):''}${th('Ended there')}</tr></thead>
+        <tbody>${SB.map(r=>`<tr style="border-bottom:1px solid var(--b2)">${td(`<span class="sw" style="background:${r.c}"></span>${r.l}`,'',false)}${nq(r.typed,r.t)}${nq(r.chip,r.t)}${nq(r.nw,r.t)}${hasOth?nq(r.oth,r.t):''}${nq(r.en,r.t)}</tr>`).join('')}</tbody></table></div>
         <div class="share-foot">Each row adds up to 100% of that kind of answer. A conversation with two not-found answers counts twice.</div>
       </div>
     </div>`:''}
