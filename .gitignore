@@ -22,3 +22,5 @@ ask review/
 # Everything under exports/ is per-turn or holds feed text (review folders, labelling sheets): never commit it
 exports/
 reports/
+pilot evaluation/
+tools/make_eval_sample.py

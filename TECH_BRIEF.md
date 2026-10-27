@@ -191,6 +191,10 @@ dated by the fixed wording, 4 candidate chip changes, launches and observed chan
 
 - **Stack**: Chart.js 4.4.1 and PapaParse 5.4.1 from cdnjs, lucide 1.49.0 from unpkg (pinned), DM Sans and DM Mono
   from Google Fonts. No build step, no framework, no server calls other than fetching the data files.
+- **Loading** (brief §93): the page opens on a full-window loader, not an upload form. `init()` fetches the files in
+  order through `ldRun`, ticking each step off (row counts for costs and usage); once `usage.csv` arrives the loader
+  shows the total questions and draws the daily line (`ldUsage`). The cover fades off when `buildDashboard` succeeds.
+  The upload form is a fallback only: for a copy opened from disk, or when neither costs nor usage could be fetched.
 - **Groups and sub-views** (`TAB_GROUPS`): Overview; Cost (Summary, Services, Models); Usage (Quality, Questions,
   Pages, Conversations, Answer wording, Volume); Scenario planner. Three Usage views are merged (brief §78): Quality
   holds Before / after, Questions holds What people ask and Categories, Pages holds Click-throughs and Reach, each

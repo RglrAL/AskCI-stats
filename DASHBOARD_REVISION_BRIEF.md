@@ -2371,3 +2371,29 @@ four views scrolling sideways by 84 to 343 px, none of them from today's charts:
   that lacks one.
 
 All 11 views now measure no sideways scroll in a 390 px frame. Ask bar test 311 of 311.
+
+## 93. A loader in place of the upload form (27 Oct 2026)
+
+Every figure on the page comes from files committed to the repo, so the upload form the page opened on ("Upload data
+files to begin", two drop zones and a Load button) asked visitors for something they never needed to do. It is
+replaced by a full-window loader that shows the real load, not a decoration:
+
+- the AskCI mark, and under it the total questions received, counting up to the figure from `usage.csv` as soon as that
+  file arrives ("questions received since 1 January 2026");
+- the daily questions line drawing itself left to right (0.8 s), so the year's shape (the September step, the Budget
+  week) is visible before the dashboard is;
+- a hairline progress bar and one line of stage text ("Loading categories · 4 of 10", ending "Building the
+  dashboard · 10 of 10"), with the ten steps listed underneath, each ticking green as its file arrives (costs and
+  usage with their row and day counts) and amber if it failed.
+
+Nothing is delayed for the show: the only wait is for the line to finish drawing, and never more than 400 ms, plus one
+paint before the build. The loader covers the window, so the dashboard builds underneath it and the cover fades off
+(0.35 s) while the dashboard rises in. With reduced motion asked for, the count, the line and the steps appear at once
+and nothing pulses or fades. The loader is not printed.
+
+The upload form stays as a fallback only, behind "Open files from this computer": shown when the page is opened from
+disk (it cannot fetch its files) or when neither `costs.csv` nor `usage.csv` could be fetched; a refused file still
+returns to it with the reason. The header line reads "Loading…" until the data is in.
+
+Checked in the browser: a real load (no console errors, all ten steps done, 136,752 questions since 1 January), a slowed
+replay in dark and light, and the disk fallback opening the upload form. Ask bar test 311 of 311.

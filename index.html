@@ -965,6 +965,44 @@ details.card:not([open])>summary.card-title{margin-bottom:0}
 }
 .kpi-more-btn:hover{color:var(--acc)}
 
+/* ── Loader (brief §93) ── */
+#loader{position:fixed;inset:0;z-index:2000;background:var(--bg);display:flex;justify-content:center;align-items:center;padding:var(--sp-6) 16px;overflow:auto;transition:opacity .35s ease,transform .35s ease}
+#loader.ld-out{opacity:0;transform:scale(1.015);pointer-events:none}
+.ld-card{width:100%;max-width:560px;text-align:center;display:flex;flex-direction:column;align-items:center}
+.ld-logo{width:56px;height:56px;border-radius:14px;margin-bottom:var(--sp-5);animation:ldBreathe 2.4s ease-in-out infinite}
+@keyframes ldBreathe{0%,100%{transform:scale(1);opacity:1}50%{transform:scale(.94);opacity:.82}}
+.ld-count{font-size:40px;font-weight:600;letter-spacing:-.02em;color:var(--text);font-variant-numeric:tabular-nums;min-height:48px;line-height:48px}
+.ld-count-lbl{font-size:13px;color:var(--muted);margin-top:2px;min-height:18px}
+.ld-spark{width:100%;height:110px;margin:var(--sp-5) 0 var(--sp-4);overflow:visible}
+.ld-base{stroke:var(--b2);stroke-width:1;stroke-dasharray:3 4}
+#ld-line{fill:none;stroke:var(--acc);stroke-width:1.6;stroke-linejoin:round;stroke-linecap:round;transition:stroke-dashoffset .8s cubic-bezier(.4,0,.2,1)}
+#ld-area{fill:var(--acc);opacity:0;transition:opacity .6s ease .45s}
+.ld-spark.drawn #ld-area{opacity:.1}
+.ld-bar{width:100%;max-width:320px;height:3px;border-radius:2px;background:var(--s3);overflow:hidden}
+#ld-bar-fill{height:100%;width:0;background:var(--acc);border-radius:2px;transition:width .3s ease}
+.ld-stage{font-size:13px;color:var(--text);margin-top:var(--sp-3);min-height:18px}
+.ld-steps{list-style:none;margin:var(--sp-4) 0 0;padding:0;display:flex;flex-wrap:wrap;justify-content:center;gap:6px 14px;font-size:12px;color:var(--dim)}
+.ld-steps li{display:inline-flex;align-items:center;gap:5px;transition:color .25s}
+.ld-steps li::before{content:'';width:7px;height:7px;border-radius:50%;border:1px solid var(--b2);transition:background .25s,border-color .25s}
+.ld-steps li.active{color:var(--text)}
+.ld-steps li.active::before{border-color:var(--acc);animation:ldPulse 1s ease-in-out infinite}
+.ld-steps li.done{color:var(--muted)}
+.ld-steps li.done::before{background:var(--green);border-color:var(--green)}
+.ld-steps li.missing::before{background:var(--amber);border-color:var(--amber)}
+.ld-steps li small{font-size:12px;color:var(--dim);font-variant-numeric:tabular-nums}
+@keyframes ldPulse{0%,100%{box-shadow:0 0 0 0 color-mix(in srgb,var(--acc) 50%,transparent)}50%{box-shadow:0 0 0 4px color-mix(in srgb,var(--acc) 0%,transparent)}}
+.ld-fallback{margin-top:var(--sp-5);font-size:13px;color:var(--muted);max-width:440px}
+.ld-open{margin-top:var(--sp-3);background:none;border:1px solid var(--b2);color:var(--acc);border-radius:var(--r-sm);padding:6px 12px;font:inherit;cursor:pointer}
+.ld-open:hover{border-color:var(--acc)}
+#dashboard.dash-in{animation:dashIn .45s ease both}
+@keyframes dashIn{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
+@media(max-width:600px){.ld-count{font-size:32px}.ld-steps{gap:4px 10px}}
+@media(prefers-reduced-motion:reduce){
+  .ld-logo,.ld-steps li.active::before{animation:none}
+  #loader,#ld-line,#ld-area,#ld-bar-fill{transition:none}
+  #dashboard.dash-in{animation:none}
+}
+
 /* Loading skeleton */
 @keyframes shimmer{
   0%{background-position:-1000px 0}
@@ -1441,7 +1479,7 @@ input[type=date]{color-scheme:dark}
 
 /* ── Print ── */
 @media print{
-  #sticky-bar,#upload-section,.tabs,#load-btn{display:none!important}
+  #sticky-bar,#upload-section,#loader,.tabs,#load-btn{display:none!important}
   .pane{display:block!important;page-break-after:always;border:none}
   body{background:#fff;color:#000}
   .card{border:1px solid #ccc;break-inside:avoid}
@@ -1763,13 +1801,33 @@ body:has(#report-mode-container[style*="block"]) .top-controls{display:none}
       <div class="hdr-titles">
         <div class="eyebrow">Citizens Information</div>
         <h1><span class="brand-ask">Ask</span><span class="brand-ci">CI</span> <span class="hdr-rest">Cost and Usage Intelligence</span></h1>
-        <div class="sub" id="hdr-sub">Upload data files to begin</div>
+        <div class="sub" id="hdr-sub">Loading…</div>
       </div>
     </div>
     <div class="hdr-right" id="hdr-meta"></div>
   </div>
 
-  <div id="upload-section">
+  <!-- Loader (brief §93): the data comes from the repo, so the page opens on this, not on an upload form. A full-
+       window cover, so the dashboard builds underneath and the cover fades off it. It shows
+       the real load: each file as it arrives, the total questions counting up, and the daily line drawing itself.
+       The upload form below is only a fallback, for a copy opened from disk or a fetch that failed. -->
+  <div id="loader" role="status" aria-live="polite">
+    <div class="ld-card">
+      <img src="logo.png" alt="" class="ld-logo">
+      <div class="ld-count" id="ld-count" aria-hidden="true"></div>
+      <div class="ld-count-lbl" id="ld-count-lbl">Loading AskCI data…</div>
+      <svg class="ld-spark" id="ld-spark" aria-hidden="true"><line class="ld-base" x1="0" x2="100%" y1="95%" y2="95%"/><path id="ld-area"/><path id="ld-line"/></svg>
+      <div class="ld-bar" aria-hidden="true"><div id="ld-bar-fill"></div></div>
+      <div class="ld-stage" id="ld-stage">Starting…</div>
+      <ul class="ld-steps" id="ld-steps"></ul>
+      <div class="ld-fallback" id="ld-fallback" hidden>
+        <div id="ld-fallback-msg"></div>
+        <button type="button" class="ld-open" id="ld-open-files">Open files from this computer</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="upload-section" style="display:none">
     <div class="section-label">Data Sources</div>
     <div class="upload-grid">
       <label class="upload-zone" id="cost-zone">
@@ -8759,6 +8817,7 @@ document.getElementById('load-btn').addEventListener('click',async()=>{
 // Skeleton shown between "Load Dashboard" click and full render
 function showLoadingSkeleton(){
   document.getElementById('upload-section').style.display='none';
+  document.getElementById('loader').style.display='none';
   const dash=document.getElementById('dashboard');
   dash.style.display='block';
   // Hero → skeleton, so its real height is reserved (no reflow when it fills in).
@@ -8796,6 +8855,7 @@ function emptyCostData(){return{daily:{},meters:{},svcTotals:{},allSvcs:[],svcCl
 function showLoadError(msgs){
   const up=document.getElementById('upload-section');
   up.style.display='';
+  document.getElementById('loader').style.display='none';
   document.getElementById('dashboard').style.display='none';
   document.getElementById('sticky-bar').classList.remove('visible');
   let box=document.getElementById('load-error');
@@ -8834,7 +8894,9 @@ function buildDashboard(costRows,usageRows){
   const S=DATA.stats;
 
   document.getElementById('upload-section').style.display='none';
+  ldHide();
   document.getElementById('dashboard').style.display='block';
+  document.getElementById('dashboard').classList.add('dash-in');
   document.getElementById('sticky-bar').classList.add('visible');
   setTimeout(()=>{wireCustomDates();updateTabOverflow();syncBudgetButton();syncEventsButton();},100);
 
@@ -8983,6 +9045,83 @@ function syncKpiMoreBtn(open){
   if(typeof renderIcons==='function')renderIcons();
 }
 
+// ── Loader (brief §93): the real load, step by step ──
+const LD_STEPS=[['costs','Costs'],['usage','Questions'],['site','Site analytics'],['cats','Categories'],['hours','Hours'],['convs','Conversations'],['clicks','Pages and clicks'],['pages','Page list'],['events','Events'],['build','Dashboard']];
+const LD_RM=matchMedia('(prefers-reduced-motion: reduce)').matches;
+let ldDrawn=null;   // when the line finishes drawing
+function ldInit(){
+  document.getElementById('ld-steps').innerHTML=LD_STEPS.map(([k,l])=>`<li data-k="${k}">${l}</li>`).join('');
+}
+function ldStep(k){
+  const i=LD_STEPS.findIndex(x=>x[0]===k),li=document.querySelector(`#ld-steps li[data-k="${k}"]`);
+  if(li)li.classList.add('active');
+  document.getElementById('ld-stage').textContent=`${k==='build'?'Building the dashboard':'Loading '+LD_STEPS[i][1].toLowerCase()} · ${i+1} of ${LD_STEPS.length}`;
+  document.getElementById('ld-bar-fill').style.width=`${(i/LD_STEPS.length)*100}%`;
+}
+function ldDone(k,note,missing){
+  const i=LD_STEPS.findIndex(x=>x[0]===k),li=document.querySelector(`#ld-steps li[data-k="${k}"]`);
+  if(li){li.classList.remove('active');li.classList.add(missing?'missing':'done');if(note)li.insertAdjacentHTML('beforeend',` <small>${note}</small>`);}
+  document.getElementById('ld-bar-fill').style.width=`${((i+1)/LD_STEPS.length)*100}%`;
+}
+async function ldRun(k,fn,note){
+  ldStep(k);
+  let r=null,ok=true;
+  try{r=await fn()}catch(e){ok=false}
+  ldDone(k,ok&&note?note(r):'',!ok);
+  return r;
+}
+// The questions received, counting up, and the daily line drawing itself, from the usage file as it arrives
+function ldUsage(rows){
+  const pts=(rows||[]).map(r=>({d:(r.Date||'').trim(),v:+String(r.Questions||'').replace(/,/g,'')})).filter(p=>/^\d{4}-\d{2}-\d{2}$/.test(p.d)&&isFinite(p.v)).sort((a,b)=>a.d<b.d?-1:1);
+  if(pts.length<2)return;
+  const total=pts.reduce((s,p)=>s+p.v,0),first=new Date(pts[0].d+'T12:00:00');
+  document.getElementById('ld-count-lbl').textContent=`questions received since ${first.toLocaleDateString('en-IE',{day:'numeric',month:'long',year:'numeric'})}`;
+  const el=document.getElementById('ld-count'),t0=performance.now(),dur=LD_RM?0:900;
+  const tick=now=>{const f=dur?Math.min(1,(now-t0)/dur):1,e=1-Math.pow(1-f,3);el.textContent=Math.round(total*e).toLocaleString('en-IE');if(f<1)requestAnimationFrame(tick);};
+  requestAnimationFrame(tick);
+  const svg=document.getElementById('ld-spark'),W=svg.clientWidth||520,H=svg.clientHeight||96,max=Math.max(...pts.map(p=>p.v))||1;
+  svg.setAttribute('viewBox',`0 0 ${W} ${H}`);
+  const xy=pts.map((p,i)=>[(i/(pts.length-1))*W,H*0.95-(p.v/max)*H*0.9]);
+  const d='M'+xy.map(([x,y])=>`${x.toFixed(1)},${y.toFixed(1)}`).join('L');
+  const line=document.getElementById('ld-line'),area=document.getElementById('ld-area');
+  line.setAttribute('d',d);area.setAttribute('d',`${d}L${W},${H*0.95}L0,${H*0.95}Z`);
+  const len=line.getTotalLength();
+  line.style.strokeDasharray=len;line.style.strokeDashoffset=LD_RM?0:len;
+  line.getBoundingClientRect();   // commit the start before the transition
+  requestAnimationFrame(()=>{line.style.strokeDashoffset=0;svg.classList.add('drawn');});
+  ldDrawn=performance.now()+(LD_RM?0:800);
+}
+// Let the line finish (never more than 400 ms of waiting), and paint once, before the heavy build
+async function ldSettle(){
+  const wait=ldDrawn?Math.min(400,Math.max(0,ldDrawn-performance.now())):0;
+  if(wait)await new Promise(r=>setTimeout(r,wait));
+  await new Promise(r=>requestAnimationFrame(()=>setTimeout(r,0)));
+}
+function ldHide(){
+  const ld=document.getElementById('loader');
+  if(!ld||ld.style.display==='none')return;
+  ldDone('build');
+  if(LD_RM){ld.style.display='none';return;}
+  ld.classList.add('ld-out');
+  setTimeout(()=>{ld.style.display='none';},360);
+}
+// No data could be fetched: say why, and offer the upload form
+function ldFallback(msg){
+  document.getElementById('ld-stage').textContent='';
+  document.querySelector('.ld-bar').style.display='none';
+  document.getElementById('ld-spark').style.display='none';
+  if(!document.querySelector('#ld-steps li.done,#ld-steps li.missing'))document.getElementById('ld-steps').style.display='none';
+  document.getElementById('ld-count-lbl').textContent='No data loaded';
+  document.getElementById('ld-fallback-msg').textContent=msg;
+  document.getElementById('ld-fallback').hidden=false;
+  document.getElementById('hdr-sub').textContent='No data loaded';
+}
+document.getElementById('ld-open-files').addEventListener('click',()=>{
+  document.getElementById('loader').style.display='none';
+  document.getElementById('upload-section').style.display='';
+  document.getElementById('hdr-sub').textContent='Open data files to begin';
+});
+
 async function init(){
   // Apply persisted theme before any rendering, then read the chart palette
   // from the now-active CSS :root.
@@ -8999,18 +9138,23 @@ async function init(){
   Chart.defaults.color=C.muted;
 
   renderIcons(); // Render initial static icons (tabs, upload zones, sticky bar)
-  if(location.protocol==='file:')return;
-  let cr=null,ur=null;
-  try{cr=await loadCSV('costs.csv')}catch(e){}
-  try{ur=await loadCSV('usage.csv')}catch(e){}
-  await loadGa4Files(); // site-analytics for the Reach tab (graceful if absent)
-  await loadCategoryData(); // category demand for the Categories tab (graceful if absent)
-  await loadHoursFile(); // hour-of-day turns for the Usage pane (graceful if absent)
-  await loadConversationFiles(); // conversation-level aggregates (graceful if absent)
-  await loadClickFiles(); // GA4 click-throughs from tools/make_clicks.py (graceful if absent)
-  await loadSitePages(); // the site's page list from tools/make_site_pages.py (graceful if absent)
-  await Promise.all([loadEvents(),loadPrompts()]); // shared events (events.json) — only confirmed ones draw
-  if(cr||ur)buildDashboard(cr,ur);
+  ldInit();
+  if(location.protocol==='file:'){ldFallback('This copy was opened from disk, so it cannot fetch its data files.');return;}
+  const rows=r=>r&&r.length?`${r.length.toLocaleString('en-IE')} rows`:'';
+  const cr=await ldRun('costs',()=>loadCSV('costs.csv'),rows);
+  const ur=await ldRun('usage',()=>loadCSV('usage.csv'),r=>r&&r.length?`${r.length} days`:'');
+  ldUsage(ur);
+  await ldRun('site',loadGa4Files); // site-analytics for the Reach tab (graceful if absent)
+  await ldRun('cats',loadCategoryData); // category demand for the Categories tab (graceful if absent)
+  await ldRun('hours',loadHoursFile); // hour-of-day turns for the Usage pane (graceful if absent)
+  await ldRun('convs',loadConversationFiles); // conversation-level aggregates (graceful if absent)
+  await ldRun('clicks',loadClickFiles); // GA4 click-throughs from tools/make_clicks.py (graceful if absent)
+  await ldRun('pages',loadSitePages); // the site's page list from tools/make_site_pages.py (graceful if absent)
+  await ldRun('events',()=>Promise.all([loadEvents(),loadPrompts()])); // shared events (events.json) — only confirmed ones draw
+  if(!cr&&!ur){ldFallback('The data files could not be fetched. Reload to try again, or open them from this computer.');return;}
+  ldStep('build');
+  await ldSettle();
+  buildDashboard(cr,ur);
 }
 init();
 </script>
