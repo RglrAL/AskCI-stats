@@ -136,6 +136,8 @@ def build_site(tmp, ref, page_path):
     page = page.replace("  let lastIntent=null;", "  let lastIntent=null;window.__resetAsk=()=>{lastIntent=null;};", 1)
     # chart animation off: the page is never looked at, and it keeps headless timing simple
     page = page.replace("animation:{duration:350}", "animation:false")
+    # the plain load (brief §94): no loader worker, waits or view transition under the headless clock
+    page = page.replace("<head>", "<head><script>window.__plainLoad=1</script>", 1)
     for f in DATA_FILES:
         dest = os.path.join(tmp, f)
         os.makedirs(os.path.dirname(dest), exist_ok=True)

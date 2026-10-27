@@ -2435,3 +2435,10 @@ Checked in the browser: a slowed run frame by frame (dark), the hand-over slowed
 elements logged at hand-over (header logo, "136,752 turns"), a 390 px frame and light theme side by side (the Budget
 Day label clamped inside the chart, the pending-step circles made visible in light), a normal load with no console
 errors and the same figures as before (296 billing days, £6,946 billed). Ask bar test 311 of 311.
+
+The first deploy of this failed at the fact sheet step: `tools/make_facts.py` loads the page in headless Chrome on the
+Linux runner and the page never finished loading there (locally both headless tools passed, so the exact cause was
+not reproduced). Both headless tools (`make_facts.py`, `test_ask.py`) now ask for a plain load by setting
+`window.__plainLoad` before the page runs: no worker, no waits, no view transition, the loader shown without motion.
+The hand-over is also wrapped so that any error in it hides the loader and lets the build finish.
+

@@ -2829,7 +2829,7 @@ function parseText(text){const c=text.replace(/^\uFEFF/,'');
   // since a worker cannot take the transformHeader function. A worker that has not answered in 4 s (blocked, or a
   // headless test clock) is left behind and the file parses here instead.
   const main=()=>new Promise((res,rej)=>Papa.parse(c,{header:true,skipEmptyLines:true,dynamicTyping:false,delimiter:sniffDelim(c),transformHeader:h=>h.trim(),complete:d=>res(d.data),error:rej}));
-  if(c.length>400000&&typeof Worker!=='undefined'&&Papa.WORKERS_SUPPORTED){
+  if(c.length>400000&&typeof Worker!=='undefined'&&Papa.WORKERS_SUPPORTED&&!window.__plainLoad){
     const viaWorker=new Promise((res,rej)=>{try{Papa.parse(c,{header:true,skipEmptyLines:true,dynamicTyping:false,delimiter:sniffDelim(c),worker:true,
       complete:d=>{const rows=d.data,ks=Object.keys(rows[0]||{});res(ks.every(k=>k===k.trim())?rows:rows.map(r=>{const o={};for(const k in r)o[k.trim()]=r[k];return o}));},error:rej})}catch(e){rej(e)}});
     return Promise.race([viaWorker,new Promise(r=>setTimeout(()=>r(null),4000))]).catch(()=>null).then(rows=>rows||main());
@@ -8952,7 +8952,7 @@ function buildDashboard(costRows,usageRows){
   const S=DATA.stats;
 
   document.getElementById('upload-section').style.display='none';
-  const handedOver=ldHide();
+  let handedOver=false;try{handedOver=ldHide()}catch(e){const l=document.getElementById('loader');if(l)l.style.display='none';}   // the hand-over never stops the build
   document.getElementById('dashboard').style.display='block';
   if(!handedOver)document.getElementById('dashboard').classList.add('dash-in');
   document.getElementById('sticky-bar').classList.add('visible');
@@ -9105,7 +9105,9 @@ function syncKpiMoreBtn(open){
 
 // ── Loader (brief §93, §94): the real load, step by step, drawing the year as its files arrive ──
 const LD_STEPS=[['costs','Costs'],['usage','Questions'],['events','Events'],['site','Site analytics'],['cats','Categories'],['hours','Hours'],['convs','Conversations'],['clicks','Pages and clicks'],['pages','Page list'],['build','Dashboard']];
-const LD_RM=matchMedia('(prefers-reduced-motion: reduce)').matches;
+// a headless tool (the Ask bar test, the fact sheet) sets window.__plainLoad: no worker, no waits, no view transition
+const LD_PLAIN=!!window.__plainLoad;
+const LD_RM=LD_PLAIN||matchMedia('(prefers-reduced-motion: reduce)').matches;
 const LD={dates:null,ys:null,W:0,H:0,top:34,revealEnd:0};
 function ldInit(){
   document.getElementById('ld-steps').innerHTML=LD_STEPS.map(([k,l],i)=>`<li data-k="${k}" style="animation-delay:${i*40}ms">${l}</li>`).join('');
@@ -9218,6 +9220,7 @@ function ldPins(){
 }
 // Let the line finish revealing (never more than 700 ms of waiting), and paint once, before the heavy build
 async function ldSettle(){
+  if(LD_PLAIN)return;
   const wait=Math.min(700,Math.max(0,LD.revealEnd-performance.now()));
   if(wait)await new Promise(r=>setTimeout(r,wait));
   await new Promise(r=>requestAnimationFrame(()=>setTimeout(r,0)));

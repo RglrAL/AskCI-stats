@@ -70,6 +70,8 @@ def main():
     stamp = f"page={git_short('index.html')} data={git_short('*.csv', 'events.json')}"
     page = page.replace('content="page=local data=local"', f'content="{stamp}"', 1)
     page = page.replace("animation:{duration:350}", "animation:false")
+    # the plain load (brief §94): no loader worker, waits or view transition under the headless clock
+    page = page.replace("<head>", "<head><script>window.__plainLoad=1</script>", 1)
     page = page.replace("</body>", HARNESS % json.dumps(("m:" + a.month) if a.month else "") + "</body>", 1)
     Handler.page = page.encode("utf-8")
     with socket.socket() as s:
