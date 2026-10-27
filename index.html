@@ -1694,6 +1694,15 @@ body:has(#report-mode-container[style*="block"]) .top-controls{display:none}
 .dq-item.amber .dq-v{color:var(--amber);font-weight:600}
 .load-error{background:color-mix(in srgb,var(--red) 8%,transparent);border:1px solid color-mix(in srgb,var(--red) 30%,transparent);
   border-radius:var(--r-md);padding:var(--sp-3) var(--sp-4);margin-bottom:var(--sp-4);font-size:var(--t-sm);color:var(--text);line-height:1.5}
+.sm-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:var(--sp-3);margin:0 0 var(--sp-4)}
+.sm-tile{background:var(--bg);border:1px solid var(--b2);border-radius:var(--r-md);padding:8px 10px 6px;min-width:0}
+.sm-tile[role=button]{cursor:pointer}.sm-tile[role=button]:hover,.sm-tile[role=button]:focus-visible{border-color:var(--acc)}
+.sm-head{display:flex;justify-content:space-between;gap:8px;align-items:baseline;font-size:var(--t-xs);line-height:1.3}
+.sm-title{color:var(--text);font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0}
+.sm-last{font-family:'DM Mono',monospace;color:var(--text);white-space:nowrap}
+.sm-sub{font-size:var(--t-xs);color:var(--dim);font-family:'DM Mono',monospace;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.sm-svg{display:block;width:100%;height:56px;margin-top:4px;overflow:visible}
+.sm-axis{display:flex;justify-content:space-between;font-size:var(--t-xs);color:var(--dim);font-family:'DM Mono',monospace;margin-top:2px}
 .card-note{font-family:'DM Sans',sans-serif;font-size:var(--t-xs);line-height:1.5;color:var(--muted);margin:calc(-1 * var(--sp-3)) 0 var(--sp-4)}
 .card-title-note{font-family:'DM Mono',monospace;font-size:var(--t-2xs);color:var(--dim);margin-left:auto;font-weight:400;text-transform:none;letter-spacing:0;text-align:right;max-width:60%}
 .events-sec-title{font-size:var(--t-2xs);color:var(--muted);text-transform:uppercase;letter-spacing:.08em;margin:var(--sp-2) 0 var(--sp-1)}
@@ -3604,6 +3613,35 @@ function renderIcons(){
 }
 
 // Small inline SVG sparkline (used inside KPI tiles)
+// Small multiples (brief §81): one tile per series, every tile on the same weeks so a step lines up down the grid.
+// o = {weeks:[iso Monday...], panels:[{title, tip, sub, v:[number|null per week], last:'text', click:'js'}],
+//      shared:bool (one y scale for all tiles: compare levels) | false (each tile its own scale, max printed),
+//      ref:[number|null per week] (a faint reference line, e.g. the site-wide rate), fmt:v=>text, color, events:[iso]}
+// A null week is a gap, never a zero. Drawn as inline SVG, so a grid of 18 costs no chart instances.
+function smallMultiples(o){
+  const W=200,H=56,n=o.weeks.length;if(n<2||!o.panels.length)return'';
+  const all=o.panels.flatMap(p=>p.v).concat(o.ref||[]).filter(v=>v!=null&&isFinite(v));
+  const gmax=Math.max(...all,0)||1;
+  const X=i=>(i/(n-1))*W;
+  const path=(v,max)=>{let d='',pen=false;v.forEach((y,i)=>{if(y==null||!isFinite(y)){pen=false;return;}d+=(pen?'L':'M')+X(i).toFixed(1)+' '+(H-(y/max)*H).toFixed(1)+' ';pen=true;});return d;};
+  const evx=(o.events||[]).map(e=>{const i=o.weeks.findIndex((w,j)=>e>=w&&(j===n-1||e<o.weeks[j+1]));return i<0?null:X(i);}).filter(x=>x!=null);
+  const fmt=o.fmt||(v=>v.toFixed(1));
+  const tiles=o.panels.map(p=>{
+    const max=o.shared?gmax:(Math.max(...p.v.filter(v=>v!=null),0)||1);
+    const ev=evx.map(x=>`<line x1="${x.toFixed(1)}" x2="${x.toFixed(1)}" y1="0" y2="${H}" stroke="${C.muted}" stroke-opacity=".35" stroke-dasharray="2 2"/>`).join('');
+    const ref=o.ref?`<path d="${path(o.ref,max)}" fill="none" stroke="${C.muted}" stroke-opacity=".55" stroke-width="1"/>`:'';
+    const label=p.tip?` title="${escH(p.tip)}"`:'';
+    const click=p.click?` role="button" tabindex="0" onclick="${p.click}" onkeydown="if(event.key==='Enter')this.click()"`:'';
+    return `<div class="sm-tile"${click}${label}><div class="sm-head"><span class="sm-title">${escH(p.title)}</span><span class="sm-last">${p.last||''}</span></div>
+      <div class="sm-sub">${p.sub||''}</div>
+      <svg class="sm-svg" viewBox="0 0 ${W} ${H}" preserveAspectRatio="none" role="img" aria-label="${escH(p.title)}: ${escH(p.aria||'')}">
+        <line x1="0" x2="${W}" y1="${H}" y2="${H}" stroke="${C.b2||C.border}"/>${ev}${ref}
+        <path d="${path(p.v,max)}" fill="none" stroke="${o.color||C.acc}" stroke-width="1.5" vector-effect="non-scaling-stroke" stroke-linejoin="round"/></svg>
+      <div class="sm-axis"><span>${fmtDate(o.from||o.weeks[0])}</span><span>${o.shared?'':'max '+fmt(max)}</span><span>${fmtDate(o.to||o.weeks[n-1])}</span></div></div>`;
+  }).join('');
+  return `<div class="sm-grid">${tiles}</div>`;
+}
+function weeksIn(from,to){const out=[];let w=weekStart(from);while(w<=to){out.push(w);w=isoAdd(w,7);}return out;}
 function sparkline(values,color,w=72,h=20){
   const pts=(values||[]).filter(v=>v!=null&&isFinite(v));
   if(pts.length<2)return '';
@@ -5028,8 +5066,18 @@ function renderWording(D,S){
     const steps={};mons.forEach((m,i)=>{if(!i)return;stat.forEach(s=>{const a=s.sh[i-1],b=s.sh[i];if(a==null||b==null)return;const hi=Math.max(a,b),lo=Math.max(Math.min(a,b),0.05);if((Math.abs(b-a)>=2&&hi>=1.25*lo)||(hi>=1&&hi>=3*lo))(steps[m]||(steps[m]=[])).push({s,a,b});});});
     const changes=Object.entries(steps).map(([m,xs])=>{const ev=inMonth(m),bf=before(m);return `<li><b>${fmtMonth(m)}</b>: ${xs.map(x=>`${escH(x.s.meta.family)} ${x.a.toFixed(1)}→${x.b.toFixed(1)}%`).join('; ')} · ${ev.length?`model change ${ev.map(e=>fmtDate(e.start)).join(', ')}`:bf.length?`settling after the model change of ${fmtDate(bf[0].start)}`:`<span style="color:${C.amber}">no model event: a prompt change</span>`}</li>`;}).join('');
     const nCh=Object.keys(steps).length,withModel=Object.keys(steps).filter(m=>inMonth(m).length).length;
+    const wk=weeksIn(from,to),ansW={},tW={};
+    D.merged.forEach(d=>{if(d.date<from||d.date>to)return;const w=weekStart(d.date);ansW[w]=(ansW[w]||0)+(d.queries||0);});
+    days.forEach(d=>{if(d<from||d>to)return;const w=weekStart(d);Object.entries(OTMPL[d]).forEach(([t,x])=>{const o=tW[t]||(tW[t]={});o[w]=(o[w]||0)+(x.Turns||0);});});
+    const smT=smallMultiples({weeks:wk,from,to,shared:false,color:C.acc,fmt:v=>v.toFixed(1)+'%',events:model.map(e=>e.start),
+      panels:stat.map(s=>{const v=wk.map(w=>(ansW[w]||0)>=CONFIG.min_rate_denominator?((tW[s.t]||{})[w]||0)/ansW[w]*100:null);const lastV=[...v].reverse().find(x=>x!=null);
+        return{title:s.meta.family+' · '+plain(s.meta.pattern).slice(0,40),tip:plain(s.meta.pattern),sub:num(s.n)+' answers · '+(rangeAns?(s.n/rangeAns*100).toFixed(1):'0')+'% overall',
+          v,last:lastV==null?'—':lastV.toFixed(1)+'%',aria:'weekly share of answers, last week '+(lastV==null?'no data':lastV.toFixed(1)+'%')};})});
     tmplCard=`<div class="card"><div class="card-title">Fixed wording<span class="card-title-note">${ids.length} sentences the prompt prescribes · each found in 200+ answers and 50+ conversations · derivation ${escH(TMPL_META._version||'')} · share of the month's answers · ${spanLabel(from,to)}</span></div>
-      <div class="tbl-wrap"><table style="width:100%;border-collapse:collapse"><thead><tr style="border-bottom:1px solid var(--b2)">${th('Sentence',true)}${th('Answers')}${th('Share')}${mons.map(m=>th(fmtMonth(m))).join('')}</tr></thead><tbody>${trows}</tbody></table></div>
+      <div class="card-note" style="margin-top:0">Each tile is one sentence: its share of the week's answers, on its own scale (the maximum is printed under it), every tile on the same weeks so a start or stop lines up down the grid. Dashed lines are confirmed model changes; weeks under ${num(CONFIG.min_rate_denominator)} answers are gaps.</div>
+      ${smT}
+      <details class="sm-details"><summary style="cursor:pointer;font-size:var(--t-xs);color:var(--muted);margin-bottom:8px">Month by month, as a table</summary>
+      <div class="tbl-wrap"><table style="width:100%;border-collapse:collapse"><thead><tr style="border-bottom:1px solid var(--b2)">${th('Sentence',true)}${th('Answers')}${th('Share')}${mons.map(m=>th(fmtMonth(m))).join('')}</tr></thead><tbody>${trows}</tbody></table></div></details>
       <div class="card-title" style="font-size:var(--t-xs);margin-top:12px">Months the wording changed<span class="card-title-note">a month-on-month step of 2+ points and a quarter of the level, or threefold from 1%+</span></div>
       <ul style="margin:0;padding-left:18px;font-size:var(--t-xs);line-height:1.6">${changes||'<li>No step inside the range</li>'}</ul>
       <div class="share-foot">A step in a month with no model event, and not in the weeks after one, is the trace of a prompt change; ${num(withModel)} of ${num(nCh)} change months hold a model-change date, so those deployments changed the prompt as well as the model. Configuration, not citizen text: the sentences are the bot's own, listed in <code>answer-templates.json</code>.</div>
@@ -5781,7 +5829,31 @@ function renderReach(D,S){
 // ═══ CATEGORY DEMAND (what topics drive AskCI use vs site browsing) ══════
 function renderCategories(D,S){
   renderCategoriesBase(D,S);
+  try{prependCategoryMultiples(D);}catch(e){console.error(e);}
   try{appendCategoryDetail(D);}catch(e){console.error(e);}
+}
+// Categories as small multiples (brief §81): the weekly not-found rate of each category's turns on ONE scale, so
+// levels compare across the grid, with the site-wide weekly rate as a faint line in every tile. A tile opens that
+// category in "One category, from the question" above.
+function prependCategoryMultiples(D){
+  const el=document.getElementById('part-categories');if(!el||!hasCatOut)return;
+  const fr=filterRange(D.merged);if(!fr.length)return;
+  const from=fr[0].date,to=fr[fr.length-1].date,wk=weeksIn(from,to),min=CONFIG.min_rate_denominator;
+  const by={},site={};
+  Object.entries(CATOUT).forEach(([d,x])=>{if(d<from||d>to)return;const w=weekStart(d);Object.entries(x).forEach(([c,o])=>{
+    if(c==='unknown'||CAT_EXCLUDE.has(c))return;
+    const s=site[w]||(site[w]={nf:0,sc:0});s.nf+=o.NotFound||0;s.sc+=o.Scored||0;const t=(by[c]||(by[c]={turns:0,nf:0,sc:0,w:{}}));t.turns+=o.Turns||0;t.nf+=o.NotFound||0;t.sc+=o.Scored||0;
+    const q=t.w[w]||(t.w[w]={nf:0,sc:0});q.nf+=o.NotFound||0;q.sc+=o.Scored||0;});});
+  const cats=Object.keys(by).filter(c=>by[c].sc>=min).sort((a,b)=>by[b].turns-by[a].turns);if(!cats.length)return;
+  const rate=o=>o&&o.sc>=min?o.nf/o.sc*100:null;
+  const smC=smallMultiples({weeks:wk,from,to,shared:true,color:C.red,fmt:v=>v.toFixed(1)+'%',ref:wk.map(w=>rate(site[w])),events:confirmedEvents().filter(e=>e.kind==='model').map(e=>e.start),
+    panels:cats.map(c=>{const t=by[c],v=wk.map(w=>rate(t.w[w])),r=rate(t);return{title:catLabel(c),sub:num(t.turns)+' turns · '+(r==null?'—':r.toFixed(1)+'%')+' overall',v,
+      last:(()=>{const x=[...v].reverse().find(y=>y!=null);return x==null?'—':x.toFixed(1)+'%';})(),aria:'weekly not-found rate',
+      click:`ASKED_CAT='${c}';renderPane('asked');setTimeout(()=>{const e=document.getElementById('asked-cat');if(e)e.closest('.card').scrollIntoView({behavior:'smooth',block:'start'});},120)`};})});
+  const gm=Math.max(0,...cats.flatMap(c=>wk.map(w=>rate(by[c].w[w])).filter(v=>v!=null)),...wk.map(w=>rate(site[w])).filter(v=>v!=null));
+  el.insertAdjacentHTML('afterbegin',`<div class="card"><div class="card-title">Not-found rate by category, week by week<span class="card-title-note">${cats.length} categories · ${spanLabel(from,to)}</span></div>
+    <div class="card-note" style="margin-top:0">One tile per category the answers were attributed to, largest first: the share of its scored turns that ended not found, each week, on one scale from 0 to ${gm.toFixed(1)}% so the tiles compare. The grey line in every tile is the weekly rate across all these categories together. A not-found answer usually cites no page, so most not-found turns have no category here and every rate on this card is lower than the site's; the tiles compare categories with each other, not with the outcome tiles. Dashed lines are confirmed model changes; weeks under ${num(min)} scored turns are gaps. Click a tile to open the category above.</div>
+    ${smC}</div>`);
 }
 function appendCategoryDetail(D){
   const el=document.getElementById('part-categories');

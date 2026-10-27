@@ -2063,3 +2063,28 @@ Ask bar test 311 of 311. Checked live in both themes.
 no visible change, better done with item 12's accessibility pass); a title-hover form of the definition
 (the lifted line is visible without hovering, which suits the readers who must trust it).
 
+## 81. UI pass 5: small multiples for the fixed wording and the categories (27 Oct 2026)
+
+§76 item 9. The §75 findings about the prompt's fixed sentences lived in a month table and a list; the
+categories had bar charts of totals and no shape over time. Both reviews asked for aligned small multiples on
+one date axis. Built:
+
+- **One helper, `smallMultiples()`**, drawing a grid of tiles in inline SVG (no chart instances): every tile
+  on the same weeks so a step lines up down the grid, a null week drawn as a gap and never as zero, confirmed
+  model changes as dashed lines, an optional reference line, and either one shared scale (to compare levels)
+  or each tile on its own scale with its maximum printed. Each tile carries a title, the last week's value,
+  its range total and an accessible label; a tile can open a view.
+- **Fixed wording (Answer wording):** 18 tiles, one per prescribed sentence, its weekly share of answers,
+  each on its own scale (they run from under 1% to 95%). The month table and the "months the wording changed"
+  list stay, the table now under a "Month by month, as a table" disclosure. The grid shows at a glance what
+  §75 established by reading: sentences start and stop together on 9 March, 1 July and 14 September, on the
+  model-change lines.
+- **Categories (Questions › Categories):** 15 tiles, one per category the answers were attributed to,
+  largest first, the weekly not-found rate on one shared scale, with the rate across those categories together
+  as a grey line in each. The note states the limit: a not-found answer usually cites no page, so most
+  not-found turns carry no category here and every rate on the card is below the site's; the tiles compare
+  categories with each other. A tile opens that category in "One category, from the question".
+- Weeks under 50 answers (or 50 scored turns) are gaps, the page's rate floor.
+
+Ask bar test 311 of 311. Checked live in both themes.
+

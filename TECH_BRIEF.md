@@ -211,6 +211,8 @@ dated by the fixed wording, 4 candidate chip changes, launches and observed chan
 - **Type floor and definitions** (brief §80): nothing a reader reads is under 12px (chart badges 11px, stated);
   card-title notes over 90 characters are moved under the title by one observer (`liftLongNotes`); copied text carries
   the data stamp on its first line.
+- **Small multiples** (brief §81): `smallMultiples()` draws aligned weekly tiles in inline SVG; used for the 18
+  fixed-wording sentences (own scales) and the categories' weekly not-found rate (one scale).
 - **Chart conventions** (brief §77): straight lines, no area fills except the cumulative burn-down, square bars,
   share charts as ranked horizontal bars; the page carries no Chart.js global overrides for radius, tension or
   gradient fills. The three standing caveats appear once, in the amber strip under the data-quality strip, not per
