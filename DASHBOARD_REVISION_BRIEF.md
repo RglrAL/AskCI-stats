@@ -2397,3 +2397,41 @@ returns to it with the reason. The header line reads "Loading…" until the data
 
 Checked in the browser: a real load (no console errors, all ten steps done, 136,752 questions since 1 January), a slowed
 replay in dark and light, and the disk fallback opening the upload form. Ask bar test 311 of 311.
+
+## 94. The loader builds the year, and hands over to the dashboard (27 Oct 2026)
+
+§93's loader drew one line and froze whenever the page was busy. Three changes:
+
+**Smoothness.** Everything that moves is now transform or opacity, which the browser animates off the main thread:
+the line is drawn whole and revealed by a cover sliding off it (1.2 s), the progress bar scales instead of changing
+width, the step dots pulse and pop by scale, the steps fade in 40 ms apart. The count is an odometer: each digit a
+column of 0-9 that rolls into place, the right-hand digits spinning further. The cost export (4 MB, the only file
+over 400 KB) parses in a PapaParse worker, headers trimmed afterwards since a worker cannot take the header function;
+its parse is kept and reused by the build, so the 16,595 rows are parsed once. A worker that has not answered in 4 s is left
+behind and the file parses on the main thread; the Ask bar test's headless clock is one such case (its first run
+without this produced no results). Space for every layer is reserved from
+the start, so nothing shifts as they fill.
+
+**The picture builds from the files.** As each arrives it adds a layer, all from the published data:
+- `usage.csv`: the daily questions line, with a pulsing dot at today, and the total rolling up;
+- `costs.csv`: daily cost as a soft purple area beneath the line, with a two-item legend;
+- `events.json` (now loaded third, as it is tiny, so the pins land while the rest loads): confirmed model, prompt,
+  launch, chips and other events as pins dropping onto the line in their event colours (Model, Modal launch, Model,
+  Model, Budget Day); observed changes are left off;
+- `categories.csv`: the citation share by category as one bar growing in, with the top three named ("Answers cite
+  Social Welfare 37% · Employment 10% · Money and Tax 9%").
+
+**The hand-over.** Where the browser supports view transitions (Chrome, Edge, Safari 18), the loader's mark flies into
+the header logo and the count flies into the bold "136,752 turns" of the Overview's opening sentence, while the rest
+crossfades (0.75 s). The Overview fills in two frames after the build and frames pause inside a view transition, so
+the hand-over waits for that sentence under the cover (up to about 0.6 s, only when opening on the Overview) before it
+starts. The line morphs into the conversations chart only when that chart is on screen, which on a laptop it is not.
+Other browsers keep the fade; with reduced motion nothing rolls, slides, pulses or flies.
+
+The wait for the line to finish is now at most 700 ms (was 400), usually nothing, since the other files take longer.
+`?ld-slow` adds half a second per step, to watch the loader.
+
+Checked in the browser: a slowed run frame by frame (dark), the hand-over slowed to 8 s mid-flight, the named
+elements logged at hand-over (header logo, "136,752 turns"), a 390 px frame and light theme side by side (the Budget
+Day label clamped inside the chart, the pending-step circles made visible in light), a normal load with no console
+errors and the same figures as before (296 billing days, £6,946 billed). Ask bar test 311 of 311.

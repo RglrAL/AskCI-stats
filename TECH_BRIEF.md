@@ -195,6 +195,13 @@ dated by the fixed wording, 4 candidate chip changes, launches and observed chan
   order through `ldRun`, ticking each step off (row counts for costs and usage); once `usage.csv` arrives the loader
   shows the total questions and draws the daily line (`ldUsage`). The cover fades off when `buildDashboard` succeeds.
   The upload form is a fallback only: for a copy opened from disk, or when neither costs nor usage could be fetched.
+  Since §94 the loader builds a picture of the year as files arrive: the total as a rolling odometer, the daily
+  questions line revealed by a sliding cover, daily cost as an area beneath (`ldCosts`, whose `parseCosts` result the
+  build reuses), confirmed events as pins (`ldPins`; events load third for this), and the category citation share as a
+  bar (`ldCats`). Only transform and opacity move, and the cost export (over 400 KB) parses in a PapaParse worker, so
+  the motion continues while the page works. Where the browser has view transitions, the hand-over flies the mark to
+  the header logo and the count into the Overview sentence that states it (`ldHide`). `?ld-slow` adds half a second
+  per step, to watch it.
 - **Groups and sub-views** (`TAB_GROUPS`): Overview; Cost (Summary, Services, Models); Usage (Quality, Questions,
   Pages, Conversations, Answer wording, Volume); Scenario planner. Three Usage views are merged (brief §78): Quality
   holds Before / after, Questions holds What people ask and Categories, Pages holds Click-throughs and Reach, each

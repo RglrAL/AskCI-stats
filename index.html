@@ -965,41 +965,80 @@ details.card:not([open])>summary.card-title{margin-bottom:0}
 }
 .kpi-more-btn:hover{color:var(--acc)}
 
-/* ── Loader (brief §93) ── */
-#loader{position:fixed;inset:0;z-index:2000;background:var(--bg);display:flex;justify-content:center;align-items:center;padding:var(--sp-6) 16px;overflow:auto;transition:opacity .35s ease,transform .35s ease}
-#loader.ld-out{opacity:0;transform:scale(1.015);pointer-events:none}
-.ld-card{width:100%;max-width:560px;text-align:center;display:flex;flex-direction:column;align-items:center}
-.ld-logo{width:56px;height:56px;border-radius:14px;margin-bottom:var(--sp-5);animation:ldBreathe 2.4s ease-in-out infinite}
+/* ── Loader (brief §93, §94) ── */
+/* Everything that moves is transform or opacity, so it keeps running while the page parses and builds. */
+#loader{position:fixed;inset:0;z-index:2000;background:var(--bg);display:flex;justify-content:center;align-items:center;padding:var(--sp-6) 16px;overflow:auto;transition:opacity .35s ease}
+#loader.ld-out{opacity:0;pointer-events:none}
+.ld-card{width:100%;max-width:600px;text-align:center;display:flex;flex-direction:column;align-items:center}
+.ld-logo{width:56px;height:56px;border-radius:14px;margin-bottom:var(--sp-4);animation:ldBreathe 2.4s ease-in-out infinite;view-transition-name:askci-logo}
 @keyframes ldBreathe{0%,100%{transform:scale(1);opacity:1}50%{transform:scale(.94);opacity:.82}}
-.ld-count{font-size:40px;font-weight:600;letter-spacing:-.02em;color:var(--text);font-variant-numeric:tabular-nums;min-height:48px;line-height:48px}
+.ld-count{font-size:40px;font-weight:600;letter-spacing:-.02em;color:var(--text);font-variant-numeric:tabular-nums;height:48px;line-height:48px;display:flex;justify-content:center;view-transition-name:askci-count}
+.odo-d{display:inline-block;height:48px;overflow:hidden}
+.odo-s{display:flex;flex-direction:column;transform:translateY(0);will-change:transform}
+.odo-s span{height:48px;line-height:48px}
 .ld-count-lbl{font-size:13px;color:var(--muted);margin-top:2px;min-height:18px}
-.ld-spark{width:100%;height:110px;margin:var(--sp-5) 0 var(--sp-4);overflow:visible}
+.ld-chart{position:relative;width:100%;height:150px;margin:var(--sp-4) 0 var(--sp-2);overflow:hidden;view-transition-name:askci-line}
+.ld-layer{position:absolute;inset:0;width:100%;height:100%;overflow:visible}
 .ld-base{stroke:var(--b2);stroke-width:1;stroke-dasharray:3 4}
-#ld-line{fill:none;stroke:var(--acc);stroke-width:1.6;stroke-linejoin:round;stroke-linecap:round;transition:stroke-dashoffset .8s cubic-bezier(.4,0,.2,1)}
-#ld-area{fill:var(--acc);opacity:0;transition:opacity .6s ease .45s}
-.ld-spark.drawn #ld-area{opacity:.1}
-.ld-bar{width:100%;max-width:320px;height:3px;border-radius:2px;background:var(--s3);overflow:hidden}
-#ld-bar-fill{height:100%;width:0;background:var(--acc);border-radius:2px;transition:width .3s ease}
+#ld-line{fill:none;stroke:var(--acc);stroke-width:1.6;stroke-linejoin:round;stroke-linecap:round}
+#ld-area{fill:var(--acc);opacity:.1}
+#ld-cost{fill:var(--purple);opacity:.32}
+#ld-cost-svg{opacity:0;transition:opacity .6s ease;will-change:opacity}
+#ld-cost-svg.on{opacity:1}
+.ld-cover{position:absolute;top:0;bottom:0;left:-48px;width:calc(100% + 48px);background:linear-gradient(90deg,transparent,var(--bg) 48px);transform:translateX(0);will-change:transform;z-index:3}
+.ld-chart.reveal .ld-cover{transform:translateX(100%);transition:transform 1.2s cubic-bezier(.45,0,.2,1)}
+.ld-dot{position:absolute;width:7px;height:7px;margin:-3.5px 0 0 -3.5px;border-radius:50%;background:var(--acc);opacity:0;z-index:2}
+.ld-dot.on{opacity:1}
+.ld-dot::after{content:'';position:absolute;inset:-5px;border-radius:50%;border:1.5px solid var(--acc);opacity:0}
+.ld-dot.on::after{animation:ldRing 1.6s ease-out .2s infinite}
+@keyframes ldRing{0%{transform:scale(.4);opacity:.9}100%{transform:scale(2.2);opacity:0}}
+.ld-pin{position:absolute;top:0;width:0;z-index:2;opacity:0;transform:translateY(-8px)}
+.ld-pin.on{opacity:1;transform:none;transition:opacity .35s ease,transform .45s cubic-bezier(.2,1.4,.4,1)}
+.ld-pin i{position:absolute;left:-.5px;width:1px;background:currentColor;opacity:.55}
+.ld-pin b{position:absolute;left:-3px;width:6px;height:6px;border-radius:50%;background:currentColor}
+.ld-pin span{position:absolute;left:0;transform:translateX(-50%);font-size:12px;font-weight:500;white-space:nowrap;line-height:14px}
+.ld-legend{display:flex;justify-content:center;gap:16px;font-size:12px;color:var(--muted);min-height:16px;opacity:0;transition:opacity .4s ease}
+.ld-legend.on{opacity:1}
+.ld-legend span{display:inline-flex;align-items:center;gap:6px}
+.ld-legend i{display:inline-block;width:14px;height:2px;background:var(--acc);border-radius:1px}
+.ld-legend i.ld-sw-cost{height:8px;background:color-mix(in srgb,var(--purple) 35%,transparent)}
+.ld-cats{display:flex;width:100%;max-width:420px;height:6px;border-radius:3px;overflow:hidden;margin-top:var(--sp-4);gap:2px}   /* space kept from the start, so nothing shifts when it fills */
+.ld-cats div{height:100%;transform:scaleX(0);transform-origin:left;will-change:transform}
+.ld-cats.on div{transform:scaleX(1);transition:transform .5s cubic-bezier(.2,.8,.2,1)}
+.ld-cats-cap{font-size:12px;color:var(--muted);margin-top:6px;min-height:16px;opacity:0;transition:opacity .4s ease .2s}
+.ld-cats-cap.on{opacity:1}
+.ld-cats-cap b{font-weight:500;color:var(--text)}
+.ld-bar{width:100%;max-width:320px;height:3px;border-radius:2px;background:var(--s3);overflow:hidden;margin-top:var(--sp-4)}
+#ld-bar-fill{height:100%;width:100%;background:var(--acc);border-radius:2px;transform:scaleX(0);transform-origin:left;transition:transform .35s ease;will-change:transform}
 .ld-stage{font-size:13px;color:var(--text);margin-top:var(--sp-3);min-height:18px}
-.ld-steps{list-style:none;margin:var(--sp-4) 0 0;padding:0;display:flex;flex-wrap:wrap;justify-content:center;gap:6px 14px;font-size:12px;color:var(--dim)}
-.ld-steps li{display:inline-flex;align-items:center;gap:5px;transition:color .25s}
-.ld-steps li::before{content:'';width:7px;height:7px;border-radius:50%;border:1px solid var(--b2);transition:background .25s,border-color .25s}
+.ld-steps{list-style:none;margin:var(--sp-3) 0 0;padding:0;display:flex;flex-wrap:wrap;justify-content:center;gap:6px 14px;font-size:12px;color:var(--dim)}
+.ld-steps li{display:inline-flex;align-items:center;gap:5px;transition:color .25s;animation:ldIn .4s ease both}
+@keyframes ldIn{from{opacity:0;transform:translateY(5px)}to{opacity:1;transform:none}}
+.ld-steps li::before{content:'';width:7px;height:7px;border-radius:50%;border:1px solid color-mix(in srgb,var(--dim) 60%,transparent);transition:background .25s,border-color .25s}
 .ld-steps li.active{color:var(--text)}
-.ld-steps li.active::before{border-color:var(--acc);animation:ldPulse 1s ease-in-out infinite}
+.ld-steps li.active::before{border-color:var(--acc);background:color-mix(in srgb,var(--acc) 30%,transparent);animation:ldPulse 1s ease-in-out infinite}
+@keyframes ldPulse{0%,100%{transform:scale(1);opacity:1}50%{transform:scale(1.45);opacity:.55}}
 .ld-steps li.done{color:var(--muted)}
-.ld-steps li.done::before{background:var(--green);border-color:var(--green)}
+.ld-steps li.done::before{background:var(--green);border-color:var(--green);animation:ldPop .4s cubic-bezier(.2,1.6,.4,1)}
+@keyframes ldPop{0%{transform:scale(.3)}100%{transform:scale(1)}}
 .ld-steps li.missing::before{background:var(--amber);border-color:var(--amber)}
 .ld-steps li small{font-size:12px;color:var(--dim);font-variant-numeric:tabular-nums}
-@keyframes ldPulse{0%,100%{box-shadow:0 0 0 0 color-mix(in srgb,var(--acc) 50%,transparent)}50%{box-shadow:0 0 0 4px color-mix(in srgb,var(--acc) 0%,transparent)}}
 .ld-fallback{margin-top:var(--sp-5);font-size:13px;color:var(--muted);max-width:440px}
 .ld-open{margin-top:var(--sp-3);background:none;border:1px solid var(--b2);color:var(--acc);border-radius:var(--r-sm);padding:6px 12px;font:inherit;cursor:pointer}
 .ld-open:hover{border-color:var(--acc)}
 #dashboard.dash-in{animation:dashIn .45s ease both}
 @keyframes dashIn{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
-@media(max-width:600px){.ld-count{font-size:32px}.ld-steps{gap:4px 10px}}
+/* the hand-over: the loader's mark flies to the header's, the count into the Overview sentence that states it, the line to
+   the conversations chart when that is on screen */
+::view-transition-group(askci-logo),::view-transition-group(askci-line),::view-transition-group(askci-count){animation-duration:.75s;animation-timing-function:cubic-bezier(.2,.8,.2,1)}
+::view-transition-old(root),::view-transition-new(root){animation-duration:.45s}
+::view-transition-old(askci-line){animation-duration:.4s}
+@media(max-width:600px){.ld-count{font-size:32px}.ld-steps{gap:4px 10px}.ld-chart{height:130px}.ld-cats-cap{min-height:34px}}
 @media(prefers-reduced-motion:reduce){
-  .ld-logo,.ld-steps li.active::before{animation:none}
-  #loader,#ld-line,#ld-area,#ld-bar-fill{transition:none}
+  .ld-logo,.ld-steps li,.ld-steps li::before,.ld-dot::after{animation:none!important}
+  #loader,#ld-cost-svg,#ld-bar-fill,.ld-legend,.ld-cats div,.ld-cats-cap,.ld-pin.on{transition:none!important}
+  .ld-cover{display:none}
+  .odo-s{transition:none!important}
   #dashboard.dash-in{animation:none}
 }
 
@@ -1816,7 +1855,16 @@ body:has(#report-mode-container[style*="block"]) .top-controls{display:none}
       <img src="logo.png" alt="" class="ld-logo">
       <div class="ld-count" id="ld-count" aria-hidden="true"></div>
       <div class="ld-count-lbl" id="ld-count-lbl">Loading AskCI data…</div>
-      <svg class="ld-spark" id="ld-spark" aria-hidden="true"><line class="ld-base" x1="0" x2="100%" y1="95%" y2="95%"/><path id="ld-area"/><path id="ld-line"/></svg>
+      <div class="ld-chart" id="ld-chart" aria-hidden="true">
+        <svg class="ld-layer" id="ld-cost-svg"><path id="ld-cost"/></svg>
+        <svg class="ld-layer" id="ld-spark"><line class="ld-base" id="ld-base"/><path id="ld-area"/><path id="ld-line"/></svg>
+        <div id="ld-pins"></div>
+        <div class="ld-dot" id="ld-dot"></div>
+        <div class="ld-cover"></div>
+      </div>
+      <div class="ld-legend" id="ld-legend" aria-hidden="true"></div>
+      <div class="ld-cats" id="ld-cats" aria-hidden="true"></div>
+      <div class="ld-cats-cap" id="ld-cats-cap"></div>
       <div class="ld-bar" aria-hidden="true"><div id="ld-bar-fill"></div></div>
       <div class="ld-stage" id="ld-stage">Starting…</div>
       <ul class="ld-steps" id="ld-steps"></ul>
@@ -2776,7 +2824,17 @@ function sortChartTable(id,col){
 
 // ═══ PARSING ════════════════════════════════════════════════════════
 function sniffDelim(t){const l=(t.split('\n')[0]||'');return(l.match(/\t/g)||[]).length>(l.match(/,/g)||[]).length?'\t':','}
-function parseText(text){const c=text.replace(/^\uFEFF/,'');return new Promise((res,rej)=>Papa.parse(c,{header:true,skipEmptyLines:true,dynamicTyping:false,delimiter:sniffDelim(c),transformHeader:h=>h.trim(),complete:d=>res(d.data),error:rej}))}
+function parseText(text){const c=text.replace(/^\uFEFF/,'');
+  // a large file (the cost export) parses in a worker, so the loader keeps moving; headers are trimmed afterwards there,
+  // since a worker cannot take the transformHeader function. A worker that has not answered in 4 s (blocked, or a
+  // headless test clock) is left behind and the file parses here instead.
+  const main=()=>new Promise((res,rej)=>Papa.parse(c,{header:true,skipEmptyLines:true,dynamicTyping:false,delimiter:sniffDelim(c),transformHeader:h=>h.trim(),complete:d=>res(d.data),error:rej}));
+  if(c.length>400000&&typeof Worker!=='undefined'&&Papa.WORKERS_SUPPORTED){
+    const viaWorker=new Promise((res,rej)=>{try{Papa.parse(c,{header:true,skipEmptyLines:true,dynamicTyping:false,delimiter:sniffDelim(c),worker:true,
+      complete:d=>{const rows=d.data,ks=Object.keys(rows[0]||{});res(ks.every(k=>k===k.trim())?rows:rows.map(r=>{const o={};for(const k in r)o[k.trim()]=r[k];return o}));},error:rej})}catch(e){rej(e)}});
+    return Promise.race([viaWorker,new Promise(r=>setTimeout(()=>r(null),4000))]).catch(()=>null).then(rows=>rows||main());
+  }
+  return main()}
 // Cache key (brief §83): the deployed commit, stamped into the askci-build meta at deploy. Every deploy changes it, so
 // a new file is always fetched; between deploys the browser's HTTP cache (and GitHub Pages' ETag revalidation) serves
 // the ~10 MB of data instead of refetching it on every load. A local copy has no stamp and keeps a fresh key per load.
@@ -8868,7 +8926,7 @@ function showLoadError(msgs){
 // The columns tools/make_usage.py writes beyond Date, Questions and Sessions (Voice columns are optional).
 const USAGE_FEED_COLUMNS='Answered Unanswered Flagged NewTopic UserFollowup SuggestedFollowup ModalTurns WebTurns OtherTurns ModalSessions WebSessions Citations LatencyP50ms LatencyP90ms LatencyP99ms Likes Dislikes DislikesOnCited StarterPromptFirstTurns OrganicFirstTurns ScriptLatin ScriptCyrillic ScriptArabic ScriptCJK ScriptDevanagari ScriptOther ScriptNone LatUnder10s Lat10to20s Lat20to30s LatOver30s Cited NotFound Clarification Error OutOfScope Greeting Uncited Partial Scored OutcomeRules ModalCited ModalNotFound ModalScored WebCited WebNotFound WebScored'.split(' ');
 function buildDashboard(costRows,usageRows){
-  const cd=costRows?parseCosts(costRows):emptyCostData();
+  const cd=costRows?(LD_PARSED&&LD_PARSED.rows===costRows?LD_PARSED.cd:parseCosts(costRows)):emptyCostData();   // the loader's parse, reused
   const ud=usageRows?parseUsage(usageRows):{byDate:{},quality:{rowsRaw:0,rowsKept:0,badDates:0,badDateSamples:[],badDateShare:0}};
   const problems=[];
   const dateMsg=(name,q)=>`<code>${name}</code> refused: ${q.badDates} of ${q.rowsRaw} rows (${(q.badDateShare*100).toFixed(1)}%) have unreadable dates, e.g. ${q.badDateSamples.map(x=>`“${x}”`).join(', ')}. Accepted formats: DD/MM/YYYY, D-Mon-YY, YYYY-MM-DD.`;
@@ -8894,9 +8952,9 @@ function buildDashboard(costRows,usageRows){
   const S=DATA.stats;
 
   document.getElementById('upload-section').style.display='none';
-  ldHide();
+  const handedOver=ldHide();
   document.getElementById('dashboard').style.display='block';
-  document.getElementById('dashboard').classList.add('dash-in');
+  if(!handedOver)document.getElementById('dashboard').classList.add('dash-in');
   document.getElementById('sticky-bar').classList.add('visible');
   setTimeout(()=>{wireCustomDates();updateTabOverflow();syncBudgetButton();syncEventsButton();},100);
 
@@ -9045,71 +9103,164 @@ function syncKpiMoreBtn(open){
   if(typeof renderIcons==='function')renderIcons();
 }
 
-// ── Loader (brief §93): the real load, step by step ──
-const LD_STEPS=[['costs','Costs'],['usage','Questions'],['site','Site analytics'],['cats','Categories'],['hours','Hours'],['convs','Conversations'],['clicks','Pages and clicks'],['pages','Page list'],['events','Events'],['build','Dashboard']];
+// ── Loader (brief §93, §94): the real load, step by step, drawing the year as its files arrive ──
+const LD_STEPS=[['costs','Costs'],['usage','Questions'],['events','Events'],['site','Site analytics'],['cats','Categories'],['hours','Hours'],['convs','Conversations'],['clicks','Pages and clicks'],['pages','Page list'],['build','Dashboard']];
 const LD_RM=matchMedia('(prefers-reduced-motion: reduce)').matches;
-let ldDrawn=null;   // when the line finishes drawing
+const LD={dates:null,ys:null,W:0,H:0,top:34,revealEnd:0};
 function ldInit(){
-  document.getElementById('ld-steps').innerHTML=LD_STEPS.map(([k,l])=>`<li data-k="${k}">${l}</li>`).join('');
+  document.getElementById('ld-steps').innerHTML=LD_STEPS.map(([k,l],i)=>`<li data-k="${k}" style="animation-delay:${i*40}ms">${l}</li>`).join('');
 }
+function ldBar(f){document.getElementById('ld-bar-fill').style.transform=`scaleX(${f})`}
 function ldStep(k){
   const i=LD_STEPS.findIndex(x=>x[0]===k),li=document.querySelector(`#ld-steps li[data-k="${k}"]`);
   if(li)li.classList.add('active');
   document.getElementById('ld-stage').textContent=`${k==='build'?'Building the dashboard':'Loading '+LD_STEPS[i][1].toLowerCase()} · ${i+1} of ${LD_STEPS.length}`;
-  document.getElementById('ld-bar-fill').style.width=`${(i/LD_STEPS.length)*100}%`;
+  ldBar(i/LD_STEPS.length);
 }
 function ldDone(k,note,missing){
   const i=LD_STEPS.findIndex(x=>x[0]===k),li=document.querySelector(`#ld-steps li[data-k="${k}"]`);
-  if(li){li.classList.remove('active');li.classList.add(missing?'missing':'done');if(note)li.insertAdjacentHTML('beforeend',` <small>${note}</small>`);}
-  document.getElementById('ld-bar-fill').style.width=`${((i+1)/LD_STEPS.length)*100}%`;
+  if(li&&!li.classList.contains('done')){li.classList.remove('active');li.classList.add(missing?'missing':'done');if(note)li.insertAdjacentHTML('beforeend',` <small>${note}</small>`);}
+  ldBar((i+1)/LD_STEPS.length);
 }
+const LD_SLOW=/[?&]ld-slow\b/.test(location.search);   // ?ld-slow: half a second per step, to watch the loader
 async function ldRun(k,fn,note){
   ldStep(k);
+  if(LD_SLOW)await new Promise(r=>setTimeout(r,500));
   let r=null,ok=true;
   try{r=await fn()}catch(e){ok=false}
   ldDone(k,ok&&note?note(r):'',!ok);
   return r;
 }
-// The questions received, counting up, and the daily line drawing itself, from the usage file as it arrives
+// The total as an odometer: each digit a column of 0-9 that rolls on the compositor; the right-hand digits spin further
+function ldOdometer(total){
+  const el=document.getElementById('ld-count'),str=total.toLocaleString('en-IE'),nd=str.replace(/\D/g,'').length;
+  let di=0;
+  el.innerHTML=[...str].map(ch=>{
+    if(!/\d/.test(ch))return `<span>${ch}</span>`;
+    const spins=Math.min(2,Math.floor(di*2/Math.max(nd-1,1)));di++;
+    return `<span class="odo-d"><span class="odo-s" data-to="${spins*10+(+ch)}">${Array.from({length:30},(_,k)=>`<span>${k%10}</span>`).join('')}</span></span>`;
+  }).join('');
+  const cols=[...el.querySelectorAll('.odo-s')];
+  el.getBoundingClientRect();
+  requestAnimationFrame(()=>cols.forEach((c,i)=>{
+    if(!LD_RM)c.style.transition=`transform ${1.1+i*0.07}s cubic-bezier(.16,1,.3,1)`;
+    c.style.transform=`translateY(-${c.dataset.to*48}px)`;
+  }));
+}
+// Questions a day: the line, revealed by a cover sliding off it (a transform, so it keeps moving while the page works)
 function ldUsage(rows){
   const pts=(rows||[]).map(r=>({d:(r.Date||'').trim(),v:+String(r.Questions||'').replace(/,/g,'')})).filter(p=>/^\d{4}-\d{2}-\d{2}$/.test(p.d)&&isFinite(p.v)).sort((a,b)=>a.d<b.d?-1:1);
   if(pts.length<2)return;
   const total=pts.reduce((s,p)=>s+p.v,0),first=new Date(pts[0].d+'T12:00:00');
-  document.getElementById('ld-count-lbl').textContent=`questions received since ${first.toLocaleDateString('en-IE',{day:'numeric',month:'long',year:'numeric'})}`;
-  const el=document.getElementById('ld-count'),t0=performance.now(),dur=LD_RM?0:900;
-  const tick=now=>{const f=dur?Math.min(1,(now-t0)/dur):1,e=1-Math.pow(1-f,3);el.textContent=Math.round(total*e).toLocaleString('en-IE');if(f<1)requestAnimationFrame(tick);};
-  requestAnimationFrame(tick);
-  const svg=document.getElementById('ld-spark'),W=svg.clientWidth||520,H=svg.clientHeight||96,max=Math.max(...pts.map(p=>p.v))||1;
-  svg.setAttribute('viewBox',`0 0 ${W} ${H}`);
-  const xy=pts.map((p,i)=>[(i/(pts.length-1))*W,H*0.95-(p.v/max)*H*0.9]);
-  const d='M'+xy.map(([x,y])=>`${x.toFixed(1)},${y.toFixed(1)}`).join('L');
-  const line=document.getElementById('ld-line'),area=document.getElementById('ld-area');
-  line.setAttribute('d',d);area.setAttribute('d',`${d}L${W},${H*0.95}L0,${H*0.95}Z`);
-  const len=line.getTotalLength();
-  line.style.strokeDasharray=len;line.style.strokeDashoffset=LD_RM?0:len;
-  line.getBoundingClientRect();   // commit the start before the transition
-  requestAnimationFrame(()=>{line.style.strokeDashoffset=0;svg.classList.add('drawn');});
-  ldDrawn=performance.now()+(LD_RM?0:800);
+  ldOdometer(total);LD.totalStr=total.toLocaleString('en-IE');
+  document.getElementById('ld-count-lbl').innerHTML=`<span class="sr-only">${total.toLocaleString('en-IE')} </span>questions received since ${first.toLocaleDateString('en-IE',{day:'numeric',month:'long',year:'numeric'})}`;
+  const box=document.getElementById('ld-chart'),W=box.clientWidth||560,H=box.clientHeight||150,max=Math.max(...pts.map(p=>p.v))||1,bot=H-3;
+  Object.assign(LD,{dates:pts.map(p=>p.d),W,H,bot});
+  LD.ys=pts.map(p=>bot-(p.v/max)*(bot-LD.top));
+  const X=i=>(i/(pts.length-1))*W,d='M'+LD.ys.map((y,i)=>`${X(i).toFixed(1)},${y.toFixed(1)}`).join('L');
+  ['ld-spark','ld-cost-svg'].forEach(id=>document.getElementById(id).setAttribute('viewBox',`0 0 ${W} ${H}`));
+  document.getElementById('ld-line').setAttribute('d',d);
+  document.getElementById('ld-area').setAttribute('d',`${d}L${W},${bot}L0,${bot}Z`);
+  const base=document.getElementById('ld-base');base.setAttribute('x1',0);base.setAttribute('x2',W);base.setAttribute('y1',bot);base.setAttribute('y2',bot);
+  const dot=document.getElementById('ld-dot');dot.style.left=`${W-4}px`;dot.style.top=`${LD.ys[LD.ys.length-1]}px`;
+  box.getBoundingClientRect();
+  requestAnimationFrame(()=>{box.classList.add('reveal');});
+  LD.revealEnd=performance.now()+(LD_RM?0:1200);
+  setTimeout(()=>dot.classList.add('on'),LD_RM?0:1150);
+  document.getElementById('ld-legend').innerHTML='<span><i></i>questions a day</span>';
+  document.getElementById('ld-legend').classList.add('on');
 }
-// Let the line finish (never more than 400 ms of waiting), and paint once, before the heavy build
+// Cost a day: a soft area under the line, from the real cost parse (kept for the build, so it runs once)
+let LD_PARSED=null;
+function ldCosts(rows){
+  if(!rows||!rows.length||!LD.dates)return;
+  try{LD_PARSED={rows,cd:parseCosts(rows)}}catch(e){return}
+  const daily=LD_PARSED.cd.daily,vals=LD.dates.map(d=>daily[d]?daily[d].total:null),max=Math.max(...vals.filter(v=>v!=null))||0;
+  if(!max)return;
+  const W=LD.W,bot=LD.bot,h=(bot-LD.top)*0.45,X=i=>(i/(LD.dates.length-1))*W;
+  let d='',run=[];
+  const flush=()=>{if(run.length>1)d+=`M${X(run[0][0]).toFixed(1)},${bot}`+run.map(([i,v])=>`L${X(i).toFixed(1)},${(bot-v/max*h).toFixed(1)}`).join('')+`L${X(run[run.length-1][0]).toFixed(1)},${bot}Z`;run=[];};
+  vals.forEach((v,i)=>{if(v==null)flush();else run.push([i,v])});flush();
+  document.getElementById('ld-cost').setAttribute('d',d);
+  document.getElementById('ld-cost-svg').classList.add('on');
+  document.getElementById('ld-legend').insertAdjacentHTML('beforeend','<span><i class="ld-sw-cost"></i>cost a day</span>');
+}
+// Where answers point: the citation share by category, as one bar that grows in
+function ldCats(){
+  try{
+    const tot={};Object.values(CATCITE||{}).forEach(m=>Object.entries(m).forEach(([k,v])=>tot[k]=(tot[k]||0)+v));
+    const all=Object.values(tot).reduce((a,b)=>a+b,0);if(!all)return;
+    const top=Object.entries(tot).sort((a,b)=>b[1]-a[1]),head=top.slice(0,5),rest=top.slice(5).reduce((s,x)=>s+x[1],0);
+    const cols=['var(--acc)','var(--purple)','var(--amber)','var(--green)','var(--pink)','var(--b2)'];
+    const segs=[...head,...(rest?[['other',rest]]:[])];
+    const bar=document.getElementById('ld-cats');
+    bar.innerHTML=segs.map(([k,v],i)=>`<div style="flex:${v} 1 0;background:${cols[i]};transition-delay:${i*70}ms"></div>`).join('');
+    bar.getBoundingClientRect();requestAnimationFrame(()=>bar.classList.add('on'));
+    const cap=document.getElementById('ld-cats-cap');
+    cap.innerHTML='Answers cite '+head.slice(0,3).map(([k,v])=>`<b>${catLabel(k)}</b> ${Math.round(v/all*100)}%`).join(' · ');
+    cap.classList.add('on');
+  }catch(e){}
+}
+// Confirmed events as pins on the line: a model change, a launch, the Budget
+function ldPins(){
+  if(!LD.dates)return;
+  const first=LD.dates[0],last=LD.dates[LD.dates.length-1];
+  const evs=confirmedEvents().filter(e=>['model','prompt','launch','chips','other'].includes(e.kind)&&e.start>=first&&e.start<=last);
+  const lab=e=>e.kind==='model'?'Model':String(e.title).replace(/\s*\(.*?\)/g,'').split(':')[0].slice(0,18);
+  const host=document.getElementById('ld-pins');
+  host.innerHTML=evs.map((e,n)=>{
+    const i=Math.max(0,LD.dates.findIndex(d=>d>=e.start)),x=(i/(LD.dates.length-1))*LD.W,row=n%2,lt=row?15:0,y=LD.ys[i];
+    const half=lab(e).length*3.6+4,cx=Math.min(Math.max(x,half),LD.W-half);   // keep the label inside the chart
+    return `<div class="ld-pin" style="left:${x}px;color:${eventColor(e)};transition-delay:${n*90}ms"><span style="top:${lt}px;left:${cx-x}px">${lab(e)}</span><i style="top:${lt+15}px;height:${Math.max(0,y-lt-17)}px"></i><b style="top:${y-3}px"></b></div>`;
+  }).join('');
+  host.getBoundingClientRect();
+  requestAnimationFrame(()=>host.querySelectorAll('.ld-pin').forEach(p=>p.classList.add('on')));
+}
+// Let the line finish revealing (never more than 700 ms of waiting), and paint once, before the heavy build
 async function ldSettle(){
-  const wait=ldDrawn?Math.min(400,Math.max(0,ldDrawn-performance.now())):0;
+  const wait=Math.min(700,Math.max(0,LD.revealEnd-performance.now()));
   if(wait)await new Promise(r=>setTimeout(r,wait));
   await new Promise(r=>requestAnimationFrame(()=>setTimeout(r,0)));
 }
+// The hand-over. Where the browser has view transitions, the mark flies to the header's, the count into the Overview
+// sentence that states it, and the line into the conversations chart when on screen; elsewhere the cover fades. Returns true when a view transition runs.
 function ldHide(){
   const ld=document.getElementById('loader');
-  if(!ld||ld.style.display==='none')return;
+  if(!ld||ld.style.display==='none')return false;
   ldDone('build');
-  if(LD_RM){ld.style.display='none';return;}
+  if(LD_RM){ld.style.display='none';return false;}
+  if(document.startViewTransition){
+    const named=[];
+    // the view fills in two frames after the build (and frames pause inside a view transition), so wait for it here,
+    // under the cover, for up to ~600 ms, then hand over
+    const onScreen=el=>{const r=el.getBoundingClientRect();return r.width&&r.top<innerHeight&&r.bottom>0};
+    const findNum=()=>{const pane=document.querySelector('.pane.active');return LD.totalStr&&pane&&[...pane.querySelectorAll('b,strong')].find(b=>b.textContent.trim().startsWith(LD.totalStr))};
+    let tries=0,toHome=true;
+    try{toHome=(PREFS.tab&&groupOf(PREFS.tab)?PREFS.tab:'home')==='home'}catch(e){}   // only the Overview states the count
+    const go=()=>{
+      if(!findNum()&&tries++<(toHome?36:3)){setTimeout(go,16);return;}
+      const vt=document.startViewTransition(()=>{
+        ld.style.display='none';
+        const logo=document.querySelector('.hdr-logo');if(logo){logo.style.viewTransitionName='askci-logo';named.push(logo);}
+        const num=findNum();if(num&&onScreen(num)){num.style.viewTransitionName='askci-count';num.style.display='inline-block';named.push(num);}
+        const cv=document.getElementById('home-vol'),card=cv&&cv.closest('.card');
+        if(card&&onScreen(card)){card.style.viewTransitionName='askci-line';named.push(card);}
+      });
+      vt.finished.finally(()=>named.forEach(n=>{n.style.viewTransitionName='';if(n.tagName==='B'||n.tagName==='STRONG')n.style.display='';}));
+    };
+    go();
+    return true;
+  }
   ld.classList.add('ld-out');
   setTimeout(()=>{ld.style.display='none';},360);
+  return false;
 }
 // No data could be fetched: say why, and offer the upload form
 function ldFallback(msg){
   document.getElementById('ld-stage').textContent='';
   document.querySelector('.ld-bar').style.display='none';
-  document.getElementById('ld-spark').style.display='none';
+  document.getElementById('ld-chart').style.display='none';
+  ['ld-legend','ld-cats','ld-cats-cap'].forEach(id=>document.getElementById(id).style.display='none');
   if(!document.querySelector('#ld-steps li.done,#ld-steps li.missing'))document.getElementById('ld-steps').style.display='none';
   document.getElementById('ld-count-lbl').textContent='No data loaded';
   document.getElementById('ld-fallback-msg').textContent=msg;
@@ -9144,13 +9295,16 @@ async function init(){
   const cr=await ldRun('costs',()=>loadCSV('costs.csv'),rows);
   const ur=await ldRun('usage',()=>loadCSV('usage.csv'),r=>r&&r.length?`${r.length} days`:'');
   ldUsage(ur);
+  ldCosts(cr);
+  await ldRun('events',()=>Promise.all([loadEvents(),loadPrompts()])); // shared events (events.json) — only confirmed ones draw; early, so the pins land while the rest loads
+  ldPins();
   await ldRun('site',loadGa4Files); // site-analytics for the Reach tab (graceful if absent)
   await ldRun('cats',loadCategoryData); // category demand for the Categories tab (graceful if absent)
+  ldCats();
   await ldRun('hours',loadHoursFile); // hour-of-day turns for the Usage pane (graceful if absent)
   await ldRun('convs',loadConversationFiles); // conversation-level aggregates (graceful if absent)
   await ldRun('clicks',loadClickFiles); // GA4 click-throughs from tools/make_clicks.py (graceful if absent)
   await ldRun('pages',loadSitePages); // the site's page list from tools/make_site_pages.py (graceful if absent)
-  await ldRun('events',()=>Promise.all([loadEvents(),loadPrompts()])); // shared events (events.json) — only confirmed ones draw
   if(!cr&&!ur){ldFallback('The data files could not be fetched. Reload to try again, or open them from this computer.');return;}
   ldStep('build');
   await ldSettle();
