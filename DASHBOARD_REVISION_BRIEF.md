@@ -2241,3 +2241,35 @@ Escape closes it and focus returns to the button that opened it (checked for bot
 config version drops from line 1 and each button sits under its text; no sideways scroll. Printing shows the panel
 in full instead of the bar, black on white whatever the theme (checked by applying the print rules on screen;
 not test-printed on paper). Ask bar test 311 of 311.
+
+## 88. Funnel plot of not-found by category, and the four kinds of page as a 2×2 (27 Oct 2026)
+
+From a review of what could be shown better (the order agreed: funnel and 2×2 first, then partial by intent per page,
+the transition grid, cited against clicked, lost and gained).
+
+**Not-found rate against volume, by category** (Questions view, above "One category, from the question"). A funnel
+plot: each category's typed questions across on a log scale, its not-found share up, the pooled rate as a line, and
+95% and 99.8% limits that narrow as volume grows, so "outside the funnel" is the claim and a small category far from
+the line is not evidence by its size. Category is the broad cut from the question (`question-categories-monthly.csv`:
+the answer cited the category, the question named a page in it, or its topic gives it), not the answer-attributed
+category, which drops most failed answers. Months overlapping the range; categories with 5+ questions; points labelled
+directly; a click opens the category below; the table sits under "Show the table"; the outcome-rule note is in the
+title when the months reach 14 Sep.
+
+Overdispersion. With plain binomial limits 9 of 15 categories fell outside (the limits on 42,000 Social Welfare
+questions are a fraction of a point wide), which says only that categories differ. The limits are widened by
+sqrt(phi), phi the mean squared z-score winsorised at the 10th and 90th percentiles (Spiegelhalter 2005); phi is 21.7
+on the full range, so the limits are 4.7× the binomial ones, and the card states both. Outside the widened funnel on
+the full range: Justice above (8.1% of 3,318) and Returning to Ireland below (0.9% of 3,104). Housing, Health and
+Employment are above the line and inside the funnel. Descriptive: above the funnel means failing more than size and
+the usual spread between categories explain, not why.
+
+**The four kinds of page as a 2×2** (Pages view, above the four tables). Pages are the headline in every box, because
+"cited, never named" can only count pages; underneath, each box gives its own unit: questions naming the pages for the
+three named kinds (28,513, 3,398 and 207 on the full range), citations for the never-named one (29,240). Each box is a
+button that scrolls to its table. No axes: three of the four kinds are "named", so they are not two crossed
+dimensions, and the boxes keep the tables' order.
+
+Both charts have their table in the page and an aria-label naming where it is (`pointLabels` is a new direct-label
+plugin that skips a label that would overlap; the table has every row). No sideways scroll at 390 px. Ask bar test 311
+of 311.
