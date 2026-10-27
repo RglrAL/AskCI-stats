@@ -2318,3 +2318,25 @@ table and a flat list of pairs. Both are now grids from one helper, `transitionG
   (with the meta categories, about and my situation, which the grid leaves out). Column heads wrap at spaces.
 
 Ask bar test 311 of 311.
+
+## 91. Cited against clicked, by page (27 Oct 2026)
+
+Pages view, Click-throughs, "Cited vs clicked pages": a scatter above the sortable table.
+
+- **Log–log, with zeros kept.** Times cited across and click-throughs up, both on log scales. The pages the chart is
+  for (cited often, never clicked) have no place on a log scale, so they sit in a strip under the axis, spread up and
+  down only so they can be seen, labelled "0 clicks". The two panels share the x scale and a 64 px y-axis, so a page's
+  times cited sit at the same x in both (checked: identical chart areas). Red in the strip = cited 100+ times with
+  none (17 on the full range, State Pension Contributory first); amber = an address not on the site's page list.
+- **The redirect note on the strip.** Hovering a red point says no click-throughs were recorded and that the link may
+  redirect, so visits may be logged under another address, the Ask bar's wording; an amber point says visits may be
+  logged under the page's current address.
+- **Reference line** at the overall rate (2.8 per 100 times cited on the full range); integer clicks make bands at 1,
+  2, 3 at the bottom, which is the data, not an artefact to smooth.
+- **Measured windows only.** Clicks and citations now cover the same whole months inside the window where both
+  surfaces are measured (June to October on the full range; the pop-up's 11 May start would otherwise put 20 days of
+  May clicks against a whole month of May citations). The table below moved to the same months, so its "cited,
+  never clicked" count and the strip's red points agree (17 and 17).
+
+Pages cited 20+ times in the window are plotted (677 with a click, 251 without); every page stays in the table. Both
+canvases name the table in their aria-label. Ask bar test 311 of 311.

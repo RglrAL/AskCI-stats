@@ -6219,7 +6219,9 @@ function renderClicks(D,S){
   const topicRows=Object.entries(topic).filter(([,o])=>rateOK(o.n,o.den).ok).map(([k,o])=>({k,label:catLabel(k),...o,r:o.n/o.den*100})).sort((a,b)=>b.r-a.r);
   const topicHidden=Object.entries(topic).filter(([,o])=>o.den>0&&!rateOK(o.n,o.den).ok).map(([k])=>catLabel(k));
   // Pages: clicks over the range from 11 May (both surfaces measured); times cited over the months overlapping it
-  const pfr=fr.filter(d=>d.date>=T.embed&&d.date>=T.app),pmonths=monthsIn(pfr),cp=pagesIn(pfr),cites={};
+  // whole months inside the measured window (brief §91), so clicks and the monthly citations cover the same days
+  const pfr0=fr.filter(d=>d.date>=T.embed&&d.date>=T.app),pfr=pfr0.length?pfr0.filter(d=>d.date.slice(0,7)+'-01'>=pfr0[0].date):[];
+  const pmonths=monthsIn(pfr),cp=pagesIn(pfr),cites={};
   pmonths.forEach(m=>(CITES[m]||[]).forEach(r=>{if(!/citizensinformation\.ie/.test(r.url))return;const o=cites[r.url]||(cites[r.url]={n:0,cat:r.cat});o.n+=r.n;}));
   const urls=new Set([...Object.keys(cp),...Object.keys(cites)]);
   const MINC=100;
@@ -6235,6 +6237,15 @@ function renderClicks(D,S){
   const th=(t,left)=>`<th style="text-align:${left?'left':'right'};padding:7px 10px;font-size:var(--t-xs);color:var(--muted);text-transform:uppercase;letter-spacing:.08em;white-space:nowrap">${t}</th>`;
   const sortBtn=(m,l)=>`<button class="pill${clicksSort===m?' active':''}" onclick="setClicksSort('${m}')">${l}</button>`;
   const onSite=u=>!hasSitePages||SITEPAGES.all.has(String(u).toLowerCase().replace(/\/$/,''));
+  // The scatter (brief §91): whole months inside the measured window only, so clicks and citations cover the same days
+  const sc=(()=>{if(!pfr.length)return null;const f0=pfr[0].date,l0=pfr[pfr.length-1].date;
+    const ms=monthsIn(pfr);if(!ms.length)return null;
+    const days=pfr.filter(d=>ms.includes(d.date.slice(0,7))),ck={},ct={};
+    days.forEach(d=>(CLICKPAGES[d.date]||[]).forEach(p=>{const u=ciKey(p.url);ck[u]=(ck[u]||0)+p.n;}));
+    ms.forEach(m=>(CITES[m]||[]).forEach(r=>{if(!/citizensinformation\.ie/.test(r.url))return;const u=ciKey(r.url);ct[u]=(ct[u]||0)+r.n;}));
+    const pts=Object.entries(ct).filter(([,n])=>n>=20).map(([u,n])=>({u,x:n,y:ck[u]||0,gone:!onSite(u)}));
+    const N=pts.reduce((a,p)=>a+p.x,0),K=pts.reduce((a,p)=>a+p.y,0);
+    return{pts,rate:N?K/N*100:0,win:`${fmtMonth(ms[0])}${ms.length>1?' to '+fmtMonth(ms[ms.length-1]):''}${ms[ms.length-1]===l0.slice(0,7)?', to '+fmtDate(l0):''}`};})()||{pts:[],rate:0,win:''};
   const pageRows=prow.map(r=>{const rr=r.cited?r.clicks/r.cited*100:null,flag=r.cited>=MINC&&r.clicks===0,gone=!onSite(r.u);
     return`<tr style="border-bottom:1px solid var(--b2)">
       ${td(`<a href="${r.u}" target="_blank" rel="noopener" style="color:${C.acc};text-decoration:none">${shortCiUrl(r.u)}</a>${gone?` <span class="clk-badge" title="This address is not on the site's page list of ${fmtDate(SITEPAGES.asOf)}: an old or moved address, or a link the model got slightly wrong. Visits may be logged under the page's current address.">not on the site's page list</span>`:flag?` <span class="clk-badge" title="Cited ${num(r.cited)} times with no recorded click.">no clicks recorded</span>`:''}`,{left:true})}
@@ -6258,6 +6269,9 @@ function renderClicks(D,S){
     </div>
     ${topicRows.length?chartBox('clk-topic',Math.max(160,topicRows.length*26+40),'Click-throughs by topic',`per 100 cited answers on that topic · ${both.length} days with both surfaces measured${topicHidden.length?` · too few to show: ${topicHidden.join(', ')}`:''}`):`<div class="card"><div class="card-title">Click-throughs by topic</div><div style="color:var(--muted);font-size:var(--t-xs)">Topic rates need both surfaces measured (from ${fmtDate(T.embed)}). Widen the range.</div></div>`}
     <div class="card"><div class="card-title">Cited vs clicked pages<span class="card-title-note">${pfr.length?`clicks ${spanLabel(pfr[0].date,pfr[pfr.length-1].date)} · times cited in ${pmonths.map(fmtMonth).join(', ')} (citations are monthly)`:`pages need both surfaces measured, from ${fmtDate(T.embed)}`}</span></div>
+      ${pfr.length?`<div class="card-note" style="margin-top:0">Each point is a page cited 20+ times in whole months with both surfaces measured (${sc.win}; the table below uses the same months): times cited across, click-throughs up, both on log scales. The dashed line is the overall rate (${sc.rate.toFixed(1)} per 100 times cited): above it, read more than typical for how often it is cited; below, less. Pages with no recorded click cannot sit on a log scale, so they are in the strip underneath (spread up and down only to be seen): red = cited 100+ times with none, amber = an address not on the site's page list, where visits may be logged under the current address. Hover for the page; click to open it. The table below has every page.</div>
+      <div class="chart-wrap" style="height:320px"><canvas id="clk-scatter"></canvas></div>
+      <div class="chart-wrap" style="height:84px;margin-bottom:12px"><canvas id="clk-strip"></canvas></div>`:''}
       <div class="pill-group" style="margin-bottom:10px">${sortBtn('clicked','Most clicked')}${sortBtn('cited','Most cited')}${sortBtn('rate','Highest rate')}${sortBtn('never',`Cited, never clicked (${never.length})`)}</div>
       ${pfr.length&&prow.length?`<div class="tbl-wrap"><table style="width:100%;border-collapse:collapse"><thead><tr style="border-bottom:1px solid var(--b2)">${th('Page',true)}${th('Topic',true)}${th('Times cited')}${th('Clicked')}${th('Per 100 times cited')}</tr></thead><tbody${showAttr(10,prowTotal)}>${pageRows}</tbody></table></div>
       <div class="share-foot">Per 100 times <i>cited</i>: one answer can cite several pages, so this differs from the per-100-cited-answers rate above.${clicksSort==='rate'?` Pages cited at least ${MINC} times.`:''}</div>`:`<div style="color:var(--muted);font-size:var(--t-xs)">Nothing to show for this view.</div>`}
@@ -6267,6 +6281,7 @@ function renderClicks(D,S){
   const rateVal=x=>x.days&&rateOK(x.n,x.den).ok?+(x.n/x.den*100).toFixed(2):null;
   const ptBg=(src,col)=>B.map(b=>b.partial||b[src].days<b.days.length?C.s1:col);
   const onPoint=(e,els)=>{if(els.length)drillBucket({date:B[els[0].index].key},B[0].byWeek?'week':'month');};
+  drawClickScatter(sc);
   mkChart('clk-rate',{type:'line',data:{labels,datasets:CLICK_SRC.map(([src,l,ck])=>({label:l,data:B.map(b=>rateVal(b[src])),borderColor:C[ck],backgroundColor:C[ck],
       pointBackgroundColor:ptBg(src,C[ck]),pointBorderColor:C[ck],pointBorderWidth:2,pointRadius:3.5,pointHoverRadius:6,borderWidth:2,tension:0,spanGaps:false}))},
     plugins:[endLabelsPlugin],
@@ -6591,6 +6606,36 @@ function drawAskHitWeek(from,to){
       {label:'Answer cited the page named',data:val('hit'),borderColor:C.green,backgroundColor:C.green,borderWidth:1.5,pointRadius:2,tension:0,spanGaps:false},
       {label:'Not found',data:val('nf'),borderColor:C.red,backgroundColor:C.red,borderWidth:1.5,pointRadius:2,tension:0,spanGaps:false}]},
     options:mergeOpts(baseOpts(),{tableLabel:'Week of',scales:{y:{min:0,ticks:{callback:v=>v+'%'}}},plugins:{legend:{display:true},tooltip:{callbacks:{label:cx=>{const o=ASKW[wks[cx.dataIndex]];return`${cx.dataset.label}: ${(+cx.parsed.y).toFixed(1)}% (${num(cx.datasetIndex?o.nf:o.hit)} of ${num(o.asked)})`;}}}},eventLines:evLines(DATA.stats,labels)})});
+}
+
+// Cited against clicked, by page (brief §91): log-log for pages with a recorded click, a strip underneath for those
+// with none (zero has no place on a log scale), one x scale for both and a shared y-axis width so they line up.
+function drawClickScatter(sc){
+  if(!sc||!sc.pts.length||!document.getElementById('clk-scatter'))return;
+  const on=sc.pts.filter(p=>p.y>0),off=sc.pts.filter(p=>p.y===0);
+  const x0=Math.min(...sc.pts.map(p=>p.x))*0.8,x1=Math.max(...sc.pts.map(p=>p.x))*1.25,y0=Math.max(0.8,Math.min(...on.map(p=>p.y))*0.8),y1=Math.max(...on.map(p=>p.y),1)*1.25;
+  const logTick=v=>{const l=Math.log10(v);return Math.abs(l-Math.round(l))<1e-6?num(v):'';};
+  const jit=u=>{let h=0;for(const c of u)h=(h*31+c.charCodeAt(0))>>>0;return .15+(h%1000)/1000*.7;};
+  const why=p=>p.gone?`not on the site's page list of ${fmtDate(SITEPAGES.asOf)}: visits may be logged under the page's current address`:p.y===0&&p.x>=100?'no click-throughs recorded: the link may redirect, so visits may be logged under another address':'';
+  const tip=p=>[`${ciPageTitle(p.u)} (${ciPageSection(p.u)})`,`${num(p.x)} times cited · ${num(p.y)} click-throughs${p.x?` · ${(p.y/p.x*100).toFixed(1)} per 100`:''}`].concat(why(p)?[why(p)]:[]);
+  const xScale={type:'logarithmic',min:x0,max:x1,ticks:{callback:logTick,autoSkip:false,maxTicksLimit:20}};
+  const open=(chart,els)=>{if(!els.length)return;const p=chart.data.datasets[els[0].datasetIndex].data[els[0].index];if(p&&p.u)window.open(p.u,'_blank','noopener');};
+  const R=sc.rate/100;
+  mkChart('clk-scatter',{type:'scatter',data:{datasets:[
+      {label:'Pages',data:on.map(p=>({x:p.x,y:p.y,u:p.u,p})),backgroundColor:on.map(p=>p.gone?C.amber:C.acc+'aa'),borderColor:on.map(p=>p.gone?C.amber:C.acc),pointRadius:3.5,pointHoverRadius:6},
+      {type:'line',label:'Overall rate',data:[{x:Math.max(x0,y0/R),y:Math.max(y0,x0*R)},{x:Math.min(x1,y1/R),y:Math.min(y1,x1*R)}],borderColor:C.muted,borderDash:[5,4],borderWidth:1.25,pointRadius:0,fill:false}]},
+    options:alignY(mergeOpts(baseOpts(),{parsing:false,interaction:{mode:'nearest',intersect:true},
+      plugins:{legend:{display:false},tooltip:{filter:it=>it.datasetIndex===0,callbacks:{title:()=>'',label:cx=>tip(cx.raw.p)}}},
+      scales:{x:xScale,y:{type:'logarithmic',min:y0,max:y1,title:{display:true,text:'click-throughs'},ticks:{callback:logTick,autoSkip:false,maxTicksLimit:20}}},
+      onClick:(e,els,ch)=>open(ch,els)}),64)});
+  mkChart('clk-strip',{type:'scatter',data:{datasets:[
+      {label:'No recorded clicks',data:off.map(p=>({x:p.x,y:jit(p.u),u:p.u,p})),backgroundColor:off.map(p=>p.gone?C.amber:p.x>=100?C.red:C.muted),borderColor:off.map(p=>p.gone?C.amber:p.x>=100?C.red:C.muted),pointRadius:3.5,pointHoverRadius:6}]},
+    options:alignY(mergeOpts(baseOpts(),{parsing:false,interaction:{mode:'nearest',intersect:true},
+      plugins:{legend:{display:false},tooltip:{callbacks:{title:()=>'',label:cx=>tip(cx.raw.p)}}},
+      scales:{x:{...xScale,title:{display:true,text:'times cited'}},y:{min:0,max:1,grid:{display:false},title:{display:true,text:'0 clicks'},ticks:{display:false}}},
+      onClick:(e,els,ch)=>open(ch,els)}),64)});
+  document.getElementById('clk-scatter').setAttribute('aria-label',`Cited against clicked: ${on.length} pages with a recorded click-through, times cited against click-throughs on log scales, with the overall rate as a line. Every page is in the "Cited vs clicked pages" table after the chart.`);
+  document.getElementById('clk-strip').setAttribute('aria-label',`${off.length} pages with no recorded click-through, by times cited, ${off.filter(p=>p.x>=100).length} of them cited 100 or more times. They are in the table after the chart under "Cited, never clicked".`);
 }
 
 // Partial share by intent, per page (brief §89): pages × intent of the question, each cell the share of the page's
