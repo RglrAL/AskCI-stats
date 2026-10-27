@@ -1688,14 +1688,29 @@ body:has(#report-mode-container[style*="block"]) .top-controls{display:none}
 /* ── Data-quality strip, load errors, card-title notes, events popover sections ── */
 .caveat-strip{display:flex;gap:var(--sp-3);align-items:flex-start;padding:var(--sp-3) var(--sp-4);margin-bottom:var(--sp-4);border:1px solid color-mix(in srgb,var(--amber) 45%,var(--border));border-left:3px solid var(--amber);border-radius:var(--r-md);background:color-mix(in srgb,var(--amber) 7%,var(--s1));font-size:var(--t-xs);line-height:1.5;color:var(--text)}
 .caveat-strip i{color:var(--amber);flex-shrink:0;margin-top:2px}
-.dq-strip{display:flex;flex-wrap:wrap;gap:var(--sp-2) var(--sp-4);padding:var(--sp-2) var(--sp-4);margin-bottom:var(--sp-4);
-  background:var(--s1);border:1px solid var(--border);border-radius:var(--r-md);
-  font-family:'DM Mono',monospace;font-size:var(--t-2xs);color:var(--muted)}
-.dq-item{display:inline-flex;gap:6px;align-items:baseline;white-space:nowrap}
-.dq-item .dq-l{text-transform:uppercase;letter-spacing:.06em;color:var(--dim)}
-.dq-item .dq-v{color:var(--text)}
-@media(max-width:600px){.dq-item{min-width:0;max-width:100%;white-space:normal}.dq-item .dq-v{white-space:normal;overflow-wrap:anywhere}}   /* long values wrap on a phone instead of widening the page */
+/* Data status (brief §87): a two-line bar above the Ask bar; the full list and caveat in a panel */
+.dq-bar{display:grid;gap:2px;padding:6px var(--sp-4);margin-bottom:var(--sp-3);background:var(--s1);border:1px solid var(--border);border-radius:var(--r-md);font-size:var(--t-xs);color:var(--muted)}
+.dq-line{display:grid;grid-template-columns:auto 1fr auto;align-items:center;gap:var(--sp-2);min-height:26px}
+.dq-line .dq-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0}
+.dq-line b{color:var(--text);font-weight:600}
+.dq-line .dq-amber{color:var(--amber);font-weight:600}
+.dq-line i{flex-shrink:0}
+.dq-caveat i{color:var(--amber)}
+.dq-open{background:transparent;border:1px solid var(--border);color:var(--acc);border-radius:var(--r-sm);padding:2px 10px;font:inherit;font-size:var(--t-xs);cursor:pointer;white-space:nowrap}
+.dq-open:hover{background:var(--s2)}
+.dq-overlay{position:fixed;inset:0;background:rgba(0,0,0,.55);backdrop-filter:blur(4px);-webkit-backdrop-filter:blur(4px);z-index:400;display:none;align-items:center;justify-content:center;padding:var(--sp-5)}
+.dq-overlay.open{display:flex}
+#dq-panel{width:min(760px,94vw);max-height:88vh;overflow-y:auto;background:var(--s1);border:1px solid var(--border);border-radius:var(--r-xl);box-shadow:0 24px 64px rgba(0,0,0,.4)}
+.dq-strip{display:grid;grid-template-columns:minmax(150px,auto) 1fr;gap:0 var(--sp-4);font-size:var(--t-xs);color:var(--muted)}
+.dq-strip .dq-group{grid-column:1/-1;font-size:var(--t-2xs);text-transform:uppercase;letter-spacing:.08em;color:var(--dim);padding:var(--sp-3) 0 var(--sp-1);border-bottom:1px solid var(--b2)}
+.dq-item{display:contents}
+.dq-item .dq-l,.dq-item .dq-r{padding:7px 0;border-bottom:1px solid var(--b2)}
+.dq-item .dq-l{color:var(--muted)}
+.dq-item .dq-v{color:var(--text);font-family:'DM Mono',monospace}
+.dq-item .dq-why{display:block;color:var(--muted);margin-top:2px;line-height:1.45}
 .dq-item.amber .dq-v{color:var(--amber);font-weight:600}
+@media(max-width:600px){.dq-strip{grid-template-columns:1fr}.dq-item .dq-l{border-bottom:none;padding-bottom:0;font-weight:600}.dq-line{grid-template-columns:auto 1fr;align-items:start}.dq-line .dq-dot{margin-top:5px}.dq-line i{margin-top:2px}.dq-open{grid-column:2;justify-self:start}.dq-hide-sm{display:none}}
+@media print{.dq-bar{display:none!important}.dq-overlay{display:block!important;position:static;background:none;backdrop-filter:none;padding:0}#dq-panel{width:auto;max-height:none;overflow:visible;box-shadow:none;border:1px solid #ccc}#dq-panel .kpi-modal-close{display:none}#dq-panel,#dq-panel *{color:#000!important;background:#fff!important}#dq-panel .dq-item.amber .dq-v{color:#7a4f00!important}}
 .load-error{background:color-mix(in srgb,var(--red) 8%,transparent);border:1px solid color-mix(in srgb,var(--red) 30%,transparent);
   border-radius:var(--r-md);padding:var(--sp-3) var(--sp-4);margin-bottom:var(--sp-4);font-size:var(--t-sm);color:var(--text);line-height:1.5}
 .sm-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:var(--sp-3);margin:0 0 var(--sp-4)}
@@ -1777,10 +1792,27 @@ Date,Questions,Sessions
   </div>
 
   <div id="dashboard" style="display:none">
-    <!-- Data-quality strip: config version, coverage, settlement, exclusions, join window -->
-    <div id="dq-strip" class="dq-strip" style="display:none"></div>
-    <!-- One caveat strip (brief §77): the rule-classification caveats, once, when the range needs them -->
-    <div id="caveat-strip" class="caveat-strip" style="display:none" role="note"></div>
+    <!-- Data status bar (brief §87): one line of freshness and attention count, one line of caveat; the full
+         data-quality list and the caveat paragraph are in the Data status panel (and printed in full) -->
+    <div id="dq-bar" class="dq-bar" style="display:none">
+      <div class="dq-line" id="dq-summary"></div>
+      <div class="dq-line dq-caveat" id="dq-caveat-line" role="note" style="display:none"></div>
+    </div>
+    <div id="dq-overlay" class="dq-overlay" onclick="if(event.target===this)closeDqPanel()">
+      <div id="dq-panel" role="dialog" aria-modal="true" aria-labelledby="dq-panel-title">
+        <div class="kpi-modal-header">
+          <div class="kpi-modal-title-block"><div class="kpi-modal-title" id="dq-panel-title">Data status</div>
+            <div class="kpi-modal-desc">What the figures rest on: versions, coverage, settlement and the checks not yet done. Amber items need attention.</div></div>
+          <button class="kpi-modal-close" onclick="closeDqPanel()" aria-label="Close"><i data-lucide="x" class="i-sm"></i></button>
+        </div>
+        <div class="kpi-modal-body">
+          <!-- One caveat strip (brief §77): the rule-classification caveats, once, when the range needs them -->
+          <div id="caveat-strip" class="caveat-strip" style="display:none" role="note"></div>
+          <!-- Data-quality list: config version, coverage, settlement, exclusions, join window -->
+          <div id="dq-strip" class="dq-strip" style="display:none"></div>
+        </div>
+      </div>
+    </div>
     <!-- Ask bar: natural-language questions answered locally from the loaded data -->
     <div id="ask-wrap">
       <form id="ask-bar" autocomplete="off">
@@ -7967,8 +7999,17 @@ function renderCaveatStrip(){
   if(f&&pd.some(d=>d.date>=f)&&!CONFIG.outcome_rules_measured)parts.push(`<b>Outcome figures from ${fmtDate(f)} are not yet checked against a reader.</b> The model and its wording changed that day; the outcome classes come from rules on the answer's wording (${(DATA.usageQuality&&DATA.usageQuality.outcomeRules)||'—'}), so a shift in wording and worse answers look alike until the labelling sheet is scored.`);
   if(hasIntent&&!(CONFIG.intent_measured&&CONFIG.intent_measured.n))parts.push(`What people ask (intent, topic, situation) is read by rule from the question${LEXICON?' ('+escH(LEXICON.version)+')':''}; reader agreement not yet measured.`);
   if(hasFigs&&!(CONFIG.derivation_measured&&CONFIG.derivation_measured.figure_n))parts.push(`"Unmatched figures" is an upper bound on quoted-figure error, not accuracy.`);
-  if(!parts.length){el.style.display='none';el.innerHTML='';return;}
+  // the one-sentence form for the bar: what is read by rule and not yet checked, in the same order
+  const names=[];
+  if(f&&pd.some(d=>d.date>=f)&&!CONFIG.outcome_rules_measured)names.push(`outcome figures from ${fmtDate(f)}`);
+  if(hasIntent&&!(CONFIG.intent_measured&&CONFIG.intent_measured.n))names.push('what people ask');
+  if(hasFigs&&!(CONFIG.derivation_measured&&CONFIG.derivation_measured.figure_n))names.push('the quoted-figures check');
+  const line=document.getElementById('dq-caveat-line');
+  if(!parts.length){el.style.display='none';el.innerHTML='';if(line){line.style.display='none';line.innerHTML='';}return;}
   el.style.display='';el.innerHTML=`<i data-lucide="alert-triangle" class="i-sm" aria-hidden="true"></i><span>${parts.join(' ')} <span style="color:var(--muted)">One labelling sheet settles all three (brief §75).</span></span>`;
+  if(line){const s=names.join(names.length>2?', ':' and ').replace(/, ([^,]*)$/,', and $1');
+    line.style.display='';line.innerHTML=`<i data-lucide="alert-triangle" class="i-sm" aria-hidden="true"></i><span><b>${s.charAt(0).toUpperCase()+s.slice(1)}</b> ${names.length>1?'are':'is'} read by rule and not yet checked by a reader.</span><button type="button" class="dq-open" onclick="openDqPanel('caveat-strip')">Why ›</button>`;}
+  renderIcons();
 }
 function outcomeCaveat(rows,compact){
   return '';   // carried once by the caveat strip (brief §77); kept so callers need no change
@@ -8389,6 +8430,11 @@ document.addEventListener('keydown',e=>{
 // ═══ FOCUS IN OVERLAYS (brief §84) ═══════════════════════════════════
 // Every overlay takes focus when it opens, keeps Tab inside it, and gives focus back to the control that opened it
 // when it closes, by Escape, its close button or a click outside. The open/close functions are wrapped, not edited.
+// Data status panel (brief §87). scrollTo: an element id inside the panel to bring into view (the caveat).
+function openDqPanel(scrollTo){const o=document.getElementById('dq-overlay');o.classList.add('open');renderIcons();
+  if(scrollTo)requestAnimationFrame(()=>document.getElementById(scrollTo)?.scrollIntoView({block:'start'}));}
+function closeDqPanel(){document.getElementById('dq-overlay').classList.remove('open');}
+document.addEventListener('keydown',e=>{if(e.key==='Escape'&&document.getElementById('dq-overlay')?.classList.contains('open'))closeDqPanel();});
 const FOCUSABLE='a[href],button:not([disabled]),input:not([disabled]),select:not([disabled]),textarea,[tabindex]:not([tabindex="-1"])';
 const OVL=[];
 function ovlOpen(el,isOpen){
@@ -8414,6 +8460,8 @@ function ovlSweep(restore){for(let i=OVL.length-1;i>=0;i--){const o=OVL[i];if(!o
   ['openDayPanel','openServicePanel','openMeterPanel'].forEach(n=>wrap(n,()=>{if(dayOpen())ovlOpen(day(),dayOpen);}));wrap('closeDayPanel',()=>ovlClose(day()));
   wrap('openPalette',()=>ovlOpen(pal(),palOpen));wrap('closePalette',()=>ovlClose(pal()));
   wrap('openReportMode',()=>{if(repOpen())ovlOpen(rep_(),repOpen);});wrap('closeReportMode',()=>ovlClose(rep_()));
+  const dq=()=>$('dq-panel'),dqOpen=()=>$('dq-overlay').classList.contains('open');
+  wrap('openDqPanel',()=>ovlOpen(dq(),dqOpen));wrap('closeDqPanel',()=>ovlClose(dq()));
   wrap('toggleEventsPopover',()=>{if(evOpen())ovlOpen(ev(),evOpen);else ovlClose(ev());});
   document.addEventListener('keydown',e=>{
     if(e.key==='Escape'){
@@ -8567,9 +8615,9 @@ function renderDqStrip(){
   const Q=DATA.quality||{},S=DATA.stats,U=DATA.usageQuality||{};
   const cands=(EVENTS.candidate||[]).length+((DATA.detected||[]).length);
   const esc=s=>String(s).replace(/"/g,'&quot;');
-  const item=(l,v,o={})=>`<span class="dq-item${o.amber?' amber':''}"${o.title?` title="${esc(o.title)}"`:''}><span class="dq-l">${l}</span><span class="dq-v">${v}</span></span>`;
+  const item=(l,v,o={})=>({l,v,amber:!!o.amber,why:o.title||''});
   const list=a=>(a&&a.length)?a.join(', '):'';
-  el.innerHTML=[
+  const items=[
     item('config',CONFIG.version,{title:'CONFIG.version — meter classes, model families, scopes and thresholds'}),
     item('billing days',S.billingDays),
     item('latest billing',DATA.latest?fmtDate(DATA.latest):'—'),
@@ -8595,8 +8643,14 @@ function renderDqStrip(){
     Q.badDates?item('cost dates rejected',Q.badDates,{amber:true,title:list(Q.badDateSamples)}):'',
     U.badDates?item('usage dates rejected',U.badDates,{amber:true,title:list(U.badDateSamples)}):'',
     Q.negativeRows?item('negative-cost rows',Q.negativeRows,{title:'credits or corrections, kept as-is'}):'',
-  ].join('');
+  ].filter(Boolean);
+  const row=x=>`<div class="dq-item${x.amber?' amber':''}"><div class="dq-l">${x.l}</div><div class="dq-r"><span class="dq-v">${x.v}</span>${x.why?`<span class="dq-why">${escH(x.why)}</span>`:''}</div></div>`;
+  const amber=items.filter(x=>x.amber),rest=items.filter(x=>!x.amber);
+  el.innerHTML=(amber.length?`<div class="dq-group">Needs attention · ${amber.length}</div>${amber.map(row).join('')}`:'')+`<div class="dq-group">In order</div>${rest.map(row).join('')}`;
   el.style.display='';
+  // the bar's first line: how fresh the data is and how many items need attention
+  const sum=document.getElementById('dq-summary'),bar=document.getElementById('dq-bar');
+  if(sum){sum.innerHTML=`<span class="dq-dot" style="background:${amber.length?'var(--amber)':'var(--green)'}" aria-hidden="true"></span><span>Data to <b>${DATA.latest?fmtDate(DATA.latest):'—'}</b>${DATA.settledCutoff?` · settled to <b>${fmtDate(DATA.settledCutoff)}</b>`:''}${S.provisionalDays?` · ${S.provisionalDays} provisional day${S.provisionalDays>1?'s':''}`:''}<span class="dq-hide-sm"> · config ${escH(CONFIG.version)}</span>${amber.length?` · <span class="dq-amber">${amber.length} item${amber.length>1?'s':''} need${amber.length>1?'':'s'} attention</span>`:' · nothing needs attention'}</span><button type="button" class="dq-open" onclick="openDqPanel()">Data status ›</button>`;bar.style.display='';}
 }
 
 // Re-build the KPI row from current DATA + PREFS + selected range (cheap)

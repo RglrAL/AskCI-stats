@@ -222,10 +222,12 @@ dated by the fixed wording, 4 candidate chip changes, launches and observed chan
   (`alignY()`) so a day sits at the same x in each; ranked and categorical charts may share a row.
 - **Chart conventions** (brief §77): straight lines, no area fills except the cumulative burn-down, square bars,
   share charts as ranked horizontal bars; the page carries no Chart.js global overrides for radius, tension or
-  gradient fills. The three standing caveats appear once, in the amber strip under the data-quality strip, not per
-  card. The cost KPI row above the group tabs shows only on Cost sub-views.
-- **The data-quality strip** under the header prints every version string the files carry, the join window, rows
-  de-duplicated and excluded, and the caveats ("unvalidated from 14 Sep", "agreement not yet measured").
+  gradient fills. The three standing caveats appear once, in the Data status panel with a one-sentence form in
+  the bar (brief §87), not per card. The cost KPI row above the group tabs shows only on Cost sub-views.
+- **The data status bar and panel** (brief §87): under the header, two lines: data freshness with a count of amber
+  items, and the caveat in one sentence; each opens the Data status panel, which lists every version string the files
+  carry, the join window, rows de-duplicated and excluded, and the caveats ("unvalidated from 14 Sep", "agreement not
+  yet measured"), amber items first, each with its explanation in visible text. Printing shows the panel in full.
 - **The build stamp**: a meta tag `askci-build` the workflow sets to the page commit, the data commit and the deployed
   commit (`build=`); the "copy with definition" footer carries the first two, and every data fetch is keyed on the
   third (`dataURL()`, brief §83), so files are cached between deploys and refetched after one.

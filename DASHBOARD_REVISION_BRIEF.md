@@ -2220,3 +2220,24 @@ horizontal bars of 4 to 15 items, short categorical bars, the 12-point scenario 
 views pair (side by side so they can be read across) and the table pairs, which are long rather than narrow. Rule
 for new cards: a daily series gets the full width; a ranked or categorical chart can share a row. Phones were
 already one column. Ask bar test 311 of 311.
+
+## 87. The data status bar (27 Oct 2026)
+
+The data-quality strip (19 items over four lines) and the amber caveat paragraph sat above the Ask bar on every view
+and pushed it to 422 px down a 873 px window. They are now one bar of two lines (68 px; the Ask bar starts at 273 px):
+
+- **Line 1**: the latest billing day, the settled-to day, provisional days, the config version and the number of
+  amber items ("6 items need attention" today: the unclassified meter, outcome rules, derivation, what people ask,
+  prompts, events awaiting confirmation), with **Data status ›**.
+- **Line 2, the caveat in one sentence**, kept on screen: "Outcome figures from 14 Sep, what people ask, and the
+  quoted-figures check are read by rule and not yet checked by a reader", built from the same three conditions as the
+  full paragraph, with **Why ›**. It goes when the labelling sheet is scored, as the paragraph does. It is not hidden
+  behind a click because it is the warning a reader who never clicks most needs.
+
+Both open the Data status panel: the full caveat paragraph, then every strip item as a row, amber items first under
+"Needs attention", each with the explanation that was a hover tooltip now in visible text (so touch and keyboard
+readers get it too). The panel is a dialog under the focus manager (§84): focus moves in, Tab is kept inside,
+Escape closes it and focus returns to the button that opened it (checked for both buttons). On a phone the
+config version drops from line 1 and each button sits under its text; no sideways scroll. Printing shows the panel
+in full instead of the bar, black on white whatever the theme (checked by applying the print rules on screen;
+not test-printed on paper). Ask bar test 311 of 311.
