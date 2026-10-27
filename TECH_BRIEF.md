@@ -213,6 +213,8 @@ dated by the fixed wording, 4 candidate chip changes, launches and observed chan
   the data stamp on its first line.
 - **Small multiples** (brief §81): `smallMultiples()` draws aligned weekly tiles in inline SVG; used for the 18
   fixed-wording sentences (own scales) and the categories' weekly not-found rate (one scale).
+- **Show all** (brief §82): ranked tables render up to 200 rows (`ROW_CAP`) and show the first few, with "Show all N"
+  from `applyShowAll()`; the era scorecard has eight columns, a weekly sparkline and a per-row expand.
 - **Chart conventions** (brief §77): straight lines, no area fills except the cumulative burn-down, square bars,
   share charts as ranked horizontal bars; the page carries no Chart.js global overrides for radius, tension or
   gradient fills. The three standing caveats appear once, in the amber strip under the data-quality strip, not per

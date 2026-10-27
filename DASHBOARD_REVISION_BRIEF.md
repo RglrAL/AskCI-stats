@@ -2088,3 +2088,27 @@ one date axis. Built:
 
 Ask bar test 311 of 311. Checked live in both themes.
 
+## 82. UI pass 6: "show all" on ranked lists, and the era scorecard in eight columns (27 Oct 2026)
+
+§76 item 10. Ranked tables were cut at a fixed count (6, 8, 10, 12, 15, 20 or 25 rows) with no sign of what
+was cut, and the era scorecard ran to 17 columns behind a horizontal scroll. Built:
+
+- **No silent cuts in ranked lists.** A ranked list now renders its whole list up to 200 rows (`ROW_CAP`);
+  its table body carries how many rows to show at first and how many exist, and one enhancer (on the observer
+  that lifts long notes) hides the rest behind "Show all N", toggling to "Show the first N". A list longer than
+  200 says so on the button ("the first 200 of 2,061; the rest are in the data file"). Applied to fifteen
+  tables: top cited pages, category journeys, click-through pages, topics of failed answers, the two
+  named-page lists, pages lost and gained at a model change, addresses off the site's list, the oldest pages,
+  the four page quadrants and figures by page. Every row shown was already in a published file with its floor
+  applied there; nothing new is disclosed. The quadrant cards' page counts were the cut count (8) and are now
+  the true count. Month-by-month tables are not collapsed (hiding rows there would hide the latest months),
+  nor is the county list inside the situations table, which shares one table with other sections.
+- **Era scorecard, eight columns and a line.** Each era row keeps turns, cited, not found, clarification,
+  partial of cited, cited-not-partial, response p50 and generation pence a turn, plus a sparkline of the weekly
+  cited-not-partial rate inside the era, all eras on one scale (printed in the header), so a drift within an
+  era and the level between eras show together. The other eight figures (words and pages per cited answer,
+  dislikes, clicks, turns per conversation, reached cited, personal situations, not what was needed) open under
+  the row with "More figures". The table fits at 760 px instead of 1,040. A typo in its footer is fixed.
+
+Ask bar test 311 of 311. Checked live.
+

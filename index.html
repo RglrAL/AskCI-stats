@@ -1703,6 +1703,9 @@ body:has(#report-mode-container[style*="block"]) .top-controls{display:none}
 .sm-sub{font-size:var(--t-xs);color:var(--dim);font-family:'DM Mono',monospace;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .sm-svg{display:block;width:100%;height:56px;margin-top:4px;overflow:visible}
 .sm-axis{display:flex;justify-content:space-between;font-size:var(--t-xs);color:var(--dim);font-family:'DM Mono',monospace;margin-top:2px}
+.show-all{display:inline-flex;margin:6px 0 2px;background:none;border:1px solid var(--border);border-radius:999px;padding:3px 12px;font:inherit;font-size:var(--t-xs);color:var(--muted);cursor:pointer}
+.show-all:hover,.show-all:focus-visible{color:var(--text);border-color:var(--acc)}
+.show-all:disabled{cursor:default;opacity:.7}
 .card-note{font-family:'DM Sans',sans-serif;font-size:var(--t-xs);line-height:1.5;color:var(--muted);margin:calc(-1 * var(--sp-3)) 0 var(--sp-4)}
 .card-title-note{font-family:'DM Mono',monospace;font-size:var(--t-2xs);color:var(--dim);margin-left:auto;font-weight:400;text-transform:none;letter-spacing:0;text-align:right;max-width:60%}
 .events-sec-title{font-size:var(--t-2xs);color:var(--muted);text-transform:uppercase;letter-spacing:.08em;margin:var(--sp-2) 0 var(--sp-1)}
@@ -2417,6 +2420,26 @@ const charts={};
 // Definitions once (brief §80): a card-title note longer than NOTE_LIFT characters is read as a definition, not a tag, and
 // moves out of the title into a full-width line under it, at the 12px floor. One observer covers every card the page
 // renders, panes, modals and day panels alike, so the templates keep writing notes where they always have.
+// Show all (brief §82): a ranked list renders up to ROW_CAP rows and its tbody carries data-show (rows visible at
+// first) and data-total (rows that exist); the enhancer hides the rest behind "Show all N", so nothing is cut silently.
+const ROW_CAP=200;
+const showAttr=(n,total)=>` data-show="${n}" data-total="${total}"`;
+function applyShowAll(root){
+  (root||document).querySelectorAll('tbody[data-show]:not([data-sa])').forEach(tb=>{
+    tb.setAttribute('data-sa','1');
+    const n=+tb.dataset.show,rows=[...tb.rows],total=+tb.dataset.total||rows.length;
+    if(rows.length<=n&&total<=rows.length)return;
+    const tbl=tb.closest('table'),host=tbl&&(tbl.closest('.tbl-wrap')||tbl);if(!host)return;
+    const more=rows.slice(n);more.forEach(r=>{r.hidden=true;});
+    const b=document.createElement('button');b.type='button';b.className='show-all';
+    const capNote=total>rows.length?` · the first ${num(rows.length)} of ${num(total)}; the rest are in the data file`:'';
+    const label=open=>open?`Show the first ${n}`:`Show all ${num(rows.length)}${capNote}`;
+    b.textContent=more.length?label(false):`${num(rows.length)} shown${capNote}`;b.setAttribute('aria-expanded','false');
+    if(more.length)b.onclick=()=>{const open=b.getAttribute('aria-expanded')!=='true';more.forEach(r=>{r.hidden=!open;});b.setAttribute('aria-expanded',String(open));b.textContent=label(open);};
+    else b.disabled=true;
+    host.insertAdjacentElement('afterend',b);
+  });
+}
 const NOTE_LIFT=90;
 function liftLongNotes(root){
   (root||document).querySelectorAll('.card-title .card-title-note').forEach(n=>{
@@ -2427,7 +2450,7 @@ function liftLongNotes(root){
   });
 }
 let _liftQueued=false;
-new MutationObserver(()=>{if(_liftQueued)return;_liftQueued=true;requestAnimationFrame(()=>{_liftQueued=false;liftLongNotes();});})
+new MutationObserver(()=>{if(_liftQueued)return;_liftQueued=true;requestAnimationFrame(()=>{_liftQueued=false;liftLongNotes();applyShowAll();});})
   .observe(document.documentElement,{childList:true,subtree:true});
 function mkChart(id,cfg){
   if(charts[id]){charts[id].destroy();delete charts[id]}
@@ -3339,19 +3362,30 @@ function eraCardHTML(){
   const pc=v=>v.toFixed(1)+'%',n0=v=>Math.round(v).toLocaleString(),p2=v=>v.toFixed(2)+'p',s1=v=>(v/1000).toFixed(1)+'s',d1=v=>v.toFixed(1),d2=v=>v.toFixed(2);
   const th=(t,align='right')=>`<th style="text-align:${align};padding:6px 7px;font-size:var(--t-xs);color:var(--muted);text-transform:uppercase;letter-spacing:.06em;line-height:1.3">${t}</th>`;
   const td=(v,o={})=>`<td style="text-align:${o.left?'left':'right'};padding:7px 7px;font-family:${o.left?'inherit':"'DM Mono',monospace"};font-size:var(--t-xs);white-space:nowrap;${o.style||''}">${v}</td>`;
-  const rows=eras.map(x=>`<tr style="border-bottom:1px solid var(--b2)">
-      ${td(`<b>${escH(x.name)}</b><div style="font-size:var(--t-xs);color:var(--muted);font-weight:400;margin-top:2px">${x.kind?`<span style="color:${eventColor(x.ev)}">${escH(x.kind)}</span> · confirmed · `:''}${spanLabel(x.from,x.to,true)}</div>`,{left:true})}
+  // Eight columns and a weekly line (brief §82): turns, the four outcome rates, cited-not-partial, response time and
+  // generation cost a turn stay in the row; the rest open under it. The line is the weekly cited-not-partial rate inside
+  // the era, every era on one scale, so a drift inside an era and the level between eras both show.
+  const wkRate=x=>{const w={};DATA.merged.forEach(d=>{if(d.date<x.from||d.date>x.to||!d.ux)return;const k=weekStart(d.date),o=w[k]||(w[k]={c:0,p:0,s:0});o.c+=d.ux.cited||0;o.p+=d.ux.partial||0;o.s+=d.ux.scored||0;});
+    return Object.keys(w).sort().map(k=>w[k].s>=CONFIG.min_rate_denominator?(w[k].c-w[k].p)/w[k].s*100:null);};
+  const lines=eras.map(wkRate),flat=lines.flat().filter(v=>v!=null),lo=Math.floor(Math.min(...flat,100)),hi=Math.ceil(Math.max(...flat,0));
+  const spark=v=>{const W=120,H=26,n=v.length;if(n<2||hi<=lo)return dash;let d='',pen=false;v.forEach((y,i)=>{if(y==null){pen=false;return;}d+=(pen?'L':'M')+(i/(n-1)*W).toFixed(1)+' '+(H-(y-lo)/(hi-lo)*H).toFixed(1)+' ';pen=true;});
+    return `<svg width="${W}" height="${H}" viewBox="0 0 ${W} ${H}" style="display:block;overflow:visible" role="img" aria-label="weekly cited, not partial, ${lo} to ${hi}%"><path d="${d}" fill="none" stroke="${C.green}" stroke-width="1.5" stroke-linejoin="round"/></svg>`;};
+  const more=x=>[['Words / cited',f(x.wordsPerCited,n0)],['Pages / cited',f(x.pagesPerCited,d2)],['Dislikes / 1,000 cited',f(x.P.dislikesPerK,d1)],['Clicks / 100 cited',f(x.clicksPer100,d1)],['Turns / conversation',f(x.P.turnsPerConv,d2)],['Reached cited',f(x.P.reachedCited,pc)]]
+    .concat(hasIntent?[['Personal situations',f(x.sitShare,pc)],['Not what was needed',f(x.unexpected,pc)]]:[])
+    .map(([k,v])=>`<div style="display:flex;justify-content:space-between;gap:12px;border-bottom:1px dashed var(--b2);padding:3px 0"><span style="color:var(--muted)">${k}</span><span style="font-family:'DM Mono',monospace">${v}</span></div>`).join('');
+  const rows=eras.map((x,i)=>`<tr style="border-bottom:1px solid var(--b2)">
+      ${td(`<b>${escH(x.name)}</b><div style="font-size:var(--t-xs);color:var(--muted);font-weight:400;margin-top:2px">${x.kind?`<span style="color:${eventColor(x.ev)}">${escH(x.kind)}</span> · confirmed · `:''}${spanLabel(x.from,x.to,true)}</div><button type="button" class="show-all" style="margin-top:4px" aria-expanded="false" onclick="const r=this.closest('tr').nextElementSibling,o=r.hidden;r.hidden=!o;this.setAttribute('aria-expanded',String(o));this.textContent=o?'Fewer':'More figures';">More figures</button>`,{left:true})}
       ${td(n0(x.P.uturns))}${td(f(x.P.citedRate,pc))}${td(f(x.P.notFoundRate,pc))}${td(f(x.P.clarRate,pc))}${td(f(x.P.partialRate,pc))}${td(f(x.cleanRate,pc),{style:'font-weight:600'})}
-      ${td(f(x.wordsPerCited,n0))}${td(f(x.pagesPerCited,d2))}${td(f(x.P.latP50,s1))}${td(f(x.P.genPT,p2))}${td(f(x.P.dislikesPerK,d1))}${td(f(x.clicksPer100,d1))}${td(f(x.P.turnsPerConv,d2))}${td(f(x.P.reachedCited,pc))}${hasIntent?td(f(x.sitShare,pc))+td(f(x.unexpected,pc)):''}
-    </tr>`).join('');
+      ${td(f(x.P.latP50,s1))}${td(f(x.P.genPT,p2))}${td(spark(lines[i]))}
+    </tr><tr hidden><td colspan="10" style="padding:6px 7px 12px"><div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:2px 24px;font-size:var(--t-xs)">${more(x)}</div></td></tr>`).join('');
   const notes=eras.filter(x=>x.inside.length).map(x=>`<li><b>${escH(x.name)}</b> holds ${x.inside.map(e=>escH(e.title)+' ('+fmtDate(e.start)+')').join('; ')}.</li>`).join('');
   return`<div class="card" style="margin-bottom:14px;overflow-x:auto">
       <div class="card-title">Era scorecard<span class="card-title-note">one row per model or prompt era, cut at confirmed events · each era's own sums · the change day belongs to neither era</span></div>
-      <table style="width:100%;border-collapse:collapse;min-width:1040px">
-        <thead><tr style="border-bottom:2px solid var(--b2)">${th('Era','left')}${th('Turns')}${th('Cited')}${th('Not found')}${th('Clarifi-<br>cation')}${th('Partial,<br>of cited')}${th('Cited, not<br>partial')}${th('Words /<br>cited')}${th('Pages /<br>cited')}${th('Response<br>p50')}${th('Generation<br>p / turn')}${th('Dislikes /<br>1,000 cited')}${th('Clicks /<br>100 cited')}${th('Turns /<br>conv.')}${th('Reached<br>cited')}${hasIntent?th('Personal<br>situations')+th('Not what<br>was needed'):''}</tr></thead>
+      <table style="width:100%;border-collapse:collapse;min-width:760px">
+        <thead><tr style="border-bottom:2px solid var(--b2)">${th('Era','left')}${th('Turns')}${th('Cited')}${th('Not found')}${th('Clarifi-<br>cation')}${th('Partial,<br>of cited')}${th('Cited, not<br>partial')}${th('Response<br>p50')}${th('Generation<br>p / turn')}${th(`Cited, not partial<br>by week · ${lo}–${hi}%`,'left')}</tr></thead>
         <tbody>${rows}</tbody></table>
       ${notes?`<ul class="wd-flags" style="margin-top:10px">${notes}</ul>`:''}
-      <div style="font-size:var(--t-xs);color:var(--dim);margin-top:10px;font-family:'DM Mono',monospace">Descriptive only. Rates are of scored turns (partial of cited answers); response time is the turn-weighted mean of daily medians; generation cost a turn is over settled join days; click-throughs need GA4 on 7+ days of the era. An era that holds a launch or a chip change carries that change inside it. Eras are model eras: the each era differs in model and in wording together, since the fixed sentences changed on every model-change date (brief §75)${PROMPTS?` and are unverified since the ${fmtDate(PROMPTS.snapshot)} snapshot`:''}.${hasIntent?' Personal situations = share of typed questions; not what was needed = typed questions whose outcome is not the one their intent expects, both by rule from the question.':''} Outcome labels from 14 Sep 2026 are unvalidated until the hand-labelled sample.</div>
+      <div style="font-size:var(--t-xs);color:var(--dim);margin-top:10px;font-family:'DM Mono',monospace">Descriptive only. Rates are of scored turns (partial of cited answers); response time is the turn-weighted mean of daily medians; generation cost a turn is over settled join days; click-throughs need GA4 on 7+ days of the era. An era that holds a launch or a chip change carries that change inside it. Eras are model eras: each era differs in model and in wording together, since the fixed sentences changed on every model-change date (brief §75)${PROMPTS?` and are unverified since the ${fmtDate(PROMPTS.snapshot)} snapshot`:''}.${hasIntent?' Personal situations = share of typed questions; not what was needed = typed questions whose outcome is not the one their intent expects, both by rule from the question.':''} Outcome labels from 14 Sep 2026 are unvalidated until the hand-labelled sample.</div>
     </div>`;
 }
 
@@ -5913,7 +5947,7 @@ function appendCategoryDetail(D){
     const short=u=>u.replace(/^https?:\/\/(www\.)?citizensinformation\.ie\/en\//,'').replace(/^https?:\/\//,'');
     h+=`<div class="card"><div class="card-title">Top cited pages<span class="card-title-note">months overlapping the range (${months.map(fmtMonth).join(', ')}) · ${num(internal.length)} distinct citizensinformation.ie pages cited · external citations ${rateText(ext,total,2)} (${Object.entries(domains).sort((a,b)=>b[1]-a[1]).slice(0,4).map(([d,n])=>d+' '+num(n)).join(', ')||'none'})</span></div>
       <div class="tbl-wrap"><table style="width:100%;border-collapse:collapse"><thead><tr style="border-bottom:1px solid var(--b2)">${th('Page',false)}${th('Category',false)}${th('Citations')}${th('Share')}</tr></thead>
-      <tbody>${list.slice(0,25).map(([u,o])=>`<tr style="border-bottom:1px solid var(--b2)">${td(`<a href="${u}" target="_blank" rel="noopener" style="color:${C.acc};text-decoration:none">${short(u)}</a>`,'',false)}${td(o.cat?catLabel(CAT_ALIAS[o.cat]||o.cat):'','var(--muted)',false)}${td(num(o.n))}${td(rateText(o.n,total,2))}</tr>`).join('')}</tbody></table></div>
+      <tbody${showAttr(10,list.length)}>${list.slice(0,ROW_CAP).map(([u,o])=>`<tr style="border-bottom:1px solid var(--b2)">${td(`<a href="${u}" target="_blank" rel="noopener" style="color:${C.acc};text-decoration:none">${short(u)}</a>`,'',false)}${td(o.cat?catLabel(CAT_ALIAS[o.cat]||o.cat):'','var(--muted)',false)}${td(num(o.n))}${td(rateText(o.n,total,2))}</tr>`).join('')}</tbody></table></div>
     </div>`;
   }
   if(hasJourneys){
@@ -5921,7 +5955,7 @@ function appendCategoryDetail(D){
     const list=Object.entries(agg).sort((a,b)=>b[1]-a[1]);const total=list.reduce((a,[,n])=>a+n,0);
     h+=`<div class="card"><div class="card-title">Category journeys<span class="card-title-note">consecutive category steps inside mature conversations · months overlapping the range · return journeys kept · ${num(total)} steps</span></div>
       <div class="tbl-wrap"><table style="width:100%;border-collapse:collapse;max-width:640px"><thead><tr style="border-bottom:1px solid var(--b2)">${th('From',false)}${th('To',false)}${th('Steps')}</tr></thead>
-      <tbody>${list.slice(0,20).map(([k,n])=>{const[a,b]=k.split('→');return`<tr style="border-bottom:1px solid var(--b2)">${td(catLabel(CAT_ALIAS[a]||a),'',false)}${td(catLabel(CAT_ALIAS[b]||b),'',false)}${td(num(n))}</tr>`;}).join('')}</tbody></table></div>
+      <tbody${showAttr(10,list.length)}>${list.slice(0,ROW_CAP).map(([k,n])=>{const[a,b]=k.split('→');return`<tr style="border-bottom:1px solid var(--b2)">${td(catLabel(CAT_ALIAS[a]||a),'',false)}${td(catLabel(CAT_ALIAS[b]||b),'',false)}${td(num(n))}</tr>`;}).join('')}</tbody></table></div>
     </div>`;
   }
   if(h)el.insertAdjacentHTML('beforeend',h);
@@ -6109,7 +6143,7 @@ function renderClicks(D,S){
   else if(clicksSort==='cited')prow.sort((a,b)=>b.cited-a.cited);
   else if(clicksSort==='rate')prow=prow.filter(r=>r.cited>=MINC).sort((a,b)=>b.clicks/b.cited-a.clicks/a.cited);
   else prow=never.sort((a,b)=>b.cited-a.cited);
-  prow=prow.slice(0,25);
+  const prowTotal=prow.length;prow=prow.slice(0,ROW_CAP);
   const maxR=Math.max(...prow.map(r=>r.cited?r.clicks/r.cited:0),0.0001);
   const td=(v,o={})=>`<td class="num" style="text-align:${o.left?'left':'right'};padding:7px 10px;font-family:'DM Mono',monospace;font-size:var(--t-xs)${o.col?';color:'+o.col:''}">${v}</td>`;
   const th=(t,left)=>`<th style="text-align:${left?'left':'right'};padding:7px 10px;font-size:var(--t-xs);color:var(--muted);text-transform:uppercase;letter-spacing:.08em;white-space:nowrap">${t}</th>`;
@@ -6139,7 +6173,7 @@ function renderClicks(D,S){
     ${topicRows.length?chartBox('clk-topic',Math.max(160,topicRows.length*26+40),'Click-throughs by topic',`per 100 cited answers on that topic · ${both.length} days with both surfaces measured${topicHidden.length?` · too few to show: ${topicHidden.join(', ')}`:''}`):`<div class="card"><div class="card-title">Click-throughs by topic</div><div style="color:var(--muted);font-size:var(--t-xs)">Topic rates need both surfaces measured (from ${fmtDate(T.embed)}). Widen the range.</div></div>`}
     <div class="card"><div class="card-title">Cited vs clicked pages<span class="card-title-note">${pfr.length?`clicks ${spanLabel(pfr[0].date,pfr[pfr.length-1].date)} · times cited in ${pmonths.map(fmtMonth).join(', ')} (citations are monthly)`:`pages need both surfaces measured, from ${fmtDate(T.embed)}`}</span></div>
       <div class="pill-group" style="margin-bottom:10px">${sortBtn('clicked','Most clicked')}${sortBtn('cited','Most cited')}${sortBtn('rate','Highest rate')}${sortBtn('never',`Cited, never clicked (${never.length})`)}</div>
-      ${pfr.length&&prow.length?`<div class="tbl-wrap"><table style="width:100%;border-collapse:collapse"><thead><tr style="border-bottom:1px solid var(--b2)">${th('Page',true)}${th('Topic',true)}${th('Times cited')}${th('Clicked')}${th('Per 100 times cited')}</tr></thead><tbody>${pageRows}</tbody></table></div>
+      ${pfr.length&&prow.length?`<div class="tbl-wrap"><table style="width:100%;border-collapse:collapse"><thead><tr style="border-bottom:1px solid var(--b2)">${th('Page',true)}${th('Topic',true)}${th('Times cited')}${th('Clicked')}${th('Per 100 times cited')}</tr></thead><tbody${showAttr(10,prowTotal)}>${pageRows}</tbody></table></div>
       <div class="share-foot">Per 100 times <i>cited</i>: one answer can cite several pages, so this differs from the per-100-cited-answers rate above.${clicksSort==='rate'?` Pages cited at least ${MINC} times.`:''}</div>`:`<div style="color:var(--muted);font-size:var(--t-xs)">Nothing to show for this view.</div>`}
     </div>
     <div class="reach-foot"><i data-lucide="info" class="i-sm"></i><span>A <b>click-through</b> is a GA4 page view of a citizensinformation.ie page whose address carries AskCI's citation tags (<code>utm_medium=chatbot</code>, <code>utm_campaign=citation</code>), reloads included; one person can click several links. Sessions are shown for comparison. <b>Pop-up</b> is <code>utm_source=askci-embed</code> (Modal in the feed); <b>standalone site</b> is <code>askci-app</code> (Web). Rates divide each surface's click-throughs by that surface's cited answers.</span></div>`;
@@ -6306,13 +6340,13 @@ function renderAsked(D,S){
   Object.entries(CATOUT).forEach(([d,cats])=>{const w=d>=from&&d<=to?'a':(d>=W.from&&d<=W.to?'b':null);if(!w)return;unk[w].nf+=(cats['unknown']||{}).NotFound||0;});
   Object.entries(QTOPIC).forEach(([d,cats])=>{const w=d>=from&&d<=to?'a':(d>=W.from&&d<=W.to?'b':null);if(!w)return;unk[w].rec+=Object.values(cats).reduce((s,x)=>s+(x.NotFound||0),0);});
   const qtA={};Object.entries(QTOPIC).forEach(([d,cats])=>{if(d<from||d>to)return;Object.entries(cats).forEach(([c,x])=>{const t=qtA[c]||(qtA[c]={Turns:0,NotFound:0,Cited:0,Partial:0,Clarification:0});Object.entries(x).forEach(([k,v])=>{t[k]=(t[k]||0)+v;});});});
-  const topicRows=Object.entries(qtA).sort((x,y)=>y[1].NotFound-x[1].NotFound).slice(0,10).map(([c,x])=>`<tr style="border-bottom:1px solid var(--b2)">${td(c,{left:true})}${td(num(x.Turns))}${td(num(x.NotFound))}${td(pc(x.NotFound,x.Turns))}${td(num(x.Clarification))}</tr>`).join('');
+  const topicAll=Object.entries(qtA).sort((x,y)=>y[1].NotFound-x[1].NotFound);const topicRows=topicAll.slice(0,ROW_CAP).map(([c,x])=>`<tr style="border-bottom:1px solid var(--b2)">${td(c,{left:true})}${td(num(x.Turns))}${td(num(x.NotFound))}${td(pc(x.NotFound,x.Turns))}${td(num(x.Clarification))}</tr>`).join('');
   // asked-about pages, months in range
   const months=monthsIn(fr),ap={};months.forEach(m=>(ASKED[m]||[]).forEach(r=>{const o=ap[r.url]||(ap[r.url]={cat:r.cat,n:0,same:0,sameCat:0,other:0,nf:0,cl:0,oth:0});['n','same','sameCat','other','nf','cl','oth'].forEach(k=>{o[k]+=r[k];});}));
   const apRows=Object.entries(ap),apN=apRows.reduce((s,[,o])=>s+o.n,0);
   const cell=(k,n)=>num(k)+(n?` <span style="color:var(--muted)">${rateOK(k,n).ok?Math.round(k/n*100)+'%':'—'}</span>`:'');
   const pageRow=([u,o])=>`<tr style="border-bottom:1px solid var(--b2)">${td(`<a href="${u}" target="_blank" rel="noopener" title="${u}" style="color:${C.acc};text-decoration:none">${ciPageTitle(u)}</a> <span style="color:var(--muted)">· ${o.cat}${o.isHub?' · hub':''}</span>`,{left:true})}${td(num(o.n))}${td(cell(o.same,o.n))}${td(cell(o.sameCat,o.n))}${td(cell(o.other,o.n))}${td(cell(o.nf,o.n),{style:o.n&&o.nf/o.n>=0.15?'color:var(--red);font-weight:600':''})}${td(cell(o.cl,o.n))}</tr>`;
-  const byNf=apRows.filter(([,o])=>o.n>=30).sort((x,y)=>y[1].nf/y[1].n-x[1].nf/x[1].n).slice(0,12),byMiss=apRows.filter(([,o])=>o.n>=30).sort((x,y)=>x[1].same/x[1].n-y[1].same/y[1].n).slice(0,12);
+  const ap30=apRows.filter(([,o])=>o.n>=30),byNf=[...ap30].sort((x,y)=>y[1].nf/y[1].n-x[1].nf/x[1].n).slice(0,ROW_CAP),byMiss=[...ap30].sort((x,y)=>x[1].same/x[1].n-y[1].same/y[1].n).slice(0,ROW_CAP);
   const tot2=k=>apRows.reduce((s,[,o])=>s+o[k],0);
   // Layer 2 (brief §75): what people say about themselves, and what the clarification asked for against it
   let sitCard='',askCard='';
@@ -6417,7 +6451,7 @@ function renderAsked(D,S){
       <div class="share-foot">A cited answer is the expected outcome for every intent, including a question about the person's own claim, where the right answer explains how to check it. Unexpected = a not-found or uncited answer, or a clarification on a question that named a scheme; a clarification on "what is the benefit?" with no scheme named is the designed outcome and is not counted. Typed questions only: starter prompts and the model's own suggested follow-ups (${num(tot(AC))} turns in range) are left out, since a suggested follow-up is written to the prompt's pattern and carries an intent by construction. ${intentCaveat()}.</div></div>
     <div class="grid2">
       <div class="card"><div class="card-title">Topics of failed answers, from the question<span class="card-title-note">answers that carried no topic, by the category the question named · ${spanLabel(from,to)}</span></div>
-        <div class="tbl-wrap"><table style="width:100%;border-collapse:collapse"><thead><tr style="border-bottom:1px solid var(--b2)">${th('Category',true)}${th('Turns')}${th('Not found')}${th('Not-found share')}${th('Clarification')}</tr></thead><tbody>${topicRows||'<tr><td colspan="5" style="padding:10px;color:var(--muted)">none</td></tr>'}</tbody></table></div>
+        <div class="tbl-wrap"><table style="width:100%;border-collapse:collapse"><thead><tr style="border-bottom:1px solid var(--b2)">${th('Category',true)}${th('Turns')}${th('Not found')}${th('Not-found share')}${th('Clarification')}</tr></thead><tbody${showAttr(10,topicAll.length)}>${topicRows||'<tr><td colspan="5" style="padding:10px;color:var(--muted)">none</td></tr>'}</tbody></table></div>
         <div class="share-foot">These turns are "unknown" in the topic tables because the answer cited no page. The question says what they were about.</div></div>
       <div class="card"><div class="card-title">Where the question named a page<span class="card-title-note">${num(apN)} asks about ${num(apRows.length)} pages, months ${months.map(fmtMonth).join(', ')} · pages asked 5+ times a month</span></div>
         <div class="grid2" style="margin-bottom:0">
@@ -6428,10 +6462,10 @@ function renderAsked(D,S){
         </div></div>
     </div>
     <div class="card"><div class="card-title">Pages people name and are not answered from<span class="card-title-note">asked 30+ times in the months in range · highest not-found share first · cells under 5 shown as &lt;5</span></div>
-      <div class="tbl-wrap"><table style="width:100%;border-collapse:collapse"><thead><tr style="border-bottom:1px solid var(--b2)">${th('Page named',true)}${th('Asked')}${th('Cited it (or beneath it)')}${th('Same category')}${th('Other category')}${th('Not found')}${th('Clarification')}</tr></thead><tbody>${byNf.map(pageRow).join('')}</tbody></table></div>
+      <div class="tbl-wrap"><table style="width:100%;border-collapse:collapse"><thead><tr style="border-bottom:1px solid var(--b2)">${th('Page named',true)}${th('Asked')}${th('Cited it (or beneath it)')}${th('Same category')}${th('Other category')}${th('Not found')}${th('Clarification')}</tr></thead><tbody${showAttr(10,ap30.length)}>${byNf.map(pageRow).join('')}</tbody></table></div>
       <div class="share-foot">A page people name that retrieval does not return is a chunking or indexing list, not a content list: the content exists. Counts are of questions, not people; a rate shows a dash under the small-sample rule.</div></div>
     <div class="card"><div class="card-title">Pages people name that the answer rarely cites<span class="card-title-note">asked 30+ times · lowest same-page share first · "cited it" counts a page beneath a named hub as a hit</span></div>
-      <div class="tbl-wrap"><table style="width:100%;border-collapse:collapse"><thead><tr style="border-bottom:1px solid var(--b2)">${th('Page named',true)}${th('Asked')}${th('Cited it')}${th('Same category')}${th('Other category')}${th('Not found')}${th('Clarification')}</tr></thead><tbody>${byMiss.map(pageRow).join('')}</tbody></table></div></div>`;
+      <div class="tbl-wrap"><table style="width:100%;border-collapse:collapse"><thead><tr style="border-bottom:1px solid var(--b2)">${th('Page named',true)}${th('Asked')}${th('Cited it')}${th('Same category')}${th('Other category')}${th('Not found')}${th('Clarification')}</tr></thead><tbody${showAttr(10,ap30.length)}>${byMiss.map(pageRow).join('')}</tbody></table></div></div>`;
   renderIcons();
 }
 
@@ -6501,7 +6535,7 @@ function contentLists(months,fr,td,th){
   const hasAns=Object.values(A).some(a=>a.ans>0);
   const span=months.length>1?fmtMonth(months[0])+' to '+fmtMonth(months[months.length-1]):fmtMonth(months[0]);
   const link=u=>`<a href="${u}" target="_blank" rel="noopener" title="${u}" style="color:${C.acc};text-decoration:none">${ciPageTitle(u)}</a> <span style="color:var(--muted)">· ${ciPageSection(u)}</span>`;
-  const tbl=(heads,rows)=>`<div class="tbl-wrap"><table style="width:100%;border-collapse:collapse"><thead><tr style="border-bottom:1px solid var(--b2)">${heads.map((h,i)=>th(h,i===0)).join('')}</tr></thead><tbody>${rows.map(r=>`<tr style="border-bottom:1px solid var(--b2)">${r.map((v,i)=>td(v,{left:i===0})).join('')}</tr>`).join('')||`<tr><td colspan="${heads.length}" style="padding:10px;color:var(--muted);font-size:var(--t-xs)">none</td></tr>`}</tbody></table></div>`;
+  const tbl=(heads,rows,show,total)=>`<div class="tbl-wrap"><table style="width:100%;border-collapse:collapse"><thead><tr style="border-bottom:1px solid var(--b2)">${heads.map((h,i)=>th(h,i===0)).join('')}</tr></thead><tbody${show?showAttr(show,total||rows.length):''}>${rows.map(r=>`<tr style="border-bottom:1px solid var(--b2)">${r.map((v,i)=>td(v,{left:i===0})).join('')}</tr>`).join('')||`<tr><td colspan="${heads.length}" style="padding:10px;color:var(--muted);font-size:var(--t-xs)">none</td></tr>`}</tbody></table></div>`;
   let h='';
   // 1. answers that say something is missing, by page
   if(hasAns){
@@ -6522,8 +6556,8 @@ function contentLists(months,fr,td,th){
       const lost=Object.entries(B).filter(([u,n])=>n>=10&&!Af[u]).sort((x,y)=>y[1]-x[1]),gained=Object.entries(Af).filter(([u,n])=>n>=10&&!B[u]).sort((x,y)=>y[1]-x[1]);
       h+=`<div class="card"><div class="card-title">Pages lost and gained at the ${fmtDate(ev.start)} model change<span class="card-title-note">${fmtMonth(before)} against ${fmtMonth(after)} · cited 10+ times in one month and never in the other · ${num(Object.keys(B).length)} pages cited in ${fmtMonth(before)}, ${num(Object.keys(Af).length)} in ${fmtMonth(after)}</span></div>
         <div class="grid2">
-          <div><div style="font-size:var(--t-xs);color:var(--muted);text-transform:uppercase;letter-spacing:.08em;margin-bottom:6px">Lost · ${num(lost.length)}</div>${tbl(['Page',fmtMonth(before)],lost.slice(0,8).map(([u,n])=>[link(u),num(n)]))}</div>
-          <div><div style="font-size:var(--t-xs);color:var(--muted);text-transform:uppercase;letter-spacing:.08em;margin-bottom:6px">Gained · ${num(gained.length)}</div>${tbl(['Page',fmtMonth(after)],gained.slice(0,8).map(([u,n])=>[link(u),num(n)]))}</div>
+          <div><div style="font-size:var(--t-xs);color:var(--muted);text-transform:uppercase;letter-spacing:.08em;margin-bottom:6px">Lost · ${num(lost.length)}</div>${tbl(['Page',fmtMonth(before)],lost.slice(0,ROW_CAP).map(([u,n])=>[link(u),num(n)]),8,lost.length)}</div>
+          <div><div style="font-size:var(--t-xs);color:var(--muted);text-transform:uppercase;letter-spacing:.08em;margin-bottom:6px">Gained · ${num(gained.length)}</div>${tbl(['Page',fmtMonth(after)],gained.slice(0,ROW_CAP).map(([u,n])=>[link(u),num(n)]),8,gained.length)}</div>
         </div>
         <div class="share-foot">A page lost at a model change is one the new model no longer reaches for; a page gained may be new content (Budget pages) or a new preference. Small lists mean the change was in how pages are used, not which.</div></div>`;
     }
@@ -6535,8 +6569,8 @@ function contentLists(months,fr,td,th){
     const y0=(fr[fr.length-1]?.date||'').slice(0,4)+'-01-01',oldN=dated.filter(x=>x[0]<y0).reduce((s,x)=>s+x[1],0),datedN=dated.reduce((s,x)=>s+x[1],0);
     h+=`<div class="card"><div class="card-title">Addresses off the site's list, and old pages<span class="card-title-note">${span} · page list as of ${SITEPAGES.asOf?fmtDate(SITEPAGES.asOf):'—'}</span></div>
       <div class="grid2">
-        <div><div style="font-size:var(--t-xs);color:var(--muted);text-transform:uppercase;letter-spacing:.08em;margin-bottom:6px">Not on the page list · ${num(offN)} citations to ${num(off.length)} addresses (${tot?(offN/tot*100).toFixed(2):'—'}%)</div>${tbl(['Address','Citations'],off.slice(0,6).map(([u,a])=>[`<a href="${u}" target="_blank" rel="noopener" style="color:${C.amber};text-decoration:none;word-break:break-all">${u.replace(/^https?:\/\/www\.citizensinformation\.ie/,'')||'/ (the site root)'}</a>`,num(a.n)]))}</div>
-        <div><div style="font-size:var(--t-xs);color:var(--muted);text-transform:uppercase;letter-spacing:.08em;margin-bottom:6px">Oldest pages cited 50+ times · ${datedN?(oldN/datedN*100).toFixed(0):'—'}% of these citations go to pages last changed before ${y0.slice(0,4)}</div>${tbl(['Page','Last changed','Citations'],dated.slice(0,6).map(([lm,n,u])=>[link(u),fdY(lm),num(n)]))}</div>
+        <div><div style="font-size:var(--t-xs);color:var(--muted);text-transform:uppercase;letter-spacing:.08em;margin-bottom:6px">Not on the page list · ${num(offN)} citations to ${num(off.length)} addresses (${tot?(offN/tot*100).toFixed(2):'—'}%)</div>${tbl(['Address','Citations'],off.slice(0,ROW_CAP).map(([u,a])=>[`<a href="${u}" target="_blank" rel="noopener" style="color:${C.amber};text-decoration:none;word-break:break-all">${u.replace(/^https?:\/\/www\.citizensinformation\.ie/,'')||'/ (the site root)'}</a>`,num(a.n)]),6,off.length)}</div>
+        <div><div style="font-size:var(--t-xs);color:var(--muted);text-transform:uppercase;letter-spacing:.08em;margin-bottom:6px">Oldest pages cited 50+ times · ${datedN?(oldN/datedN*100).toFixed(0):'—'}% of these citations go to pages last changed before ${y0.slice(0,4)}</div>${tbl(['Page','Last changed','Citations'],dated.slice(0,ROW_CAP).map(([lm,n,u])=>[link(u),fdY(lm),num(n)]),6,dated.length)}</div>
       </div>
       <div class="share-foot">An address off the list is a moved or retired page that the index still holds. "Last changed" is the site's own LastMod; an old date on a rates page is a content question, on a procedure page it may be fine.</div></div>`;
   }
@@ -6562,8 +6596,8 @@ function contentLists(months,fr,td,th){
     // family, and its siblings (renewing, replacing) are reached through it, not surfaced unasked
     const namedSections=new Set(named.map(u=>u.replace(/\/[^/]+$/,'')));
     Object.entries(A).forEach(([u,a])=>{if(a.n>=100&&!N[u]&&!namedSections.has(u.replace(/\/[^/]+$/,''))&&(!hasSitePages||SITEPAGES.info.has(u)))Q.surfaced.push([u,{n:a.n,same:0,nf:0}]);});
-    const srt=(l,f)=>l.sort((x,y)=>f(y)-f(x)).slice(0,8);
-    const quad=(title,sub,list,cols,rowf,col)=>`<div class="card" style="border-top:3px solid ${col}"><div class="card-title">${title}<span class="card-title-note">${sub} · ${num(list.length)} page${list.length===1?'':'s'}</span></div>${tbl(cols,list.map(rowf))}</div>`;
+    const srt=(l,f)=>l.sort((x,y)=>f(y)-f(x));
+    const quad=(title,sub,list,cols,rowf,col)=>`<div class="card" style="border-top:3px solid ${col}"><div class="card-title">${title}<span class="card-title-note">${sub} · ${num(list.length)} page${list.length===1?'':'s'}</span></div>${tbl(cols,list.slice(0,ROW_CAP).map(rowf),8,list.length)}</div>`;
     h+=`<div class="reach-note"><i data-lucide="info" class="i-sm"></i><span><b>Four kinds of page.</b> A page can be <b>named</b> in a question, <b>cited</b> in an answer and <b>read</b> on the site afterwards. Named and cited and read is the service working; named but cited elsewhere is a retrieval or chunking question; named and not found is a content or index gap; cited but never named is AskCI surfacing content people did not know to ask for. Named = 30+ questions naming the page in the months in range; cited = 100+ citations${hasClicks?'; read = at least one GA4 click-through in range':''}.</span></div>
     <div class="grid2">
       ${quad('Named, cited and read','the service working',srt(Q.working,x=>x[1].n),['Page','Named','Cited it','Read on the site'],([u,o])=>[link(u),num(o.n),rateText(o.same,o.n),hasClicks?num(clicked(u)):'—'],C.green)}
@@ -6581,7 +6615,8 @@ function contentLists(months,fr,td,th){
     const pcF=(k,n)=>n?(k/n*100).toFixed(1)+'%':'—';
     const tdF=(v,o={})=>`<td style="text-align:${o.left?'left':'right'};padding:7px 10px;font-family:${o.left?'inherit':"'DM Mono',monospace"};font-size:var(--t-xs)">${v}</td>`;
     const thF=(t,left)=>`<th style="text-align:${left?'left':'right'};padding:7px 10px;font-size:var(--t-xs);color:var(--muted);text-transform:uppercase;letter-spacing:.08em;white-space:nowrap">${t}</th>`;
-    const pages=Object.entries(agg).filter(([u,a])=>!u.startsWith('(')&&a.figures>=100&&a.matched+a.unmatched>=50).sort((x,y)=>y[1].unmatched/(y[1].matched+y[1].unmatched)-x[1].unmatched/(x[1].matched+x[1].unmatched)).slice(0,15);
+    const pages=Object.entries(agg).filter(([u,a])=>!u.startsWith('(')&&a.figures>=100&&a.matched+a.unmatched>=50).sort((x,y)=>y[1].unmatched/(y[1].matched+y[1].unmatched)-x[1].unmatched/(x[1].matched+x[1].unmatched));
+    const pagesAll=pages.length;pages.splice(ROW_CAP);
     const prow=pages.map(([u,a])=>`<tr style="border-bottom:1px solid var(--b2)">${tdF(`<a href="${u}" target="_blank" rel="noopener" title="${u}" style="color:${C.acc};text-decoration:none">${ciPageTitle(u)}</a>`,{left:true})}${tdF(num(a.answers))}${tdF(num(a.figures))}${tdF(pcF(a.matched,a.figures))}${tdF(pcF(a.unmatched,a.matched+a.unmatched))}${tdF(pcF(a.unverifiable,a.figures))}</tr>`).join('');
     const mrow=fmons.map(m=>{const r=(FIGM[m]||[]).find(x=>x.url==='(all)')||{answers:0,figures:0,matched:0,unmatched:0,unverifiable:0};const q=frF.filter(d=>d.date.slice(0,7)===m).reduce((s,d)=>s+(d.queries||0),0);return `<tr style="border-bottom:1px solid var(--b2)">${tdF(fmtMonth(m),{left:true})}${tdF(num(r.answers))}${tdF(pcF(r.answers,q))}${tdF(pcF(r.matched,r.figures))}${tdF(pcF(r.unmatched,r.matched+r.unmatched))}${tdF(pcF(r.unverifiable,r.figures))}</tr>`;}).join('');
     h+=`<div class="card"><div class="card-title">Figures quoted in answers<span class="card-title-note">euro amounts, percentages and years, checked against a dated snapshot of each cited page · ${spanLabel(frF[0].date,frF[frF.length-1].date)}</span></div>
@@ -6593,7 +6628,7 @@ function contentLists(months,fr,td,th){
       </div>
       <div class="grid2">
         <div><div class="card-title" style="font-size:var(--t-xs)">Pages whose answers quote figures the page does not carry<span class="card-title-note">100+ figures, 50+ checkable · highest unmatched share first</span></div>
-          <div class="tbl-wrap"><table style="width:100%;border-collapse:collapse"><thead><tr style="border-bottom:1px solid var(--b2)">${thF('Page',true)}${thF('Answers')}${thF('Figures')}${thF('Matched')}${thF('Unmatched')}${thF('Unverifiable')}</tr></thead><tbody>${prow||'<tr>'+tdF('No page has 50 checkable figures in range',{left:true})+'</tr>'}</tbody></table></div></div>
+          <div class="tbl-wrap"><table style="width:100%;border-collapse:collapse"><thead><tr style="border-bottom:1px solid var(--b2)">${thF('Page',true)}${thF('Answers')}${thF('Figures')}${thF('Matched')}${thF('Unmatched')}${thF('Unverifiable')}</tr></thead><tbody${showAttr(15,pagesAll)}>${prow||'<tr>'+tdF('No page has 50 checkable figures in range',{left:true})+'</tr>'}</tbody></table></div></div>
         <div><div class="card-title" style="font-size:var(--t-xs)">By month</div>
           <div class="tbl-wrap"><table style="width:100%;border-collapse:collapse"><thead><tr style="border-bottom:1px solid var(--b2)">${thF('Month',true)}${thF('Answers with a figure')}${thF('Share')}${thF('Matched')}${thF('Unmatched')}${thF('Unverifiable')}</tr></thead><tbody>${mrow}</tbody></table></div>
           <div class="share-foot">A figure is matched when its number appears on a snapshot of a cited page taken at that page's last change, and only when that change predates the answer; otherwise the page has changed since and the figure is unverifiable. Unmatched fires on three things that are not errors as well as on errors: a figure from a second source, a rounding, a weekly rate the page gives annually. It is an upper bound until the labelling sheet's figure-match column calibrates it (${derivCaveat('figures')}), and the word "accuracy" is not used for it. "Matched" is loose in the other direction: a year matches any year on the page and an amount any bare number, so the matched share overstates too. Snapshots are dated from today; the back history can only be checked against pages that have not changed since.</div></div>
