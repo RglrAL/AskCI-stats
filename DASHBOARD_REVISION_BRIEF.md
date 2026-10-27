@@ -2297,3 +2297,24 @@ small-sample rule is a gap; confirmed events as lines. It shows a change within 
 the register's closure measurement needs. On the full range the not-found share of named-page questions steps from
 about 3% to about 9% in the week of 14 Sep while the hit rate holds near its summer level. The per-page tables stay
 monthly. Ask bar test 311 of 311.
+
+## 90. Transition grids for what follows what (27 Oct 2026)
+
+"What kind of question follows what" (Conversations view) and "Category journeys" (Questions view) were a ranked
+table and a flat list of pairs. Both are now grids from one helper, `transitionGridHTML()`: rows "after X", columns
+"next Y", the number in each cell, one sequential blue.
+
+- **Row share.** Each cell is the share of X's moves that went to Y ("what follows X"), not a share of all
+  transitions, which would only repeat the biggest rows.
+- **The diagonal and the end.** Same-kind steps and the end of the conversation dominate a row (45–62% of a row's
+  turns end there, 4–17% repeat the kind, on the full range) and would wash out the shading. They are separate columns on the left ("Ended there",
+  "Same kind again", as shares of all the row's turns, unshaded); the grid's shares are of the moves to a different
+  kind, and the diagonal cell is masked. The category file records only changes of category, so its grid has no side
+  columns and its diagonal is empty by construction.
+- **Thin rows and cells.** A row with fewer moves than the small-sample minimum (50) shows dashes; a cell under 5
+  shows "<5". Every cell has its count and denominator on hover.
+- The intent card keeps its designed-path tiles and the after-a-setback tables; the ranked "most often next" table is
+  replaced by the grid, which carries the same numbers. The category list stays under "Every journey, as a list"
+  (with the meta categories, about and my situation, which the grid leaves out). Column heads wrap at spaces.
+
+Ask bar test 311 of 311.

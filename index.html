@@ -6034,9 +6034,14 @@ function appendCategoryDetail(D){
   if(hasJourneys){
     const agg={};months.forEach(m=>(JOURNEYS[m]||[]).forEach(r=>{const k=r.from+'→'+r.to;agg[k]=(agg[k]||0)+r.n;}));
     const list=Object.entries(agg).sort((a,b)=>b[1]-a[1]);const total=list.reduce((a,[,n])=>a+n,0);
+    const TJ={};list.forEach(([k,n])=>{const[a,b]=k.split('→');if(CAT_EXCLUDE.has(a)||CAT_EXCLUDE.has(b))return;(TJ[a]||(TJ[a]={}))[b]=n;});
+    const jkeys=Object.keys(TJ).concat(...Object.values(TJ).map(o=>Object.keys(o))).filter((c,i,a)=>a.indexOf(c)===i).sort((x,y)=>Object.values(TJ[y]||{}).reduce((s,v)=>s+v,0)-Object.values(TJ[x]||{}).reduce((s,v)=>s+v,0));
     h+=`<div class="card"><div class="card-title">Category journeys<span class="card-title-note">consecutive category steps inside mature conversations · months overlapping the range · return journeys kept · ${num(total)} steps</span></div>
+      <div class="card-note" style="margin-top:0">Read across a row: after a question in that category, where the conversation went next, as shares of the row's steps to another category (a step within one category is not counted here). Darker is more, on one scale; a row under ${num(CONFIG.min_rate_denominator)} steps is dashed, a cell under 5 shows &lt;5. Meta categories (about, my situation) are left out of the grid and kept in the list.</div>
+      ${transitionGridHTML(TJ,jkeys,c=>catLabel(CAT_ALIAS[c]||c),[])}
+      <details class="sm-details" style="margin-top:8px"><summary style="cursor:pointer;font-size:var(--t-xs);color:var(--muted);margin-bottom:8px">Every journey, as a list</summary>
       <div class="tbl-wrap"><table style="width:100%;border-collapse:collapse;max-width:640px"><thead><tr style="border-bottom:1px solid var(--b2)">${th('From',false)}${th('To',false)}${th('Steps')}</tr></thead>
-      <tbody${showAttr(10,list.length)}>${list.slice(0,ROW_CAP).map(([k,n])=>{const[a,b]=k.split('→');return`<tr style="border-bottom:1px solid var(--b2)">${td(catLabel(CAT_ALIAS[a]||a),'',false)}${td(catLabel(CAT_ALIAS[b]||b),'',false)}${td(num(n))}</tr>`;}).join('')}</tbody></table></div>
+      <tbody${showAttr(10,list.length)}>${list.slice(0,ROW_CAP).map(([k,n])=>{const[a,b]=k.split('→');return`<tr style="border-bottom:1px solid var(--b2)">${td(catLabel(CAT_ALIAS[a]||a),'',false)}${td(catLabel(CAT_ALIAS[b]||b),'',false)}${td(num(n))}</tr>`;}).join('')}</tbody></table></div></details>
     </div>`;
   }
   if(h)el.insertAdjacentHTML('beforeend',h);
@@ -6350,6 +6355,27 @@ function renderPages(D,S){
   renderIcons();
 }
 
+// A transition grid (brief §90): rows "after X", columns "next Y", each cell the share of X's moves that went to Y
+// (row share: what follows X), numbers in the cells, one sequential hue. Steps that stay put (same kind again) or
+// end the conversation dominate a row and would wash out the shading, so they are separate columns on the left, as
+// shares of the row, unshaded; the grid's shares are of the moves to a different kind. A row with fewer moves than the
+// small-sample minimum shows dashes; a cell under 5 shows "<5".
+function transitionGridHTML(T,keys,lab,side){
+  const min=CONFIG.min_rate_denominator;
+  const tdS='padding:6px 8px;text-align:right;font-family:\'DM Mono\',monospace;font-size:var(--t-xs);white-space:nowrap';
+  const thS='padding:6px 8px;font-size:var(--t-2xs);color:var(--muted);text-transform:uppercase;letter-spacing:.06em;vertical-align:bottom';
+  const rows=keys.filter(a=>T[a]).map(a=>{const o=T[a],all=Object.values(o).reduce((x,y)=>x+y,0),moves=keys.filter(b=>b!==a).reduce((x,b)=>x+(o[b]||0),0);return{a,o,all,moves};});
+  const max=Math.max(.01,...rows.filter(r=>r.moves>=min).flatMap(r=>keys.filter(b=>b!==r.a).map(b=>(r.o[b]||0)/r.moves)));
+  const cell=(r,b)=>{if(b===r.a)return`<td style="${tdS};background:var(--b2)" aria-label="same">·</td>`;const n=r.o[b]||0;
+    if(r.moves<min)return`<td style="${tdS};color:var(--dim)">—</td>`;if(n>0&&n<5)return`<td style="${tdS};color:var(--dim)" title="under 5">&lt;5</td>`;
+    const v=n/r.moves,al=Math.round(Math.min(1,v/max)*0xc0).toString(16).padStart(2,'0');
+    return`<td style="${tdS};background:${C.acc}${al}" title="${lab(r.a)} → ${lab(b)}: ${num(n)} of ${num(r.moves)} moves">${n?(v*100).toFixed(0)+'%':''}</td>`;};
+  const sideTd=(r,k)=>{const n=r.o[k==='SAME'?r.a:k]||0;return`<td style="${tdS};color:var(--muted)">${rateText(n,r.all)}</td>`;};
+  return`<div class="tbl-wrap"><table class="tgrid" style="border-collapse:collapse;min-width:${320+side.length*90+keys.length*80}px">
+    <thead><tr style="border-bottom:1px solid var(--b2)"><th style="${thS};text-align:left">After …</th><th style="${thS};text-align:right">Steps</th>${side.map(([,l])=>`<th style="${thS};text-align:right">${l}</th>`).join('')}${side.length?`<th style="${thS};text-align:right">Moved on</th>`:''}${keys.map(b=>`<th style="${thS};text-align:right;min-width:76px;white-space:normal;line-height:1.25;text-transform:none;letter-spacing:0;font-size:var(--t-xs)">${lab(b)}</th>`).join('')}</tr></thead>
+    <tbody>${rows.map(r=>`<tr style="border-bottom:1px solid var(--b2)"><td style="padding:6px 10px;font-size:var(--t-xs);font-weight:600;white-space:nowrap">${lab(r.a)}</td><td style="${tdS}">${num(r.all)}</td>${side.map(([k])=>sideTd(r,k)).join('')}${side.length?`<td style="${tdS}">${num(r.moves)}</td>`:''}${keys.map(b=>cell(r,b)).join('')}</tr>`).join('')}</tbody></table></div>`;
+}
+
 // ═══ INTENT JOURNEYS (brief §69 item 5) ═════════════════════════════════════════
 // How people use the thing: what kind of question follows what, inside mature conversations; and after a not-found or
 // clarification answer, by the kind of question, whether they left, asked the same kind again or moved on.
@@ -6361,8 +6387,6 @@ function intentJourneyCards(months,cohort){
   const th=(t,left)=>`<th style="text-align:${left?'left':'right'};padding:6px 10px;font-size:var(--t-xs);color:var(--muted);text-transform:uppercase;letter-spacing:.08em;white-space:nowrap">${t}</th>`;
   const lab=i=>i==='END'?'ended':(INTENT_LABEL[i]||i);
   const order=INTENT_ORDER.filter(i=>T[i]);
-  const rows=order.map(i=>{const o=T[i],tot=Object.values(o).reduce((a,b)=>a+b,0),end=o.END||0,same=o[i]||0,next=Object.entries(o).filter(([k])=>k!=='END'&&k!==i).sort((x,y)=>y[1]-x[1]).slice(0,3);
-    return`<tr style="border-bottom:1px solid var(--b2)">${td(`<b>${lab(i)}</b>`,{left:true})}${td(num(tot))}${td(rateText(end,tot),{style:'color:var(--muted)'})}${td(rateText(same,tot))}${td(next.map(([k,v])=>`${lab(k)} ${rateText(v,tot)}`).join(' · ')||'—',{left:true,style:'font-size:var(--t-xs)'})}</tr>`;}).join('');
   // the designed path: what is X → can I get it → how do I apply → what do I need
   const step=(a,b)=>{const o=T[a]||{},out=Object.entries(o).filter(([k])=>k!=='END').reduce((s,[,v])=>s+v,0);return out?{n:o[b]||0,d:out}:null;};
   const path=[['definition','eligibility'],['eligibility','apply'],['apply','documents']].map(([a,b])=>[a,b,step(a,b)]);
@@ -6375,7 +6399,8 @@ function intentJourneyCards(months,cohort){
   }
   return`<div class="card"><div class="card-title">What kind of question follows what${cohort}</div>
       <div class="grid4" style="margin-bottom:10px">${path.map(([a,b,r])=>uxTile(r?rateText(r.n,r.d):'—',`${lab(a)} → ${lab(b)}`,r?`of ${num(r.d)} ${lab(a)} questions followed by another`:'',C.acc)).join('')}${uxTile(rateText(J.filter(r=>r.to==='END').reduce((a,r)=>a+r.n,0),J.reduce((a,r)=>a+r.n,0)),'Turns that were the last','of all turns in mature conversations',C.muted)}</div>
-      <div class="tbl-wrap"><table style="width:100%;border-collapse:collapse"><thead><tr style="border-bottom:1px solid var(--b2)">${th('After a … question',true)}${th('Turns')}${th('Ended there')}${th('Same kind again')}${th('Most often next',true)}</tr></thead><tbody>${rows}</tbody></table></div>
+      <div class="card-note" style="margin-top:0">Read across a row: after that kind of question, the share that ended there and that asked the same kind again (both of all its turns), then where the rest went, as shares of the moves to a different kind. Darker is more, on one scale; a row under ${num(CONFIG.min_rate_denominator)} moves is dashed.</div>
+      ${transitionGridHTML(T,order,lab,[['END','Ended there'],['SAME','Same kind again']])}
       ${sb}
       <div class="share-foot">The designed path is what is X → can I … → how do I … → what do I need. Intents are by rule from the question (${LEXICON?escH(LEXICON.version):'—'}); "asked the same kind again" after a not-found is the retry a rephrase would show; months overlapping the range (${months.map(fmtMonth).join(', ')}).</div></div>`;
 }
