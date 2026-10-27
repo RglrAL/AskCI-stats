@@ -3410,10 +3410,13 @@ function eraCardHTML(){
     </div>`;
 }
 
+// The same windows as tools/change_report.py and the Quality view's outcome chart (brief §85): the 28 days before the
+// event, and the 28 days after it starting the day after the event, or the day after its end date when it has one. The
+// change day belongs to neither window, so a part-day of the old model or wording is not counted as "after".
 function beforeAfter(ev,maxDays=28){
-  const start=ev.start;
-  const before=DATA.merged.filter(d=>d.date<start&&d.date>=isoAdd(start,-maxDays));
-  const after=DATA.merged.filter(d=>d.date>=start&&d.date<isoAdd(start,maxDays));
+  const W=eventWindows(ev,maxDays);
+  const before=DATA.merged.filter(d=>d.date>=W.bFrom&&d.date<=W.bTo);
+  const after=DATA.merged.filter(d=>d.date>=W.aFrom&&d.date<=W.aTo);
   return{ev,before:perTurnStats(before),after:perTurnStats(after)};
 }
 
@@ -7510,7 +7513,7 @@ function renderImpact(D,S){
   el.innerHTML=`
     ${eraCardHTML()}
     <div class="card" style="margin-bottom:14px;overflow-x:auto">
-      <div class="card-title">Before / after confirmed events<span class="card-title-note">equal windows of up to 28 days each side · settled join days · sum then divide</span></div>
+      <div class="card-title">Before / after confirmed events<span class="card-title-note">28 days each side, the event day (and the days to its end date) in neither · as in the change report · settled join days · sum then divide</span></div>
       <table style="width:100%;border-collapse:collapse;min-width:640px">
         <thead><tr style="border-bottom:2px solid var(--b2)">${th('Event','left')}${th('Window','left')}${th('Turns / day')}${th('Billed £ / day')}${th('Generation p / turn')}${th('Allocated total p / turn')}${ux.outcomes?th('Answered share'):''}${ux.latency?th('Response p50'):''}${ux.feedback?th('Dislikes / 1,000 cited'):''}</tr></thead>
         <tbody>

@@ -2176,3 +2176,28 @@ hidden finds two, the topic-mix dumbbell and the topic-mix gap; the first names 
 ("AskCI citations (green) vs site browsing (purple)") and the second encodes by position (left and right of
 parity), so no chart is left where colour carries meaning with no words beside it.
 
+## 85. The Before / after table on the change report's windows (27 Oct 2026)
+
+Noted in §79 and decided by the analyst: the Before / after table counted the event day as the first day of
+"after" (14 Sep to 11 Oct for the 14 September change), while the change report and the Quality view's outcome
+chart leave it out (15 Sep to 12 Oct). The table now uses the same rule through the same function
+(`eventWindows()`): the 28 days before the event, and the 28 days after it starting the day after the event, or
+the day after its end date when it has one. The event day belongs to neither window, so a part-day of the old
+model or wording no longer counts as "after". The card's note says so.
+
+What moved, after window only (before windows are unchanged):
+
+| Event | After window, was → now | Turns a day | Generation p / turn | Answered | Response p50 |
+|---|---|---|---|---|---|
+| 9 Mar model change (ends 10 Mar) | 9 Mar–5 Apr → 11 Mar–7 Apr | 169 → 171 | 0.66 → 0.65 | 86.8 → 86.5% | 15.8 → 16.4 s |
+| May Search cost step (month only) | 1–28 May → 1–28 Jun | 460 → 725 | 0.57 → 0.51 | 83.2 → 83.1% | 13.2 → 11.3 s |
+| 11 May Modal launch | 11 May–7 Jun → 12 May–8 Jun | 675 → 690 | 0.55 → 0.55 | 82.3 → 82.2% | 12.1 → 12.0 s |
+| 20 May Modal step | 20 May–16 Jun → 21 May–17 Jun | 771 → 769 | 0.55 → 0.55 | 83.0 → 82.9% | 11.3 → 11.3 s |
+| 1 Jul model change | 1–28 Jul → 2–29 Jul | 577 → 577 | 2.92 → 2.95 | 88.5 → 88.8% | 12.5 → 12.5 s |
+| 14 Sep model change | 14 Sep–11 Oct → 15 Sep–12 Oct | 851 → 860 | 1.43 → 1.37 | 77.8 → 77.4% | 11.4 → 11.3 s |
+
+Most rows move by a few hundredths. The one large move is the Search cost step, which is dated to a month: the
+whole of May is now the event, and "after" is June, where before it was May itself, the month in which the step
+happened on a day nobody has recorded. That is the honest reading for a month-dated event; giving it a day in
+`events.json` would let it use 28 days either side of that day instead. Ask bar test 311 of 311.
+
