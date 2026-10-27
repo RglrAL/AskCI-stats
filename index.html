@@ -2641,7 +2641,13 @@ function sortChartTable(id,col){
 // ═══ PARSING ════════════════════════════════════════════════════════
 function sniffDelim(t){const l=(t.split('\n')[0]||'');return(l.match(/\t/g)||[]).length>(l.match(/,/g)||[]).length?'\t':','}
 function parseText(text){const c=text.replace(/^\uFEFF/,'');return new Promise((res,rej)=>Papa.parse(c,{header:true,skipEmptyLines:true,dynamicTyping:false,delimiter:sniffDelim(c),transformHeader:h=>h.trim(),complete:d=>res(d.data),error:rej}))}
-async function loadCSV(path){const r=await fetch(path+'?v='+Date.now());if(!r.ok)throw new Error(r.status);return parseText(await r.text())}
+// Cache key (brief §83): the deployed commit, stamped into the askci-build meta at deploy. Every deploy changes it, so
+// a new file is always fetched; between deploys the browser's HTTP cache (and GitHub Pages' ETag revalidation) serves
+// the ~10 MB of data instead of refetching it on every load. A local copy has no stamp and keeps a fresh key per load.
+let _cacheKey=null;
+function cacheKey(){if(_cacheKey==null){const b=buildStamp();_cacheKey=b.build&&b.build!=='local'?b.build:String(Date.now());}return _cacheKey;}
+const dataURL=path=>path+'?v='+cacheKey();
+async function loadCSV(path){const r=await fetch(dataURL(path));if(!r.ok)throw new Error(r.status);return parseText(await r.text())}
 function readFile(file){return new Promise((res,rej)=>{const r=new FileReader();r.onload=e=>parseText(e.target.result).then(res).catch(rej);r.onerror=rej;r.readAsText(file)})}
 
 function parseCosts(rows){
@@ -2886,7 +2892,7 @@ async function loadConversationFiles(){
   await loadM('question-categories-monthly.csv',{cat:'Category',source:'Source'},QCATM);hasTopics=Object.keys(QCATM).length>0;
   await loadM('question-topics-monthly.csv',{cat:'Category',topic:'Topic'},QTOPM);
   await loadM('question-intent-category-monthly.csv',{cat:'Category',intent:'Intent'},QICM);
-  try{const r=await fetch('question-lexicon.json?v='+Date.now());if(r.ok){const j=await r.json();if(j&&j.intents)LEXICON={version:j.version,intents:j.intents,phrases:Object.keys(j.phrases||{}).length};}}catch(e){}
+  try{const r=await fetch(dataURL('question-lexicon.json'));if(r.ok){const j=await r.json();if(j&&j.intents)LEXICON={version:j.version,intents:j.intents,phrases:Object.keys(j.phrases||{}).length};}}catch(e){}
   // intent journeys and what follows a setback, by the question's intent (brief §69)
   try{(await loadCSV('intent-journeys-monthly.csv')).forEach(r=>{const m=String(r['Month']||'').trim();if(!/^\d{4}-\d{2}$/.test(m))return;(IJOUR[m]||(IJOUR[m]=[])).push({from:String(r['From']||'other'),to:String(r['To']||'other'),n:nInt(r['Turns'])});});}catch(e){}
   try{(await loadCSV('setback-intents-monthly.csv')).forEach(r=>{const m=String(r['Month']||'').trim();if(!/^\d{4}-\d{2}$/.test(m))return;(SETBI[m]||(SETBI[m]=[])).push({sb:r['Setback'],intent:String(r['Intent']||'other'),n:nInt(r['Turns']),ended:nInt(r['Ended']),same:nInt(r['SameIntentNext']),other:nInt(r['OtherIntentNext'])});});}catch(e){}
@@ -2894,7 +2900,7 @@ async function loadConversationFiles(){
   // the content-gap register (brief §73): evidence rows rebuilt by tools/make_register.py, a status file people edit, one config
   try{GAPS=(await loadCSV('content-gaps.csv')).filter(r=>r['kind']).map(r=>({kind:r['kind'],page:r['page']||'',cat:r['category']||'',intent:r['intent']||'',evidence:r['evidence']||'',asks:nInt(r['asks']),rate:parseFloat(r['rate'])||0,priority:nInt(r['priority']),team:r['team']||'',period:r['period']||'',rules:r['rules_version']||'',lex:r['lexicon_version']||'',built:r['built']||''}));}catch(e){}
   try{(await loadCSV('content-gaps-status.csv')).forEach(r=>{if(!r['kind']||r['kind']==='_comment')return;GAPSTAT[r['kind']+'|'+(r['page']||'')]={owner:r['owner']||'',status:r['status']||'',raised:r['raised']||'',expected:r['expected_effect']||'',changed:r['changed']||'',closed:r['closed']||'',note:r['note']||''};});}catch(e){}
-  try{const r=await fetch('register-config.json?v='+Date.now());if(r.ok)REGCFG=await r.json();}catch(e){}
+  try{const r=await fetch(dataURL('register-config.json'));if(r.ok)REGCFG=await r.json();}catch(e){}
   try{(await loadCSV('categories-daily.csv')).forEach(r=>{const d=parseDate(r['Date']);if(!d)return;(CATDAY[d]||(CATDAY[d]={}))[String(r['Category']||'').trim()]=nInt(r['Citations']);});}catch(e){}
   hasCatDay=Object.keys(CATDAY).length>0;
   try{(await loadCSV('latency-buckets-daily.csv')).forEach(r=>{const d=parseDate(r['Date']);if(!d)return;const k=r['Kind'],b=r['Bucket'];const o=LATB[d]||(LATB[d]={});(o[k]||(o[k]={}))[b]={t:nInt(r['Turns']),sum:nInt(r['LatencySumMs'])};});}catch(e){}
@@ -2902,8 +2908,8 @@ async function loadConversationFiles(){
   try{(await loadCSV('outcome-rules-daily.csv')).forEach(r=>{const d=parseDate(r['Date']);if(!d)return;(ORULES[d]||(ORULES[d]={}))[String(r['Rule']||'').trim()]=nInt(r['Turns']);});}catch(e){}
   try{(await loadCSV('answer-style-daily.csv')).forEach(r=>{const d=parseDate(r['Date']);if(!d)return;const o={};Object.entries(r).forEach(([k,v])=>{if(k!=='Date'&&k!=='Outcome')o[k]=nInt(v);});(OSTYLE[d]||(OSTYLE[d]={}))[String(r['Outcome']||'').trim()]=o;});}catch(e){}
   try{(await loadCSV('answer-templates-daily.csv')).forEach(r=>{const d=parseDate(r['Date']);if(!d)return;const o={};Object.entries(r).forEach(([k,v])=>{if(k!=='Date'&&k!=='Template')o[k]=nInt(v);});(OTMPL[d]||(OTMPL[d]={}))[String(r['Template']||'').trim()]=o;});hasTmpl=Object.keys(OTMPL).length>0;}catch(e){}
-  try{const j=await(await fetch('answer-templates.json',{cache:'no-store'})).json();(j.templates||[]).forEach(t=>{TMPL_META[t.id]={family:t.family,pattern:t.pattern};});TMPL_META._version=j.derivation_version||'';(j.organisations||[]).forEach(o=>{ORG_META[o.id]={family:o.family,pattern:o.pattern};});}catch(e){}
-  try{VERSIONS=await(await fetch('VERSIONS.json',{cache:'no-store'})).json();}catch(e){VERSIONS=null;}
+  try{const j=await(await fetch(dataURL('answer-templates.json'))).json();(j.templates||[]).forEach(t=>{TMPL_META[t.id]={family:t.family,pattern:t.pattern};});TMPL_META._version=j.derivation_version||'';(j.organisations||[]).forEach(o=>{ORG_META[o.id]={family:o.family,pattern:o.pattern};});}catch(e){}
+  try{VERSIONS=await(await fetch(dataURL('VERSIONS.json'))).json();}catch(e){VERSIONS=null;}
   await loadM('question-situation-monthly.csv',{cat:'Category',flag:'Flag'},QSIT);hasSit=Object.keys(QSIT).length>0;
   await loadM('clarification-asks-monthly.csv',{asks:'Asks',given:'Given'},QASK);hasAsk=Object.keys(QASK).length>0;
   await loadM('answer-personalisation-monthly.csv',{given:'SituationGiven',pers:'Personalised'},QPERS);
@@ -2966,11 +2972,11 @@ function normEvent(e){
 // prompts themselves stay on the analyst's machine; the page shows the snapshot date and whether it is known current.
 let PROMPTS=null;
 async function loadPrompts(){
-  try{const r=await fetch('prompts.json?v='+Date.now());if(!r.ok)return;const j=await r.json();if(j&&j.snapshot)PROMPTS=j;}catch(e){}
+  try{const r=await fetch(dataURL('prompts.json'));if(!r.ok)return;const j=await r.json();if(j&&j.snapshot)PROMPTS=j;}catch(e){}
 }
 async function loadEvents(){
   try{
-    const r=await fetch('events.json?v='+Date.now());if(!r.ok)return;
+    const r=await fetch(dataURL('events.json'));if(!r.ok)return;
     const j=await r.json();
     const list=(Array.isArray(j)?j:(j.events||[])).map(normEvent).sort((a,b)=>a.start.localeCompare(b.start));
     EVENTS.confirmed=list.filter(e=>e.status==='confirmed');
@@ -4084,7 +4090,7 @@ function showToast(msg){
 function buildStamp(){
   const c=(document.querySelector('meta[name="askci-build"]')||{}).content||'';
   const g=k=>((c.match(new RegExp(k+'=(\\S+)'))||[])[1]||'local');
-  return {page:g('page'),data:g('data')};
+  return {page:g('page'),data:g('data'),build:g('build')};
 }
 const fdY=d=>fmtDate(d)+' '+String(d).slice(0,4);   // dates in a copied footer carry their year
 function lastUsageDay(){return ((DATA&&DATA.merged||[]).filter(d=>d.queries>0).slice(-1)[0]||{}).date||'';}

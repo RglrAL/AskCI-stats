@@ -221,8 +221,9 @@ dated by the fixed wording, 4 candidate chip changes, launches and observed chan
   card. The cost KPI row above the group tabs shows only on Cost sub-views.
 - **The data-quality strip** under the header prints every version string the files carry, the join window, rows
   de-duplicated and excluded, and the caveats ("unvalidated from 14 Sep", "agreement not yet measured").
-- **The build stamp**: a meta tag `askci-build` the workflow sets to the page commit and the data commit; the
-  "copy with definition" footer carries it.
+- **The build stamp**: a meta tag `askci-build` the workflow sets to the page commit, the data commit and the deployed
+  commit (`build=`); the "copy with definition" footer carries the first two, and every data fetch is keyed on the
+  third (`dataURL()`, brief §83), so files are cached between deploys and refetched after one.
 
 ## 8. Verification
 

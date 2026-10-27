@@ -2112,3 +2112,30 @@ was cut, and the era scorecard ran to 17 columns behind a horizontal scroll. Bui
 
 Ask bar test 311 of 311. Checked live.
 
+## 83. UI pass 7: the data files cached between deploys (27 Oct 2026)
+
+§76 item 11. Every load fetched every data file with `?v=` and the current time, so neither the browser nor
+GitHub Pages could serve anything from cache: 46 files, about 16 MB on disk, on each visit and each refresh.
+Built:
+
+- **One cache key: the deployed commit.** The deploy's stamping step now writes a third value into the
+  `askci-build` meta, `build=` the short commit being deployed, beside the page and data commits it already
+  wrote. Every data fetch (the CSVs, the lexicon, the register config, the templates, `VERSIONS.json`, the
+  prompts and the events) goes through `dataURL()`, which keys it on that commit. A deploy changes the key, so
+  a reader never gets a stale file after a release; between deploys the URLs are stable, so the browser's
+  cache and GitHub Pages' own headers (a ten-minute max-age and an ETag on every file, checked) serve repeat
+  visits from cache or with a "not modified" reply. The data commit alone would not do: it covers the CSVs and
+  `events.json` but not the JSON files or anything regenerated at deploy.
+- **A local copy is unchanged.** Without a deploy stamp the key stays the time of the load, so working on the
+  page locally always reads the files as they are on disk. The fact-sheet tool and the Ask bar test serve the
+  unstamped page and behave as before.
+- Checked by serving a copy with a simulated stamp: all 46 data requests carried the commit key and the page
+  loaded its data; only the logo has no key, as before.
+
+**Not done, and why.** The review's second half of this item, loading files only when their pane opens, is
+not worth its cost here: panes already render lazily on first visit, and the Ask bar answers from every file,
+so all of them are needed at start for it. With the cache in place the start-up cost is paid once per deploy,
+not once per visit.
+
+Ask bar test 311 of 311.
+

@@ -46,12 +46,15 @@ jobs:
       - name: Ask bar regression test
         run: python3 tools/test_ask.py
 
-      # Copied figures carry the commit of the page and of the data that made them (footer of "Copy with definition").
+      # Copied figures carry the commit of the page and of the data that made them (footer of "Copy with definition");
+      # the deployed commit is the cache key for the data files.
       - name: Stamp the page and data commits
         run: |
           PAGE=$(git log -1 --format=%h -- index.html)
           DATA=$(git log -1 --format=%h -- '*.csv' 'ga4/*.csv' events.json)
-          sed -i "s/content=\"page=local data=local\"/content=\"page=$PAGE data=$DATA\"/" index.html
+          # build = the deployed commit: the page's cache key for every data file it fetches (brief §83)
+          BUILD=$(git rev-parse --short HEAD)
+          sed -i "s/content=\"page=local data=local\"/content=\"page=$PAGE data=$DATA build=$BUILD\"/" index.html
           grep -o 'askci-build" content="[^"]*"' index.html
 
       # The fact sheet for the last full month, answered by the page itself, published at reports/facts-latest.md.
