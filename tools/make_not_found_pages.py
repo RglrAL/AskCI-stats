@@ -13,11 +13,12 @@ addresses and counts only. The page states what was found, not why.
 import csv, os, sys
 
 REPO = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+DATA = os.path.join(REPO, "data")   # the published files the page reads (brief §97)
 sys.path.insert(0, os.path.join(REPO, "tools"))
 from fetch_pages import norm_url
 
 IDX = os.path.join(REPO, "exports", "site-text", "index.csv")
-OUT = os.path.join(REPO, "cited-not-found.csv")
+OUT = os.path.join(DATA, "cited-not-found.csv")
 
 
 def main():
@@ -30,7 +31,7 @@ def main():
             if u not in latest or r["fetched"] >= latest[u]["fetched"]: latest[u] = r
     gone = {u: r for u, r in latest.items() if r["status"] == "http 404"}
     rows = []
-    with open(os.path.join(REPO, "pages-cited.csv"), encoding="utf-8-sig", newline="") as fh:
+    with open(os.path.join(DATA, "pages-cited.csv"), encoding="utf-8-sig", newline="") as fh:
         for r in csv.DictReader(fh):
             u = norm_url(r["URL"])
             if u in gone:

@@ -33,6 +33,7 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from make_usage import norm_url   # one URL normalisation for cited and clicked pages
 
 REPO = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+DATA = os.path.join(REPO, "data")   # the published files the page reads (brief §97)
 SOURCES = {"askci-embed": "embed", "askci-app": "app"}
 DEVICES = ["mobile", "desktop", "tablet"]   # any other GA4 device category (e.g. smart tv) goes to OtherDevice
 
@@ -72,7 +73,7 @@ def read_export(path):
 
 
 def main():
-    files = sys.argv[1:] or sorted(glob.glob(os.path.join(REPO, "ga4", "Ask-ci-click-throughs*.csv")))
+    files = sys.argv[1:] or sorted(glob.glob(os.path.join(DATA, "ga4", "Ask-ci-click-throughs*.csv")))
     if not files:
         sys.exit("no click-through exports found (ga4/Ask-ci-click-throughs*.csv)")
     exports = sorted((read_export(f) + (f,) for f in files), key=lambda e: e[0])
@@ -94,7 +95,7 @@ def main():
             for k in DEVICES + ["other"]: c[k] += dv.get(k, 0)
             nu = norm_url(url)
             if nu: pages[(d, nu, src)] += v
-    out = os.path.join(REPO, "ga4")
+    out = os.path.join(DATA, "ga4")
     with open(os.path.join(out, "clicks-daily.csv"), "w", newline="") as fh:
         w = csv.writer(fh); w.writerow(["Date", "Source", "Views", "Sessions", "Mobile", "Desktop", "Tablet", "OtherDevice"])
         for (d, src), c in sorted(daily.items()):

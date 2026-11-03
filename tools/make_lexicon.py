@@ -18,6 +18,7 @@ from datetime import datetime
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 REPO = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+DATA = os.path.join(REPO, "data")   # the published files the page reads (brief §97)
 LEXICON_VERSION = "2026.10.24-6"
 MIN_CHARS = 6            # a phrase shorter than this never matches on its own ("tax" would match everything)
 CI = "https://www.citizensinformation.ie/en/"
@@ -92,7 +93,7 @@ def norm(s):
 
 def build():
     pages = {}
-    with open(os.path.join(REPO, "site-pages.csv"), encoding="utf-8-sig", newline="") as fh:
+    with open(os.path.join(DATA, "site-pages.csv"), encoding="utf-8-sig", newline="") as fh:
         for r in csv.DictReader(fh):
             if r.get("Kind") != "information" or r.get("Language") != "en": continue
             u = r["URL"].rstrip("/"); path = u.split("/en/", 1)[1] if "/en/" in u else ""
@@ -358,7 +359,7 @@ def main():
         if low: sys.exit(f"{len(low)} topic keyword(s) match fewer than {TOPIC_MIN_MATCHES} questions; remove them before writing the lexicon")
         print(f"every topic keyword matches {TOPIC_MIN_MATCHES}+ questions")
     lex = build()
-    p = os.path.join(REPO, "question-lexicon.json")
+    p = os.path.join(DATA, "question-lexicon.json")
     json.dump(lex, open(p, "w", encoding="utf-8"), indent=1, ensure_ascii=False); open(p, "a").write("\n")
     print(f"wrote question-lexicon.json: {len(lex['phrases'])} phrases ({sum(1 for e in lex['phrases'].values() if e['source'] == 'alias')} aliases), version {LEXICON_VERSION}; "
           f"{sum(len(t) for t in lex['topics'].values())} topics in {len(lex['topics'])} categories, derivation {DERIVATION_VERSION}")

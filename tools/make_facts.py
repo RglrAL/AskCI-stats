@@ -25,6 +25,7 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from test_ask import chrome   # the same browser lookup as the Ask bar test
 
 REPO = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+DATA = os.path.join(REPO, "data")   # the published files the page reads (brief §97)
 
 HARNESS = r"""<script>
 window.__e=[];window.addEventListener('error',e=>window.__e.push(e.message+' @'+e.lineno));
@@ -67,7 +68,7 @@ def main():
         sys.exit("make_facts: no Chrome or Chromium found")
     with open(os.path.join(REPO, "index.html"), encoding="utf-8") as fh:
         page = fh.read()
-    stamp = f"page={git_short('index.html')} data={git_short('*.csv', 'events.json')}"
+    stamp = f"page={git_short('index.html')} data={git_short('data')}"
     page = page.replace('content="page=local data=local"', f'content="{stamp}"', 1)
     page = page.replace("animation:{duration:350}", "animation:false")
     # the plain load (brief §94): no loader worker, waits or view transition under the headless clock

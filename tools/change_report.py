@@ -40,6 +40,7 @@ import argparse, csv, json, os, re, sys, statistics, collections as C
 from datetime import date, datetime, timedelta
 
 REPO = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+DATA = os.path.join(REPO, "data")   # the published files the page reads (brief §97)
 Z = 1.96
 SETTLEMENT_DAYS = 3        # as CONFIG.settlement_days in index.html
 MIN_N = 50                 # a rate needs this many in its denominator
@@ -50,7 +51,7 @@ I = lambda x: int(float(x or 0))
 
 
 def rd(p):
-    with open(os.path.join(REPO, p), encoding="utf-8-sig", newline="") as fh:
+    with open(os.path.join(DATA, p), encoding="utf-8-sig", newline="") as fh:
         return list(csv.DictReader(fh))
 
 
@@ -140,7 +141,7 @@ def main():
     ap.add_argument("--stdout", action="store_true")
     ap.add_argument("--out-dir", default=os.path.join(REPO, "reports"))
     a = ap.parse_args()
-    EV = json.load(open(os.path.join(REPO, "events.json")))["events"]
+    EV = json.load(open(os.path.join(DATA, "events.json")))["events"]
     if a.events:
         dates = [e["start"] for e in EV if e.get("kind") == "model" and e.get("status") == "confirmed"]
     elif a.date:
@@ -165,16 +166,16 @@ def load():
     D = {}
     D["usage"] = {r["Date"]: r for r in rd("usage.csv")}
     D["cat"] = rd("category-outcomes-daily.csv")
-    D["rules"] = rd("outcome-rules-daily.csv") if os.path.exists(os.path.join(REPO, "outcome-rules-daily.csv")) else []
-    D["style"] = rd("answer-style-daily.csv") if os.path.exists(os.path.join(REPO, "answer-style-daily.csv")) else []
-    D["conv"] = rd("conversations-daily.csv") if os.path.exists(os.path.join(REPO, "conversations-daily.csv")) else []
-    D["next"] = rd("answer-next-daily.csv") if os.path.exists(os.path.join(REPO, "answer-next-daily.csv")) else []
-    D["clicks"] = rd("ga4/clicks-daily.csv") if os.path.exists(os.path.join(REPO, "ga4/clicks-daily.csv")) else []
-    D["intent"] = rd("question-intent-daily.csv") if os.path.exists(os.path.join(REPO, "question-intent-daily.csv")) else []
-    D["lex"] = json.load(open(os.path.join(REPO, "question-lexicon.json"))) if os.path.exists(os.path.join(REPO, "question-lexicon.json")) else {}
+    D["rules"] = rd("outcome-rules-daily.csv") if os.path.exists(os.path.join(DATA, "outcome-rules-daily.csv")) else []
+    D["style"] = rd("answer-style-daily.csv") if os.path.exists(os.path.join(DATA, "answer-style-daily.csv")) else []
+    D["conv"] = rd("conversations-daily.csv") if os.path.exists(os.path.join(DATA, "conversations-daily.csv")) else []
+    D["next"] = rd("answer-next-daily.csv") if os.path.exists(os.path.join(DATA, "answer-next-daily.csv")) else []
+    D["clicks"] = rd("ga4/clicks-daily.csv") if os.path.exists(os.path.join(DATA, "ga4/clicks-daily.csv")) else []
+    D["intent"] = rd("question-intent-daily.csv") if os.path.exists(os.path.join(DATA, "question-intent-daily.csv")) else []
+    D["lex"] = json.load(open(os.path.join(DATA, "question-lexicon.json"))) if os.path.exists(os.path.join(DATA, "question-lexicon.json")) else {}
     # generation cost a day: Foundry Models minus embeddings and speech, as the dashboard's "Generation" stage
     gen = C.Counter(); last = None
-    if os.path.exists(os.path.join(REPO, "costs.csv")):
+    if os.path.exists(os.path.join(DATA, "costs.csv")):
         for r in rd("costs.csv"):
             try:
                 d = datetime.strptime(r["UsageDate"], "%d/%m/%Y").date()

@@ -21,6 +21,7 @@ from redact_feed import normalise_query, STARTER_PROMPTS, classify
 
 csv.field_size_limit(min(sys.maxsize, 2**31 - 1))
 REPO = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+DATA = os.path.join(REPO, "data")   # the published files the page reads (brief §97)
 TS = "%b %d, %Y %H:%M"
 TOPS = [10, 25, 50, 100, 250]
 
@@ -62,7 +63,7 @@ def main():
         for q, v in alls.most_common(a.show):
             o = sugg_out[q]; print(f"   {v:6}  cited {o['Cited answer'] / v * 100:3.0f}%  nf {o['Not found'] / v * 100:3.0f}%  {q[:80]}")
     if not a.no_write:
-        p = os.path.join(REPO, "repeat-questions-monthly.csv")
+        p = os.path.join(DATA, "repeat-questions-monthly.csv")
         with open(p, "w", newline="", encoding="utf-8") as fh:
             w = csv.writer(fh); w.writerow(cols); w.writerows(rows)
         print(f"\nwrote {os.path.relpath(p, REPO)}")

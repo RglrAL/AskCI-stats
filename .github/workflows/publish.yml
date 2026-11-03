@@ -1,4 +1,4 @@
-# Publish the dashboard to GitHub Pages with the Azure subscription ID redacted from costs.csv,
+# Publish the dashboard to GitHub Pages with the Azure subscription ID redacted from data/costs.csv,
 # and only when the data audit and the Ask bar regression test pass: a failing check blocks the deploy
 # and the last good version stays live (the cause is in the run's log).
 # Runs on every push to main, including "Add files via upload" from the web, which skips the
@@ -32,11 +32,18 @@ jobs:
         with:
           fetch-depth: 0   # the Ask bar test reads its frozen data from an earlier commit
 
-      - name: Redact subscription ID from costs.csv
+      # The cost export lives in data/ (brief §97). One uploaded to the repo root, the old place, is moved there first
+      # and replaces the one in data/; the move is committed back with the redaction below.
+      - name: Move a costs.csv uploaded to the root into data/
+        id: move
+        run: |
+          if [ -f costs.csv ]; then git mv -f costs.csv data/costs.csv; echo "moved=true" >> "$GITHUB_OUTPUT"; echo "moved costs.csv into data/"; else echo "moved=false" >> "$GITHUB_OUTPUT"; fi
+
+      - name: Redact subscription ID from data/costs.csv
         id: redact
         run: |
-          python3 tools/redact_costs.py costs.csv
-          if git diff --quiet -- costs.csv; then echo "changed=false" >> "$GITHUB_OUTPUT"; else echo "changed=true" >> "$GITHUB_OUTPUT"; fi
+          python3 tools/redact_costs.py data/costs.csv
+          if git diff --quiet -- data/costs.csv && [ "${{ steps.move.outputs.moved }}" != "true" ]; then echo "changed=false" >> "$GITHUB_OUTPUT"; else echo "changed=true" >> "$GITHUB_OUTPUT"; fi
 
       # Every file the dashboard reads has the columns it reads, and the files agree with each other
       # (the feed recount needs the feed, which never leaves the analyst's machine).
@@ -51,7 +58,7 @@ jobs:
       - name: Stamp the page and data commits
         run: |
           PAGE=$(git log -1 --format=%h -- index.html)
-          DATA=$(git log -1 --format=%h -- '*.csv' 'ga4/*.csv' events.json)
+          DATA=$(git log -1 --format=%h -- data)
           # build = the deployed commit: the page's cache key for every data file it fetches (brief §83)
           BUILD=$(git rev-parse --short HEAD)
           sed -i "s/content=\"page=local data=local\"/content=\"page=$PAGE data=$DATA build=$BUILD\"/" index.html
@@ -85,10 +92,11 @@ jobs:
         uses: actions/deploy-pages@v4
 
       # Runs even when a check above failed, so an unredacted upload never stays in the repo.
-      - name: Commit redacted costs.csv back to main
+      - name: Commit the moved or redacted costs.csv back to main
         if: ${{ !cancelled() && steps.redact.outputs.changed == 'true' }}
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git commit -m "Redact the Azure subscription ID from costs.csv (automatic)" -- costs.csv
+          git add data/costs.csv   # the move, when there was one, is already staged; nothing else is (the stamp is not)
+          git commit -m "Move costs.csv into data/ and redact the Azure subscription ID (automatic)"
           git push origin HEAD:main

@@ -137,9 +137,10 @@ from collections import defaultdict
 from datetime import datetime, date, timedelta
 
 REPO = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+DATA = os.path.join(REPO, "data")   # the published files the page reads (brief §97)
 try:   # hub pages from the lexicon (brief §71): a citation of a page beneath a named hub counts as a hit
     import json as _json
-    _lex = _json.load(open(os.path.join(REPO, "question-lexicon.json"), encoding="utf-8"))
+    _lex = _json.load(open(os.path.join(DATA, "question-lexicon.json"), encoding="utf-8"))
     HUBS = {e["path"] for e in _lex["phrases"].values() if e.get("hub") and e.get("url")}
     TOPIC_CAT = {t: c for c, tops in (_lex.get("topics") or {}).items() for t in tops}   # topic -> its category (brief §75)
 except (OSError, ValueError, KeyError):
@@ -1055,7 +1056,7 @@ def main():
         write(os.path.join(a.out_dir, "conversations-daily.csv"), *conversation_rows(cd))
         write(os.path.join(a.out_dir, "category-outcomes-daily.csv"), *category_outcome_rows(co))
         write(os.path.join(a.out_dir, "citations-monthly.csv"), *citation_rows(cites_m, cites_x))
-        write(os.path.join(a.out_dir, "pages-cited.csv"), *page_rows(pages, os.path.join(REPO, "site-pages.csv")))
+        write(os.path.join(a.out_dir, "pages-cited.csv"), *page_rows(pages, os.path.join(DATA, "site-pages.csv")))
         write(os.path.join(a.out_dir, "journeys-monthly.csv"), *journey_rows(jm))
         write(os.path.join(a.out_dir, "starter-prompts-monthly.csv"), *starter_rows(sp))
         if latb: write(os.path.join(a.out_dir, "latency-buckets-daily.csv"), *latency_bucket_rows(latb))

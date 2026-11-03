@@ -15,6 +15,7 @@ import argparse, csv, json, os, re, collections as C
 from datetime import date, timedelta
 
 REPO = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+DATA = os.path.join(REPO, "data")   # the published files the page reads (brief §97)
 I = lambda x: int(float(x or 0))
 RECORDED = "24 Oct 2026"
 # The figures §72 recorded, so the report can say whether each has moved. Dated on purpose: they are the record.
@@ -24,7 +25,7 @@ BASE = {"chip_empty": 8.2, "typed_first_empty": 0.99, "unexpected": 11.9, "sit_n
 
 def rd(p):
     try:
-        with open(os.path.join(REPO, p), encoding="utf-8-sig", newline="") as fh:
+        with open(os.path.join(DATA, p), encoding="utf-8-sig", newline="") as fh:
             return list(csv.DictReader(fh))
     except OSError:
         return []
@@ -49,7 +50,7 @@ def main():
     last_full = (date.fromisoformat(last).replace(day=1) - timedelta(days=1)).strftime("%Y-%m")
     d28 = (date.fromisoformat(last) - timedelta(days=27)).isoformat()
     lex = {}
-    try: lex = json.load(open(os.path.join(REPO, "question-lexicon.json"), encoding="utf-8"))
+    try: lex = json.load(open(os.path.join(DATA, "question-lexicon.json"), encoding="utf-8"))
     except (OSError, ValueError): pass
     exp = lex.get("intents", {})
     out = []; P = out.append

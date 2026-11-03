@@ -21,6 +21,7 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from make_usage import norm_url
 
 REPO = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+DATA = os.path.join(REPO, "data")   # the published files the page reads (brief §97)
 
 
 def main():
@@ -40,7 +41,7 @@ def main():
         lang = m.group(1).lower() if m else "other"
         depth = len([p for p in (m.group(2) or "").split("/") if p]) if m else 0
         rows.append([u, lang, "information" if depth >= 3 else "index", lastmod.strip(), date.today().isoformat()])
-    with open(os.path.join(REPO, "site-pages.csv"), "w", newline="") as fh:
+    with open(os.path.join(DATA, "site-pages.csv"), "w", newline="") as fh:
         w = csv.writer(fh); w.writerow(["URL", "Language", "Kind", "LastMod", "ListedOn"]); w.writerows(sorted(rows))
     en_info = sum(1 for r in rows if r[1] == "en" and r[2] == "information")
     print(f"wrote site-pages.csv: {len(rows)} pages, {en_info} English information pages")

@@ -22,24 +22,25 @@ import csv, json, os, collections as C
 from datetime import date
 
 REPO = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+DATA = os.path.join(REPO, "data")   # the published files the page reads (brief §97)
 I = lambda x: int(float(x or 0))
 
 
 def rd(p):
     try:
-        with open(os.path.join(REPO, p), encoding="utf-8-sig", newline="") as fh:
+        with open(os.path.join(DATA, p), encoding="utf-8-sig", newline="") as fh:
             return list(csv.DictReader(fh))
     except OSError:
         return []
 
 
 def main():
-    cfg = json.load(open(os.path.join(REPO, "register-config.json"), encoding="utf-8"))
+    cfg = json.load(open(os.path.join(DATA, "register-config.json"), encoding="utf-8"))
     U = rd("usage.csv"); days = sorted(r["Date"] for r in U); last = days[-1]
     allm = sorted({d[:7] for d in days}); full = [m for m in allm if m < last[:7]][-cfg["months"]:]
     rules = next((r.get("OutcomeRules") for r in reversed(U) if r.get("OutcomeRules")), "")
     lex = {}
-    try: lex = json.load(open(os.path.join(REPO, "question-lexicon.json"), encoding="utf-8"))
+    try: lex = json.load(open(os.path.join(DATA, "question-lexicon.json"), encoding="utf-8"))
     except (OSError, ValueError): pass
     lexv = lex.get("version", ""); period = f"{full[0]}..{full[-1]}" if full else ""
     rows = []
@@ -108,7 +109,7 @@ def main():
                          "asks": t["n"], "rate": round(part, 3), "priority": round(t["n"] * part), "team": cfg["teams"]["content"]}); computed.add((c, name))
     # seeded topic rows (register-themes.json): subjects from the housing read that the topic layer does not yet compute,
     # and the signpost rows, which no count can infer; a seeded row is dropped once a computed row of the same topic exists
-    try: themes = json.load(open(os.path.join(REPO, "register-themes.json"), encoding="utf-8")).get("rows", [])
+    try: themes = json.load(open(os.path.join(DATA, "register-themes.json"), encoding="utf-8")).get("rows", [])
     except (OSError, ValueError): themes = []
     themes = [t for t in themes if (t.get("category", ""), t["topic"]) not in computed]
     for t in themes:
@@ -117,10 +118,10 @@ def main():
                      "asks": I(t.get("asks")), "rate": 1.0, "priority": I(t.get("asks")), "team": cfg["teams"].get(t["kind"], cfg["teams"].get("content", ""))})
     rows.sort(key=lambda r: (-r["priority"], r["kind"]))
     cols = ["kind", "page", "category", "intent", "evidence", "asks", "rate", "priority", "team", "period", "rules_version", "lexicon_version", "built"]
-    with open(os.path.join(REPO, "content-gaps.csv"), "w", newline="", encoding="utf-8") as fh:
+    with open(os.path.join(DATA, "content-gaps.csv"), "w", newline="", encoding="utf-8") as fh:
         w = csv.DictWriter(fh, fieldnames=cols); w.writeheader()
         for r in rows: w.writerow({**r, "period": period, "rules_version": rules, "lexicon_version": lexv, "built": date.today().isoformat()})
-    sp = os.path.join(REPO, "content-gaps-status.csv")
+    sp = os.path.join(DATA, "content-gaps-status.csv")
     if not os.path.exists(sp):
         with open(sp, "w", newline="", encoding="utf-8") as fh:
             w = csv.writer(fh); w.writerow(["kind", "page", "owner", "status", "raised", "expected_effect", "changed", "closed", "note"])

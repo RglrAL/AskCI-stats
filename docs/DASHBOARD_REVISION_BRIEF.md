@@ -2482,3 +2482,29 @@ every address is a cited page with the same dates and citations as `pages-cited.
 
 Checked in the browser: both lines render, no console errors; a fake address cited on 30 Oct turned the watch amber,
 named it, and raised the attention count from 6 to 7.
+
+## 97. The repository tidied into folders (3 Nov 2026)
+
+The root held 63 entries, about 50 of them data files. Now:
+
+- `data/`: every published file the page reads (the 38 CSV aggregates and costs.csv, the seven JSON files including
+  events, the lexicon, the templates, the register config and VERSIONS.json), with `ga4/` as `data/ga4/`.
+- `docs/`: TECH_BRIEF.md, this journal, and `docs/brief/` (the September documents). The UI and audit review reports
+  moved from `brief/` to `docs/reviews/`, git-ignored as before (one names a person); `screenshots/` is git-ignored too.
+- The root keeps `index.html`, `logo.png`, a new `README.md` (a one-screen guide), `tools/`, `tests/`, `.github/`.
+
+Moved with `git mv`, so each file's history follows it. The page reads every file through one function, `dataURL`,
+which now prefixes `data/`. The tools that read or write published files take a `DATA` path beside `REPO` (21 tools);
+`exports/`, `ask review/` and `reports/` are where they were. The private folders were deliberately not moved: the
+feed-text guard is written around their paths. The Ask bar test reads its frozen files from the fixture commit at their
+old root paths, falling back to `data/`, and serves them from `data/`, so its 311 cases stand unchanged. The fact
+sheet's data stamp and the deploy's are now the last commit touching `data/`.
+
+A cost export uploaded to the root, the old place, is moved by the deploy into `data/costs.csv` (replacing the one
+there) before the redaction, and the move is committed back with it; the pre-commit hook checks a staged costs file at
+either path.
+
+Checked: the audit with the feed recount (181 passed, 0 failed); collect, the cited-not-found list, register, findings,
+change reports, incidents and fact sheet regenerated into `data/` byte for byte (no change); the redaction, lexicon and
+aggregate tools resolve their paths; Ask bar 311 of 311; the guard's own test 34 of 34; the page loads all 49 data
+files from `data/` with no errors.

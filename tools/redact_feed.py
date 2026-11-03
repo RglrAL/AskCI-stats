@@ -379,7 +379,7 @@ def lexicon():
     """question-lexicon.json, loaded once; one regex of every phrase, longest first, so the longest wins at a position."""
     global _LEX
     if _LEX is None:
-        p = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "question-lexicon.json")
+        p = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "data", "question-lexicon.json")
         try:
             j = json.load(open(p, encoding="utf-8"))
             ph = j["phrases"]; keys = sorted(ph, key=lambda k: (-len(k), k))

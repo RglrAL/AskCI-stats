@@ -16,6 +16,7 @@ from concurrent.futures import ThreadPoolExecutor
 from datetime import date
 
 REPO = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+DATA = os.path.join(REPO, "data")   # the published files the page reads (brief §97)
 OUT = os.path.join(REPO, "exports", "site-text")
 UA = "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0 Safari/537.36"
 
@@ -59,11 +60,11 @@ def main():
     a = ap.parse_args()
     os.makedirs(OUT, exist_ok=True)
     lastmod = {}
-    with open(os.path.join(REPO, "site-pages.csv"), encoding="utf-8-sig", newline="") as fh:
+    with open(os.path.join(DATA, "site-pages.csv"), encoding="utf-8-sig", newline="") as fh:
         for r in csv.DictReader(fh):
             n = norm_url(r["URL"])
             if n: lastmod[n] = (r.get("LastMod") or "")[:10]
-    with open(os.path.join(REPO, "pages-cited.csv"), encoding="utf-8-sig", newline="") as fh:
+    with open(os.path.join(DATA, "pages-cited.csv"), encoding="utf-8-sig", newline="") as fh:
         urls = [norm_url(r["URL"]) for r in csv.DictReader(fh)]
     urls = [u for u in dict.fromkeys(urls) if u and "citizensinformation.ie" in u]
     todo = []

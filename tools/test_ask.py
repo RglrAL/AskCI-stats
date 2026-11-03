@@ -139,9 +139,10 @@ def build_site(tmp, ref, page_path):
     # the plain load (brief §94): no loader worker, waits or view transition under the headless clock
     page = page.replace("<head>", "<head><script>window.__plainLoad=1</script>", 1)
     for f in DATA_FILES:
-        dest = os.path.join(tmp, f)
+        dest = os.path.join(tmp, "data", f)   # the page reads data/ (brief §97); the fixture commit may predate the move
         os.makedirs(os.path.dirname(dest), exist_ok=True)
         r = subprocess.run(["git", "-C", REPO, "show", f"{ref}:{f}"], capture_output=True)
+        if r.returncode: r = subprocess.run(["git", "-C", REPO, "show", f"{ref}:data/{f}"], capture_output=True)
         if r.returncode:
             if "exists on disk, but not in" in r.stderr.decode() or "does not exist in" in r.stderr.decode():
                 continue   # a file added after the fixture commit: the page runs without it, as it would then

@@ -2840,7 +2840,7 @@ function parseText(text){const c=text.replace(/^\uFEFF/,'');
 // the ~10 MB of data instead of refetching it on every load. A local copy has no stamp and keeps a fresh key per load.
 let _cacheKey=null;
 function cacheKey(){if(_cacheKey==null){const b=buildStamp();_cacheKey=b.build&&b.build!=='local'?b.build:String(Date.now());}return _cacheKey;}
-const dataURL=path=>path+'?v='+cacheKey();
+const dataURL=path=>'data/'+path+'?v='+cacheKey();   // the published files live in data/ (brief §97)
 async function loadCSV(path){const r=await fetch(dataURL(path));if(!r.ok)throw new Error(r.status);return parseText(await r.text())}
 function readFile(file){return new Promise((res,rej)=>{const r=new FileReader();r.onload=e=>parseText(e.target.result).then(res).catch(rej);r.onerror=rej;r.readAsText(file)})}
 

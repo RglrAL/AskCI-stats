@@ -55,23 +55,24 @@ These are design rules, not preferences. An audit should check each holds.
 
 ```
 index.html                      the dashboard (page, calculation layer, Ask bar, tests hooks)
-*.csv, *.json (root)            the published data files the page reads (section 5)
-ga4/                            GA4 aggregates: sessions, searches, categories, click-throughs
-events.json                     model, prompt, chip, launch and content events with status and evidence
-question-lexicon.json           page slugs and aliases (1,617 phrases), expected outcome per intent, topic layer (114 topics)
-answer-templates.json           the bot's 18 fixed sentences and the 39 organisations list
-register-config.json            thresholds, kinds, teams and owners for the content-gap register
-register-themes.json            seeded register rows from the housing read (replaced as the topic layer computes them)
-content-gaps.csv                the register's evidence rows (rebuilt at deploy)
-content-gaps-status.csv         the register's status file (created once, edited by people, never overwritten)
-site-pages.csv                  the site's own page list from its sitemap (3,749 pages, LastMod)
-costs.csv                       Azure cost export, subscription ID redacted
+logo.png, README.md             the mark; a one-screen guide to the repo
+data/                           the published data files the page reads (section 5), since brief §97:
+  *.csv                         the aggregates, costs.csv (Azure cost export, subscription ID redacted), site-pages.csv
+                                (the site's page list from its sitemap), content-gaps*.csv (the register), cited-not-found.csv
+  ga4/                          GA4 aggregates: sessions, searches, categories, click-throughs
+  events.json                   model, prompt, chip, launch and content events with status and evidence
+  question-lexicon.json         page slugs and aliases (1,617 phrases), expected outcome per intent, topic layer (114 topics)
+  answer-templates.json         the bot's 18 fixed sentences and the 39 organisations list
+  register-config.json          thresholds, kinds, teams and owners for the content-gap register
+  register-themes.json          seeded register rows from the housing read
+  prompts.json, VERSIONS.json   the prompt-set fingerprint; the refresh manifest
 tools/                          the pipeline (section 4); tools/hooks/ the pre-commit hook and the feed-text guard
 tests/                          Ask bar regression cases (311) and the frozen-data commit reference
-reports/                        generated at deploy, git-ignored: fact sheet, change reports, incidents, findings
-.github/workflows/publish.yml   the deploy: audit, test, stamp, reports, register, Pages
-DASHBOARD_REVISION_BRIEF.md     the dated journal, §1–§76
-brief/                          September documents: AGENT_BRIEF.md (system), COST_BRIEF, the dashboard spec
+docs/                           this brief, DASHBOARD_REVISION_BRIEF.md (the dated journal), brief/ (September documents:
+                                the superseded agent brief, COST_BRIEF, the dashboard spec, the audit prompt)
+docs/reviews/ (git-ignored)     the UI and audit review reports
+reports/ (git-ignored)          generated at deploy: fact sheet, change reports, incidents, findings
+.github/workflows/publish.yml   the deploy: move a root costs.csv into data/, redact, audit, test, stamp, reports, Pages
 exports/ (git-ignored)          raw feeds, redacted review folders, labelling sheets, page-text snapshots
 ask review/ (git-ignored)       prompts, UAT logs, the log parser, backend notes, the independent review
 ```

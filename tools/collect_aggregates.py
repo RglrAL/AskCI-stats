@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
-"""Copy the aggregate CSVs from a review folder into the repo root, never a feed (brief §75).
+"""Copy the aggregate CSVs from a review folder into data/, never a feed (brief §75, §97).
 
 make_usage.py --out-dir writes its aggregates beside the redacted feeds in a review folder under exports/. This copies
-every *.csv there except the feeds (qa-feed*) into the repo root, where the dashboard and the audit read them, and prints
+every *.csv there except the feeds (qa-feed*) into data/, where the dashboard and the audit read them, and prints
 what changed: new files, changed files, unchanged. Counts only; it never opens a feed.
 
 Usage:
@@ -11,6 +11,7 @@ Usage:
 import filecmp, os, shutil, sys
 
 REPO = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+DATA = os.path.join(REPO, "data")   # the published files the page reads (brief §97)
 
 
 def main():
@@ -19,7 +20,7 @@ def main():
     new, changed, same = [], [], []
     for name in sorted(os.listdir(src)):
         if not name.endswith(".csv") or "qa-feed" in name or name.startswith("labell"): continue
-        s, d = os.path.join(src, name), os.path.join(REPO, name)
+        s, d = os.path.join(src, name), os.path.join(DATA, name)
         if not os.path.exists(d): new.append(name)
         elif filecmp.cmp(s, d, shallow=False): same.append(name); continue
         else: changed.append(name)

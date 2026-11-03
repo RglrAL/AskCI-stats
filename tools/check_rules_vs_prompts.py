@@ -23,13 +23,14 @@ from redact_feed import RULES, RX, classify_rule, rule_of, APOS
 
 csv.field_size_limit(min(sys.maxsize, 2**31 - 1))
 REPO = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+DATA = os.path.join(REPO, "data")   # the published files the page reads (brief §97)
 PROMPTS = os.path.join(REPO, "ask review", "prompts")
 TS = "%b %d, %Y %H:%M"
 FAMILY = {"nf.": "Not found", "cl.": "Clarification", "oos.": "Out of scope", "gr.": "Greeting", "cited.partial.": "Cited answer (partial)"}
 
 
 def eras():
-    ev = json.load(open(os.path.join(REPO, "events.json")))["events"]
+    ev = json.load(open(os.path.join(DATA, "events.json")))["events"]
     cuts = sorted((e for e in ev if e.get("status") == "confirmed" and e.get("kind") in ("model", "prompt") and len(e.get("start", "")) == 10), key=lambda e: e["start"])
     out = []; prev = (cuts[0].get("era_before") or "before", date(2000, 1, 1)) if cuts else ("all", date(2000, 1, 1))
     for e in cuts:

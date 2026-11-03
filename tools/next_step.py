@@ -35,6 +35,7 @@ from redact_feed import classify, normalise_query
 
 csv.field_size_limit(min(sys.maxsize, 2**31 - 1))
 REPO = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+DATA = os.path.join(REPO, "data")   # the published files the page reads (brief §97)
 TS = "%b %d, %Y %H:%M"
 Z = 1.96
 CLASSES = ["cited", "partial", "notfound", "clarification"]
@@ -47,7 +48,7 @@ def eras(first, last):
     """Model or prompt eras from events.json, as the dashboard's era scorecard cuts them (brief §58): a confirmed model
     or prompt event's `era` names the era it starts, `era_before` on the first names the era before it; the change
     day and the event's settling days belong to neither."""
-    ev = json.load(open(os.path.join(REPO, "events.json")))["events"]
+    ev = json.load(open(os.path.join(DATA, "events.json")))["events"]
     cuts = sorted((e for e in ev if e.get("status") == "confirmed" and e.get("kind") in ("model", "prompt") and len(e.get("start", "")) == 10), key=lambda e: e["start"])
     if not cuts:
         return [("all", first, last)]
@@ -152,7 +153,7 @@ def main():
             p = prof(S[(era, cl)])
             print(f"   {era + ' ' + NAMES[cl]:28}" + "".join(f"{dist(p, r[1]):>24.3f}" for r in refs))
     if not a.no_write:
-        out = os.path.join(REPO, "answer-next-daily.csv")
+        out = os.path.join(DATA, "answer-next-daily.csv")
         with open(out, "w", newline="", encoding="utf-8") as fh:
             w = csv.writer(fh); w.writerow(["Date", "Class"] + COLS)
             for (d, c), e in sorted(daily.items()):

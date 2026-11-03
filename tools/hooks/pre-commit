@@ -18,14 +18,16 @@ ROOT=$(git rev-parse --show-toplevel)
 TMP=$(mktemp -d) || exit 1
 trap 'rm -rf "$TMP"' EXIT
 
-if echo "$STAGED" | grep -qx 'costs.csv'; then
-  git show :costs.csv > "$TMP/costs.csv"   # the staged version, not the working copy
-  if ! "$PY" "$ROOT/tools/redact_costs.py" "$TMP/costs.csv" --check 2>/dev/null; then
-    echo "pre-commit: staged costs.csv still carries an Azure subscription ID." >&2
-    echo "  Run: python3 tools/redact_costs.py costs.csv && git add costs.csv" >&2
-    exit 1
+for CF in data/costs.csv costs.csv; do   # data/ since brief §97; the root, should an upload land there
+  if echo "$STAGED" | grep -qx "$CF"; then
+    git show ":$CF" > "$TMP/costs.csv"   # the staged version, not the working copy
+    if ! "$PY" "$ROOT/tools/redact_costs.py" "$TMP/costs.csv" --check 2>/dev/null; then
+      echo "pre-commit: staged $CF still carries an Azure subscription ID." >&2
+      echo "  Run: python3 tools/redact_costs.py $CF && git add $CF" >&2
+      exit 1
+    fi
   fi
-fi
+done
 
 if echo "$STAGED" | grep -qxE 'index.html|tests/ask_cases.json|tests/ask_fixture_ref' && [ "$SKIP_ASK_TESTS" != "1" ]; then
   git show :index.html > "$TMP/index.html"

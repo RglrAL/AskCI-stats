@@ -18,6 +18,7 @@ import subprocess, csv, glob, os, sys, json, re, io, collections as C
 from datetime import datetime, date
 
 REPO = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+DATA = os.path.join(REPO, "data")   # the published files the page reads (brief §97)
 FILES_ONLY = '--files-only' in sys.argv
 _args = [a for a in sys.argv[1:] if not a.startswith('--')]
 if FILES_ONLY:
@@ -32,7 +33,7 @@ FAIL = []; WARN = []; OK = []
 def check(name, cond, detail=''):
     (OK if cond else FAIL).append(f'{name}' + (f' — {detail}' if detail and not cond else ''))
 def warn(name, detail): WARN.append(f'{name} — {detail}')
-def rd(p): return list(csv.DictReader(open(f'{REPO}/{p}', encoding='utf-8-sig')))
+def rd(p): return list(csv.DictReader(open(f'{DATA}/{p}', encoding='utf-8-sig')))
 I = lambda x: int(x or 0)
 
 # ── 0. Schema: every file the dashboard reads has the columns it reads ────────
@@ -79,8 +80,8 @@ SCHEMA = {
     'cited-not-found.csv': 'URL FirstCited LastCited Citations Checked EverFetched',
 }
 for f, cols in SCHEMA.items():
-    if not os.path.exists(f'{REPO}/{f}'): FAIL.append(f'schema: {f} is missing'); continue
-    have = set(next(csv.reader(open(f'{REPO}/{f}', encoding='utf-8-sig')), []))
+    if not os.path.exists(f'{DATA}/{f}'): FAIL.append(f'schema: {f} is missing'); continue
+    have = set(next(csv.reader(open(f'{DATA}/{f}', encoding='utf-8-sig')), []))
     miss = [c for c in cols.split() if c not in have]
     check(f'schema: {f} has the columns the dashboard reads', not miss, 'missing ' + ', '.join(miss[:8]) + (' …' if len(miss) > 8 else ''))
 if FAIL:   # the checks below index these columns; stop with the schema failures rather than a traceback
@@ -88,7 +89,7 @@ if FAIL:   # the checks below index these columns; stop with the schema failures
 
 # ── 1. Independent recount from the redacted feed ─────────────────────────────
 seen = set(); T = []
-LAST = max(r['Date'] for r in csv.DictReader(open(REPO + '/usage.csv')))   # the feed's partial export day is not in usage.csv
+LAST = max(r['Date'] for r in csv.DictReader(open(DATA + '/usage.csv')))   # the feed's partial export day is not in usage.csv
 for f in FEED:
     for r in csv.DictReader(open(f, encoding='utf-8-sig')):
         k = (r['Conversation ID'], r['Turn #'].strip())
@@ -339,7 +340,7 @@ if I(G[last]['Sessions']) < 0.25 * med: warn('ga4: last day partial', f'{last} h
 
 # ── 9. click-throughs ────────────────────────────────────────────────────────
 rows = []
-for f in sorted(glob.glob(REPO + '/ga4/Ask-ci-click-throughs *.csv')):
+for f in sorted(glob.glob(DATA + '/ga4/Ask-ci-click-throughs *.csv')):
     R = [r for r in csv.reader(open(f, encoding='utf-8-sig')) if r and not r[0].startswith('#')]
     hdr0, hdr1 = R[0], R[1]
     tot_i = [i for i, x in enumerate(hdr0) if x == 'Totals']
@@ -356,7 +357,7 @@ for f in sorted(glob.glob(REPO + '/ga4/Ask-ci-click-throughs *.csv')):
     rows += [(r[0], r[1], I(r[tot_i[0]])) for r in data]
     print(f'  {f.split("/")[-1]}: range {rng}, {len(data)} rows')
 check('click-throughs: no page/day in two files', len(rows) == len({(a, b) for a, b, _ in rows}))
-ranges = sorted(re.search(r'(\d{8})-(\d{8})', open(f).read(400)).groups() for f in glob.glob(REPO + '/ga4/Ask-ci-click-throughs *.csv'))
+ranges = sorted(re.search(r'(\d{8})-(\d{8})', open(f).read(400)).groups() for f in glob.glob(DATA + '/ga4/Ask-ci-click-throughs *.csv'))
 cont = all((datetime.strptime(ranges[i+1][0], '%Y%m%d') - datetime.strptime(ranges[i][1], '%Y%m%d')).days == 1 for i in range(len(ranges) - 1))
 check('click-throughs: files cover a continuous range', cont, str(ranges))
 nonutm = [u for _, u, _ in rows if 'utm_medium=chatbot' not in u or 'utm_campaign=citation' not in u]
@@ -370,7 +371,7 @@ hi = [(d, ctr[d], U[d]['Cited']) for d in days if I(U[d]['Cited']) >= 50 and ctr
 check('click-throughs never exceed 15% of cited answers on a day (sanity)', not hi, str(hi[:5]))
 
 raw_total = sum(v for _, _, v in rows)
-if os.path.exists(REPO + '/ga4/clicks-daily.csv'):
+if os.path.exists(DATA + '/ga4/clicks-daily.csv'):
     CK = rd('ga4/clicks-daily.csv'); CP = rd('ga4/clicks-pages-daily.csv')
     check('clicks-daily total = raw exports total', sum(I(r['Views']) for r in CK) == raw_total, f"{sum(I(r['Views']) for r in CK)} vs {raw_total}")
     check('clicks-pages-daily total = raw exports total', sum(I(r['Views']) for r in CP) == raw_total)
@@ -445,7 +446,7 @@ QTM = rd('question-topics-monthly.csv'); QCM = rd('question-categories-monthly.c
 LEXT = {}
 try:
     import json as _j
-    _lx = _j.load(open(f'{REPO}/question-lexicon.json', encoding='utf-8')); LEXT = {t: c for c, tops in (_lx.get('topics') or {}).items() for t in tops}
+    _lx = _j.load(open(f'{DATA}/question-lexicon.json', encoding='utf-8')); LEXT = {t: c for c, tops in (_lx.get('topics') or {}).items() for t in tops}
     check('lexicon: derivation_version present and every topic has 1+ keywords of 2+ characters (gp, 1g, lpt are real)', bool(_lx.get('derivation_version'))
           and all(spec.get('keywords') and all(len(k) >= 2 for k in spec['keywords']) for tops in (_lx.get('topics') or {}).values() for spec in tops.values()))
 except (OSError, ValueError): check('lexicon: readable', False)
@@ -466,7 +467,7 @@ if QCM:
     check('question topics monthly: a topic\'s turns in a month <= the topic-or-page turns of its category that month',
           all(I(r['Turns']) <= sum(I(x['Turns']) for x in QCM if x['Month'] == r['Month'] and x['Category'] == r['Category']) for r in QTM))
 TMPL = rd('answer-templates-daily.csv')
-try: _tj = _j.load(open(f'{REPO}/answer-templates.json', encoding='utf-8')); _tids = {t['id'] for t in _tj['templates']}; _tver = _tj.get('derivation_version', '')
+try: _tj = _j.load(open(f'{DATA}/answer-templates.json', encoding='utf-8')); _tids = {t['id'] for t in _tj['templates']}; _tver = _tj.get('derivation_version', '')
 except (OSError, ValueError, KeyError): _tids = set(); _tver = ''
 if TMPL:
     tnone = C.Counter()
@@ -561,13 +562,13 @@ check('costs.csv: every ResourceId ends in a role label (service- / admin- / sha
 if not FILES_ONLY: print('  (VERSIONS.json is checked in --files-only mode; this recount is what the next manifest records)')
 try:
     if not FILES_ONLY: raise StopIteration
-    _V = _j.load(open(f'{REPO}/VERSIONS.json', encoding='utf-8'))
+    _V = _j.load(open(f'{DATA}/VERSIONS.json', encoding='utf-8'))
     import hashlib as _hl
     _rules_now = next((r.get('OutcomeRules') for r in reversed(rd('usage.csv')) if r.get('OutcomeRules')), '')
     _hash_bad = []
     for _name, _m in (_V.get('aggregates') or {}).items():
         try:
-            with open(f'{REPO}/{_name}', 'rb') as fh: _h = _hl.sha256(fh.read()).hexdigest()[:16]
+            with open(f'{DATA}/{_name}', 'rb') as fh: _h = _hl.sha256(fh.read()).hexdigest()[:16]
         except OSError: _h = 'missing'
         if _h != _m.get('sha256'): _hash_bad.append(_name)
     check('VERSIONS.json: versions agree with the files (rules, lexicon, derivation) and the recount had no failures',
@@ -578,7 +579,7 @@ except StopIteration: pass
 except (OSError, ValueError, KeyError) as e:
     check('VERSIONS.json: present and readable (written by tools/refresh.py)', False, str(e)[:80])
 GAPSF = rd('content-gaps.csv')
-try: _rc = _j.load(open(f'{REPO}/register-config.json', encoding='utf-8')); _kinds = set(_rc.get('teams', {}))
+try: _rc = _j.load(open(f'{DATA}/register-config.json', encoding='utf-8')); _kinds = set(_rc.get('teams', {}))
 except (OSError, ValueError): _kinds = set()
 check('content gaps: every kind has a team in register-config.json; missing-page and signpost rows carry a topic (not a URL), a category and asks > 0',
       all(r['kind'] in _kinds for r in GAPSF) and all(r['page'] and not r['page'].startswith('http') and r['category'] and I(r['asks']) > 0 for r in GAPSF if r['kind'] in ('missing-page', 'signpost')),
@@ -603,8 +604,8 @@ check('repeat questions: Top10 <= Top25 <= ... <= Top250 <= FirstTurns; StarterF
 # ── 9b. prompts.json and the prompt canary ────────────────────────────────────
 # The system prompts stay in the git-ignored review folder; the repo holds a set-level fingerprint only (brief §60).
 # No tracked file may carry the canary line that every local prompt file starts with.
-if os.path.exists(REPO + '/prompts.json'):
-    PJ = json.load(open(REPO + '/prompts.json'))
+if os.path.exists(DATA + '/prompts.json'):
+    PJ = json.load(open(DATA + '/prompts.json'))
     check('prompts.json: snapshot date, count and set hash present', bool(re.fullmatch(r'\d{4}-\d{2}-\d{2}', str(PJ.get('snapshot', '')))) and int(PJ.get('prompts', 0)) > 0 and len(str(PJ.get('set_sha256', ''))) == 64)
 _can = 'ASKCI-PROMPT-' + 'CANARY'
 _tracked = subprocess.run(['git', '-C', REPO, 'ls-files', '-z'], capture_output=True).stdout.decode().split('\0')
@@ -617,7 +618,7 @@ for _f in _tracked:
 check('prompt canary: no tracked file carries a system-prompt copy', not _leak, ', '.join(_leak[:5]))
 
 # ── 10. events.json ──────────────────────────────────────────────────────────
-E = json.load(open(REPO + '/events.json'))['events']
+E = json.load(open(DATA + '/events.json'))['events']
 check('events.json: content events carry a page', all(bool(e.get('page')) for e in E if e.get('kind') == 'content'))
 check('events.json: valid statuses and kinds', all(e['status'] in ('confirmed', 'candidate', 'rejected') and e['kind'] in ('model', 'prompt', 'launch', 'chips', 'content', 'observed change', 'other') for e in E))
 launch = [e for e in E if e['kind'] == 'launch' and e['status'] == 'confirmed']

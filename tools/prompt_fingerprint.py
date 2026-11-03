@@ -15,6 +15,7 @@ Usage:
 import argparse, glob, hashlib, json, os, re, sys
 
 REPO = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+DATA = os.path.join(REPO, "data")   # the published files the page reads (brief §97)
 PROMPTS = os.path.join(REPO, "ask review", "prompts")
 CANARY = re.compile(r"<!--\s*ASKCI-PROMPT-" + "CANARY.*?-->\n?")
 
@@ -43,7 +44,7 @@ def main():
                        "exports is a prompt change; whether anything changed between exports cannot be known from this file.",
            "snapshot": date, "prompts": n, "set_sha256": sha, "verified_current": bool(a.verified_current),
            "history": [{"snapshot": d, "prompts": k, "set_sha256": s} for d, k, s in snaps]}
-    p = os.path.join(REPO, "prompts.json")
+    p = os.path.join(DATA, "prompts.json")
     json.dump(out, open(p, "w", encoding="utf-8"), indent=2, ensure_ascii=False); open(p, "a").write("\n")
     print(f"wrote prompts.json: snapshot {date}, {n} prompts, {sha[:12]}…, verified current: {out['verified_current']}")
 

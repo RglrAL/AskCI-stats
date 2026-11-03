@@ -24,6 +24,7 @@ import argparse, csv, json, os, re, statistics, collections as C
 from datetime import date, datetime, timedelta
 
 REPO = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+DATA = os.path.join(REPO, "data")   # the published files the page reads (brief §97)
 I = lambda x: int(float(x or 0))
 GROUPS = [("Search units", lambda s, m: s == "Azure Cognitive Search" and "Unit" in m),
           ("Semantic ranker queries", lambda s, m: s == "Azure Cognitive Search" and "Ranker" in m),
@@ -36,7 +37,7 @@ GROUPS = [("Search units", lambda s, m: s == "Azure Cognitive Search" and "Unit"
 
 
 def rd(p):
-    with open(os.path.join(REPO, p), encoding="utf-8-sig", newline="") as fh:
+    with open(os.path.join(DATA, p), encoding="utf-8-sig", newline="") as fh:
         return list(csv.DictReader(fh))
 
 
@@ -53,16 +54,16 @@ def main():
     a = ap.parse_args()
     U = {r["Date"]: r for r in rd("usage.csv")}; days = sorted(U)
     H = C.defaultdict(dict)
-    if os.path.exists(os.path.join(REPO, "usage-hours.csv")):
+    if os.path.exists(os.path.join(DATA, "usage-hours.csv")):
         for r in rd("usage-hours.csv"): H[r["Date"]][I(r["Hour"])] = r
     cost = C.defaultdict(C.Counter)
-    if os.path.exists(os.path.join(REPO, "costs.csv")):
+    if os.path.exists(os.path.join(DATA, "costs.csv")):
         for r in rd("costs.csv"):
             try: d = datetime.strptime(r["UsageDate"], "%d/%m/%Y").date().isoformat()
             except ValueError: continue
             for g, f in GROUPS:
                 if f(r.get("ServiceName", ""), r.get("Meter", "")): cost[g][d] += float(r.get("Cost") or 0)
-    EV = json.load(open(os.path.join(REPO, "events.json")))["events"]
+    EV = json.load(open(os.path.join(DATA, "events.json")))["events"]
     share = {d: (I(U[d]["Error"]) / I(U[d]["Questions"]) if I(U[d]["Questions"]) else None) for d in days}
     turns = {d: I(U[d]["Questions"]) for d in days}
     p50 = {d: (I(U[d]["LatencyP50ms"]) or None) for d in days}; p90 = {d: (I(U[d]["LatencyP90ms"]) or None) for d in days}

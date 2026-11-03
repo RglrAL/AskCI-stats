@@ -25,6 +25,7 @@ import argparse, csv, hashlib, json, os, re, subprocess, sys
 from datetime import date
 
 REPO = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+DATA = os.path.join(REPO, "data")   # the published files the page reads (brief §97)
 sys.path.insert(0, os.path.join(REPO, "tools"))
 
 
@@ -56,7 +57,7 @@ def main():
         run("lexicon (20-match check)", py + ["tools/make_lexicon.py", "--topic-counts"] + a.feeds)
         for f in a.feeds:
             run(f"redact {os.path.basename(f)}", py + ["tools/redact_feed.py", f, "--out-dir", a.out_dir, "--force"])
-        run("templates json", py + ["tools/redact_feed.py", "--write-templates", "answer-templates.json"])
+        run("templates json", py + ["tools/redact_feed.py", "--write-templates", "data/answer-templates.json"])
         redacted = sorted(os.path.join(a.out_dir, x) for x in os.listdir(a.out_dir) if x.startswith("qa-feed-redacted_") and x.endswith(".csv"))
         run("aggregates", py + ["tools/make_usage.py"] + redacted + ["--out-dir", a.out_dir])
         run("repeat questions", py + ["tools/cache_coverage.py"] + a.feeds)
@@ -76,8 +77,8 @@ def main():
     commit = subprocess.run(["git", "rev-parse", "--short", "HEAD"], cwd=REPO, capture_output=True, text=True).stdout.strip()
     files = {}
     for x in sorted(os.listdir(a.out_dir)):
-        if x.endswith(".csv") and "qa-feed" not in x and os.path.exists(os.path.join(REPO, x)):
-            p = os.path.join(REPO, x)
+        if x.endswith(".csv") and "qa-feed" not in x and os.path.exists(os.path.join(DATA, x)):
+            p = os.path.join(DATA, x)
             with open(p, "rb") as fh: b = fh.read()
             files[x] = {"sha256": hashlib.sha256(b).hexdigest()[:16], "rows": b.count(b"\n") - 1}
     man = {"_comment": "Written by tools/refresh.py at the end of a data refresh (brief §76): the version strings in force, the feed recount's result, "
@@ -87,7 +88,7 @@ def main():
            "audit": {"mode": "feed recount", "date": date.today().isoformat(), "passed": passed, "failed": failed},
            "tests": {"ask_bar": results.get("ask bar test", {}).get("last", "skipped")},
            "aggregates": files}
-    with open(os.path.join(REPO, "VERSIONS.json"), "w", encoding="utf-8") as fh: json.dump(man, fh, indent=1, ensure_ascii=False); fh.write("\n")
+    with open(os.path.join(DATA, "VERSIONS.json"), "w", encoding="utf-8") as fh: json.dump(man, fh, indent=1, ensure_ascii=False); fh.write("\n")
     print(f"wrote VERSIONS.json: derivation {RF.DERIVATION_VERSION}, lexicon {ML.LEXICON_VERSION}, recount {passed} passed {failed} failed, {len(files)} aggregate files hashed")
     print("next: review git status, commit, push; the deploy repeats the files-only audit and the test")
 
