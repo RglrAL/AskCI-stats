@@ -76,6 +76,7 @@ SCHEMA = {
     'outcome-rules-daily.csv': 'Date Rule Turns',
     'answer-style-daily.csv': 'Date Outcome Turns Words Lines Hedges Apologies Signposts Questions Links',
     'answer-next-daily.csv': 'Date Class Answers Ended Rephrased NextTyped NextChip NextNew Within1m NextCited Disliked',
+    'cited-not-found.csv': 'URL FirstCited LastCited Citations Checked EverFetched',
 }
 for f, cols in SCHEMA.items():
     if not os.path.exists(f'{REPO}/{f}'): FAIL.append(f'schema: {f} is missing'); continue
@@ -401,6 +402,12 @@ if 'StarterPromptErrors' in U[days[0]]:
     check('first-turn errors: StarterPromptErrors <= StarterPromptFirstTurns, OrganicFirstErrors <= OrganicFirstTurns, both <= Error', all(
         I(U[d]['StarterPromptErrors']) <= I(U[d]['StarterPromptFirstTurns']) and I(U[d]['OrganicFirstErrors']) <= I(U[d]['OrganicFirstTurns'])
         and I(U[d]['StarterPromptErrors']) + I(U[d]['OrganicFirstErrors']) <= I(U[d]['Error']) for d in days))
+
+# ── 9b. cited-not-found.csv against pages-cited.csv (brief §96): every address is a cited page, with its own counts ──
+_PC = {r['URL']: r for r in rd('pages-cited.csv')}
+_NF = rd('cited-not-found.csv')
+_bad = [r['URL'] for r in _NF if r['URL'] not in _PC or any(r[k] != _PC[r['URL']][k] for k in ('FirstCited', 'LastCited', 'Citations'))]
+check(f'cited-not-found.csv: {len(_NF)} addresses, each a cited page with the same dates and citations as pages-cited.csv', not _bad, 'differs: ' + ', '.join(_bad[:3]))
 
 # ── 9a. pages-cited.csv against citations-monthly.csv (brief §62) ─────────────
 CM = rd('citations-monthly.csv'); PC = rd('pages-cited.csv')

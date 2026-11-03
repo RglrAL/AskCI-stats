@@ -11,7 +11,7 @@ prints each step's last line (counts and versions, never text):
   3 redact_feed.py            each feed to the review folder, text dropped, derived columns added; then --write-templates
   4 make_usage.py             the aggregate files, from the redacted feeds
   5 cache_coverage.py, next_step.py   from the raw feeds, into the repo root
-  6 collect_aggregates.py     the aggregates into the repo root
+  6 collect_aggregates.py     the aggregates into the repo root; make_not_found_pages.py, cited addresses not on the site
   7 audit_data.py DIR         the audit WITH the feed recount (the deploy can only run files-only)
   8 make_register.py, make_findings.py, change_report.py --events, incidents.py, make_facts.py
   9 test_ask.py               the Ask bar regression (skipped with --skip-test)
@@ -62,6 +62,7 @@ def main():
         run("repeat questions", py + ["tools/cache_coverage.py"] + a.feeds)
         run("what people do next", py + ["tools/next_step.py"] + a.feeds)
         run("collect", py + ["tools/collect_aggregates.py", a.out_dir])
+        run("cited addresses not on the site", py + ["tools/make_not_found_pages.py"])   # brief §96: from the fetch log and pages-cited.csv
     r = run("audit (feed recount)", py + ["tools/audit_data.py", a.out_dir])
     passed = r.stdout.count("✓"); failed = r.stdout.count("✗")
     run("register", py + ["tools/make_register.py"]); run("findings", py + ["tools/make_findings.py"])

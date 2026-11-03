@@ -3140,7 +3140,12 @@ let SITEPAGES={info:new Set(),all:new Set(),asOf:'',mod:{}},hasSitePages=false;
 async function loadSitePages(){
   try{(await loadCSV('site-pages.csv')).forEach(r=>{const u=String(r['URL']||'').toLowerCase().replace(/\/$/,'');if(!u)return;SITEPAGES.all.add(u);if(r['Kind']==='information'&&r['Language']==='en')SITEPAGES.info.add(u);if(r['LastMod'])SITEPAGES.mod[u]=String(r['LastMod']).slice(0,10);if(r['ListedOn']&&r['ListedOn']>SITEPAGES.asOf)SITEPAGES.asOf=r['ListedOn'];});}catch(e){}
   hasSitePages=SITEPAGES.info.size>0;
+  // cited addresses that returned page-not-found when last fetched (tools/make_not_found_pages.py, brief §96)
+  try{NOTFOUNDPAGES=(await loadCSV('cited-not-found.csv')).map(r=>({url:r.URL,first:r.FirstCited,last:r.LastCited,n:+r.Citations||0,checked:r.Checked}));}catch(e){}
 }
+let NOTFOUNDPAGES=null;
+// Not-on-the-site addresses cited inside a span: at least one citation between its first and last citation date
+function notFoundIn(from,to){return (NOTFOUNDPAGES||[]).filter(r=>r.first<=to&&r.last>=from)}
 // Matched numerator and denominator for one day: a surface counts only from its tracking start.
 // Returns null for a day outside every measured window (no usage row or before tracking began).
 function clickDay(d,src){
@@ -3583,12 +3588,16 @@ function eraCardHTML(){
       ${td(f(x.P.latP50,s1))}${td(f(x.P.genPT,p2))}${td(spark(lines[i]))}
     </tr><tr hidden><td colspan="10" style="padding:6px 7px 12px"><div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:2px 24px;font-size:var(--t-xs)">${more(x)}</div></td></tr>`).join('');
   const notes=eras.filter(x=>x.inside.length).map(x=>`<li><b>${escH(x.name)}</b> holds ${x.inside.map(e=>escH(e.title)+' ('+fmtDate(e.start)+')').join('; ')}.</li>`).join('');
+  // cited addresses not on the site, by the era they were cited in (brief §96): a fact about each era, no cause given
+  const nfChecked=(NOTFOUNDPAGES||[]).reduce((m,r)=>r.checked>m?r.checked:m,'');
+  const nfLine=NOTFOUNDPAGES&&NOTFOUNDPAGES.length?`<div style="font-size:var(--t-xs);color:var(--muted);margin-top:10px">Cited addresses not on the site (page not found when checked${nfChecked?', '+fmtDate(nfChecked):''}), by the era they were cited in: ${eras.map(x=>`${escH(x.name)} <b style="color:var(--text)">${notFoundIn(x.from,x.to).length}</b>`).join(' · ')}. An address is counted in each era it was cited in.</div>`:'';
   return`<div class="card" style="margin-bottom:14px;overflow-x:auto">
       <div class="card-title">Era scorecard<span class="card-title-note">one row per model or prompt era, cut at confirmed events · each era's own sums · the change day belongs to neither era</span></div>
       <table style="width:100%;border-collapse:collapse;min-width:760px">
         <thead><tr style="border-bottom:2px solid var(--b2)">${th('Era','left')}${th('Turns')}${th('Cited')}${th('Not found')}${th('Clarifi-<br>cation')}${th('Partial,<br>of cited')}${th('Cited, not<br>partial')}${th('Response<br>p50')}${th('Generation<br>p / turn')}${th(`Cited, not partial<br>by week · ${lo}–${hi}%`,'left')}</tr></thead>
         <tbody>${rows}</tbody></table>
       ${notes?`<ul class="wd-flags" style="margin-top:10px">${notes}</ul>`:''}
+      ${nfLine}
       <div style="font-size:var(--t-xs);color:var(--dim);margin-top:10px;font-family:'DM Mono',monospace">Descriptive only. Rates are of scored turns (partial of cited answers); response time is the turn-weighted mean of daily medians; generation cost a turn is over settled join days; click-throughs need GA4 on 7+ days of the era. An era that holds a launch or a chip change carries that change inside it. Eras are model eras: each era differs in model and in wording together, since the fixed sentences changed on every model-change date (brief §75)${PROMPTS?` and are unverified since the ${fmtDate(PROMPTS.snapshot)} snapshot`:''}.${hasIntent?' Personal situations = share of typed questions; not what was needed = typed questions whose outcome is not the one their intent expects, both by rule from the question.':''} Outcome labels from 14 Sep 2026 are unvalidated until the hand-labelled sample.</div>
     </div>`;
 }
@@ -9007,6 +9016,10 @@ function renderDqStrip(){
     (U.columns&&Object.values(U.columns).some(Boolean))||hasHours?item('usage detail',['outcomes','types','sources','latency','voice'].filter(k=>U.columns&&U.columns[k]).concat(hasHours?['hours']:[]).join(' · ')||'—',{title:'optional columns found in usage.csv, plus usage-hours.csv'}):'',
     hasClicks?item('click-throughs',`${spanLabel(clickRange.from,clickRange.to)}`,{title:'GA4 page views of CI pages carrying AskCI citation tags (tools/make_clicks.py); consenting visitors only, so a minimum. Rates count the standalone site from '+fmtDate(CONFIG.click_tracking_from.app)+' and the pop-up from '+fmtDate(CONFIG.click_tracking_from.embed)}):'',
     U.minimal?item('usage columns','minimal',{amber:true,title:'usage.csv has only date, questions and conversations: outcomes, sources, latency and feedback are not shown. Regenerate it from the QA feed with tools/make_usage.py.'}):'',
+    NOTFOUNDPAGES?(()=>{const end=DATA.merged.length?DATA.merged[DATA.merged.length-1].date:null,from=end?isoAdd(end,-27):null,recent=end?notFoundIn(from,end):[],checked=NOTFOUNDPAGES.reduce((m,r)=>r.checked>m?r.checked:m,'');
+      const lastAny=NOTFOUNDPAGES.reduce((m,r)=>r.last>m?r.last:m,'');
+      return item('cited addresses not on the site',recent.length?`${recent.length} cited in the last 28 days`:`none in the last 28 days${NOTFOUNDPAGES.length?` · ${NOTFOUNDPAGES.length} earlier, last ${fmtDate(lastAny)}`:''}`,
+        {amber:recent.length>0,title:`addresses AskCI cited that returned page not found when last checked${checked?' ('+fmtDate(checked)+')':''}`+(recent.length?': '+recent.slice(0,5).map(r=>r.url.replace(/^https?:\/\/www\.citizensinformation\.ie/,'')).join(', '):'')});})():'',
     item('events awaiting confirmation',cands,{amber:cands>0,title:'candidate events in events.json plus model events detected from billing'}),
     Q.badDates?item('cost dates rejected',Q.badDates,{amber:true,title:list(Q.badDateSamples)}):'',
     U.badDates?item('usage dates rejected',U.badDates,{amber:true,title:list(U.badDateSamples)}):'',

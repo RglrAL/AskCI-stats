@@ -2459,3 +2459,26 @@ network on 3 Nov fetched 3 new pages; the next refresh uses them.
 Costs come from the Azure export, which was not refreshed, so costs still end on 23 October. The status bar said
 "Data to 23 Oct", the cost end, which until now was also the questions' end. When the two differ it now says
 "Questions to 2 Nov · costs to 23 Oct · costs settled to 20 Oct"; when they agree it keeps the single "Data to".
+
+## 96. Cited addresses not on the site: a watch and an era line (3 Nov 2026)
+
+The 186 page-fetch failures of §95 are addresses AskCI cited that return page not found and are not in the sitemap.
+They carry 314 of 211,054 citations, and the problem is nearly all in the past: 183 of the 186 were cited in the
+gpt-4o era (to 8 March), 5, 2 and 1 in the three eras since, the last on 21 September. A panel would present a
+stopped problem as a current one, so the page carries it in two quieter places:
+
+- **Data status watch.** A line in the Data status panel, "cited addresses not on the site", amber (and counted in
+  "items need attention") only when such an address was cited in the last 28 days of question data, naming up to five
+  of them in its note; otherwise green, "none in the last 28 days · 186 earlier, last 21 Sep".
+- **Era scorecard line.** Under the scorecard: "Cited addresses not on the site (page not found when checked, 3 Nov),
+  by the era they were cited in: gpt-4o 183 · GPT 5 Chat 5 · chat-latest 2 · 5.4 1." An address cited in two eras
+  counts in both. No cause is given: a 404 today does not show whether an address was mistaken or moved.
+
+New file `cited-not-found.csv` (URL, FirstCited, LastCited, Citations, Checked, EverFetched), written by
+`tools/make_not_found_pages.py` from the page fetcher's log and `pages-cited.csv`: an address whose most recent fetch
+returned 404, with its citation dates and count, the day checked, and whether a fetch of it ever succeeded (none has).
+Public addresses and counts only. It runs in the refresh after the collect step; the audit checks its columns and that
+every address is a cited page with the same dates and citations as `pages-cited.csv`.
+
+Checked in the browser: both lines render, no console errors; a fake address cited on 30 Oct turned the watch amber,
+named it, and raised the attention count from 6 to 7.
