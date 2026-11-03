@@ -40,7 +40,10 @@ Month,Prompt,Count,Cited,FollowedByTyped,FollowedBySuggested,Partial,NotFound,Cl
 2026-09,can i get help with low pay,34,31,4,6,0,0,1,0,8131,32,445147,34,23,eligibility
 2026-09,how much is maternity benefit,33,30,0,7,0,0,0,0,2169,30,257593,33,24,rate
 2026-09,how do i apply for the household benefits package,2,2,1,0,1,0,0,0,287,2,19907,2,1,apply
-2026-10,how do i renew my passport,323,280,10,24,2,0,0,0,82418,280,4002291,294,220,apply
-2026-10,what are the housing assistance payment (hap) limits,288,270,16,55,79,0,0,0,60459,270,3601203,272,176,rate
-2026-10,how do i apply for the household benefits package,240,232,10,83,0,0,0,0,25976,232,2054874,214,121,apply
+2026-10,how do i apply for the household benefits package,465,453,17,154,0,0,0,0,47707,453,3991870,465,264,apply
+2026-10,how do i renew my passport,439,386,13,36,2,0,0,0,113529,386,5555555,439,324,apply
+2026-10,what are the housing assistance payment (hap) limits,379,355,22,73,100,1,0,0,78692,356,4753064,379,245,rate
 2026-10,how do i apply for the back to school clothing and footwear allowance,89,76,0,13,1,0,0,0,16061,76,853014,89,68,apply
+2026-11,how do i apply for the household benefits package,42,41,0,19,0,0,0,0,3956,41,302512,17,10,apply
+2026-11,how do i renew my passport,27,25,0,5,0,0,0,0,7392,25,277846,9,7,apply
+2026-11,what are the housing assistance payment (hap) limits,17,15,0,1,4,0,0,0,3369,15,165886,10,8,rate

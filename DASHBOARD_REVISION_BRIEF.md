@@ -2442,3 +2442,16 @@ not reproduced). Both headless tools (`make_facts.py`, `test_ask.py`) now ask fo
 `window.__plainLoad` before the page runs: no worker, no waits, no view transition, the loader shown without motion.
 The hand-over is also wrapped so that any error in it hides the loader and lets the build finish.
 
+
+## 95. Data refresh to 2 November, and two end dates in the status bar (3 Nov 2026)
+
+`tools/refresh.py` run on five feed exports (the four of 24 Oct and the export of 3 Nov, 13:07) into
+`exports/askci-export-2026-11-03`: questions now run to 2 November (3 November, the export day, is partial and left
+out as before). Feed recount audit 179 passed, 0 failed; 31 aggregate files changed and hashed in `VERSIONS.json`;
+Ask bar 311 of 311. The page fetch step fetched none of the 186 cited pages (no network from that session), so the
+quoted-figures check ran against the 1,707 snapshots already held (to 8 Oct); `tools/fetch_pages.py` run from a normal
+terminal, then a refresh, brings them up to date.
+
+Costs come from the Azure export, which was not refreshed, so costs still end on 23 October. The status bar said
+"Data to 23 Oct", the cost end, which until now was also the questions' end. When the two differ it now says
+"Questions to 2 Nov · costs to 23 Oct · costs settled to 20 Oct"; when they agree it keeps the single "Data to".

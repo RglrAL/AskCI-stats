@@ -1,13 +1,14 @@
 {
  "_comment": "Written by tools/refresh.py at the end of a data refresh (brief §76): the version strings in force, the feed recount's result, and a hash of each aggregate file as committed, which the deploy audit checks so that the published aggregates are the ones the recount passed.",
- "generated": "2026-10-24",
- "commit_before_refresh": "febe2a2",
- "review_folder": "exports/askci-export-2026-10-24-topics",
+ "generated": "2026-11-03",
+ "commit_before_refresh": "ab19a35",
+ "review_folder": "exports/askci-export-2026-11-03",
  "feeds": [
   "qa-feed_20260929_113454.csv",
   "qa-feed_20260929_113634.csv",
   "qa-feed_20261008_163019.csv",
-  "qa-feed_20261023_135700.csv"
+  "qa-feed_20261023_135700.csv",
+  "qa-feed_20261103_130720.csv"
  ],
  "versions": {
   "outcome_rules": "2026.10.23-2",
@@ -20,7 +21,7 @@
  },
  "audit": {
   "mode": "feed recount",
-  "date": "2026-10-24",
+  "date": "2026-11-03",
   "passed": 179,
   "failed": 0
  },
@@ -29,128 +30,128 @@
  },
  "aggregates": {
   "answer-figures-monthly.csv": {
-   "sha256": "4af677e09283c2b4",
-   "rows": 2784
+   "sha256": "50e8fa370ab70b61",
+   "rows": 2924
   },
   "answer-personalisation-monthly.csv": {
-   "sha256": "5086b552ad7e1d9f",
-   "rows": 40
+   "sha256": "15a4cb18e83d590d",
+   "rows": 44
   },
   "answer-signposts-monthly.csv": {
-   "sha256": "416662ce9bae5ebf",
-   "rows": 2593
+   "sha256": "6a23b3f968555e43",
+   "rows": 2755
   },
   "answer-style-daily.csv": {
-   "sha256": "f3062f21f7208b97",
-   "rows": 1730
+   "sha256": "9888bb2956b92ae9",
+   "rows": 1800
   },
   "answer-templates-daily.csv": {
-   "sha256": "2571b92a5119fb73",
-   "rows": 3097
+   "sha256": "ff0358db19d3e272",
+   "rows": 3226
   },
   "asked-pages-monthly.csv": {
-   "sha256": "6716f55b16de8085",
-   "rows": 891
+   "sha256": "a92e81bfbbcdc4b0",
+   "rows": 935
   },
   "asked-pages-weekly.csv": {
-   "sha256": "77a372a005f2fd94",
-   "rows": 2166
+   "sha256": "67c60537169536d6",
+   "rows": 2345
   },
   "categories-daily.csv": {
-   "sha256": "401e0c6250d2f3e5",
-   "rows": 4289
+   "sha256": "7d16a07f5af959ca",
+   "rows": 4466
   },
   "categories.csv": {
-   "sha256": "7f1a4c530d475241",
-   "rows": 166
+   "sha256": "4b97cc691cd31789",
+   "rows": 183
   },
   "category-outcomes-daily.csv": {
-   "sha256": "23257fa42aa6a184",
-   "rows": 4476
+   "sha256": "843859704d75f96d",
+   "rows": 4662
   },
   "citations-intent-monthly.csv": {
-   "sha256": "43f2c217c2c4ab87",
-   "rows": 8287
+   "sha256": "a690403417c23aad",
+   "rows": 8730
   },
   "citations-monthly.csv": {
-   "sha256": "494b339c77abb6f4",
-   "rows": 10206
+   "sha256": "432f5b240d7d83cc",
+   "rows": 10857
   },
   "clarification-asks-monthly.csv": {
-   "sha256": "346aaf066e5e5b4c",
-   "rows": 119
+   "sha256": "d8b7243916993002",
+   "rows": 125
   },
   "conversations-daily.csv": {
-   "sha256": "9dfc35fbaee731f0",
-   "rows": 295
+   "sha256": "c67bfbefaaff8eee",
+   "rows": 306
   },
   "intent-journeys-monthly.csv": {
-   "sha256": "b9a0a1ab76ad26ad",
-   "rows": 984
+   "sha256": "deaa5707e6fdf451",
+   "rows": 1046
   },
   "journeys-monthly.csv": {
-   "sha256": "85bf96b697acfdc1",
-   "rows": 1731
+   "sha256": "988cabdbc10c3809",
+   "rows": 1777
   },
   "latency-buckets-daily.csv": {
-   "sha256": "cbaa4d4854997f7d",
-   "rows": 3481
+   "sha256": "d11f47b9f7f1922c",
+   "rows": 3618
   },
   "outcome-rules-daily.csv": {
-   "sha256": "54679e7233ecca08",
-   "rows": 3415
+   "sha256": "1e686beb3b90ae7a",
+   "rows": 3588
   },
   "pages-cited.csv": {
-   "sha256": "cdb2e654f62bc098",
-   "rows": 2061
+   "sha256": "640ec47bf4a21ba6",
+   "rows": 2064
   },
   "question-categories-monthly.csv": {
-   "sha256": "aefeb20336261d15",
-   "rows": 493
+   "sha256": "db6412ac365138cd",
+   "rows": 540
   },
   "question-intent-category-monthly.csv": {
-   "sha256": "61cc567f1437446e",
-   "rows": 1166
+   "sha256": "acb63b2ea0b10575",
+   "rows": 1243
   },
   "question-intent-daily.csv": {
-   "sha256": "bec41074dc2ff245",
-   "rows": 5399
+   "sha256": "5548c147899cd477",
+   "rows": 5612
   },
   "question-situation-monthly.csv": {
-   "sha256": "9794d0c9d56918c1",
-   "rows": 1491
+   "sha256": "b443e20de7be9719",
+   "rows": 1593
   },
   "question-topics-daily.csv": {
-   "sha256": "be6389f8b647ab37",
-   "rows": 1837
+   "sha256": "f632341e181d9873",
+   "rows": 1963
   },
   "question-topics-monthly.csv": {
-   "sha256": "a7111e84f85af0e4",
-   "rows": 979
+   "sha256": "fd0c495977280720",
+   "rows": 1034
   },
   "safety-daily.csv": {
-   "sha256": "75efcccf6b18f742",
-   "rows": 173
+   "sha256": "8fcfeea5f3772335",
+   "rows": 184
   },
   "script-outcomes-daily.csv": {
-   "sha256": "bf7b65c407d7b322",
-   "rows": 547
+   "sha256": "0418f32fef65555e",
+   "rows": 576
   },
   "setback-intents-monthly.csv": {
-   "sha256": "214ff8034c81b39e",
-   "rows": 179
+   "sha256": "74c0287d3ec6a6ab",
+   "rows": 195
   },
   "starter-prompts-monthly.csv": {
-   "sha256": "b64bf7c28da6c11a",
-   "rows": 45
+   "sha256": "1d01f148ab0607a8",
+   "rows": 48
   },
   "usage-hours.csv": {
-   "sha256": "01750ec7c42d5f2e",
-   "rows": 5758
+   "sha256": "e70615d519dd5acf",
+   "rows": 6018
   },
   "usage.csv": {
-   "sha256": "bb5d056ffb50f5e7",
-   "rows": 295
+   "sha256": "7fbc24f02df95b10",
+   "rows": 306
   }
  }
 }
