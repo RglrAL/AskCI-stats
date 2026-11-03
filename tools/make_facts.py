@@ -80,10 +80,17 @@ def main():
     srv = ThreadingHTTPServer(("127.0.0.1", port), partial(Handler, directory=REPO))
     threading.Thread(target=srv.serve_forever, daemon=True).start()
     prof = tempfile.mkdtemp(prefix="facts-")
+    dom = ""
     try:
-        dom = subprocess.run([browser, "--headless=new", "--disable-gpu", "--no-first-run", f"--user-data-dir={prof}",
-                              "--virtual-time-budget=60000", "--dump-dom", f"http://127.0.0.1:{port}/index.html"],
-                             capture_output=True, text=True, timeout=300).stdout
+        # one retry on a fresh profile when Chrome hangs on a stalled request (as tools/test_ask.py does)
+        for attempt in (1, 2):
+            try:
+                dom = subprocess.run([browser, "--headless=new", "--disable-gpu", "--no-first-run", f"--user-data-dir={os.path.join(prof, str(attempt))}",
+                                      "--virtual-time-budget=60000", "--dump-dom", f"http://127.0.0.1:{port}/index.html"],
+                                     capture_output=True, text=True, timeout=180).stdout
+                break
+            except subprocess.TimeoutExpired:
+                print(f"make_facts: Chrome did not finish in 180 s (attempt {attempt} of 2)" + ("; retrying" if attempt == 1 else ""), file=sys.stderr)
     finally:
         srv.shutdown(); shutil.rmtree(prof, ignore_errors=True)
     m = re.search(r'data-facts="([^"]*)"', dom)

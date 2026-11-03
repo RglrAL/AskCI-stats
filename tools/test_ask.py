@@ -42,6 +42,7 @@ DATA_FILES = ["usage.csv", "usage-hours.csv", "conversations-daily.csv", "catego
 CHROMES = ["/Applications/Google Chrome.app/Contents/MacOS/Google Chrome", "/Applications/Chromium.app/Contents/MacOS/Chromium",
            "google-chrome", "chromium", "chromium-browser"]
 WAIT_MS = 250   # per question; the Ask bar renders synchronously, so this is ample
+CHROME_TIMEOUT = 240   # seconds an attempt; see run()
 
 HARNESS = r"""<script>
 window.__errs=[];window.addEventListener('error',e=>window.__errs.push(e.message+' @'+e.lineno));
@@ -163,11 +164,20 @@ def run(cases, ref, browser, page_path):
             s.bind(("127.0.0.1", 0)); port = s.getsockname()[1]
         srv = ThreadingHTTPServer(("127.0.0.1", port), partial(QuietHandler, directory=tmp))
         threading.Thread(target=srv.serve_forever, daemon=True).start()
-        prof = os.path.join(tmp, "_profile")
         budget = 60000 + len(cases) * (WAIT_MS * 2 + 900) + 400 * 200   # plus every suggestion, asked once
-        dom = subprocess.run([browser, "--headless=new", "--disable-gpu", "--no-first-run", f"--user-data-dir={prof}",
-                              f"--virtual-time-budget={budget}", "--dump-dom", f"http://127.0.0.1:{port}/index.html"],
-                             capture_output=True, text=True, timeout=900).stdout
+        # Under a virtual-time budget Chrome's clock waits on every pending request, so one stalled fetch (a CDN library,
+        # say) hangs the run; a passing run takes under a minute. So: 4 minutes an attempt, and one retry on a fresh
+        # profile (the deploy of 3 Nov 2026 hung once and passed on a re-run unchanged).
+        dom = ""
+        for attempt in (1, 2):
+            prof = os.path.join(tmp, f"_profile{attempt}")
+            try:
+                dom = subprocess.run([browser, "--headless=new", "--disable-gpu", "--no-first-run", f"--user-data-dir={prof}",
+                                      f"--virtual-time-budget={budget}", "--dump-dom", f"http://127.0.0.1:{port}/index.html"],
+                                     capture_output=True, text=True, timeout=CHROME_TIMEOUT).stdout
+                break
+            except subprocess.TimeoutExpired:
+                print(f"Chrome did not finish in {CHROME_TIMEOUT} s (attempt {attempt} of 2)" + ("; retrying" if attempt == 1 else ""), file=sys.stderr)
         srv.shutdown()
         m = re.search(r'data-test="([^"]*)"', dom)
         if not m:

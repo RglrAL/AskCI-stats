@@ -2508,3 +2508,10 @@ Checked: the audit with the feed recount (181 passed, 0 failed); collect, the ci
 change reports, incidents and fact sheet regenerated into `data/` byte for byte (no change); the redaction, lexicon and
 aggregate tools resolve their paths; Ask bar 311 of 311; the guard's own test 34 of 34; the page loads all 49 data
 files from `data/` with no errors.
+
+The first deploy of this commit failed: the Ask bar test's headless Chrome hung on the runner until the 15-minute
+limit, and the re-run passed unchanged (a passing run takes about 20 s there, 48 s locally, also from a fresh clone).
+Under a virtual-time budget Chrome's clock waits on every pending request, so one stalled fetch, a CDN library for
+instance, hangs the whole run. `tools/test_ask.py` now gives Chrome 4 minutes an attempt and retries once on a fresh
+profile; `tools/make_facts.py` does the same with 3 minutes. Checked by forcing a 1-second limit: two attempts, a
+retry message, then the test fails with its usual message.
