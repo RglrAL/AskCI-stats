@@ -2448,9 +2448,13 @@ The hand-over is also wrapped so that any error in it hides the loader and lets 
 `tools/refresh.py` run on five feed exports (the four of 24 Oct and the export of 3 Nov, 13:07) into
 `exports/askci-export-2026-11-03`: questions now run to 2 November (3 November, the export day, is partial and left
 out as before). Feed recount audit 179 passed, 0 failed; 31 aggregate files changed and hashed in `VERSIONS.json`;
-Ask bar 311 of 311. The page fetch step fetched none of the 186 cited pages (no network from that session), so the
-quoted-figures check ran against the 1,707 snapshots already held (to 8 Oct); `tools/fetch_pages.py` run from a normal
-terminal, then a refresh, brings them up to date.
+Ask bar 311 of 311. The page fetch step reported "fetched 0, failed 186". That is not a network failure: 1,707 cited
+pages already had a snapshot at their current LastMod (so the quoted-figures check ran on current text), and the 186
+are addresses AskCI cited that do not exist on the site (each returns 404 and none is in the sitemap; for example
+`/en/social-welfare/social-welfare-payments/older-and-retired-people/state-pension-contributory`, where the page is at
+`/en/social-welfare/older-and-retired-people/state-pension-contributory`). They fail on every refresh. They carry 314
+of the 211,054 citations to date (0.1%), each a citation link that opens an error page. A run from a terminal with
+network on 3 Nov fetched 3 new pages; the next refresh uses them.
 
 Costs come from the Azure export, which was not refreshed, so costs still end on 23 October. The status bar said
 "Data to 23 Oct", the cost end, which until now was also the questions' end. When the two differ it now says
