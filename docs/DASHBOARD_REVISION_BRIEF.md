@@ -2551,4 +2551,5 @@ footer and the hidden axis; the choice survives a reload; light theme; Ask bar 3
 
 Two fixes the chips showed up, the same day: the 5.4 model family was a second green (#39d353) beside chat-latest's
 (#3fb950) and is now teal (#2dd4bf); the services timeline's By service / Fixed-variable switch sat in the top-right
-corner under the chart/table icons that appear on hover, and now sits on the left.
+corner under the chart/table icons that appear on hover, and now sits on the left. Storage (#388bfd) was a second blue beside
+Foundry Models (#58a6ff) and is now pink (#f778ba).
