@@ -1358,6 +1358,16 @@ tr.event-row td{background:color-mix(in srgb,var(--amber) 6%,transparent)}
 .cpq-zone b{color:var(--text);font-family:'DM Mono',monospace;font-weight:500}
 .cpq-takeaway{display:flex;align-items:center;gap:var(--sp-4);font-size:var(--t-sm);color:var(--muted);line-height:1.5}
 .cpq-takeaway b{color:var(--text);font-weight:600}
+.series-chips{display:flex;flex-wrap:wrap;align-items:center;gap:6px;margin:0 0 10px}
+.series-chips .sc{display:inline-flex;align-items:center;gap:6px;font:500 var(--t-2xs)/1 'DM Sans',sans-serif;color:var(--text);background:transparent;border:1px solid var(--b2);border-radius:999px;padding:5px 10px;cursor:pointer;transition:opacity .15s,border-color .15s}
+.series-chips .sc:hover{border-color:var(--muted)}
+.series-chips .sc:focus-visible{outline:2px solid var(--acc);outline-offset:2px}
+.series-chips .sc.off{color:var(--dim);opacity:.6}
+.series-chips .sc-sw{width:8px;height:8px;border-radius:2px;background:var(--sw);flex-shrink:0}
+.series-chips .sc.off .sc-sw{background:transparent;box-shadow:inset 0 0 0 1.5px var(--sw)}
+.series-chips .sc-act{color:var(--muted)}
+.series-chips .sc-sep{width:1px;height:16px;background:var(--b2);margin:0 2px}
+.series-chips .sc-none{font-size:var(--t-2xs);color:var(--dim)}
 .cpq-spark{flex-shrink:0;margin-left:auto;opacity:.9}
 .cpq-refs{display:flex;gap:var(--sp-2);margin-bottom:var(--sp-5)}
 .cpq-refs>div{flex:1;background:var(--bg);border:1px solid var(--b2);border-radius:var(--r-md);padding:var(--sp-3)}
@@ -2149,7 +2159,6 @@ const PREFS_DEFAULTS={
   customTo:'',
   budgetMonthly:0,    // 0 = no budget set
   projPeriod:'both',  // monthly | yearly | both — composition card view
-  monthlySeries:'both', // both | cost | gen — Monthly cost trend series toggle
   annotations:[],     // [{id, date, label, color}] — user-added event markers
 };
 let PREFS={...PREFS_DEFAULTS};
@@ -2206,7 +2215,7 @@ function savePrefs(){
     history.replaceState(null,'',location.pathname+location.search+newHash);
   }
 }
-function resetPrefs(){PREFS={...PREFS_DEFAULTS,annotations:[]};savePrefs();}
+function resetPrefs(){PREFS={...PREFS_DEFAULTS,annotations:[]};savePrefs();try{localStorage.removeItem('askci-series-v1');}catch(e){}}
 
 // ── Annotation CRUD ──────────────────────────────────────────────
 function addAnnotation(date,label,colorKey){
@@ -2627,6 +2636,7 @@ new MutationObserver(()=>{if(_liftQueued)return;_liftQueued=true;requestAnimatio
 function mkChart(id,cfg){
   if(charts[id]){charts[id].destroy();delete charts[id]}
   const el=document.getElementById(id);if(!el)return;
+  try{seriesFooter(cfg);}catch(e){}
   charts[id]=new Chart(el,cfg);
   // A text alternative for every chart (brief §84): the canvas is an image named after its card, and its data table is
   // built now and kept in the page (visually hidden until the table toggle shows it), so a screen reader reaches the
@@ -2639,6 +2649,77 @@ function mkChart(id,cfg){
     el.setAttribute('aria-label',name+(host?'. The values are in the table that follows.':''));
     if(host){host.setAttribute('role','region');host.setAttribute('aria-label',name+', as a table');buildChartTable(id);}
   }catch(e){}
+  try{seriesChips(id);}catch(e){}
+}
+// Series chips (brief §99): every chart with two or more series gets a row of chips, one per series in its colour,
+// that hide or show it; four or more add All and Clear. They replace the Chart.js legend, whose click did the same
+// but looked like a plain key. The choice is kept per chart in this browser only (not in the URL), and is dropped
+// when the chart's series change (a new model in range, say). On a stacked chart the tooltip adds what is shown of
+// the whole. Structural charts (control limits, reference marks) keep their own drawing.
+const SERIES_KEY='askci-series-v1';
+const SERIES_SKIP=new Set(['clk-scatter','clk-strip','cat-funnel','pg-movers','ask-chart']);
+function seriesStore(){try{return JSON.parse(localStorage.getItem(SERIES_KEY)||'{}')||{};}catch(e){return{};}}
+function seriesSave(id,sig,hidden){try{const st=seriesStore();if(hidden.length)st[id]={sig,hidden};else delete st[id];localStorage.setItem(SERIES_KEY,JSON.stringify(st));}catch(e){}}
+function seriesColour(d){
+  const pick=v=>Array.isArray(v)?v.find(x=>x&&x!=='transparent'):(v&&v!=='transparent'?v:null);
+  const c=(d.type==='line'||(!d.type&&d.fill===false)?pick(d.borderColor):null)||pick(d.backgroundColor)||pick(d.borderColor)||C.dim;
+  return typeof c==='string'?c.slice(0,7):C.dim;
+}
+// Stacked charts: while a series is hidden the tooltip adds "Shown: X of Y" for the hovered bar. Set on the config
+// before the chart is built (Chart.js options cannot be reassigned afterwards).
+function seriesFooter(cfg){
+  const o=cfg.options=cfg.options||{},ax=o.indexAxis==='y'?'x':'y',sc=o.scales||{};
+  // A second value axis (y2, yPct) hides itself while every series on it is switched off
+  Object.keys(sc).forEach(k=>{if(k!=='x'&&k!=='y'&&sc[k]&&sc[k].display===undefined)sc[k].display='auto';});
+  if(!(sc[ax]&&sc[ax].stacked)||['pie','doughnut','scatter','bubble'].includes(cfg.type))return;
+  o.plugins=o.plugins||{};const tt=o.plugins.tooltip=o.plugins.tooltip||{};tt.callbacks=tt.callbacks||{};
+  const orig=tt.callbacks.footer;
+  tt.callbacks.footer=function(items){
+    const base=orig?orig.call(this,items):[];const out=Array.isArray(base)?base.slice():(base?[base]:[]);
+    const ch=this.chart;if(!items.length||!ch)return out;
+    const k=items[0].dataIndex,axis=ch.data.datasets[items[0].datasetIndex].yAxisID||'y';
+    const same=ch.data.datasets.map((d,i)=>({d,i})).filter(x=>(x.d.yAxisID||'y')===axis&&x.d.type!=='line'&&x.d.label);
+    if(same.every(x=>ch.isDatasetVisible(x.i)))return out;
+    const val=x=>{const v=x.d.data[k];return +(v&&typeof v==='object'?v[ax]:v)||0;};
+    const all=same.reduce((a,x)=>a+val(x),0),shown=same.filter(x=>ch.isDatasetVisible(x.i)).reduce((a,x)=>a+val(x),0);
+    const f=ch.scales[ax]&&ch.scales[ax].options.ticks.callback;let fmt=v=>num(Math.round(v));
+    try{const t=String(f.call(ch.scales[ax],1,0,[]));if(t.startsWith('£'))fmt=v=>gbp(v);else if(t.endsWith('p'))fmt=v=>v.toFixed(2)+'p';}catch(e){}
+    out.push(`Shown: ${fmt(shown)} of ${fmt(all)}`);return out;
+  };
+}
+function seriesChips(id){
+  const ch=charts[id],cv=document.getElementById(id);if(!ch||!cv||SERIES_SKIP.has(id))return;
+  const host=cv.closest('.chart-wrap')||cv.parentElement;
+  const old=document.getElementById(id+'-series');if(old)old.remove();
+  if(['pie','doughnut','scatter','bubble'].includes(ch.config.type))return;
+  const ds=ch.data.datasets.map((d,i)=>({d,i})).filter(x=>x.d.label&&typeof x.d.label==='string');
+  if(ds.length<2)return;
+  const sig=ds.map(x=>x.d.label).join('|');
+  const saved=seriesStore()[id];
+  const hidden=new Set(saved&&saved.sig===sig?saved.hidden:[]);
+  ds.forEach(x=>ch.setDatasetVisibility(x.i,!hidden.has(x.d.label)));
+  ch.options.plugins.legend.display=false;
+  ch.update('none');
+  const row=document.createElement('div');row.className='series-chips';row.id=id+'-series';row.setAttribute('role','group');
+  row.setAttribute('aria-label','Series shown');
+  const many=ds.length>=4;
+  row.innerHTML=ds.map(x=>{const on=ch.isDatasetVisible(x.i);return`<button type="button" class="sc${on?'':' off'}" data-i="${x.i}" aria-pressed="${on}"><span class="sc-sw" style="--sw:${seriesColour(x.d)}"></span>${escH(x.d.label)}</button>`;}).join('')
+    +(many?`<span class="sc-sep"></span><button type="button" class="sc sc-act" data-act="all">All</button><button type="button" class="sc sc-act" data-act="none">Clear</button>`:'')
+    +`<span class="sc-none" hidden>Nothing shown: pick a series</span>`;
+  const sync=()=>{
+    const hid=[];
+    row.querySelectorAll('.sc[data-i]').forEach(b=>{const on=ch.isDatasetVisible(+b.dataset.i);b.classList.toggle('off',!on);b.setAttribute('aria-pressed',on);if(!on)hid.push(ch.data.datasets[+b.dataset.i].label);});
+    row.querySelector('.sc-none').hidden=hid.length<ds.length;
+    seriesSave(id,sig,hid);ch.update();
+  };
+  row.addEventListener('click',e=>{
+    const b=e.target.closest('.sc');if(!b)return;
+    if(b.dataset.act)ds.forEach(x=>ch.setDatasetVisibility(x.i,b.dataset.act==='all'));
+    else{const i=+b.dataset.i;ch.setDatasetVisibility(i,!ch.isDatasetVisible(i));}
+    sync();
+  });
+  host.parentElement.insertBefore(row,host);
+  row.querySelector('.sc-none').hidden=ds.some(x=>ch.isDatasetVisible(x.i));
 }
 function baseOpts(){return{
   responsive:true,maintainAspectRatio:false,animation:{duration:350},
@@ -5490,31 +5571,13 @@ function renderHome(D,S){
 
 // ═══ OVERVIEW ═══════════════════════════════════════════════════════
 let stackMode='service'; // Summary timeline: 'service' | 'class'
-// Monthly cost trend (Summary and Services): billed total and generation per month, with a toggle to show both or
-// either one. The months follow the selected range; the bars are never scoped by service.
-const MONTHLY_SERIES={both:'Both',cost:'Billed total',gen:'Generation'};
-let monthlyFm={};
-function monthlyToggleHTML(){
-  const cur=PREFS.monthlySeries||'both';
-  const dot=c=>`<span style="display:inline-block;width:8px;height:8px;border-radius:2px;background:${c};margin-right:6px"></span>`;
-  return`<div class="pill-group" style="margin-left:auto;height:28px" role="group" aria-label="Series shown">${Object.entries(MONTHLY_SERIES).map(([k,l])=>
-    `<button class="pill${k===cur?' active':''}" data-monthly-series="${k}" aria-pressed="${k===cur}" onclick="setMonthlySeries('${k}')">${k==='cost'?dot(C.acc+'88'):k==='gen'?dot(C.green+'bb'):''}${l}</button>`).join('')}</div>`;
-}
+// Monthly cost trend (Summary and Services): billed total and generation per month. The months follow the selected
+// range; the bars are never scoped by service. The series chips (seriesChips) switch either off.
 function monthlyCostChart(id,fm){
-  monthlyFm[id]=fm;
-  const ser=PREFS.monthlySeries||'both',ds=[];
-  if(ser!=='gen')ds.push({label:'Billed cost',data:fm.map(m=>+m.cost.toFixed(2)),backgroundColor:C.acc+(ser==='cost'?'99':'55')});
-  if(ser!=='cost')ds.push({label:'Generation',data:fm.map(m=>+m.gen.toFixed(2)),backgroundColor:C.green+'bb'});
-  const card=document.getElementById(id)?.closest('.card'),t=card&&card.querySelector('.card-title');
-  if(t&&!t.querySelector('[data-monthly-series]'))t.insertAdjacentHTML('beforeend',monthlyToggleHTML());
-  mkChart(id,{type:'bar',data:{labels:fm.map(m=>m.label),datasets:ds},
+  mkChart(id,{type:'bar',data:{labels:fm.map(m=>m.label),datasets:[
+    {label:'Billed cost',data:fm.map(m=>+m.cost.toFixed(2)),backgroundColor:C.acc+'77'},
+    {label:'Generation',data:fm.map(m=>+m.gen.toFixed(2)),backgroundColor:C.green+'bb'}]},
     options:mergeOpts(baseOpts(),{scales:{x:{ticks:{autoSkip:fm.length>14}}},onClick:(e,els)=>{if(els.length)openMonthPanel(fm[els[0].index].month);}})});
-}
-function setMonthlySeries(k){
-  if(!MONTHLY_SERIES[k])k='both';
-  PREFS.monthlySeries=k;savePrefs();
-  document.querySelectorAll('[data-monthly-series]').forEach(b=>{const on=b.dataset.monthlySeries===k;b.classList.toggle('active',on);b.setAttribute('aria-pressed',on);});
-  Object.keys(monthlyFm).forEach(id=>{if(document.getElementById(id))monthlyCostChart(id,monthlyFm[id]);});
 }
 function setStackMode(m){stackMode=m;rendered['overview']=false;renderPane('overview');}
 function renderOverview(D,S){

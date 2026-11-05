@@ -2525,7 +2525,26 @@ had settled; a fresh export covering June will correct it. Their chart also has 
 export starts.
 
 The monthly chart that lived only on Cost › Services is now also on Cost › Summary, under the daily timeline, as
-"Monthly cost — billed total and generation". Both copies are drawn by one function, `monthlyCostChart`, and carry a
-toggle: Both, Billed total (the figure to compare with Azure's own monthly view) or Generation. The choice is a
-preference (`monthlySeries`) and applies to both copies. Every month is labelled. The months follow the selected range
+"Monthly cost — billed total and generation". Both copies are drawn by one function, `monthlyCostChart`. Every month is
+labelled. (Its first toggle, Both / Billed total / Generation, was replaced the same day by the series chips, §99.) The months follow the selected range
 and are never scoped by service, as before. Checked in the browser; Ask bar 311 of 311.
+
+## 99. Series chips on every multi-series chart (5 Nov 2026)
+
+An audit of the 52 charts found about 30 with two or more series. Most showed a Chart.js legend, whose click already
+hid a series but read as a plain key; several had no legend at all (the services timeline, the model-family monthly,
+fixed/variable monthly, turns and conversations, weekday and weekend, answer outcomes, question types), so their
+series could not be switched off.
+
+`mkChart` now gives every chart with two or more named series a row of chips above it (`seriesChips`): one per series
+in its colour, a click hides or shows it, and with four or more series All and Clear, so one service or one model can
+be seen alone. The chips replace the legend. The choice is kept per chart in this browser (`askci-series-v1` in local
+storage, never in the URL) and is dropped when the chart's series change; resetting preferences clears it. On a stacked
+chart the tooltip adds "Shown: X of Y" while a series is hidden (`seriesFooter`, set on the config before the chart is
+built), and a second value axis (turns, percentages) hides itself while every series on it is off. Left out: scatter
+charts and the structural ones whose extra datasets are control limits or reference marks (the funnel plot, the
+movers, the click scatter and strip) and the Ask bar's answer chart. The data-table view still lists every series.
+The one-off monthly toggle of §98 was removed in favour of the chips.
+
+Checked: chips on 30 charts across all eleven views with no errors; Clear then one chip on the services timeline, the
+footer and the hidden axis; the choice survives a reload; light theme; Ask bar 311 of 311; the fact sheet builds.
