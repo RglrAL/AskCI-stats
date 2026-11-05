@@ -2149,6 +2149,7 @@ const PREFS_DEFAULTS={
   customTo:'',
   budgetMonthly:0,    // 0 = no budget set
   projPeriod:'both',  // monthly | yearly | both — composition card view
+  monthlySeries:'both', // both | cost | gen — Monthly cost trend series toggle
   annotations:[],     // [{id, date, label, color}] — user-added event markers
 };
 let PREFS={...PREFS_DEFAULTS};
@@ -5489,6 +5490,32 @@ function renderHome(D,S){
 
 // ═══ OVERVIEW ═══════════════════════════════════════════════════════
 let stackMode='service'; // Summary timeline: 'service' | 'class'
+// Monthly cost trend (Summary and Services): billed total and generation per month, with a toggle to show both or
+// either one. The months follow the selected range; the bars are never scoped by service.
+const MONTHLY_SERIES={both:'Both',cost:'Billed total',gen:'Generation'};
+let monthlyFm={};
+function monthlyToggleHTML(){
+  const cur=PREFS.monthlySeries||'both';
+  const dot=c=>`<span style="display:inline-block;width:8px;height:8px;border-radius:2px;background:${c};margin-right:6px"></span>`;
+  return`<div class="pill-group" style="margin-left:auto;height:28px" role="group" aria-label="Series shown">${Object.entries(MONTHLY_SERIES).map(([k,l])=>
+    `<button class="pill${k===cur?' active':''}" data-monthly-series="${k}" aria-pressed="${k===cur}" onclick="setMonthlySeries('${k}')">${k==='cost'?dot(C.acc+'88'):k==='gen'?dot(C.green+'bb'):''}${l}</button>`).join('')}</div>`;
+}
+function monthlyCostChart(id,fm){
+  monthlyFm[id]=fm;
+  const ser=PREFS.monthlySeries||'both',ds=[];
+  if(ser!=='gen')ds.push({label:'Billed cost',data:fm.map(m=>+m.cost.toFixed(2)),backgroundColor:C.acc+(ser==='cost'?'99':'55')});
+  if(ser!=='cost')ds.push({label:'Generation',data:fm.map(m=>+m.gen.toFixed(2)),backgroundColor:C.green+'bb'});
+  const card=document.getElementById(id)?.closest('.card'),t=card&&card.querySelector('.card-title');
+  if(t&&!t.querySelector('[data-monthly-series]'))t.insertAdjacentHTML('beforeend',monthlyToggleHTML());
+  mkChart(id,{type:'bar',data:{labels:fm.map(m=>m.label),datasets:ds},
+    options:mergeOpts(baseOpts(),{scales:{x:{ticks:{autoSkip:fm.length>14}}},onClick:(e,els)=>{if(els.length)openMonthPanel(fm[els[0].index].month);}})});
+}
+function setMonthlySeries(k){
+  if(!MONTHLY_SERIES[k])k='both';
+  PREFS.monthlySeries=k;savePrefs();
+  document.querySelectorAll('[data-monthly-series]').forEach(b=>{const on=b.dataset.monthlySeries===k;b.classList.toggle('active',on);b.setAttribute('aria-pressed',on);});
+  Object.keys(monthlyFm).forEach(id=>{if(document.getElementById(id))monthlyCostChart(id,monthlyFm[id]);});
+}
 function setStackMode(m){stackMode=m;rendered['overview']=false;renderPane('overview');}
 function renderOverview(D,S){
   const el=document.getElementById('pane-overview');
@@ -5504,6 +5531,7 @@ function renderOverview(D,S){
   el.innerHTML=`
     ${D.hasBoth?`<div class="card cpq-card"><div class="card-title">What a turn costs</div><div id="ov-cpq-breakdown"></div></div>`:''}
     <div id="ov-timeline"></div>
+    ${D.hasCost?chartBox('ov-monthly',200,'Monthly cost — billed total and generation','click month'):''}
     ${chartBox('ov-donut',170,'Fixed / variable / generation — selected period')}
     <div class="card"><div class="card-title">What changed<span class="card-title-note">settled join days · the comparison window is named in each statement</span></div><div id="ov-ins"></div></div>
     <div class="card"><div class="card-title">Cost by Service — Selected Period</div><div id="ov-svc-bars"></div></div>
@@ -5511,6 +5539,7 @@ function renderOverview(D,S){
   `;
   const pd=filterRange(D.merged);
   renderTimeline(D,S,document.getElementById('ov-timeline'),document.getElementById('ov-detail'));
+  if(D.hasCost)monthlyCostChart('ov-monthly',D.monthly.filter(m=>m.billingDays>0&&pd.some(d=>d.month===m.month)));
 
   const tF=pd.reduce((s,d)=>s+d.fixed,0),tV=pd.reduce((s,d)=>s+d.variable,0),tG=pd.reduce((s,d)=>s+d.gen,0),tU=pd.reduce((s,d)=>s+d.unclassified,0);
   const dl=['Fixed','Variable (other)','Generation'],dv=[+tF.toFixed(2),+Math.max(0,tV-tG).toFixed(2),+tG.toFixed(2)],dc=[COST_COL.fixed,COST_COL.other,COST_COL.llm];
@@ -5717,8 +5746,7 @@ function renderBreakdown(D,S){
   }
 
   const fm=D.monthly.filter(m=>m.billingDays>0&&pd.some(d=>d.month===m.month));
-  mkChart('bk-monthly',{type:'bar',data:{labels:fm.map(m=>m.label),datasets:[{label:'Billed cost',data:fm.map(m=>+m.cost.toFixed(2)),backgroundColor:C.acc+'55'},{label:'Generation',data:fm.map(m=>+m.gen.toFixed(2)),backgroundColor:C.green+'bb'}]},
-    options:mergeOpts(baseOpts(),{onClick:(e,els)=>{if(els.length)openMonthPanel(fm[els[0].index].month);}})});
+  monthlyCostChart('bk-monthly',fm);
   const fvvDs=[{label:'Fixed',data:fm.map(m=>+m.fixed.toFixed(2)),backgroundColor:COST_COL.fixed+'99',stack:'s'},{label:'Variable',data:fm.map(m=>+m.variable.toFixed(2)),backgroundColor:COST_COL.other+'99',stack:'s'}];
   if(fm.some(m=>m.unclassified>0))fvvDs.push({label:'Unclassified',data:fm.map(m=>+m.unclassified.toFixed(2)),backgroundColor:COST_COL.unclassified+'99',stack:'s'});
   mkChart('bk-fvv',{type:'bar',data:{labels:fm.map(m=>m.label),datasets:fvvDs},

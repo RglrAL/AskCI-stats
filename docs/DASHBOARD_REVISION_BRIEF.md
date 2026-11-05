@@ -2515,3 +2515,17 @@ Under a virtual-time budget Chrome's clock waits on every pending request, so on
 instance, hangs the whole run. `tools/test_ask.py` now gives Chrome 4 minutes an attempt and retries once on a fresh
 profile; `tools/make_facts.py` does the same with 3 minutes. Checked by forcing a 1-second limit: two attempts, a
 retry message, then the test fails with its usual message.
+
+## 98. Monthly cost on the Summary, with a series toggle (5 Nov 2026)
+
+The developers' monthly cost chart (Azure Cost Management) was checked against `data/costs.csv`: every month from
+January to October agrees within about £10 except June (theirs about £690, ours £634). Our export has every June day
+but 22 June (£4.46) and 30 June (£2.25) are nearly empty against £20–25 a day, so the export was taken before those days
+had settled; a fresh export covering June will correct it. Their chart also has December 2025 (about £145), before our
+export starts.
+
+The monthly chart that lived only on Cost › Services is now also on Cost › Summary, under the daily timeline, as
+"Monthly cost — billed total and generation". Both copies are drawn by one function, `monthlyCostChart`, and carry a
+toggle: Both, Billed total (the figure to compare with Azure's own monthly view) or Generation. The choice is a
+preference (`monthlySeries`) and applies to both copies. Every month is labelled. The months follow the selected range
+and are never scoped by service, as before. Checked in the browser; Ask bar 311 of 311.
