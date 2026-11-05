@@ -2548,3 +2548,7 @@ The one-off monthly toggle of §98 was removed in favour of the chips.
 
 Checked: chips on 30 charts across all eleven views with no errors; Clear then one chip on the services timeline, the
 footer and the hidden axis; the choice survives a reload; light theme; Ask bar 311 of 311; the fact sheet builds.
+
+Two fixes the chips showed up, the same day: the 5.4 model family was a second green (#39d353) beside chat-latest's
+(#3fb950) and is now teal (#2dd4bf); the services timeline's By service / Fixed-variable switch sat in the top-right
+corner under the chart/table icons that appear on hover, and now sits on the left.

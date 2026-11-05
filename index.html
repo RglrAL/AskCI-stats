@@ -2399,7 +2399,7 @@ const CONFIG={
   phone_service:{days:[1,2,3,4,5],from:9,to:20,label:'Mon–Fri 09:00–20:00',source:'Citizens Information Phone Service published hours, confirmed 23 Oct 2026'},
 };
 const FOUNDRY='Foundry Models';
-const FAMILY_COL={'GPT 5 Chat':'#58a6ff','GPT 5 Mini':'#bc8cff','GPT 5':'#ff7b72','gpt-4o 1120':'#d29922','gpt-4o-mini 0718':'#e879f9','chat-latest 05052026':'#3fb950','5.4':'#39d353','5.4 mini':'#f0883e','gpt-4o-transcribe':'#79c0ff','text-embedding-3-small':'#8b949e','unparsed':'#6e7681'};
+const FAMILY_COL={'GPT 5 Chat':'#58a6ff','GPT 5 Mini':'#bc8cff','GPT 5':'#ff7b72','gpt-4o 1120':'#d29922','gpt-4o-mini 0718':'#e879f9','chat-latest 05052026':'#3fb950','5.4':'#2dd4bf','5.4 mini':'#f0883e','gpt-4o-transcribe':'#79c0ff','text-embedding-3-small':'#8b949e','unparsed':'#6e7681'};
 const METER_TYPE_COL={'input':'#58a6ff','cached input':'#3fb950','output':'#f85149','embedding':'#8b949e','voice':'#79c0ff','unparsed':'#6e7681'};
 // Event kinds: four hues chosen from the dataviz reference palette as the set that best separates every pair
 // (events can sit next to each other in any order): unsimulated ΔE ≥ 19 in both themes, colour-blind ΔE 6.9
@@ -5638,7 +5638,7 @@ function renderTimeline(D,S,chartTarget,detailTarget){
   const el=chartTarget||document.getElementById('pane-timeline');
   const det=detailTarget||el;
   const byClass=stackMode==='class';
-  const toggle=`<div style="display:flex;justify-content:flex-end;margin:-6px 0 8px"><div class="pill-group" role="tablist" aria-label="Stack by">
+  const toggle=`<div style="display:flex;justify-content:flex-start;margin:-6px 0 8px;padding-right:76px"><div class="pill-group" role="tablist" aria-label="Stack by">
       <button class="pill${byClass?'':' active'}" onclick="setStackMode('service')">By service</button>
       <button class="pill${byClass?' active':''}" onclick="setStackMode('class')">Fixed / variable / unclassified</button>
     </div></div>`;
