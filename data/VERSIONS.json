@@ -1,8 +1,8 @@
 {
  "_comment": "Written by tools/refresh.py at the end of a data refresh (brief §76): the version strings in force, the feed recount's result, and a hash of each aggregate file as committed, which the deploy audit checks so that the published aggregates are the ones the recount passed.",
  "generated": "2026-11-16",
- "commit_before_refresh": "a9c7a8e",
- "review_folder": "exports/askci-export-2026-11-16b",
+ "commit_before_refresh": "39849d6",
+ "review_folder": "exports/askci-export-2026-11-16c",
  "feeds": [
   "qa-feed_20260929_113454.csv",
   "qa-feed_20260929_113634.csv",
@@ -22,11 +22,11 @@
  "audit": {
   "mode": "feed recount",
   "date": "2026-11-16",
-  "passed": 182,
+  "passed": 184,
   "failed": 0
  },
  "tests": {
-  "ask_bar": "311 of 311 passed"
+  "ask_bar": "316 of 316 passed"
  },
  "aggregates": {
   "answer-figures-monthly.csv": {
@@ -118,8 +118,8 @@
    "rows": 5612
   },
   "question-situation-monthly.csv": {
-   "sha256": "6825428f9a56c386",
-   "rows": 1588
+   "sha256": "32e64f88fb78a392",
+   "rows": 2055
   },
   "question-topics-daily.csv": {
    "sha256": "ce234d1a712e87ce",
@@ -129,13 +129,13 @@
    "sha256": "f63aff7bb3ac6675",
    "rows": 1034
   },
-  "safety-daily.csv": {
-   "sha256": "07d4555c0c27dd5c",
-   "rows": 158
+  "safety-monthly.csv": {
+   "sha256": "4191b35087ff0243",
+   "rows": 29
   },
-  "script-outcomes-daily.csv": {
-   "sha256": "130042a66f4c4b0f",
-   "rows": 576
+  "script-outcomes-monthly.csv": {
+   "sha256": "3758cf19da331b47",
+   "rows": 41
   },
   "setback-intents-monthly.csv": {
    "sha256": "91136aab6949065e",

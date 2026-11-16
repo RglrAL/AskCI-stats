@@ -2773,3 +2773,37 @@ and window, now against before (`risers()`, one computation for every place it s
 
 Checked: the reference figures above on the page; the Questions card, the Overview strip, the starter-prompt line and
 the register kind render with no errors; 384 px wide in a 390 px frame; files-only audit 163 passed; Ask bar 316 of 316.
+
+## 105. Small-cell consistency and trims (16 Nov 2026)
+
+The handoff's package 5. The floor of five was applied to situations, organisations and topics but not to the safety
+and script files; the analyst chose to apply it (5a, the recommended option).
+
+- **Safety counts** (5a). `safety-daily.csv` published a row per day and flag, 183 of its 184 rows under five. It is
+  replaced by `safety-monthly.csv`: per month and for the whole period (`Month = (all)`), a flag under five left out,
+  the "Any identifier" total exempt as a total row. Whole period: Any identifier 17, injection 25, pasted letter 49,
+  phone 9, code 15, creative 10, crisis 48, entertainment 21; PPS, email, IBAN, card, sport and weather are under five
+  and appear only inside the total. 29 rows in all. The page reads the whole-period rows when the range covers every
+  month and the floored months otherwise, lists every flag with "under 5" where it is small, and says which it read; the
+  findings report reads the whole-period crisis row. The daily file left `data/`, and the audit checks the floor and
+  that it has not come back.
+- **Script table** (5b). `script-outcomes-daily.csv` is replaced by `script-outcomes-monthly.csv`: a script with under
+  five questions or under five scored in a month is folded into Other for that month (41 rows). The audit's per-day
+  checks became per-month ones, with a floor check. The page's script tiles show "under 5" for a script under five in
+  the range.
+- **Whole-period situation rows** (5c). `question-situation-monthly.csv` adds rows with `Month = (all)`, summed before
+  the floor, so a class small in every month appears once it reaches five over the period: the five counties that had
+  no row at all (Laois 7, Leitrim 11, Louth 14, Monaghan 11, Westmeath 15) now do, 26 of 26. The page uses them for
+  whole-range tables (`wholeOr`); the audit's monthly checks set them aside and check their totals. Topics and
+  signposts were considered and left monthly: their floored months already cover the whole range well.
+- **Dislikes** (5d). 735 likes and dislikes on 146,130 questions are too few to rank by: the per-page "Disliked" column
+  and the per-category "Dislikes / 1,000" column are gone; the overall feedback tiles on Quality stay. The CSV columns
+  are unchanged.
+- **Voice input** (5e). The microphone uses the browser's Web Speech API, and in Chrome the audio goes to Google. Its
+  tooltip says so, and the first click shows a note instead of listening; the technical brief no longer says "no
+  network" without qualification.
+- **The brief's rules** (5f) are numbered 1 to 8 in order, and rule 6 names the new floors.
+
+Checked: the refresh with the feed recount 184 passed, 0 failed; files-only audit 164 passed, with the two new floor
+checks; the safety card on All and 3M, the counties in the whole-period rows, the voice note on first click, no errors
+on any view, 384 px wide in a 390 px frame; rule tests 57; guard 34; Ask bar 316 of 316.

@@ -27,7 +27,8 @@ Outputs (all daily counts; nothing per-turn and no text crosses into the dashboa
                                                                    all answers and cited answers (needs Response Words)
                          VoiceTurns, VoiceSessions                 only when the export has an input-mode column
   usage-hours.csv      Date, Hour, Turns, Sessions   (hour of day, Irish time)
-  script-outcomes-daily.csv  Date, Script, Turns, Scored, Cited, NotFound, Clarification — outcome by the alphabet
+  script-outcomes-monthly.csv  Month, Script, Turns, Scored, Cited, NotFound, Clarification — outcome by the alphabet;
+                             a script under 5 questions or under 5 scored in a month is folded into Other (brief §105)
                        the question starts in (needs Query Script and Outcome); a script, not a language
   categories.csv       Category, Citations, Month    (current dashboard contract; display names)
   categories-daily.csv Date, Category, Citations     (slugs, by day)
@@ -88,7 +89,9 @@ Outputs (all daily counts; nothing per-turn and no text crosses into the dashboa
   intent-journeys-monthly.csv  Month, From, To, Turns: consecutive turns' intents in mature conversations, END after the
                             last (brief §69)
   setback-intents-monthly.csv  Month, Setback (NF | Clar), Intent, Turns, Ended, SameIntentNext, OtherIntentNext (brief §69)
-  safety-daily.csv          Date, Flag, Turns, Cited, NotFound, Clarification, Error, OutOfScope, Greeting, Uncited: turns
+  safety-monthly.csv        Month ("(all)" = the whole period), Flag, Turns, Cited, NotFound, Clarification, Error,
+                            OutOfScope, Greeting, Uncited; a flag under 5 in its month (or the period) is left out, the
+                            "Any identifier" total is exempt (brief §105): turns
                             flagged by redact_feed.py (identifiers typed in, injection phrasings, off-topic and
                             crisis themes) and their outcomes (brief §65)
   answer-style-daily.csv    Date, Outcome, Turns, Words, Lines, Hedges, Apologies, Signposts, Questions, Links, Openers,
@@ -607,12 +610,19 @@ def qtopic_rows(qtopic):
     return cols, [[d.isoformat(), c, e["Turns"]] + [e[k] for k in OUT7_SRC] + [e["o:partial"]] for (d, c), e in sorted(qtopic.items())]
 
 
-def safety_rows(safety):
-    """safety-daily.csv: per day and flag (PPS, Phone, Email, IBAN, Card, Any identifier, Injection, Theme <name>), the
-    flagged turns and their outcomes (brief §65). Counts only; the flags are set by redact_feed.py before the text is
-    dropped."""
-    cols = ["Date", "Flag", "Turns"] + [k for k, _ in OUTCOME_COLS if k not in ("Partial", "Scored")]
-    return cols, [[d.isoformat(), f, e["Turns"]] + [e[src] for k, src in OUTCOME_COLS if k not in ("Partial", "Scored")] for (d, f), e in sorted(safety.items())]
+def safety_rows(safety, min_turns=5):
+    """safety-monthly.csv: per month ("(all)" = the whole period) and flag (PPS, Phone, Email, IBAN, Card, Any identifier,
+    Injection, Theme <name>), the flagged turns and their outcomes (brief §65). Counts only; the flags are set by
+    redact_feed.py before the text is dropped. Floored (brief §105): a flag under min_turns in its month or period is
+    left out; "Any identifier", the total of the identifier flags, is exempt as a total row."""
+    keys = [src for k, src in OUTCOME_COLS if k not in ("Partial", "Scored")]
+    agg = defaultdict(lambda: defaultdict(int))
+    for (d, f), e in safety.items():
+        for m in (d.strftime("%Y-%m"), "(all)"):
+            x = agg[(m, f)]; x["Turns"] += e["Turns"]
+            for k in keys: x[k] += e[k]
+    cols = ["Month", "Flag", "Turns"] + [k for k, _ in OUTCOME_COLS if k not in ("Partial", "Scored")]
+    return cols, [[m, f, e["Turns"]] + [e[k] for k in keys] for (m, f), e in sorted(agg.items(), key=lambda kv: (kv[0][0] == "(all)", kv[0])) if e["Turns"] >= min_turns or f == "Any identifier"]
 
 
 def rule_rows(rulesd):
@@ -652,7 +662,13 @@ def sit_rows(sit, min_turns=5):
     cols = ["Month", "Category", "Flag", "Turns"] + OUT7 + ["Partial"]
     # the floor applies to every row that names a class (a county, a band, a year, a shape), "(all)" rows included; only
     # the two totals are exempt (brief §76, audit finding 2)
-    return cols, [[m, c, f, e["Turns"]] + [e[k] for k in OUT7_SRC] + [e["o:partial"]] for (m, c, f), e in sorted(sit.items()) if f in ("(any situation)", "(no situation)") or e["Turns"] >= min_turns]
+    # whole-period rows (brief §105, handoff 5c): Month "(all)", summed before the floor, so a class small in every month
+    # but five or more over the period appears once, and whole-range tables need not add floored months
+    allp = defaultdict(lambda: defaultdict(int))
+    for (m, c, f), e in sit.items():
+        for k, v in e.items(): allp[("(all)", c, f)][k] += v
+    every = list(sorted(sit.items())) + sorted(allp.items())
+    return cols, [[m, c, f, e["Turns"]] + [e[k] for k in OUT7_SRC] + [e["o:partial"]] for (m, c, f), e in every if f in ("(any situation)", "(no situation)") or e["Turns"] >= min_turns]
 
 
 def asks_rows(asks):
@@ -941,10 +957,22 @@ def usage_rows(D, sess, lat, has_voice, has_outcome=False, rules="", has_starter
     return cols, out
 
 
-def script_outcome_rows(D):
-    rows = [[d.isoformat(), sc, D[d][f"so:{sc}:turns"], D[d][f"so:{sc}:scored"], D[d][f"so:{sc}:cited"], D[d][f"so:{sc}:notfound"], D[d][f"so:{sc}:clar"]]
-            for d in sorted(D) for sc in SCRIPT_COLS if D[d][f"so:{sc}:turns"]]
-    return ["Date", "Script", "Turns", "Scored", "Cited", "NotFound", "Clarification"], rows
+def script_outcome_rows(D, min_turns=5):
+    """script-outcomes-monthly.csv (brief §105): per month and script; a script with under min_turns questions, or under
+    min_turns scored, in the month is folded into Other, so no row names a small class. Latin and Other stay as they fall."""
+    M = defaultdict(lambda: defaultdict(lambda: [0, 0, 0, 0, 0]))
+    for d in D:
+        for sc in SCRIPT_COLS:
+            v = [D[d][f"so:{sc}:{k}"] for k in ("turns", "scored", "cited", "notfound", "clar")]
+            if v[0]: M[d.strftime("%Y-%m")][sc] = [a + b for a, b in zip(M[d.strftime("%Y-%m")][sc], v)]
+    rows = []
+    for m in sorted(M):
+        out = {sc: v for sc, v in M[m].items()}
+        for sc in list(out):
+            if sc not in ("Latin", "Other") and (out[sc][0] < min_turns or out[sc][1] < min_turns):
+                out["Other"] = [a + b for a, b in zip(out.get("Other", [0, 0, 0, 0, 0]), out.pop(sc))]
+        rows += [[m, sc] + out[sc] for sc in SCRIPT_COLS if sc in out]
+    return ["Month", "Script", "Turns", "Scored", "Cited", "NotFound", "Clarification"], rows
 
 
 def hours_rows(hours, hour_sess):
@@ -1056,7 +1084,7 @@ def main():
         os.makedirs(a.out_dir, exist_ok=True)
         write(os.path.join(a.out_dir, "usage.csv"), ucols, urows)
         write(os.path.join(a.out_dir, "usage-hours.csv"), hcols, hrows)
-        if has_script and has_outcome: write(os.path.join(a.out_dir, "script-outcomes-daily.csv"), *script_outcome_rows(D))
+        if has_script and has_outcome: write(os.path.join(a.out_dir, "script-outcomes-monthly.csv"), *script_outcome_rows(D))
         write(os.path.join(a.out_dir, "categories.csv"), ccols, crows)
         write(os.path.join(a.out_dir, "categories-daily.csv"), dcols, drows)
         write(os.path.join(a.out_dir, "conversations-daily.csv"), *conversation_rows(cd))
@@ -1076,7 +1104,7 @@ def main():
                 write(os.path.join(a.out_dir, "question-situation-monthly.csv"), *sit_rows(sit))
                 write(os.path.join(a.out_dir, "clarification-asks-monthly.csv"), *asks_rows(asks))
                 write(os.path.join(a.out_dir, "answer-personalisation-monthly.csv"), *pers_rows(pers))
-        if safety: write(os.path.join(a.out_dir, "safety-daily.csv"), *safety_rows(safety))
+        if safety: write(os.path.join(a.out_dir, "safety-monthly.csv"), *safety_rows(safety))
         if intent:
             write(os.path.join(a.out_dir, "question-intent-daily.csv"), *intent_rows(intent))
             write(os.path.join(a.out_dir, "asked-pages-monthly.csv"), *asked_rows(asked))

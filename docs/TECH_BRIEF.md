@@ -44,12 +44,15 @@ These are design rules, not preferences. An audit should check each holds.
 6. **Counts, not suppression, with small-cell rules.** Published rows naming a class of person (a county, an age
    band, a year, a shape), a topic or an organisation need five or more, "(all)" rows included; topic keywords need
    20 or more matching questions; fixed-wording sentences need 200 or more answers and 50 or more conversations
-   before they are named. Rows naming a public page are not floored: a page is not a person.
+   before they are named. Rows naming a public page are not floored: a page is not a person. Since brief §105 the
+   safety flags and the question's script are floored too: safety counts by month and for the whole period, a flag
+   under five left out (the "Any identifier" total exempt); a script under five questions or five scored in a month
+   counted under Other. Totals are the only exemption.
+7. **Every derivation is versioned**, and the version travels in the files: outcome rules, style, safety, intent, the
+   lexicon, and one `derivation_version` bundling the topic layer, the response rules and the template list.
 8. **The deploy enforces the rules it can.** The audit sweeps every tracked CSV, JSON and Markdown file for a
    text-column header, a long free-text cell outside the known prose columns, identifier patterns and a production
    resource name, and fails the deploy on a hit, reporting file and rule only.
-7. **Every derivation is versioned**, and the version travels in the files: outcome rules, style, safety, intent, the
-   lexicon, and one `derivation_version` bundling the topic layer, the response rules and the template list.
 
 ## 3. Repository layout
 
@@ -117,12 +120,14 @@ All live in `data/` (brief §97) and are counts or public addresses. The audit's
 column list; this is the map.
 
 **Volume and cost.** `usage.csv` (day: questions, sessions, outcomes, errors by source and chip, rules version),
-`usage-hours.csv`, `costs.csv`, `latency-buckets-daily.csv`, `script-outcomes-daily.csv` (by query script).
+`usage-hours.csv`, `costs.csv`, `latency-buckets-daily.csv`, `script-outcomes-monthly.csv` (by query script, small
+scripts folded into Other, brief §105).
 
 **Outcomes and categories.** `category-outcomes-daily.csv` (by the category of the page cited; `unknown` when none),
 `categories.csv`, `categories-daily.csv`, `outcome-rules-daily.csv` (which phrase decided each outcome),
 `answer-style-daily.csv` (the wording fingerprint), `answer-next-daily.csv` (what people do next), `conversations-daily.csv`,
-`journeys-monthly.csv`, `starter-prompts-monthly.csv`, `repeat-questions-monthly.csv`, `safety-daily.csv`.
+`journeys-monthly.csv`, `starter-prompts-monthly.csv`, `repeat-questions-monthly.csv`, `safety-monthly.csv` (floored by
+month and for the whole period, brief §105).
 
 **Pages.** `citations-monthly.csv` (page, month: citations, answers, partial, dislikes), `citations-intent-monthly.csv`,
 `pages-cited.csv` (page: first and last cited, LastMod, answers after LastMod), `asked-pages-monthly.csv` and
@@ -135,7 +140,7 @@ named-scheme cuts), `question-topics-daily.csv` (category the question named, fo
 `question-topics-monthly.csv` (category, topic from the lexicon's topic layer), `question-categories-monthly.csv`
 (category by how the turn entered it: cited / page / topic / none, the "broad cut"), `question-intent-category-monthly.csv`,
 `intent-journeys-monthly.csv`, `setback-intents-monthly.csv`, `question-situation-monthly.csv` (county, age band,
-household, work, payment on, year, shape; never crossed with each other).
+household, work, payment on, year, shape; never crossed with each other; with whole-period "(all)" months since §105).
 
 **The response side.** `answer-templates-daily.csv` (the fixed sentences per day), `answer-signposts-monthly.csv`
 (organisations named, by category, with `(any)`, `(external)` and `(none)` rows), `answer-figures-monthly.csv`
@@ -226,7 +231,8 @@ dated by the fixed wording, 4 candidate chip changes, launches and observed chan
   variable / unclassified, reported never silently bucketed), and two null fields the labelling fills:
   `intent_measured` and `outcome_rules_measured`.
 - **The Ask bar**: a natural-language question answered from the loaded files, entirely in the browser; no API key,
-  no network. Entities include day, week, month, category, page, prompt, journey, kinds of question, pages people
+  and no network for a typed question. The microphone uses the browser's own speech service (the Web Speech API): in
+  Chrome the audio is sent to Google to be turned into text, and the page says so on first use (brief §105). Entities include day, week, month, category, page, prompt, journey, kinds of question, pages people
   named, and subjects within a category; a quick-list and a command palette sit beside it.
 - **Browser storage**: theme, range, personal event markers, a spend target, and which series are switched off on each
   chart (`askci-series-v1`, never in the URL); nothing else.

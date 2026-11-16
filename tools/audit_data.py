@@ -41,7 +41,7 @@ I = lambda x: int(x or 0)
 # the missing columns named, before any check can crash on it.
 SCHEMA = {
     'usage.csv': 'Date Questions Sessions Answered Unanswered Flagged NewTopic UserFollowup SuggestedFollowup ModalTurns WebTurns OtherTurns ModalSessions WebSessions Citations LatencyP50ms LatencyP90ms LatencyP99ms Likes Dislikes DislikesOnCited StarterPromptFirstTurns OrganicFirstTurns ScriptLatin ScriptCyrillic ScriptArabic ScriptCJK ScriptDevanagari ScriptOther ScriptNone LatUnder10s Lat10to20s Lat20to30s LatOver30s Cited NotFound Clarification Error OutOfScope Greeting Uncited Partial Scored OutcomeRules ModalCited ModalNotFound ModalScored WebCited WebNotFound WebScored AnswerWords AnswerWordsTurns CitedWords CitedWordsTurns',
-    'script-outcomes-daily.csv': 'Date Script Turns Scored Cited NotFound Clarification',
+    'script-outcomes-monthly.csv': 'Month Script Turns Scored Cited NotFound Clarification',
     'usage-hours.csv': 'Date Hour Turns Sessions NotFound Errors Timed LatencySumMs',
     'conversations-daily.csv': 'Date Started Mature Turns1 Turns10plus MatureTurns Span0to1 Span2to5 Span6to15 Span16to60 SpanOver60 ChipUse ReachedCited NFTurns NFLaterCited',
     'category-outcomes-daily.csv': 'Date Category Turns Cited NotFound Clarification Error OutOfScope Greeting Uncited Scored OrganicFirstTurns',
@@ -49,7 +49,7 @@ SCHEMA = {
     'categories.csv': 'Month Citations',
     'citations-monthly.csv': 'Month URL Citations Answers Partial Dislikes',
     'pages-cited.csv': 'URL FirstCited LastCited Citations Answers Partial Dislikes LastMod FirstCitedAfterLastMod AnswersAfterLastMod',
-    'safety-daily.csv': 'Date Flag Turns Cited NotFound Clarification Error OutOfScope Greeting Uncited',
+    'safety-monthly.csv': 'Month Flag Turns Cited NotFound Clarification Error OutOfScope Greeting Uncited',
     'question-intent-daily.csv': 'Date Intent Chip Turns Cited NotFound Clarification Error OutOfScope Greeting Uncited Partial Year Euro YesNo Situation WithTopic SituationCited SituationNotFound SituationPartial NamedCited NamedNotFound NamedClarification',
     'asked-pages-monthly.csv': 'Month URL Category Asked CitedSame CitedSameCategory CitedOther NotFound Clarification Other CitedUnderHub Hub',
     'question-topics-daily.csv': 'Date Category Turns Cited NotFound Clarification Error OutOfScope Greeting Uncited Partial',
@@ -173,17 +173,16 @@ timed = C.Counter()
 for r in H: timed[r['Date']] += I(r['Timed'])
 check('hours: Timed per day = latency bands total', all(timed[d] == sum(I(U[d][k]) for k in ['LatUnder10s', 'Lat10to20s', 'Lat20to30s', 'LatOver30s']) for d in days))
 
-# ── 3b. script-outcomes-daily.csv ─────────────────────────────────────────────
-SO = rd('script-outcomes-daily.csv'); sot = C.Counter(); soc = C.Counter(); bad_so = 0
+# ── 3b. script-outcomes-monthly.csv (brief §105: by month, small scripts folded into Other) ─────────────
+SO = rd('script-outcomes-monthly.csv'); sot = C.Counter(); soc = C.Counter(); bad_so = 0; um_q = C.Counter(); um_c = C.Counter()
+for d in days: um_q[d[:7]] += I(U[d]['Questions']); um_c[d[:7]] += I(U[d]['Cited'])
 for r in SO:
-    sot[r['Date']] += I(r['Turns']); soc[r['Date']] += I(r['Cited'])
+    sot[r['Month']] += I(r['Turns']); soc[r['Month']] += I(r['Cited'])
     if I(r['Cited']) + I(r['NotFound']) + I(r['Clarification']) > I(r['Scored']) or I(r['Scored']) > I(r['Turns']): bad_so += 1
-check('script outcomes: turns per day = usage.Questions', all(sot[d] == I(U[d]['Questions']) for d in days), str([d for d in days if sot[d] != I(U[d]['Questions'])][:5]))
-check('script outcomes: cited per day = usage.Cited', all(soc[d] == I(U[d]['Cited']) for d in days))
+check('script outcomes: turns per month = usage.Questions, cited per month = usage.Cited', all(sot[m] == um_q[m] and soc[m] == um_c[m] for m in um_q), str([m for m in um_q if sot[m] != um_q[m]][:5]))
 check('script outcomes: rows within bounds (cited + not found + clarification <= scored <= turns)', bad_so == 0, f'{bad_so} rows')
-for sc in ['Latin', 'Cyrillic', 'Arabic', 'CJK', 'Devanagari', 'Other', 'None']:
-    if not all(sum(I(r['Turns']) for r in SO if r['Date'] == d and r['Script'] == sc) == I(U[d]['Script' + sc]) for d in days[-7:]):
-        check(f'script outcomes: {sc} turns = usage.Script{sc} (last 7 days)', False)
+check('script outcomes (brief §105): every named script other than Latin and Other has 5+ questions and 5+ scored in its month', all(r['Script'] in ('Latin', 'Other') or (I(r['Turns']) >= 5 and I(r['Scored']) >= 5) for r in SO),
+      str([(r['Month'], r['Script'], r['Turns']) for r in SO if r['Script'] not in ('Latin', 'Other') and (I(r['Turns']) < 5 or I(r['Scored']) < 5)][:3]))
 
 # ── 3c. outcome rule ids and the wording fingerprint (brief §53) ──────────────
 # Every turn carries exactly one rule id, and the rule's family must agree with the outcome counted in usage.csv.
@@ -508,11 +507,13 @@ if SIT:
     for r in QI:
         if r['Chip'] == '0': typed_m[r['Date'][:7]] += I(r['Turns'])
     anyno = C.Counter()
-    for r in SIT:
+    SITM = [r for r in SIT if r['Month'] != '(all)']   # the whole-period rows (brief §105) are checked apart below
+    for r in SITM:
         if r['Category'] == '(all)' and r['Flag'] in ('(any situation)', '(no situation)'): anyno[r['Month']] += I(r['Turns'])
     check('question situation: outcomes sum to Turns, flags are of a known kind, no flag exceeds the month\'s typed turns, (any) + (no) = typed turns',
           all(sum(I(r[k]) for k in OUT7) == I(r['Turns']) and re.match(r'^(county:[a-z]+|age:(16-24|25-44|45-65|66\+)|household:(children|partner|alone)|work:[a-z-]+|payment_on|year:20[12]\d|shape:(letter|multi|url)|\(any situation\)|\(no situation\))$', r['Flag']) for r in SIT)
-          and all(I(r['Turns']) <= typed_m[r['Month']] for r in SIT) and all(anyno[m] == typed_m[m] for m in anyno),
+          and all(I(r['Turns']) <= typed_m[r['Month']] for r in SITM) and all(anyno[m] == typed_m[m] for m in anyno)
+          and sum(I(r['Turns']) for r in SIT if r['Month'] == '(all)' and r['Category'] == '(all)' and r['Flag'] in ('(any situation)', '(no situation)')) in (0, sum(typed_m.values())),
           str([(r['Month'], r['Flag']) for r in SIT if not re.match(r'^(county:|age:|household:|work:|payment_on|year:|shape:|\(any|\(no)', r['Flag'])][:3] + [(m, anyno[m], typed_m[m]) for m in anyno if anyno[m] != typed_m[m]][:3]))
     clar_m = C.Counter()
     for r in QI:
@@ -605,10 +606,13 @@ for d, r in CV.items(): cvm[d[:7]] += I(r['Mature'])
 check('intent journeys: END rows per month = mature conversations started that month', all(ends[m] == cvm[m] for m in cvm if m in ends), str([(m, ends[m], cvm[m]) for m in cvm if m in ends and ends[m] != cvm[m]][:3]))
 check('setback intents: Ended + Same + Other = Turns on every row, setback is NF or Clar', all(I(r['Ended']) + I(r['SameIntentNext']) + I(r['OtherIntentNext']) == I(r['Turns']) and r['Setback'] in ('NF', 'Clar') for r in SBI))
 
-# ── 9a1. safety-daily.csv (brief §65) ─────────────────────────────────────────
-SF = rd('safety-daily.csv')
-check('safety: outcomes sum to Turns on every row, and no flag exceeds the day\'s turns', all(
-    sum(I(r[k]) for k in ('Cited', 'NotFound', 'Clarification', 'Error', 'OutOfScope', 'Greeting', 'Uncited')) <= I(r['Turns']) and (r['Date'] not in U or I(r['Turns']) <= I(U[r['Date']]['Questions'])) for r in SF))
+# ── 9a1. safety-monthly.csv (brief §65, floored by month since §105) ─────────
+SF = rd('safety-monthly.csv'); _um = C.Counter()
+for d in days: _um[d[:7]] += I(U[d]['Questions'])
+check('safety: outcomes sum to Turns at most on every row, and no flag exceeds the month\'s (or the period\'s) turns', all(
+    sum(I(r[k]) for k in ('Cited', 'NotFound', 'Clarification', 'Error', 'OutOfScope', 'Greeting', 'Uncited')) <= I(r['Turns']) and I(r['Turns']) <= (sum(_um.values()) if r['Month'] == '(all)' else _um[r['Month']]) for r in SF))
+check('safety (brief §105): every flag row has 5+ turns, the Any identifier total exempt; no daily safety file remains in data/', all(I(r['Turns']) >= 5 or r['Flag'] == 'Any identifier' for r in SF) and not os.path.exists(DATA + '/safety-daily.csv'),
+      str([(r['Month'], r['Flag'], r['Turns']) for r in SF if I(r['Turns']) < 5 and r['Flag'] != 'Any identifier'][:3]))
 
 # ── 9a2. repeat-questions-monthly.csv against usage.csv (brief §63) ───────────
 RQ = {r['Month']: r for r in rd('repeat-questions-monthly.csv')}; um = C.Counter(); usm2 = C.Counter()

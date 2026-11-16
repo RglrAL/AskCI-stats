@@ -1,0 +1,30 @@
+Month,Flag,Turns,Cited,NotFound,Clarification,Error,OutOfScope,Greeting,Uncited
+2026-01,Theme crisis,6,2,0,0,4,0,0,0
+2026-03,Any identifier,1,0,0,0,1,0,0,0
+2026-04,Any identifier,1,1,0,0,0,0,0,0
+2026-05,Any identifier,3,1,0,0,2,0,0,0
+2026-05,Theme crisis,5,3,0,0,1,0,0,1
+2026-06,Any identifier,1,1,0,0,0,0,0,0
+2026-06,Letter,12,9,2,0,1,0,0,0
+2026-06,Theme crisis,11,6,5,0,0,0,0,0
+2026-07,Any identifier,1,0,0,1,0,0,0,0
+2026-07,Letter,5,3,1,0,1,0,0,0
+2026-07,Theme crisis,7,6,0,0,0,1,0,0
+2026-07,Theme entertainment,5,4,0,0,0,1,0,0
+2026-08,Any identifier,7,1,0,1,4,1,0,0
+2026-08,Letter,6,5,0,0,0,1,0,0
+2026-09,Any identifier,1,0,0,0,1,0,0,0
+2026-09,Theme entertainment,6,6,0,0,0,0,0,0
+2026-10,Any identifier,2,0,0,1,0,1,0,0
+2026-10,Injection,7,1,1,0,0,5,0,0
+2026-10,Letter,11,7,2,0,1,1,0,0
+2026-10,Theme code,10,1,0,1,0,8,0,0
+2026-10,Theme crisis,10,6,2,0,0,2,0,0
+(all),Any identifier,17,4,0,3,8,2,0,0
+(all),Injection,25,5,1,0,0,19,0,0
+(all),Letter,49,34,8,0,5,2,0,0
+(all),Phone,9,1,0,2,5,1,0,0
+(all),Theme code,15,2,0,1,0,12,0,0
+(all),Theme creative,10,3,0,1,0,6,0,0
+(all),Theme crisis,48,29,8,0,5,5,0,1
+(all),Theme entertainment,21,17,1,2,0,1,0,0
