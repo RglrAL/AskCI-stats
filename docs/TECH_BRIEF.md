@@ -221,8 +221,10 @@ dated by the fixed wording, 4 candidate chip changes, launches and observed chan
   the motion continues while the page works. Where the browser has view transitions, the hand-over flies the mark to
   the header logo and the count into the Overview sentence that states it (`ldHide`). `?ld-slow` adds half a second
   per step, to watch it.
-- **Groups and sub-views** (`TAB_GROUPS`): Overview; Cost (Summary, Services, Models); Usage (Quality, Questions,
-  Pages, Conversations, Answer wording, Volume); Scenario planner. Three Usage views are merged (brief §78): Quality
+- **Groups and sub-views** (`TAB_GROUPS`, regrouped in brief §107): Overview; Demand (Questions, Volume and reach);
+  Answer quality (Outcomes, Conversations, Wording and signposting); Content (Register, Pages); Cost (Summary, Services,
+  Models, Scenario planner). Views fold past about four screens (`foldPane`); the reader reads "question" for the
+  files' "turn" (`readerWords`); a glossary and per-card confidence labels (`confidenceLabels`). Before §107: Three Usage views are merged (brief §78): Quality
   holds Before / after, Questions holds What people ask and Categories, Pages holds Click-throughs and Reach, each
   former view a part with its own section and anchor (`PARTS`, `PART_DEF`). A sub-view opens from a link as
   `#tab=<sub id>` (for example `#tab=asked`); the four folded ids (`impact`, `categories`, `clicks`, `reach`) still

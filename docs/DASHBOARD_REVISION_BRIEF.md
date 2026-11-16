@@ -2845,3 +2845,39 @@ cases in `tools/test_rules.py` (70 cases) and counts only.
 
 Checked: the third refresh with the feed recount 187 passed, 0 failed; files-only audit 167 passed; rule tests 70;
 guard 34; Ask bar 316 of 316; every view loads with no errors and is 384 px wide in a 390 px frame.
+
+## 107. The views regrouped; one word for a question; a glossary; confidence labels (16 Nov 2026)
+
+The handoff's package 7, with the grouping and vocabulary the analyst agreed on 16 Nov (the handoff's grouping;
+"question" for "turn", a glossary and confidence labels; Modal and Web left as they are).
+
+- **Groups** (7a). Overview · **Demand** (Questions: what people ask, rising and falling, situations, categories and
+  topics; Volume and reach: volume, hours, script, language, and Reach, which moved here from Pages) · **Answer
+  quality** (Outcomes: outcomes, safety, response time, Before / after; Conversations; Wording and signposting) ·
+  **Content** (Register; Pages: pages cited, figures check, index lag, Click-throughs) · **Cost** (Summary, Services,
+  Models, and the Scenario planner, which was its own group). No card was removed. Every sub-view id is still a
+  sub-view or an alias (`reach` now resolves to Volume and reach), so old `#tab=` links and the Ask bar's links open the
+  right place and scroll to the part; the reader text that named "Usage › …" now names the new places.
+- **No view much past four screens** (7b). After a view renders, `foldPane` folds the blocks that start past four
+  screens behind one "Show N more sections" button, which names the first of them; a part link, a deep link or printing
+  unfolds the view. At 1440 × 900, in screens: Questions 18 → 5.0, Pages 14.5 → 3.8, Outcomes 10.2 → 5.2, Wording 8.9 →
+  4.8; Conversations 5.7, its early cards being tall. The order of the cards is the existing one, primary first.
+- **One word per thing** (7c). The reader reads "question" where the files say "turn": one pass over the text the page
+  shows (`readerWords`, on text nodes as they are added, titles and labels) and a chart plugin for dataset labels and
+  tooltips, never over code, file or column names. The Ask bar still understands "turn". 58 pinned answers changed on
+  purpose (the word only) and one definition was rewritten ("A question is one message a person sends and the answer to
+  it"); 316 of 316. A glossary (the "Glossary" button beside "Why" in the status bar) defines question, conversation,
+  scored, cited, partial, cited with no gap flagged, not found, clarification, mature, typed, chip, organic, settled,
+  provisional, by rule and inferred; it is the one place that keeps the files' word. The report's downloaded text is
+  built from strings, not the page, and still says "turn".
+- **Confidence labels** (7d). Each card whose figures rest on a rule carries a chip: "checked by a reader", "by rule,
+  not yet checked" or "inferred", from the `CONFIG` entries the labelling fills (`outcome_rules_measured`,
+  `intent_measured`, `derivation_measured`), so the labels change when the sheet is scored. Plain counts (questions,
+  cost, citations, clicks) carry none. The repeated caveat sentences were left as they are; the Data status panel stays
+  the full account.
+- The bug "Usage › Registeres", from a §103 replacement, is gone with the old names.
+
+Checked: every view in the new groups at 1440 and 390 px (384 px wide), no errors; the old links reach, clicks,
+impact, categories, projections and register land in the right group and scroll to their part; the fold and its button;
+no "turn" left in any view's text; the glossary centred, scrolling and keeping its own word; the fact sheet builds;
+files-only audit clean; Ask bar 316 of 316.

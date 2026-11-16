@@ -1368,6 +1368,19 @@ tr.event-row td{background:color-mix(in srgb,var(--amber) 6%,transparent)}
 .series-chips .sc-act{color:var(--muted)}
 .series-chips .sc-sep{width:1px;height:16px;background:var(--b2);margin:0 2px}
 .series-chips .sc-none{font-size:var(--t-2xs);color:var(--dim)}
+.folded{display:none!important}
+.fold-more{display:flex;flex-wrap:wrap;align-items:center;gap:8px;width:100%;margin:var(--sp-2) 0 var(--sp-4);padding:12px 16px;background:var(--s1);border:1px dashed var(--b2);border-radius:var(--r-md,10px);color:var(--acc);font:600 var(--t-sm)/1.3 'DM Sans',sans-serif;cursor:pointer;text-align:left}
+.fold-more:hover{border-style:solid}
+.fold-more:focus-visible{outline:2px solid var(--acc);outline-offset:2px}
+.fold-more .fold-names{font-weight:400;color:var(--muted);font-size:var(--t-xs)}
+@media print{.folded{display:revert!important}.fold-more{display:none!important}}
+.conf-chip{display:inline-flex;align-items:center;gap:4px;margin-left:8px;padding:1px 7px;border-radius:999px;border:1px solid var(--b2);font:500 var(--t-2xs)/1.6 'DM Sans',sans-serif;letter-spacing:0;text-transform:none;color:var(--muted);vertical-align:middle;white-space:nowrap}
+.conf-chip.rule{color:var(--amber);border-color:color-mix(in srgb,var(--amber) 40%,transparent)}
+.conf-chip.checked{color:var(--green);border-color:color-mix(in srgb,var(--green) 40%,transparent)}
+.conf-chip.inferred{color:var(--purple);border-color:color-mix(in srgb,var(--purple) 40%,transparent)}
+#glossary{margin:auto;max-height:85vh;overflow:auto;max-width:640px;width:calc(100vw - 32px);border:1px solid var(--b2);border-radius:12px;background:var(--s1);color:var(--text);padding:0}
+#glossary::backdrop{background:rgba(0,0,0,.5)}
+#glossary dl{margin:0;padding:0 20px 16px}#glossary dt{font-weight:600;margin-top:12px}#glossary dd{margin:2px 0 0;color:var(--muted);font-size:var(--t-sm);line-height:1.55}
 .cpq-spark{flex-shrink:0;margin-left:auto;opacity:.9}
 .cpq-refs{display:flex;gap:var(--sp-2);margin-bottom:var(--sp-5)}
 .cpq-refs>div{flex:1;background:var(--bg);border:1px solid var(--b2);border-radius:var(--r-md);padding:var(--sp-3)}
@@ -2036,9 +2049,10 @@ Date,Questions,Sessions
     <div class="tabs-wrap" id="tabs-wrap">
     <div class="tabs" role="tablist">
       <button class="tab-btn active" data-tab="home"        role="tab" aria-selected="true"><i data-lucide="layout-dashboard" class="i-sm"></i>Overview</button>
+      <button class="tab-btn"        data-tab="demand"      role="tab" aria-selected="false"><i data-lucide="help-circle" class="i-sm"></i>Demand</button>
+      <button class="tab-btn"        data-tab="answers"     role="tab" aria-selected="false"><i data-lucide="badge-check" class="i-sm"></i>Answer quality</button>
+      <button class="tab-btn"        data-tab="content"     role="tab" aria-selected="false"><i data-lucide="file-text"   class="i-sm"></i>Content</button>
       <button class="tab-btn"        data-tab="costs"       role="tab" aria-selected="false"><i data-lucide="wallet"      class="i-sm"></i>Cost</button>
-      <button class="tab-btn"        data-tab="usage"       role="tab" aria-selected="false"><i data-lucide="users"       class="i-sm"></i>Usage</button>
-      <button class="tab-btn"        data-tab="projections" role="tab" aria-selected="false"><i data-lucide="sparkles"    class="i-sm"></i>Scenario planner</button>
     </div>
     </div>
     <!-- In-pane sub-navigation for grouped tabs (Costs, Usage); hidden for single-view tabs -->
@@ -2047,7 +2061,10 @@ Date,Questions,Sessions
     <div id="pane-overview"    class="pane"></div>
     <div id="pane-timeline"    class="pane"></div>
     <div id="pane-breakdown"   class="pane"></div>
-    <div id="pane-usage"       class="pane"></div>
+    <div id="pane-usage"       class="pane"><div class="part-nav" id="partnav-usage"></div>
+      <section class="part" id="sec-usage"><div id="part-usage"></div></section>
+      <section class="part" id="sec-reach"><div class="part-head"><i data-lucide="globe" class="i-sm"></i>Reach<span class="part-head-note">AskCI beside the site's own traffic, by day</span></div><div id="part-reach"></div></section>
+    </div>
     <div id="pane-quality"     class="pane"><div class="part-nav" id="partnav-quality"></div>
       <section class="part" id="sec-quality"><div id="part-quality"></div></section>
       <section class="part" id="sec-impact"><div class="part-head"><i data-lucide="git-compare" class="i-sm"></i>Before / after<span class="part-head-note">28 days either side of each lasting change</span></div><div id="part-impact"></div></section>
@@ -2056,7 +2073,6 @@ Date,Questions,Sessions
     <div id="pane-pages"       class="pane"><div class="part-nav" id="partnav-pages"></div>
       <section class="part" id="sec-pages"><div id="part-pages"></div></section>
       <section class="part" id="sec-clicks"><div class="part-head"><i data-lucide="mouse-pointer-click" class="i-sm"></i>Click-throughs<span class="part-head-note">GA4 page views carrying AskCI's citation tags · consenting visitors only</span></div><div id="part-clicks"></div></section>
-      <section class="part" id="sec-reach"><div class="part-head"><i data-lucide="globe" class="i-sm"></i>Reach<span class="part-head-note">AskCI beside the site's own traffic, by day</span></div><div id="part-reach"></div></section>
     </div>
     <div id="pane-wording"     class="pane"></div>
     <div id="pane-register"    class="pane"></div>
@@ -2459,6 +2475,23 @@ function addDays(iso,n){return isoAdd(iso,n)}   // UTC throughout: local-time ar
 function weekStart(iso){const day=isoDow(iso);return isoAdd(iso,-(day===0?6:day-1))}   // Monday, UTC
 function shortMeter(k){return k.replace(/Glbl 1M Tokens|glbl Tokens|regional Tokens|1M Tokens/gi,'').replace(/cchd/gi,'cached').replace(/Inpt|Inp\b/gi,'In').replace(/outpt|Outp\b/gi,'Out').replace(/-glbl$/i,'').replace(/-$/,'').trim()}
 
+// One word per thing (brief §107, handoff 7c): a reader reads "question" where the files say "turn". Applied once, to
+// the text the page shows (text nodes as they are added, chart labels and tooltips), never to file or column names or
+// code; the Ask bar still understands "turn". Case is kept: Turn → Question, turns → questions.
+const READER_WORDS=[[/\b([Tt])urns\b/g,(m,t)=>t==='T'?'Questions':'questions'],[/\b([Tt])urn\b(?![-‐]?(?:over|out|on|off|up|down|around)\b)/g,(m,t)=>t==='T'?'Question':'question']];
+function readerText(t){if(typeof t!=='string'||!/[Tt]urn/.test(t))return t;let x=t;READER_WORDS.forEach(([re,f])=>{x=x.replace(re,f);});return x;}
+function readerWords(root){
+  if(!root)return;const skip=n=>n.parentElement&&n.parentElement.closest('script,style,textarea,code,input,[data-raw]');
+  if(root.nodeType===3){if(!skip(root)){const v=readerText(root.data);if(v!==root.data)root.data=v;}return;}
+  if(root.nodeType!==1)return;
+  const w=document.createTreeWalker(root,NodeFilter.SHOW_TEXT);let n;while((n=w.nextNode())){if(/[Tt]urn/.test(n.data)&&!skip(n)){const v=readerText(n.data);if(v!==n.data)n.data=v;}}
+  root.querySelectorAll&&root.querySelectorAll('[title],[aria-label]').forEach(e=>{['title','aria-label'].forEach(a=>{const v=e.getAttribute(a);if(v&&/[Tt]urn/.test(v))e.setAttribute(a,readerText(v));});});
+}
+new MutationObserver(ms=>ms.forEach(m=>m.addedNodes.forEach(readerWords))).observe(document.documentElement,{childList:true,subtree:true});
+document.addEventListener('DOMContentLoaded',()=>readerWords(document.body));
+const readerWordsPlugin={id:'readerWords',
+  beforeInit(c){(c.data.datasets||[]).forEach(d=>{if(d.label)d.label=readerText(d.label);});},
+  beforeTooltipDraw(c,args){const t=args.tooltip;if(!t)return;t.title=(t.title||[]).map(readerText);(t.body||[]).forEach(b=>{b.lines=b.lines.map(readerText);b.before=(b.before||[]).map(readerText);b.after=(b.after||[]).map(readerText);});t.footer=(t.footer||[]).map(readerText);t.afterBody=(t.afterBody||[]).map(readerText);}};
 // ═══ CHART PLUGINS ══════════════════════════════════════════════════
 const eventLinesPlugin={
   id:'eventLines',
@@ -2591,7 +2624,7 @@ const pointLabelPlugin={id:'pointLabels',afterDatasetsDraw(chart){
       if(b.x1<ca.left||b.x2>ca.right||b.y1<ca.top||b.y2>ca.bottom||hit(b))continue;
       placed.push(b);ctx.fillStyle=(o.colors&&o.colors[i])||C.muted;ctx.fillText(l,x,pt.y);break;}});
   ctx.restore();}};
-Chart.register(eventLinesPlugin,crosshairPlugin,dumbbellPlugin,bubbleLabelPlugin,refLinePlugin,windowShadePlugin,pointLabelPlugin);
+Chart.register(readerWordsPlugin,eventLinesPlugin,crosshairPlugin,dumbbellPlugin,bubbleLabelPlugin,refLinePlugin,windowShadePlugin,pointLabelPlugin);
 
 // ═══ CHART HELPERS ══════════════════════════════════════════════════
 const charts={};
@@ -3890,39 +3923,42 @@ document.querySelectorAll('#gran-group .pill').forEach(b=>b.addEventListener('cl
 const TAB_GROUPS=[
   // Overview first: outcomes before activity. One screen — headline, six tiles, What changed (service), two charts.
   {id:'home',       label:'Overview',    icon:'layout-dashboard', subs:[{id:'home',label:'Overview',icon:'layout-dashboard'}]},
-  {id:'costs',      label:'Cost',        icon:'wallet',      subs:[
+  // Regrouped around two questions (brief §107, handoff 7a): what the public asks for (Demand) and how well the service
+  // answers it (Answer quality), then the content behind the answers and what it costs. No card was removed; every old
+  // sub-view id is still a sub-view or an alias, so old #tab= links and the Ask bar's links still open the right place.
+  {id:'demand',     label:'Demand',         icon:'help-circle', when:()=>!!(DATA&&DATA.hasUsage), subs:[
+    {id:'asked',    label:'Questions',      icon:'help-circle', when:()=>partLive('asked')||partLive('categories')},
+    {id:'usage',    label:'Volume and reach',icon:'users'}]},
+  {id:'answers',    label:'Answer quality', icon:'badge-check', when:()=>!!(DATA&&DATA.hasUsage), subs:[
+    {id:'quality',  label:'Outcomes',       icon:'badge-check', when:()=>partLive('quality')||partLive('impact')},
+    {id:'convs',    label:'Conversations',  icon:'messages-square', when:()=>hasConv},
+    {id:'wording',  label:'Wording and signposting',icon:'text-search', when:()=>hasRules}]},
+  {id:'content',    label:'Content',        icon:'file-text',   when:()=>!!(DATA&&DATA.hasUsage), subs:[
+    {id:'register', label:'Register',       icon:'clipboard-list', when:()=>GAPS.length>0},
+    {id:'pages',    label:'Pages',          icon:'file-text',   when:()=>partLive('pages')||partLive('clicks')}]},
+  {id:'costs',      label:'Cost',           icon:'wallet',      subs:[
     {id:'overview', label:'Summary',  icon:'layout-grid'},
     {id:'breakdown',label:'Services', icon:'microscope'},
-    {id:'llm',      label:'Models',   icon:'bot'}]},
-  // Usage is optional: shown only when usage.csv is loaded. Six sub-views (brief §78): the four former views
-  // Before / after, Categories, Click-throughs and Reach are parts of Quality, Questions and Pages (PARTS below);
-  // their old ids still work as deep links and jump targets through SUB_ALIAS and open the right part.
-  {id:'usage',      label:'Usage',       icon:'users',       when:()=>!!(DATA&&DATA.hasUsage), subs:[
-    {id:'quality',  label:'Quality',       icon:'badge-check', when:()=>partLive('quality')||partLive('impact')},
-    {id:'asked',    label:'Questions',     icon:'help-circle', when:()=>partLive('asked')||partLive('categories')},
-    {id:'pages',    label:'Pages',         icon:'file-text',   when:()=>partLive('pages')||partLive('clicks')||partLive('reach')},
-    {id:'register', label:'Register',      icon:'clipboard-list', when:()=>GAPS.length>0},
-    {id:'convs',    label:'Conversations', icon:'messages-square', when:()=>hasConv},
-    {id:'wording',  label:'Answer wording',icon:'text-search', when:()=>hasRules},
-    {id:'usage',    label:'Volume',        icon:'users'}]},
-  {id:'projections',label:'Scenario planner', icon:'sparkles',    subs:[{id:'projections',label:'Scenario planner',icon:'sparkles'}]},
+    {id:'llm',      label:'Models',   icon:'bot'},
+    {id:'projections',label:'Scenario planner',icon:'sparkles'}]},
 ];
 const subAvailable=sb=>!sb.when||sb.when();
 // The parts of the merged views, in page order, with the availability rule each had as a sub-view.
-const PARTS={quality:['quality','impact'],asked:['asked','categories'],pages:['pages','clicks','reach']};
+const PARTS={quality:['quality','impact'],asked:['asked','categories'],pages:['pages','clicks'],usage:['usage','reach']};   // reach moved to Demand (brief §107)
 const PART_DEF={
   quality:   {label:'Quality',        icon:'badge-check', when:()=>!!(DATA&&DATA.usageQuality&&DATA.usageQuality.columns&&(DATA.usageQuality.columns.outcomes||DATA.usageQuality.columns.taxonomy))},
   impact:    {label:'Before / after', icon:'git-compare'},
   asked:     {label:'What people ask',icon:'help-circle', when:()=>hasIntent},
+  usage:     {label:'Volume and hours',icon:'users'},
   categories:{label:'Categories',     icon:'shapes',      when:()=>hasCats||hasCatOut},
   pages:     {label:'Pages',          icon:'file-text',   when:()=>hasPageViews&&hasCites},
   clicks:    {label:'Click-throughs', icon:'mouse-pointer-click', when:()=>hasClicks},
   reach:     {label:'Reach',          icon:'globe',       when:()=>hasGa4},
 };
 const partLive=p=>{const d=PART_DEF[p];return !!d&&(!d.when||d.when());};
-const SUB_ALIAS={impact:'quality',categories:'asked',clicks:'pages',reach:'pages'};   // old sub id → the view it lives in
+const SUB_ALIAS={impact:'quality',categories:'asked',clicks:'pages',reach:'usage'};   // old sub id → the view it lives in
 const partOf=id=>SUB_ALIAS[id]?id:null;
-function scrollToPart(p){const sec=document.getElementById('sec-'+p);if(sec)sec.scrollIntoView({behavior:'smooth',block:'start'});}
+function scrollToPart(p){const sec=document.getElementById('sec-'+p);if(!sec)return;const pane=sec.closest('.pane');if(pane&&sec.querySelector('.folded,.fold-more')||sec.classList.contains('folded'))unfoldPane(pane.id.slice(5));sec.scrollIntoView({behavior:'smooth',block:'start'});}
 const groupAvailable=g=>(!g.when||g.when())&&g.subs.some(subAvailable);
 function syncTabVisibility(){
   document.querySelectorAll('.tab-btn[data-tab]').forEach(b=>{const g=TAB_GROUPS.find(x=>x.id===b.dataset.tab);b.style.display=(g&&groupAvailable(g))?'':'none';});
@@ -5365,7 +5401,84 @@ function renderPane(id){
     live.forEach(p=>{try{one(p);}catch(e){console.error('render '+p,e);}});
   } else one(id);
   renderIcons();
+  const pane=document.getElementById('pane-'+id);if(pane){delete pane.dataset.unfolded;requestAnimationFrame(()=>{try{foldPane(id);confidenceLabels(id);}catch(e){console.error('fold '+id,e);}});}
 }
+
+// The glossary (brief §107): the words the page uses with a fixed meaning.
+const GLOSSARY=[
+  ['Question','One message a person sends AskCI and the answer to it (the files call it a turn).'],
+  ['Conversation','The questions from one visit, in order.'],
+  ['Scored','A question whose answer is cited, partial, not found, clarification or uncited; greetings, errors and out-of-scope answers are left out. Rates "of scored" use these.'],
+  ['Cited answer','An answer that cites at least one citizensinformation.ie page.'],
+  ['Partial','A cited answer that also says the bot could not find something. By rule on the wording.'],
+  ['Cited, no gap flagged','A cited answer that is not partial. Not "complete": a model that admits gaps more readily scores lower.'],
+  ['Not found','An answer with no citation that says the information could not be found.'],
+  ['Clarification','An answer that asks the person a question back.'],
+  ['Mature conversation','A conversation whose first question was 24 hours or more before the end of the data, so it has had time to finish.'],
+  ['Typed','A question the person typed: not a starter prompt (chip) and not a suggested follow-up.'],
+  ['Chip','A starter prompt or suggested follow-up the person clicked instead of typing.'],
+  ['Organic','A first question that was typed, not a starter prompt.'],
+  ['Settled','A cost day old enough (three days) that Azure is not expected to change it.'],
+  ['Provisional','A cost day inside the settlement window: its figure may still change.'],
+  ['By rule, not yet checked','Read by a written rule (outcomes, kinds of question, topics, figures), not yet compared with a person reading the same answers. The labelling sheet settles it.'],
+  ['Inferred','Modelled or allocated rather than counted: the scenario planner, cost allocated per question, forecasts.'],
+];
+function openGlossary(){let d=document.getElementById('glossary');
+  if(!d){d=document.createElement('dialog');d.id='glossary';d.setAttribute('data-raw','');   // the glossary names the files' word, so the reader-words pass skips it
+    d.setAttribute('aria-labelledby','glossary-title');
+    d.innerHTML=`<div class="kpi-modal-header" style="padding:16px 20px 0"><div class="kpi-modal-title-block"><div class="kpi-modal-title" id="glossary-title">Glossary</div><div class="kpi-modal-desc">The words this page uses with a fixed meaning.</div></div><button type="button" class="dq-open" onclick="document.getElementById('glossary').close()" aria-label="Close the glossary">Close</button></div><dl>${GLOSSARY.map(([k,v])=>`<dt>${k}</dt><dd>${v}</dd>`).join('')}</dl>`;
+    d.addEventListener('click',e=>{if(e.target===d)d.close();});document.body.appendChild(d);}
+  d.showModal();}
+
+// ── 7d: a confidence label on each card ──────────────────────────────────────────────────────────
+// Three states, from the CONFIG entries the labelling fills, so a label changes when the sheet is scored: checked by a
+// reader; by rule, not yet checked; inferred (modelled or allocated). Plain counts (questions, cost, citations, clicks)
+// carry no label. The Data status panel stays the full account.
+const CONF_RULES=[
+  [/scenario|projected|forecast|allocated|composition|run-rate|what if/i,'inferred'],
+  [/figure|signpost|organisation|situation|details mentioned|clarification asked|language|topic|subject|personal|register|rising|falling|kind of question|what people ask|asked for|named a|pages people name|wording|phrase|template|helpline|crisis|safety/i,'derived'],
+  [/outcome|cited|not found|not-found|partial|quality|scored|answer|conversation|era|before \/ after|latest confirmed change|what changed|setback|after each/i,'outcome'],
+];
+function confState(kind){
+  const m=kind==='outcome'?CONFIG.outcome_rules_measured:kind==='derived'?(CONFIG.derivation_measured||CONFIG.intent_measured):null;
+  if(kind==='inferred')return['inferred','inferred'];
+  return m&&(m.n||m.figure_n)?['checked','checked by a reader']:['rule','by rule, not yet checked'];
+}
+function confidenceLabels(id){
+  if(['overview','breakdown','llm'].includes(id))return;   // cost views: counts from the export
+  const pane=document.getElementById('pane-'+id);if(!pane)return;
+  pane.querySelectorAll('.card > .card-title, details.card > summary.card-title').forEach(t=>{
+    if(t.querySelector('.conf-chip'))return;
+    const txt=[...t.childNodes].filter(n=>n.nodeType===3).map(n=>n.textContent).join(' ');
+    const r=CONF_RULES.find(([re])=>re.test(txt))||(id==='projections'?[null,'inferred']:null);if(!r)return;
+    const[c,l]=confState(r[1]);const ch=document.createElement('span');ch.className='conf-chip '+c;ch.textContent=l;ch.title='Confidence: '+l+'. See the glossary and the Data status panel.';
+    const note=t.querySelector('.card-title-note');note?t.insertBefore(ch,note):t.appendChild(ch);
+  });
+}
+
+// Long views (brief §107, handoff 7b): a view's blocks are laid out in order; those that start past about four screens
+// are folded behind one "Show more" button, so the first screens carry the primary cards. A part link, a deep link or
+// printing unfolds the view; the choice to unfold holds until the view is rendered again.
+const FOLD_SCREENS=4;
+function foldPane(id){
+  const pane=document.getElementById('pane-'+id);if(!pane||pane.dataset.unfolded==='1')return;
+  pane.querySelectorAll('.fold-more').forEach(b=>b.remove());pane.querySelectorAll('.folded').forEach(e=>e.classList.remove('folded'));
+  const limit=FOLD_SCREENS*Math.max(window.innerHeight||900,700),top=pane.getBoundingClientRect().top;
+  const conts=[...pane.querySelectorAll(':scope > section.part, :scope')].flatMap(c=>c.matches('section.part')?[c.querySelector('[id^="part-"]')||c]:[]);
+  const blocks=(conts.length?conts:[pane]).flatMap(c=>[...c.children]).filter(e=>!e.matches('.part-nav,.part-head,script')&&e.offsetHeight>0);
+  const cut=blocks.findIndex(e=>e.getBoundingClientRect().top-top>limit);if(cut<1)return;
+  const rest=blocks.slice(cut);rest.forEach(e=>e.classList.add('folded'));
+  pane.querySelectorAll(':scope > section.part').forEach(sec=>{const c=sec.querySelector('[id^="part-"]')||sec;const kids=[...c.children].filter(e=>e.offsetHeight>0||e.classList.contains('folded'));if(kids.length&&kids.every(e=>e.classList.contains('folded')))sec.classList.add('folded');});
+  const names=[...new Set(rest.map(e=>{const t=e.querySelector('.card-title');return t?[...t.childNodes].filter(n=>n.nodeType===3).map(n=>n.textContent).join('').trim():'';}).filter(Boolean))];
+  const btn=document.createElement('button');btn.type='button';btn.className='fold-more';
+  btn.innerHTML=`<i data-lucide="chevrons-down" class="i-sm"></i><span>Show ${rest.length} more ${rest.length===1?'section':'sections'}</span><span class="fold-names">${escH(names.slice(0,4).join(' · '))}${names.length>4?' …':''}</span>`;
+  btn.onclick=()=>unfoldPane(id);
+  rest[0].parentElement.insertBefore(btn,rest[0].closest('section.part.folded')?null:rest[0]);
+  if(rest[0].closest('section.part.folded'))pane.appendChild(btn);
+  renderIcons();
+}
+function unfoldPane(id){const pane=document.getElementById('pane-'+id);if(!pane)return;pane.dataset.unfolded='1';pane.querySelectorAll('.folded').forEach(e=>e.classList.remove('folded'));pane.querySelectorAll('.fold-more').forEach(b=>b.remove());Object.values(charts).forEach(c=>{try{c.resize()}catch(e){}});}
+window.addEventListener('beforeprint',()=>document.querySelectorAll('.pane').forEach(p=>{if(p.id)unfoldPane(p.id.slice(5));}));
 
 // ═══ ANSWER WORDING (brief §53, step 1) ══════════════════════════════
 // Which phrase decided each outcome (the outcome rule id, recorded by redact_feed.py) and a wording fingerprint of the
@@ -6397,7 +6510,7 @@ function appendCategoryDetail(D){
     // Failed answers rarely cite a page, so they rarely carry a topic: the failures sit in Unknown, and a topic's own
     // failure rates are lower bounds. Comparing periods by topic must leave Unknown out (brief §48: after 14 Sep 2026
     // no-topic scored turns went from 571 to 2,100 a month; including them distorts any topic-mix adjustment).
-    h+=withQ?`<div class="reach-note"><i data-lucide="info" class="i-sm"></i><span><b>Failed answers usually have no topic from the answer; the question supplies one for most.</b> A not-found or clarification reply rarely cites a page, so ${num(unknown.Turns||0)} turns in this range (${tot?((unknown.Turns||0)/tot*100).toFixed(1):'0'}%) carry no topic from the answer; the question names a scheme for ${num(qtAll)} of them, shown in the marked columns above and in Usage › What people ask. The table below is by the answer’s topic only.</span></div>`:`<div class="reach-note"><i data-lucide="info" class="i-sm"></i><span><b>Failed answers usually have no topic.</b> A not-found or clarification reply rarely cites a page, so most of them sit in Unknown (${num(unknown.Turns||0)} turns in this range, ${tot?((unknown.Turns||0)/tot*100).toFixed(1):'0'}%). Each topic’s failure rates are therefore lower bounds, and when comparing periods by topic, leave the Unknown row out.</span></div>`;
+    h+=withQ?`<div class="reach-note"><i data-lucide="info" class="i-sm"></i><span><b>Failed answers usually have no topic from the answer; the question supplies one for most.</b> A not-found or clarification reply rarely cites a page, so ${num(unknown.Turns||0)} turns in this range (${tot?((unknown.Turns||0)/tot*100).toFixed(1):'0'}%) carry no topic from the answer; the question names a scheme for ${num(qtAll)} of them, shown in the marked columns above and in Demand › Questions. The table below is by the answer’s topic only.</span></div>`:`<div class="reach-note"><i data-lucide="info" class="i-sm"></i><span><b>Failed answers usually have no topic.</b> A not-found or clarification reply rarely cites a page, so most of them sit in Unknown (${num(unknown.Turns||0)} turns in this range, ${tot?((unknown.Turns||0)/tot*100).toFixed(1):'0'}%). Each topic’s failure rates are therefore lower bounds, and when comparing periods by topic, leave the Unknown row out.</span></div>`;
     h+=`<div class="card"><div class="card-title">Outcome share by attributed category<span class="card-title-note">each row sums to 100% of its turns · cells under the small-sample rule show a dash · sorted by volume</span></div>
       <div class="tbl-wrap"><table style="width:100%;border-collapse:collapse;min-width:760px"><thead><tr style="border-bottom:1px solid var(--b2)">${th('Category',false)}${th('Turns')}${OUT.map(([,l])=>th(l)).join('')}</tr></thead>
       <tbody>${byVol.map(([c,o])=>`<tr style="border-bottom:1px solid var(--b2)">${td(catLabel(CAT_ALIAS[c]||c),C.acc,false)}${td(num(o.Turns||0))}${OUT.map(([k,,col])=>cell(o,k,col)).join('')}</tr>`).join('')}
@@ -7068,7 +7181,7 @@ function renderAsked(D,S){
           <div class="card-title" style="font-size:var(--t-xs);margin-top:12px">By month</div>
           ${tbl2(th('Month',true)+th('Questions')+th('Share of typed')+th('Not found')+th('Partial')+th('Clarif.'),perMonth)}</div>
       </div>
-      <div class="card-title" style="font-size:var(--t-xs);margin-top:12px">Register rows for ${lab}<span class="card-title-note">${num(gaps.length)} · the register period · status on Usage › Registeres</span></div>
+      <div class="card-title" style="font-size:var(--t-xs);margin-top:12px">Register rows for ${lab}<span class="card-title-note">${num(gaps.length)} · the register period · status on Content › Register</span></div>
       ${tbl2(th('Kind',true)+th('Page or topic',true)+th('Asks')+th('Owner',true),gapRows)}
       ${(()=>{if(!hasOrgs)return'';const ag={};months.forEach(m=>(ORGSM[m]||[]).forEach(r=>{if(r.cat!==ASKED_CAT)return;const a=ag[r.org]||(ag[r.org]={Turns:0,NotFound:0,Partial:0});a.Turns+=r.Turns;a.NotFound+=r.NotFound;a.Partial+=r.Partial;}));const any=ag['(any)']||{Turns:0,NotFound:0},none=ag['(none)']||{Turns:0,NotFound:0},ext=ag['(external)']||{Turns:0,NotFound:0};const allA=any.Turns+none.Turns,nfA=any.NotFound+none.NotFound;const top=Object.entries(ag).filter(([o])=>!o.startsWith('(')).sort((a,b)=>b[1].Turns-a[1].Turns).slice(0,8);if(!top.length)return'';
         return `<div class="card-title" style="font-size:var(--t-xs);margin-top:12px">Organisations ${lab} answers name<span class="card-title-note">${allA?(ext.Turns/allA*100).toFixed(1):'—'}% of ${lab} answers name an outside body · ${nfA?(ext.NotFound/nfA*100).toFixed(1):'—'}% of its not-found answers do</span></div>`+tbl2(th('Organisation',true)+th('Answers')+th('In not found')+th('In partial'),top.map(([o,a])=>tr(td(escH(o),{left:true})+td(num(a.Turns))+td(num(a.NotFound))+td(num(a.Partial)))).join(''));})()}
@@ -7647,7 +7760,7 @@ function renderConvs(D,S){
 }
 
 function renderUsage(D,S){
-  const el=document.getElementById('pane-usage');
+  const el=document.getElementById('part-usage');
 
   if(!D.hasUsage){
     el.innerHTML=emptyState(
@@ -7863,7 +7976,7 @@ function usageOutcomesHTML(fr){
   return h;
 }
 // part: 'volume' (question types, source, script, hours), 'quality' (feedback, outcome by source and type, response
-// time, answer length, incidents, safety) or 'all'. Usage › Volume and Usage › Quality each take their half (brief §69).
+// time, answer length, incidents, safety) or 'all'. Demand › Volume and reach and Answer quality › Outcomes each take their half (brief §69).
 function usageDetailHTML(fr,part='all'){
   const cols=(DATA.usageQuality&&DATA.usageQuality.columns)||{};
   if(!fr.length)return'';
@@ -8804,7 +8917,7 @@ function renderCaveatStrip(){
   if(!parts.length){el.style.display='none';el.innerHTML='';if(line){line.style.display='none';line.innerHTML='';}return;}
   el.style.display='';el.innerHTML=`<i data-lucide="alert-triangle" class="i-sm" aria-hidden="true"></i><span>${parts.join(' ')} <span style="color:var(--muted)">One labelling sheet settles all three (brief §75).</span></span>`;
   if(line){const s=names.join(names.length>2?', ':' and ').replace(/, ([^,]*)$/,', and $1');
-    line.style.display='';line.innerHTML=`<i data-lucide="alert-triangle" class="i-sm" aria-hidden="true"></i><span><b>${s.charAt(0).toUpperCase()+s.slice(1)}</b> ${names.length>1?'are':'is'} read by rule and not yet checked by a reader.</span><button type="button" class="dq-open" onclick="openDqPanel('caveat-strip')">Why ›</button>`;}
+    line.style.display='';line.innerHTML=`<i data-lucide="alert-triangle" class="i-sm" aria-hidden="true"></i><span><b>${s.charAt(0).toUpperCase()+s.slice(1)}</b> ${names.length>1?'are':'is'} read by rule and not yet checked by a reader.</span><button type="button" class="dq-open" onclick="openDqPanel('caveat-strip')">Why ›</button><button type="button" class="dq-open" onclick="openGlossary()">Glossary</button>`;}
   renderIcons();
 }
 function outcomeCaveat(rows,compact){
@@ -10700,7 +10813,7 @@ init();
     AM('cpq_llm','Generation cost per turn','pence',{polarity:'down',cost:true,def:'Foundry generation cost divided by turns, over settled billing days with turns.'}),
     AM('cpq_tot','Allocated total cost per turn','pence',{polarity:'down',cost:true,def:'Allocated total billed cost divided by turns, over settled billing days with turns.'}),
     AM('runrate','Run rate, next 30 days','gbp',{cost:true,groupable:false,prior:false}),
-    AM('questions','Turns','count',{calc:{src:'row',n:'queries'},bySource:true,syn:[[/question|quer|asked|\bturns?\b/,590,'turns'],[/busy|busiest|quiet|quietest|slow|slowest|traffic|volume|footfall|usage|used|activity|demand/,630,'turns',/cost|spend|spent|£/]],def:'A turn is one question and its answer: one row of the QA feed. Days are Irish days.'}),
+    AM('questions','Turns','count',{calc:{src:'row',n:'queries'},bySource:true,syn:[[/question|quer|asked|\bturns?\b/,590,'turns'],[/busy|busiest|quiet|quietest|slow|slowest|traffic|volume|footfall|usage|used|activity|demand/,630,'turns',/cost|spend|spent|£/]],def:'A question is one message a person sends and the answer to it: one row of the QA feed (see the glossary). Days are Irish days.'}),
     AM('sessions','Conversations','count',{calc:{src:'row',n:'sessions'},bySource:true,syn:[[/session|conversation/,580,'conversations']],def:'A conversation is a conversation ID whose first turn falls on that day. AskCI has no login, so conversations are not people.'}),
     AM('qps','Turns per conversation','ratio',{syn:[[/\b(questions?|turns?) (per|in each|in a) conversation\b/,10,'questions per conversation'],[/questions? per session|per session|engagement/,400,'questions per session']],def:'Turns divided by conversations started, over the same days.'}),
     AM('organic','Organic first turns','count',{calc:{src:'ux',n:'organic'},syn:[[/organic first turns|organic demand|organic/,300,'organic first turns']],def:'First turns that are not starter prompts: questions people typed themselves.'}),
@@ -11496,7 +11609,7 @@ init();
     const perLbl=per.kind==='all'?'the full period':per.kind==='month'?per.label:months.map(fmtMonth).join(', ')+' (citations are monthly)';
     showCard(title+' · '+perLbl,
       `<b>${num(cit)}</b> citations in AskCI answers${older?` (and ${num(older)} to an older address of the same page)`:''}`+(per.kind!=='all'&&per.kind!=='month'?` · for ${months.map(fmtMonth).join(', ')}, since citations are monthly`:'')+(hasClicks?` · at least <b>${num(clk)}</b> click-throughs (GA4, consenting visitors only)`+(cit?`, ${(clk/cit*100).toFixed(1)} per 100 times cited`:''):'')+
-      (hasClicks&&cit>=100&&clk===0?`<div style="margin-top:6px">No click-throughs recorded although it was cited ${num(cit)} times: the link may redirect, so visits may be logged under another address (Usage › Click-throughs lists such pages).</div>`:'')+
+      (hasClicks&&cit>=100&&clk===0?`<div style="margin-top:6px">No click-throughs recorded although it was cited ${num(cit)} times: the link may redirect, so visits may be logged under another address (Content › Pages › Click-throughs lists such pages).</div>`:'')+
       (monthly?`<div style="margin-top:6px;color:var(--muted)">By month: ${monthly}</div>`:''),['most cited pages','top clicked pages'],'file-text');
     lastIntent=null;return true;
   }
@@ -11981,13 +12094,13 @@ init();
       const lq=' '+q+' ';
       // List questions the lists cannot answer: say so and point to where the answer is.
       if((tn.entity==='page'||tn.entity==='clickpage')&&/never clicked|not clicked|no clicks|per citation|per 100|click[- ]?through rate|\brate\b/.test(lq)){
-        showCard('Ranking pages by click-through rate is under Pages, in Click-throughs','The Ask bar lists pages by citations or by clicks. The Cited vs clicked pages table under Usage › Pages › Click-throughs ranks them by click-through rate and lists pages cited often but never clicked.',['most cited pages','top clicked pages']);
+        showCard('Ranking pages by click-through rate is under Pages, in Click-throughs','The Ask bar lists pages by citations or by clicks. The Cited vs clicked pages table under Content › Pages › Click-throughs ranks them by click-through rate and lists pages cited often but never clicked.',['most cited pages','top clicked pages']);
         const el=$('ask-answer');el.querySelector('.ask-know-body').insertAdjacentHTML('beforeend',' <button class="ask-action" data-act="sub" data-arg="clicks">Open Click-throughs</button>');lastIntent=null;return;}
       if(tn.entity==='category'&&(/\b(grow(ing|n|th)?|fastest|rose|rise|rising|increas\w*|fell|fall(ing)?|declin\w*|drop(ped)?|change[ds]?)\b/.test(lq)||/\b(vs\.?|versus|compared (to|with))\b/.test(lq))){
         const lm=(DATA.merged.filter(d=>d.queries>0).slice(-1)[0]||{}).date||'',m1=lm?MONFULL[+lm.slice(5,7)-1]:'October',m0=lm?MONFULL[(+lm.slice(5,7)+10)%12]:'September';
         showCard('Ranking topics by change isn’t available yet','Topic lists rank by volume or by a rate for one period. To see which topics moved, compare two periods:',['top topics in '+m0,'top topics in '+m1,'housing questions by month']);lastIntent=null;return;}
       if(tn.entity==='category'&&/click/.test(lq)){
-        showCard('Click-throughs by topic are under Pages, in Click-throughs','Usage › Pages › Click-throughs has a chart of click-throughs per 100 cited answers for each topic.',['click-through rate','top clicked pages']);
+        showCard('Click-throughs by topic are under Pages, in Click-throughs','Content › Pages › Click-throughs has a chart of click-throughs per 100 cited answers for each topic.',['click-through rate','top clicked pages']);
         const el=$('ask-answer');el.querySelector('.ask-know-body').insertAdjacentHTML('beforeend',' <button class="ask-action" data-act="sub" data-arg="clicks">Open Click-throughs</button>');lastIntent=null;return;}
       const fq=parseFilter(lq);if(fq)addNotice(`This list covers every source: lists can’t yet be filtered to ${fq.label}.`);
       if(parseHours(lq))addNotice('This list covers all hours: lists can’t be narrowed to hours of the day.');

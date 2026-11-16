@@ -3,7 +3,7 @@
   "q": "how many questions did AskCI get last month",
   "group": "mgmt",
   "expect": [
-   "21,718 turns"
+   "21,718 questions"
   ]
  },
  {
@@ -30,14 +30,14 @@
   "group": "mgmt",
   "expect": [
    "Showing the latest month’s summary.",
-   "21,538 TURNS"
+   "21,538 QUESTIONS"
   ]
  },
  {
   "q": "give me a summary of October",
   "group": "mgmt",
   "expect": [
-   "21,538 TURNS",
+   "21,538 QUESTIONS",
    "11,746 CONVERSATIONS"
   ]
  },
@@ -85,7 +85,7 @@
   "q": "questions this quarter",
   "group": "mgmt",
   "expect": [
-   "21,538 turns"
+   "21,538 questions"
   ],
   "not": [
    "136,752"
@@ -96,7 +96,7 @@
   "q": "questions in Q3",
   "group": "mgmt",
   "expect": [
-   "57,863 turns"
+   "57,863 questions"
   ],
   "not": [
    "136,752"
@@ -107,7 +107,7 @@
   "q": "questions last fortnight",
   "group": "mgmt",
   "expect": [
-   "12,889 turns"
+   "12,889 questions"
   ],
   "not": [
    "136,752"
@@ -159,7 +159,7 @@
   "group": "mgmt",
   "expect": [
    "Counting weekends only.",
-   "19,421 turns"
+   "19,421 questions"
   ],
   "not": [
    "136,752"
@@ -171,7 +171,7 @@
   "group": "mgmt",
   "expect": [
    "Counting Mondays only.",
-   "23,592 turns"
+   "23,592 questions"
   ],
   "not": [
    "136,752"
@@ -264,7 +264,7 @@
   "q": "what happened on 27 January",
   "group": "quality",
   "expect": [
-   "168 TURNS"
+   "168 QUESTIONS"
   ]
  },
  {
@@ -301,7 +301,7 @@
   "q": "how many answers took over 30 seconds",
   "group": "quality",
   "expect": [
-   "2.0% turns"
+   "2.0% questions"
   ]
  },
  {
@@ -378,7 +378,7 @@
   "q": "housing questions by month",
   "group": "content",
   "expect": [
-   "turns in Housing by month"
+   "questions in Housing by month"
   ]
  },
  {
@@ -496,8 +496,8 @@
   "q": "topics on budget day",
   "group": "content",
   "expect": [
-   "Social Welfare · 761 turns",
-   "Money and Tax · 449 turns"
+   "Social Welfare · 761 questions",
+   "Money and Tax · 449 questions"
   ]
  },
  {
@@ -511,7 +511,7 @@
   "q": "questions about moving country last month",
   "group": "content",
   "expect": [
-   "1,499 turns"
+   "1,499 questions"
   ]
  },
  {
@@ -682,7 +682,7 @@
   "q": "cost per question by month",
   "group": "cost",
   "expect": [
-   "allocated total cost per turn by month",
+   "allocated total cost per question by month",
    "Jan'26 7.44p"
   ]
  },
@@ -704,21 +704,21 @@
   "q": "how many questions since launch",
   "group": "comms",
   "expect": [
-   "114,922 turns"
+   "114,922 questions"
   ]
  },
  {
   "q": "questions on budget day",
   "group": "comms",
   "expect": [
-   "2,213 turns"
+   "2,213 questions"
   ]
  },
  {
   "q": "questions after the phone line closed on budget day",
   "group": "comms",
   "expect": [
-   "24.5% turns",
+   "24.5% questions",
    "542 of 2,213"
   ]
  },
@@ -726,7 +726,7 @@
   "q": "what share of questions come when the phone line is closed",
   "group": "comms",
   "expect": [
-   "35.1% turns"
+   "35.1% questions"
   ]
  },
  {
@@ -776,7 +776,7 @@
   "group": "comms",
   "expect": [
    "The data is daily, so this shows the latest full day.",
-   "1,104 turns"
+   "1,104 questions"
   ],
   "not": [
    "136,752"
@@ -787,14 +787,14 @@
   "q": "Questions in sept",
   "group": "phrasing",
   "expect": [
-   "21,718 turns"
+   "21,718 questions"
   ]
  },
  {
   "q": "qs last wk",
   "group": "phrasing",
   "expect": [
-   "6,679 turns"
+   "6,679 questions"
   ],
   "note": "windows end on the question data's last day (22 Oct), not the billing day (review step 1)"
  },
@@ -802,7 +802,7 @@
   "q": "how many querys in august",
   "group": "phrasing",
   "expect": [
-   "18,155 turns"
+   "18,155 questions"
   ]
  },
  {
@@ -839,28 +839,28 @@
   "q": "turns yesterday",
   "group": "phrasing",
   "expect": [
-   "1,104 turns"
+   "1,104 questions"
   ]
  },
  {
   "q": "How many questions between 1 and 15 October",
   "group": "phrasing",
   "expect": [
-   "14,859 turns"
+   "14,859 questions"
   ]
  },
  {
   "q": "questions from 1st September to 30th September",
   "group": "phrasing",
   "expect": [
-   "21,718 turns"
+   "21,718 questions"
   ]
  },
  {
   "q": "questions in the first week of October",
   "group": "phrasing",
   "expect": [
-   "7,433 turns"
+   "7,433 questions"
   ]
  },
  {
@@ -875,7 +875,7 @@
   "group": "phrasing",
   "expect": [
    "Counting weekends only.",
-   "3,299 turns"
+   "3,299 questions"
   ],
   "not": [
    "21,538 turns"
@@ -920,7 +920,7 @@
   "group": "multi",
   "expect": [
    "11,590 conversations",
-   "21,718 turns"
+   "21,718 questions"
   ],
   "not": [
    "This answers"
@@ -944,7 +944,7 @@
   "group": "multi",
   "expect": [
    "This answers one measure; ask “cost by month” for the other.",
-   "turns by month"
+   "questions by month"
   ]
  },
  {
@@ -970,7 +970,7 @@
   "group": "multi",
   "expect": [
    "Counting weekends only.",
-   "6,675 turns"
+   "6,675 questions"
   ],
   "not": [
    "citations in AskCI answers"
@@ -1068,7 +1068,7 @@
   "group": "follow",
   "expect": [
    "Following on from “questions in september”.",
-   "18,155 turns"
+   "18,155 questions"
   ]
  },
  {
@@ -1098,7 +1098,7 @@
   "q": "how many questions since January",
   "group": "verified",
   "expect": [
-   "136,752 turns"
+   "136,752 questions"
   ]
  },
  {
@@ -1152,7 +1152,7 @@
   "q": "top topics",
   "group": "verified",
   "expect": [
-   "Social Welfare · 49,999 turns",
+   "Social Welfare · 49,999 questions",
    "39.7% of questions with a topic"
   ]
  },
@@ -1160,7 +1160,7 @@
   "q": "what do people ask about most",
   "group": "verified",
   "expect": [
-   "Social Welfare · 49,999 turns",
+   "Social Welfare · 49,999 questions",
    "39.7% of questions with a topic"
   ]
  },
@@ -1168,14 +1168,14 @@
   "q": "out of hours share",
   "group": "verified",
   "expect": [
-   "35.1% turns"
+   "35.1% questions"
   ]
  },
  {
   "q": "questions when the phone line is closed",
   "group": "verified",
   "expect": [
-   "35.1% turns"
+   "35.1% questions"
   ]
  },
  {
@@ -1247,21 +1247,21 @@
   "q": "budget week questions",
   "group": "verified",
   "expect": [
-   "8,323 turns"
+   "8,323 questions"
   ]
  },
  {
   "q": "questions 5 to 11 October",
   "group": "verified",
   "expect": [
-   "8,323 turns"
+   "8,323 questions"
   ]
  },
  {
   "q": "money and tax questions on budget day",
   "group": "verified",
   "expect": [
-   "449 turns"
+   "449 questions"
   ]
  },
  {
@@ -1411,14 +1411,14 @@
   "q": "questions in October",
   "group": "verified",
   "expect": [
-   "21,538 turns"
+   "21,538 questions"
   ]
  },
  {
   "q": "how many questions about housing in October",
   "group": "verified",
   "expect": [
-   "2,236 turns"
+   "2,236 questions"
   ]
  },
  {
@@ -1530,7 +1530,7 @@
   "q": "what is meant by out of hours share",
   "group": "definitions",
   "expect": [
-   "Out-of-hours share DEFINITION Turns asked"
+   "Out-of-hours share DEFINITION Questions asked"
   ]
  },
  {
@@ -1701,7 +1701,7 @@
  {
   "q": "give me a summary of September",
   "expect": [
-   "21,718 TURNS",
+   "21,718 QUESTIONS",
    "88.0% REACHED A CITED ANSWER",
    "+2.9 pts"
   ],
@@ -1740,7 +1740,7 @@
  {
   "q": "peak hourly load",
   "expect": [
-   "216 turns in the busiest single hour",
+   "216 questions in the busiest single hour",
    "6 Oct, 15:00 to 16:00"
   ],
   "group": "mgmt"
@@ -1748,7 +1748,7 @@
  {
   "q": "most questions in one hour in september",
   "expect": [
-   "121 turns",
+   "121 questions",
    "15 Sep, 13:00 to 14:00"
   ],
   "group": "mgmt"
@@ -1799,7 +1799,7 @@
  {
   "q": "questions last week",
   "expect": [
-   "6,679 turns",
+   "6,679 questions",
    "“Last week” is read as the last 7 days, 16 Oct to 22 Oct"
   ],
   "not": [
@@ -1812,7 +1812,7 @@
  {
   "q": "questions in the last 2 weeks",
   "expect": [
-   "12,889 turns",
+   "12,889 questions",
    "vs 25 Sep – 8 Oct"
   ],
   "group": "review",
@@ -1832,7 +1832,7 @@
  {
   "q": "questions in September",
   "expect": [
-   "21,718 turns",
+   "21,718 questions",
    "▲ up 20% vs August"
   ],
   "not": [
@@ -1889,7 +1889,7 @@
  {
   "q": "questions week of 5 October",
   "expect": [
-   "8,323 turns",
+   "8,323 questions",
    "5 Oct to 11 Oct"
   ],
   "not": [
@@ -1901,7 +1901,7 @@
  {
   "q": "questions in week 40",
   "expect": [
-   "5,299 turns",
+   "5,299 questions",
    "28 Sep to 4 Oct"
   ],
   "not": [
@@ -1913,7 +1913,7 @@
  {
   "q": "questions in the first half of the year",
   "expect": [
-   "57,351 turns",
+   "57,351 questions",
    "January to June 2026"
   ],
   "not": [
@@ -1925,7 +1925,7 @@
  {
   "q": "questions on 6/10",
   "expect": [
-   "2,213 turns",
+   "2,213 questions",
    "6 Oct"
   ],
   "not": [
@@ -2210,7 +2210,7 @@
  {
   "q": "how much does a question cost",
   "expect": [
-   "allocated total cost per turn"
+   "allocated total cost per question"
   ],
   "not": [
    "136,752 turns overall"
@@ -2344,7 +2344,7 @@
  {
   "q": "organic first turns in September",
   "expect": [
-   "10,850 organic first turns"
+   "10,850 organic first questions"
   ],
   "not": [
    "isn’t split by"
@@ -2593,7 +2593,7 @@
   "note": "copy carries the table",
   "expect": [
    "| Sep'26 | 21,718 |",
-   "Definition: A turn is one question and its answer",
+   "Definition: A question is one message a person sends and the answer to it",
    "#ask=questions%20by%20month"
   ],
   "not": [
@@ -2609,7 +2609,7 @@
   ],
   "note": "fact sheet (brief §48 Phase A step 3)",
   "expect": [
-   "21,718 turns in Sep'26",
+   "21,718 questions in Sep'26",
    "up 20% vs August"
   ]
  },
@@ -2632,7 +2632,7 @@
   ],
   "note": "fact sheet (brief §48 Phase A step 3)",
   "expect": [
-   "724 average turns in Sep'26"
+   "724 average questions in Sep'26"
   ]
  },
  {
@@ -2727,7 +2727,7 @@
   ],
   "note": "fact sheet (brief §48 Phase A step 3)",
   "expect": [
-   "37.5% turns outside phone-service hours in Sep'26"
+   "37.5% questions outside phone-service hours in Sep'26"
   ]
  },
  {
@@ -2765,7 +2765,7 @@
   ],
   "note": "fact sheet (brief §48 Phase A step 3)",
   "expect": [
-   "2.08p generation cost per turn in Sep'26"
+   "2.08p generation cost per question in Sep'26"
   ]
  },
  {
@@ -2776,8 +2776,8 @@
   ],
   "note": "fact sheet (brief §48 Phase A step 3)",
   "expect": [
-   "Top 10 categories by turns in Sep'26",
-   "1 Social Welfare · 7,868 turns"
+   "Top 10 categories by questions in Sep'26",
+   "1 Social Welfare · 7,868 questions"
   ]
  },
  {
@@ -2862,7 +2862,7 @@
   "group": "quality",
   "expect": [
    "68.5% cited, no gap flagged",
-   "14,238 of 20,790 scored turns"
+   "14,238 of 20,790 scored questions"
   ]
  },
  {
@@ -2870,7 +2870,7 @@
   "group": "quality",
   "expect": [
    "68.5% cited, no gap flagged",
-   "14,238 of 20,790 scored turns"
+   "14,238 of 20,790 scored questions"
   ]
  },
  {
