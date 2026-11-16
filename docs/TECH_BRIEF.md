@@ -1,15 +1,15 @@
 # AskCI Cost and Usage Intelligence: technical brief for audit
 
-Prepared 24 October 2026 at commit `e17abd1` (177 commits); counts and versions refreshed after the audit response of the same day (brief §76, commit 165b383). This is the current description of the whole system for
+Prepared 24 October 2026 at commit `e17abd1` (177 commits); counts and versions refreshed after the audit response of the same day (brief §76, commit 165b383); brought up to date on 16 November 2026 at commit `76c25be` (213 commits, brief §99). This is the current description of the whole system for
 an agent or a person auditing it. It is written to be read on its own. The dated journal of every decision is
-`DASHBOARD_REVISION_BRIEF.md` (§1–§76); this brief points into it rather than repeating it. Three older documents in
-`brief/` describe the system as it was in September and are superseded where they differ.
+`docs/DASHBOARD_REVISION_BRIEF.md` (§1–§99); this brief points into it rather than repeating it. Three older documents in
+`docs/brief/` describe the system as it was in September and are superseded where they differ.
 
 ## 1. What the system is
 
 A public, static analytics dashboard for AskCI, the Citizens Information Board's chatbot for Irish public services,
 built and run by one analyst. It answers four questions about the service: what it costs, how much it is used, how
-well it answers, and what people ask that it cannot answer. It is one HTML page (`index.html`, 11,228 lines, vanilla
+well it answers, and what people ask that it cannot answer. It is one HTML page (`index.html`, 12,034 lines, vanilla
 JavaScript) reading committed CSV and JSON files, deployed by GitHub Pages at https://rglral.github.io/AskCI-stats/.
 Nothing runs on a server; every number on the page is computed in the browser from the files in this repository.
 
@@ -18,8 +18,8 @@ The analyst's machine runs a local pipeline that turns three private inputs into
 | Input | Holds | Kept where |
 |---|---|---|
 | AskCI QA feed exports (`exports/qa-feed_*.csv`) | every conversation turn: the citizen's question, the bot's answer, citations, timestamps, feedback | analyst's machine only, git-ignored |
-| Azure Cost Management export (`costs.csv`) | billed cost per meter per day | committed, with the subscription ID and the resource names redacted to role labels |
-| GA4 exports (`ga4/*.csv`) | site sessions, searches, and click-throughs from AskCI citation links | committed, aggregate |
+| Azure Cost Management export (`data/costs.csv`) | billed cost per meter per day | committed, with the subscription ID and the resource names redacted to role labels; one uploaded to the repo root is moved into `data/` by the deploy |
+| GA4 exports (`data/ga4/*.csv`) | site sessions, searches, and click-throughs from AskCI citation links | committed, aggregate |
 
 ## 2. The governing rules
 
@@ -113,7 +113,7 @@ redaction refuses to run if the lexicon's does not match.
 
 ## 5. The published data files
 
-All are counts or public addresses. The audit's schema table (`tools/audit_data.py`, `SCHEMA`) is the authoritative
+All live in `data/` (brief §97) and are counts or public addresses. The audit's schema table (`tools/audit_data.py`, `SCHEMA`) is the authoritative
 column list; this is the map.
 
 **Volume and cost.** `usage.csv` (day: questions, sessions, outcomes, errors by source and chip, rules version),
@@ -126,8 +126,9 @@ column list; this is the map.
 
 **Pages.** `citations-monthly.csv` (page, month: citations, answers, partial, dislikes), `citations-intent-monthly.csv`,
 `pages-cited.csv` (page: first and last cited, LastMod, answers after LastMod), `asked-pages-monthly.csv` and
-`asked-pages-weekly.csv` (pages the question named, and whether the answer cited them), `ga4/clicks-daily.csv`,
-`ga4/clicks-pages-daily.csv`.
+`asked-pages-weekly.csv` (pages the question named, and whether the answer cited them), `cited-not-found.csv` (cited
+addresses that do not exist on the site: first and last cited, citations, when checked; brief §96, written by
+`tools/make_not_found_pages.py` from the page-text fetch log), `ga4/clicks-daily.csv`, `ga4/clicks-pages-daily.csv`.
 
 **What people ask (the question side).** `question-intent-daily.csv` (intent × chip flag, with form flags and the
 named-scheme cuts), `question-topics-daily.csv` (category the question named, for turns whose answer carried none),
@@ -215,7 +216,8 @@ dated by the fixed wording, 4 candidate chip changes, launches and observed chan
 - **The Ask bar**: a natural-language question answered from the loaded files, entirely in the browser; no API key,
   no network. Entities include day, week, month, category, page, prompt, journey, kinds of question, pages people
   named, and subjects within a category; a quick-list and a command palette sit beside it.
-- **Browser storage**: theme, range, personal event markers, a spend target; nothing else.
+- **Browser storage**: theme, range, personal event markers, a spend target, and which series are switched off on each
+  chart (`askci-series-v1`, never in the URL); nothing else.
 - **Outcomes over time** (brief §79): the Quality view opens with daily cited and not-found rate charts; a chosen
   confirmed event's 28-day windows are shaded with each window's pooled rate and a day-level 95% interval computed in the
   browser (`dayBootstrap()`, 2,000 seeded resamples of the days, the same windows as `tools/change_report.py`). The
@@ -238,8 +240,22 @@ dated by the fixed wording, 4 candidate chip changes, launches and observed chan
   the bar (brief §87), not per card. The cost KPI row above the group tabs shows only on Cost sub-views.
 - **The data status bar and panel** (brief §87): under the header, two lines: data freshness with a count of amber
   items, and the caveat in one sentence; each opens the Data status panel, which lists every version string the files
-  carry, the join window, rows de-duplicated and excluded, and the caveats ("unvalidated from 14 Sep", "agreement not
+  carry, the join window, rows de-duplicated and excluded, the questions and costs end dates when they differ (brief §95), and the caveats ("unvalidated from 14 Sep", "agreement not
   yet measured"), amber items first, each with its explanation in visible text. Printing shows the panel in full.
+- **Monthly cost** (brief §98): the monthly billed total and generation bars (`monthlyCostChart`) sit on Cost › Summary
+  under the daily timeline as well as on Services; every month labelled, months follow the range, never scoped by
+  service. Billed total is the figure to compare with Azure Cost Management's own monthly view; checked against the
+  developers' chart on 5 Nov 2026 (every month within about £10 except June, where two part-settled days in the export
+  leave ours about £55 short until a fresh export).
+- **Series chips** (brief §99): `mkChart` gives every chart with two or more named series a row of chips
+  (`seriesChips`), one per series in its colour; a click hides or shows it, and four or more series add All and Clear.
+  They replace the Chart.js legend. On stacked charts the tooltip adds "Shown: X of Y" while a series is hidden
+  (`seriesFooter`, set before the chart is built), and a second value axis hides when all its series are off. Scatter
+  charts, the structural ones (funnel plot, movers, click scatter and strip) and the Ask bar's chart are left out
+  (`SERIES_SKIP`). Series colours are distinct within each chart (5.4 teal beside chat-latest green, Storage pink beside
+  Foundry Models blue).
+- **Cited addresses not on the site** (brief §96): a Data status item, amber only when one was cited in the last 28
+  days, and a line on the era scorecard counting them by model era; no cause is given.
 - **The build stamp**: a meta tag `askci-build` the workflow sets to the page commit, the data commit and the deployed
   commit (`build=`); the "copy with definition" footer carries the first two, and every data fetch is keyed on the
   third (`dataURL()`, brief §83), so files are cached between deploys and refetched after one.
@@ -248,13 +264,13 @@ dated by the fixed wording, 4 candidate chip changes, launches and observed chan
 
 | Check | Where | Count at this commit |
 |---|---|---|
-| Data audit, files-only (schema, cross-file sums, bounds, floors, versions, lexicon, register, canary, privacy sweep, cost labels) | `tools/audit_data.py --files-only`, run by the workflow | 157 pass |
+| Data audit, files-only (schema, cross-file sums, bounds, floors, versions, lexicon, register, canary, privacy sweep, cost labels) | `tools/audit_data.py --files-only`, run by the workflow | 161 pass, 0 fail, 23 notes |
 | Data audit with the feed recount | `tools/audit_data.py DIR`, local | more checks; run before each refresh is committed |
-| Ask bar regression | `tools/test_ask.py`, headless Chrome, data frozen at `tests/ask_fixture_ref` (54dc360); fails without a browser unless `--allow-skip` | 311 pass |
+| Ask bar regression | `tools/test_ask.py`, headless Chrome, data frozen at `tests/ask_fixture_ref` (54dc360), served from `data/`; 4 minutes an attempt and one retry on a fresh profile (brief §97); fails without a browser unless `--allow-skip` | 311 pass |
 | Feed-text guard | `tools/hooks/test_guard.py` | 34 cases |
 | Refresh manifest | `VERSIONS.json`, written by `tools/refresh.py`; the audit checks its versions against the files and its aggregate hashes against the committed files | one per refresh |
 | Pre-commit | `tools/hooks/pre-commit` (`git config core.hooksPath tools/hooks`): canary, costs redaction, Ask bar test on the staged page | |
-| Deploy | `.github/workflows/publish.yml`: redact costs, audit, test, stamp, fact sheet, change reports, incidents, findings, register, Pages | every step green at `e17abd1` |
+| Deploy | `.github/workflows/publish.yml`: move a root costs.csv into `data/`, redact costs, audit, test, stamp, fact sheet, change reports, incidents, findings, register, Pages | every step green at `76c25be` |
 
 Visual checks are screenshots from headless Chrome against a local `http.server`; the headless `--dump-dom` path
 does not render the panes.
@@ -275,7 +291,10 @@ bound are inferences and the page says so.
 - The outcome rules, intents and topics are rules written by the analyst, pruned by counts, not yet reader-checked.
 - The page snapshots began on 24 October; the back history is checkable only against pages unchanged since the answer,
   so half of all figures are unverifiable (78% in January, 29% in October) and the share falls from here.
-- 186 pages the answers have cited now return 404; nearly all those citations are from January and February.
+- 186 addresses the answers have cited do not exist on the site (404, not in the sitemap; 314 of 211,054 citations),
+  183 of them in the gpt-4o era; listed in `cited-not-found.csv` (brief §96).
+- The cost export runs from 1 January 2026 (the service's December 2025 costs, about £145, are not in it), and June is
+  about £55 short: 22 and 30 June were exported before they had settled. A fresh export covering June corrects it (§98).
 - The clarification "asks" classes and the situation classes are regex; the household and work classes carry most of
   the "asked for what was given" signal and are the ones to check first.
 - The Ask bar test's frozen data means new files are absent in tests until the reference moves; it is moved on purpose.

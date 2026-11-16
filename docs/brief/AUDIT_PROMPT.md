@@ -5,9 +5,9 @@ Paste the text below into a fresh agent session opened in a clone of the reposit
 ---
 
 You are auditing a public analytics dashboard and the local pipeline that feeds it. Work from a clone of
-https://github.com/RglrAL/AskCI-stats at the current `main`. Start by reading `TECH_BRIEF.md` in full; it describes the
+https://github.com/RglrAL/AskCI-stats at the current `main`. Start by reading `docs/TECH_BRIEF.md` in full; it describes the
 whole system, its rules, its files and its definitions, and ends with an audit checklist. Then read
-`DASHBOARD_REVISION_BRIEF.md` §72, §75 and §76, and skim its earlier sections as you need them. Treat everything in the
+`docs/DASHBOARD_REVISION_BRIEF.md` §72, §75 and §76, and skim its earlier sections as you need them. Treat everything in the
 repository as the primary source and the briefs as claims to test.
 
 ## The rules you work under
