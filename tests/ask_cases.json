@@ -2813,7 +2813,7 @@
   "q": "answers not what the question needed last month",
   "group": "asked",
   "expect": [
-   "answers not what the question needed",
+   "typed questions with no cited answer",
    "reader agreement not yet measured"
   ]
  },

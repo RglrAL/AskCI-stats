@@ -158,7 +158,12 @@ INTENT_VERSION = "2026.10.24-2"
 #                 or option ("which scheme / one / of these / type of", "do you mean", "are you asking about"), not every
 #                 "could you clarify" or "more detail"; a clarification naming no class counts as (none), shown as
 #                 unspecified. Work status "unemployed" needs the first person for "not working" (not "my heating is not working")
-DERIVATION_VERSION = "2026.11.16-1"
+#   2026.11.16-2  (brief §100, handoff 0h and 0i) figures by kind: matched / unmatched / unverifiable for euro amounts,
+#                 percentages and years separately (nine Answer Figures <kind> columns), since a year or a small number
+#                 matches almost any page; generic aliases (lexicon 2026.11.16-1): a question whose page match comes only
+#                 from a subject word ("income tax", "self employed", "pension") is marked Query Page Generic and left out
+#                 of the named-page files
+DERIVATION_VERSION = "2026.11.16-2"
 
 # Layer 2 (brief §75): situation entities read from the question, published as classes only (a county name, an age band,
 # a household flag, a work status, a payment-on flag, the year asked about, a shape flag); the classes a clarification
@@ -268,22 +273,34 @@ def _snapshots(key):
     return _SNAPS[key]
 
 
+FIG_KIND = {"e": "Euro", "p": "Percent", "y": "Year"}
+FIG_KIND_COLS = ["Answer Figures " + k + " " + r for k in ("Euro", "Percent", "Year") for r in ("Matched", "Unmatched", "Unverifiable")]
+
+
 def check_figures(answer, citations, day):
     """(figures, matched, unmatched, unverifiable) for one answer on one day (ISO date)."""
+    k = check_figures_by_kind(answer, citations, day)
+    m, u, v = (sum(x[i] for x in k.values()) for i in range(3))
+    return m + u + v, m, u, v
+
+
+def check_figures_by_kind(answer, citations, day):
+    """{"Euro" | "Percent" | "Year": (matched, unmatched, unverifiable)} for one answer on one day (brief §100)."""
+    out = {n: [0, 0, 0] for n in FIG_KIND.values()}
     figs = figures_of(answer)
-    if not figs: return 0, 0, 0, 0
+    if not figs: return {n: tuple(x) for n, x in out.items()}
     pages = {k for k in (_snap_key(u) for u in FIG_URL.findall(citations or "")) if k}
     snaps = []; unverifiable = not pages
     for k in pages:
         usable = [s for lm, s in _snapshots(k) if lm != "unknown" and lm <= day]
         if usable: snaps.append(usable[-1])
         else: unverifiable = True
-    m = u = v = 0
     for f in figs:
-        if any(f in s or ("n", f[1]) in s for s in snaps): m += 1
-        elif unverifiable: v += 1
-        else: u += 1
-    return len(figs), m, u, v
+        x = out[FIG_KIND[f[0]]]
+        if any(f in s or ("n", f[1]) in s for s in snaps): x[0] += 1
+        elif unverifiable: x[2] += 1
+        else: x[1] += 1
+    return {n: tuple(x) for n, x in out.items()}
 
 # Organisations an answer can signpost to (brief §75, response layer 3): public bodies, helplines and the service's own
 # channels, matched by name in the answer text. The ids and counts are published; the measure is whether a not-found or
@@ -455,14 +472,20 @@ def intent_of(q):
 
 def topic_of(q):
     """(page url or '', category or '', schemes named) from the longest lexicon phrase the question contains."""
+    return page_match(q)[:3]
+
+
+def page_match(q):
+    """topic_of plus a generic flag (brief §100): True when the phrase that gave the page is a subject word the lexicon
+    marks generic ("income tax", "self employed"), so the question mentions a subject rather than naming a page."""
     L = lexicon()
-    if not L["rx"]: return "", "", 0
+    if not L["rx"]: return "", "", 0, False
     nq = norm_words(q).replace("'", "")
     hits = [m.group(1) for m in L["rx"].finditer(nq)]
-    if not hits: return "", "", 0
+    if not hits: return "", "", 0, False
     best = max(hits, key=len); e = L["phrases"][best]
     pages = {L["phrases"][h]["path"] for h in hits if L["phrases"][h].get("url")}
-    return e.get("url") or "", e.get("category") or "", len(pages)
+    return e.get("url") or "", e.get("category") or "", len(pages), bool(e.get("generic"))
 
 
 def safety_flags(q):
@@ -552,7 +575,7 @@ def redact(src, dst):
                                                           "Outcome Rule", "Style Version"] + list(STYLE) + ["Answer Signoff", "Safety Version"] + list(SAFETY) + ["Query Theme",
                                                           "Intent Version", "Query Intent", "Query Form", "Query Page", "Query Category", "Query Schemes",
                                                           "Derivation Version", "Query Topic", "Category Source", "Answer Templates", "Answer Orgs",
-                                                          "Answer Figures", "Answer Figures Matched", "Answer Figures Unmatched", "Answer Figures Unverifiable",
+                                                          "Answer Figures", "Answer Figures Matched", "Answer Figures Unmatched", "Answer Figures Unverifiable"] + FIG_KIND_COLS + ["Query Page Generic",
                                                           "Query County", "Query Age Band", "Query Household", "Query Work", "Query Payment On", "Query Year Value", "Query Shape", "Query Letter",
                                                           "Answer Asks", "Answer Asked Given", "Answer Personalised"]
         dropped = [c for c in r.fieldnames if c in DROP]
@@ -575,7 +598,8 @@ def redact(src, dst):
             row.update(safety_flags(row.get("User Query")))
             row["Intent Version"] = INTENT_VERSION + "+" + lexicon()["version"]
             row["Query Intent"], row["Query Form"] = intent_of(q)
-            row["Query Page"], row["Query Category"], row["Query Schemes"] = topic_of(q)
+            row["Query Page"], row["Query Category"], row["Query Schemes"], gen = page_match(q)
+            row["Query Page Generic"] = "1" if gen and row["Query Page"] else ""
             # topic layer (brief §75): a question naming no page takes its category from its topic; Category Source says which
             row["Derivation Version"] = DERIVATION_VERSION
             row["Query Topic"], tcat = question_topic(q)
@@ -594,12 +618,17 @@ def redact(src, dst):
             if row["Query Letter"]:
                 row["Answer Templates"], row["Answer Orgs"] = "", ""
                 row["Answer Figures"] = row["Answer Figures Matched"] = row["Answer Figures Unmatched"] = row["Answer Figures Unverifiable"] = 0
+                for c in FIG_KIND_COLS: row[c] = 0
             else:
                 row["Answer Templates"] = answer_templates(ans)
                 row["Answer Orgs"] = answer_orgs(ans)
                 try: day = datetime.strptime((row.get("Timestamp") or "").strip(), "%b %d, %Y %H:%M").date().isoformat()
                 except ValueError: day = "9999-12-31"
-                row["Answer Figures"], row["Answer Figures Matched"], row["Answer Figures Unmatched"], row["Answer Figures Unverifiable"] = check_figures(ans, row.get("Citations"), day)
+                byk = check_figures_by_kind(ans, row.get("Citations"), day)
+                for kn, res in byk.items():
+                    for rn, n in zip(("Matched", "Unmatched", "Unverifiable"), res): row[f"Answer Figures {kn} {rn}"] = n
+                fm, fu, fv = (sum(r[i] for r in byk.values()) for i in range(3))
+                row["Answer Figures"], row["Answer Figures Matched"], row["Answer Figures Unmatched"], row["Answer Figures Unverifiable"] = fm + fu + fv, fm, fu, fv
             if row["Starter Prompt"]: counts["(starter prompt)"] = counts.get("(starter prompt)", 0) + 1
             w.writerow(row)
             n += 1

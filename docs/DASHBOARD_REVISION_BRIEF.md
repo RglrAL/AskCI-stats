@@ -2595,3 +2595,42 @@ Checked: `tools/test_rules.py` 51 of 51, and 32 of 51 against the previous rules
 (fetch skipped: no page text changed) with the audit's feed recount 181 passed, 0 failed; files-only audit 161 passed;
 Ask bar 311 of 311; guard 34 of 34; the before and after counts above from the committed and refreshed files; the
 Questions, Answer wording and Quality views load with no errors, and the clarification card shows the unspecified row.
+
+**The rest of package 0 (0f to 0i), the same day.**
+
+- **Labels that claimed more than the rule measures** (0f, page and findings report). "Not what the question needed"
+  is now "Typed questions with no cited answer" (not found, uncited, or a clarification although a scheme was named):
+  the design expects a cited answer for every kind of question, including status and contact questions the site may
+  not answer, so the old name judged the need. The Ask bar keeps the old wording as a synonym; one pinned case's
+  expected text was changed on purpose. "Where the answers send people" is "Organisations the answers name" (a
+  mention, not a referral). The figures check no longer calls unmatched "an upper bound on error": "Unmatched: the
+  number appears on no cited page. Not an error rate.", since a figure from the wrong row of the right page counts as
+  matched and a correct worked-out total as unmatched. The intent tables head their column "Kind of question" and say
+  that "What is …" also takes any question of one to five words no other kind catches, and that "How do I …" and "Can
+  I …" name the question's form.
+- **The denominator** (0g, page). Scored answers leave out out-of-scope, error and greeting answers, so a rise in those
+  moves the quality rates with no answer changing. Quality now carries "Every question, by outcome": each outcome as a
+  share of all questions beside its share of scored answers. Both outcome-mix charts (Overview and Quality) are over
+  all questions and split cited into "Cited, no gap flagged" and "Partial" (`outcomeSeries`, `outcomeOf`). The
+  Overview's cited and not-found tiles add their share of all questions. From 15 Sep to 2 Nov, of all questions: cited
+  with no gap flagged 58.7%, partial 19.7%, clarification 8.5%, not found 8.0%, out of scope 2.7%, error 1.3%, greeting
+  1.0%, uncited 0.1% (the handoff had 57.7, 20.7, 8.8, 8.0, 2.4, 1.3, 1.0, 0.1 before the rule fixes above).
+- **Figures by kind** (0h, derivation 2026.11.16-2). `check_figures_by_kind` splits matched / unmatched / unverifiable
+  for euro amounts, percentages and years; nine columns in the redacted feed and nine in `answer-figures-monthly.csv`
+  (EuroMatched … YearUnverifiable), declared in the catalogue, `SCHEMA` and the loader; the audit checks that the kinds
+  sum to the totals on every row. The figures card has a "By kind of figure" table. Over the whole period, unmatched of
+  checkable: euro 3.2% (1,507), percent 2.2% (206), year 6.8% (1,744); September and October 2.4%, 1.3% and 5.6%. Years
+  are the least often matched, not the most: a year in an answer is often one the cited page does not mention.
+- **Generic phrases** (0i, lexicon 2026.11.16-1). `GENERIC` in `tools/make_lexicon.py` marks 21 phrases that name a
+  subject or a situation rather than a page: income tax, pay tax, tax refund, tax return, self employed, self
+  employment, pension, pensions, separated, separation, divorce, inheritance, living alone, opt out, means test, means
+  tested, redundancy, citizenship, irish citizen, single parent, lone parent. **For the analyst to review.** A question
+  whose page match comes only from one of these keeps the page's category but is marked Query Page Generic and left out
+  of the named-page files. Named-page asks 40,518 → 32,998 over the whole period; the weekly named-page hit rate since
+  7 Sep 53.6% → 60.3%. The register's retrieval rows went from 19 to 16: income tax, self-employment, pensions, divorce
+  decrees and capital acquisitions tax left; one-parent family payment and naturalisation entered, since the
+  questions naming those schemes by name are cited less often than the generic ones were.
+
+Checked: rule tests 57 of 57 (figures by kind and generic phrases added); the second refresh with the feed recount 182
+passed, 0 failed; files-only audit 162 passed; Ask bar 311 of 311; guard 34 of 34; every view loads with no errors;
+Quality's every-question table and chart and the figures card's kind table read as above.

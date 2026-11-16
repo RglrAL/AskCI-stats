@@ -1,6 +1,6 @@
 {
  "_comment": "Scheme names a question can be matched on (brief §66): the site's English information page slugs as phrases, plus aliases, minus generic slugs and ordinary-phrase titles. redact_feed.py tags each question with the longest phrase it contains, as the page address and category. hub = other pages sit beneath it, so a citation of any of them counts as a hit (brief §71). Public data: the site's own addresses. INTENTS carries the outcome the design expects per intent.",
- "version": "2026.10.24-6",
+ "version": "2026.11.16-1",
  "min_chars": 6,
  "intents": {
   "status": "cited",
@@ -14,7 +14,7 @@
   "statement": "cited",
   "other": null
  },
- "derivation_version": "2026.11.16-1",
+ "derivation_version": "2026.11.16-2",
  "topics": {
   "housing": {
    "Renting: landlord and tenant": {
@@ -10742,7 +10742,8 @@
    "url": "https://www.citizensinformation.ie/en/employment/types-of-employment/self-employment",
    "category": "employment",
    "source": "alias",
-   "hub": true
+   "hub": true,
+   "generic": true
   },
   "shopping online": {
    "path": "consumer/shopping/shopping-online",
@@ -11292,7 +11293,8 @@
    "url": "https://www.citizensinformation.ie/en/moving-country/irish-citizenship/becoming-an-irish-citizen-through-naturalisation",
    "category": "moving-country",
    "source": "alias",
-   "hub": false
+   "hub": false,
+   "generic": true
   },
   "making a will": {
    "path": "death/before-a-death/making-a-will",
@@ -11348,7 +11350,8 @@
    "url": "https://www.citizensinformation.ie/en/employment/types-of-employment/self-employment",
    "category": "employment",
    "source": "alias",
-   "hub": true
+   "hub": true,
+   "generic": true
   },
   "seniors alert": {
    "path": "justice/crime-and-crime-prevention/seniors-alert",
@@ -11369,7 +11372,8 @@
    "url": "https://www.citizensinformation.ie/en/social-welfare/families-and-children/one-parent-family-payment",
    "category": "social-welfare",
    "source": "alias",
-   "hub": false
+   "hub": false,
+   "generic": true
   },
   "starting work": {
    "path": "employment/starting-work-and-changing-job/starting-work",
@@ -11581,7 +11585,8 @@
    "url": "https://www.citizensinformation.ie/en/social-welfare/extra-social-welfare-benefits/living-alone-allowance",
    "category": "social-welfare",
    "source": "alias",
-   "hub": false
+   "hub": false,
+   "generic": true
   },
   "mabs service": {
    "path": "money-and-tax/personal-finance/debt/mabs-service",
@@ -11595,7 +11600,8 @@
    "url": "https://www.citizensinformation.ie/en/social-welfare/irish-social-welfare-system/means-test-for-social-welfare-payments",
    "category": "social-welfare",
    "source": "alias",
-   "hub": true
+   "hub": true,
+   "generic": true
   },
   "medical card": {
    "path": "health/medical-cards-and-gp-visit-cards/medical-card",
@@ -11880,7 +11886,8 @@
    "url": "https://www.citizensinformation.ie/en/moving-country/irish-citizenship/becoming-an-irish-citizen-through-naturalisation",
    "category": "moving-country",
    "source": "alias",
-   "hub": false
+   "hub": false,
+   "generic": true
   },
   "confessions": {
    "path": "justice/arrests/confessions",
@@ -11983,7 +11990,8 @@
    "url": "https://www.citizensinformation.ie/en/money-and-tax/tax/capital-taxes/capital-acquisitions-tax",
    "category": "money-and-tax",
    "source": "alias",
-   "hub": false
+   "hub": false,
+   "generic": true
   },
   "job seekers": {
    "path": "social-welfare/unemployed-people/jobseekers-allowance",
@@ -12003,7 +12011,8 @@
    "url": "https://www.citizensinformation.ie/en/social-welfare/families-and-children/one-parent-family-payment",
    "category": "social-welfare",
    "source": "alias",
-   "hub": false
+   "hub": false,
+   "generic": true
   },
   "lose my job": {
    "path": "social-welfare/unemployed-people",
@@ -12146,7 +12155,8 @@
    "url": "https://www.citizensinformation.ie/en/money-and-tax/tax/income-tax",
    "category": "money-and-tax",
    "source": "alias",
-   "hub": true
+   "hub": true,
+   "generic": true
   },
   "jobseekers": {
    "path": "social-welfare/unemployed-people/jobseekers-allowance",
@@ -12160,7 +12170,8 @@
    "url": "https://www.citizensinformation.ie/en/social-welfare/irish-social-welfare-system/means-test-for-social-welfare-payments",
    "category": "social-welfare",
    "source": "alias",
-   "hub": true
+   "hub": true,
+   "generic": true
   },
   "night work": {
    "path": "employment/employment-rights-and-conditions/hours-of-work/night-work",
@@ -12195,7 +12206,8 @@
    "url": "https://www.citizensinformation.ie/en/employment/unemployment-and-redundancy/redundancy/redundancy-payments",
    "category": "employment",
    "source": "alias",
-   "hub": false
+   "hub": false,
+   "generic": true
   },
   "rent books": {
    "path": "housing/renting-a-home/tenants-rights-and-responsibilities/rent-books",
@@ -12222,7 +12234,8 @@
    "url": "https://www.citizensinformation.ie/en/birth-family-relationships/separation-and-divorce/judicial-separation",
    "category": "birth-family-relationships",
    "source": "alias",
-   "hub": false
+   "hub": false,
+   "generic": true
   },
   "sick leave": {
    "path": "employment/employment-rights-and-conditions/leave-and-holidays/sick-leave-and-sick-pay",
@@ -12264,7 +12277,8 @@
    "url": "https://www.citizensinformation.ie/en/money-and-tax/tax/income-tax",
    "category": "money-and-tax",
    "source": "alias",
-   "hub": true
+   "hub": true,
+   "generic": true
   },
   "tax relief": {
    "path": "money-and-tax",
@@ -12277,7 +12291,8 @@
    "url": "https://www.citizensinformation.ie/en/money-and-tax/tax/income-tax",
    "category": "money-and-tax",
    "source": "alias",
-   "hub": true
+   "hub": true,
+   "generic": true
   },
   "the seanad": {
    "path": "government-in-ireland/houses-of-the-oireachtas/the-seanad",
@@ -12402,7 +12417,8 @@
    "url": "https://www.citizensinformation.ie/en/birth-family-relationships/separation-and-divorce/judicial-separation",
    "category": "birth-family-relationships",
    "source": "alias",
-   "hub": false
+   "hub": false,
+   "generic": true
   },
   "solicitor": {
    "path": "justice",
@@ -12534,7 +12550,8 @@
    "url": "https://www.citizensinformation.ie/en/employment/retirement/pensions",
    "category": "employment",
    "source": "slug",
-   "hub": false
+   "hub": false,
+   "generic": true
   },
   "pet care": {
    "path": "environment/pets-and-wildlife/pet-care",
@@ -12608,7 +12625,8 @@
    "url": "https://www.citizensinformation.ie/en/birth-family-relationships/separation-and-divorce/divorce-decrees",
    "category": "birth-family-relationships",
    "source": "alias",
-   "hub": false
+   "hub": false,
+   "generic": true
   },
   "e bikes": {
    "path": "travel-and-recreation/motoring/motorcycle-electric-and-off-road-vehicles/e-bikes",
@@ -12655,21 +12673,24 @@
    "url": "https://www.citizensinformation.ie/en/money-and-tax/personal-finance/pensions/auto-enrolment",
    "category": "money-and-tax",
    "source": "alias",
-   "hub": false
+   "hub": false,
+   "generic": true
   },
   "pay tax": {
    "path": "money-and-tax/tax/income-tax",
    "url": "https://www.citizensinformation.ie/en/money-and-tax/tax/income-tax",
    "category": "money-and-tax",
    "source": "alias",
-   "hub": true
+   "hub": true,
+   "generic": true
   },
   "pension": {
    "path": "social-welfare/older-and-retired-people/state-pension-contributory",
    "url": "https://www.citizensinformation.ie/en/social-welfare/older-and-retired-people/state-pension-contributory",
    "category": "social-welfare",
    "source": "alias",
-   "hub": false
+   "hub": false,
+   "generic": true
   },
   "pricing": {
    "path": "consumer/advertising-and-promotions/pricing",

@@ -62,7 +62,7 @@ SCHEMA = {
     'content-gaps.csv': 'kind page category intent evidence asks rate priority team period rules_version lexicon_version built',
     'answer-templates-daily.csv': 'Date Template Turns Cited NotFound Clarification Error OutOfScope Greeting Uncited Partial',
     'answer-signposts-monthly.csv': 'Month Org Category Turns Cited NotFound Clarification Error OutOfScope Greeting Uncited Partial',
-    'answer-figures-monthly.csv': 'Month URL Answers Partial Figures Matched Unmatched Unverifiable',
+    'answer-figures-monthly.csv': 'Month URL Answers Partial Figures Matched Unmatched Unverifiable EuroMatched EuroUnmatched EuroUnverifiable PctMatched PctUnmatched PctUnverifiable YearMatched YearUnmatched YearUnverifiable',
     'question-situation-monthly.csv': 'Month Category Flag Turns Cited NotFound Clarification Error OutOfScope Greeting Uncited Partial',
     'clarification-asks-monthly.csv': 'Month Asks Given Turns',
     'answer-personalisation-monthly.csv': 'Month SituationGiven Personalised Answers',
@@ -498,6 +498,10 @@ if FIG:
           all(I(r['Matched']) + I(r['Unmatched']) + I(r['Unverifiable']) == I(r['Figures']) and I(r['Partial']) <= I(r['Answers']) and I(r['Figures']) >= I(r['Answers']) for r in FIG)
           and all(I(r['Answers']) <= I(fall[r['Month']]['Answers']) for r in FIG if r['Month'] in fall) and all(I(r['Answers']) <= sum(I(U[d]['Questions']) for d in U if d[:7] == m) for m, r in fall.items()),
           str([(r['Month'], r['URL'][-40:]) for r in FIG if I(r['Matched']) + I(r['Unmatched']) + I(r['Unverifiable']) != I(r['Figures'])][:3]))
+    if 'EuroMatched' in FIG[0]:
+        check('answer figures by kind: euro + percent + year = Matched, Unmatched and Unverifiable on every row (brief §100)',
+              all(sum(I(r[k + x]) for k in ('Euro', 'Pct', 'Year')) == I(r[x]) for r in FIG for x in ('Matched', 'Unmatched', 'Unverifiable')),
+              str([(r['Month'], r['URL'][-40:]) for r in FIG if any(sum(I(r[k + x]) for k in ('Euro', 'Pct', 'Year')) != I(r[x]) for x in ('Matched', 'Unmatched', 'Unverifiable'))][:3]))
 SIT = rd('question-situation-monthly.csv'); ASK = rd('clarification-asks-monthly.csv'); PERS = rd('answer-personalisation-monthly.csv')
 if SIT:
     typed_m = C.Counter()

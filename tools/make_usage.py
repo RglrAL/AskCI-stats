@@ -66,7 +66,8 @@ Outputs (all daily counts; nothing per-turn and no text crosses into the dashboa
                                    already given it (brief §75)
   answer-personalisation-monthly.csv  Month, SituationGiven, Personalised, Answers: cited answers by whether the question gave
                                    a detail and the answer used one ("in your case") (brief §75)
-  answer-figures-monthly.csv       Month, URL, Answers, Partial, Figures, Matched, Unmatched, Unverifiable: figures quoted
+  answer-figures-monthly.csv       Month, URL, Answers, Partial, Figures, Matched, Unmatched, Unverifiable, and the same three
+                                   for euro amounts, percentages and years (EuroMatched ... YearUnverifiable, brief §100): figures quoted
                                    in answers checked against dated snapshots of the cited pages; (all) and (uncited) rows (brief §75)
   answer-signposts-monthly.csv     Month, Org, Category, Turns, outcomes, Partial: organisations the answer names
                                    (redact_feed.py ORGS; (any) / (external) / (none)), by the turn's category and (all) (brief §75)
@@ -375,8 +376,10 @@ def aggregate(files, skip_days=frozenset()):
                 is_partial = (row.get("Partial") or "").strip().lower() == "yes"
                 if "Answer Figures" in row and str(row.get("Answer Figures") or "").isdigit() and int(row["Answer Figures"]):   # figures quoted (brief §75)
                     fm, fu, fv = (int(row.get(k) or 0) for k in ("Answer Figures Matched", "Answer Figures Unmatched", "Answer Figures Unverifiable"))
+                    fk = {k + r: int(row.get(f"Answer Figures {K} {r}") or 0) for k, K in (("Euro", "Euro"), ("Pct", "Percent"), ("Year", "Year")) for r in ("Matched", "Unmatched", "Unverifiable")}
                     for key in (nus or ["(uncited)"]) + ["(all)"]:   # an answer's result is attributed to every page it cites
                         x9 = figs[(d.strftime("%Y-%m"), key)]; x9["answers"] += 1; x9["figures"] += int(row["Answer Figures"]); x9["matched"] += fm; x9["unmatched"] += fu; x9["unverifiable"] += fv
+                        for c, n in fk.items(): x9[c] += n
                         if is_partial: x9["partial"] += 1
                 for nu in nus:   # once per answer and page
                     x = cites_x[(d.strftime("%Y-%m"), nu)]; x["answers"] += 1
@@ -465,7 +468,7 @@ def aggregate(files, skip_days=frozenset()):
                         for nu in nus:
                             x7 = cint[(d.strftime("%Y-%m"), nu, qi)]; x7["answers"] += 1
                             if is_partial: x7["partial"] += 1
-                    if qp and chip == 0:   # pages people name: typed questions only
+                    if qp and chip == 0 and (row.get("Query Page Generic") or "") != "1":   # pages people name: typed questions only; a generic subject word is not naming a page (brief §100)
                         a5 = asked[(d.strftime("%Y-%m"), qp)]; a5["Asked"] += 1; a5["_cat"] = qc
                         qpn = norm_url(qp); hubp = qpn.split("/en/", 1)[1] if "/en/" in qpn else ""
                         wk = (d - timedelta(days=d.weekday())).isoformat(); w7 = askw[(wk, qp)]; w7["asked"] += 1
@@ -664,13 +667,16 @@ def pers_rows(pers):
     return ["Month", "SituationGiven", "Personalised", "Answers"], [[m, g, p, n] for (m, g, p), n in sorted(pers.items())]
 
 
+FIG_KCOLS = [k + r for k in ("Euro", "Pct", "Year") for r in ("Matched", "Unmatched", "Unverifiable")]   # by kind (brief §100)
+
+
 def figs_rows(figs, min_answers=5):
     """answer-figures-monthly.csv: per month and cited page ("(all)" = every answer, "(uncited)" = answers citing nothing):
     answers carrying a euro, percent or year figure, the figures, and how many matched a dated snapshot of a cited
     page, were unmatched on checkable pages, or were unverifiable (page changed since, no snapshot, nothing cited).
     An answer's result counts for every page it cites. Page rows under min_answers left out (brief §75)."""
-    cols = ["Month", "URL", "Answers", "Partial", "Figures", "Matched", "Unmatched", "Unverifiable"]
-    return cols, [[m, u, e["answers"], e["partial"], e["figures"], e["matched"], e["unmatched"], e["unverifiable"]] for (m, u), e in sorted(figs.items()) if u.startswith("(") or e["answers"] >= min_answers]
+    cols = ["Month", "URL", "Answers", "Partial", "Figures", "Matched", "Unmatched", "Unverifiable"] + FIG_KCOLS
+    return cols, [[m, u, e["answers"], e["partial"], e["figures"], e["matched"], e["unmatched"], e["unverifiable"]] + [e[c] for c in FIG_KCOLS] for (m, u), e in sorted(figs.items()) if u.startswith("(") or e["answers"] >= min_answers]
 
 
 def style_rows(style):

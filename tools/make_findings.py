@@ -70,7 +70,7 @@ def main():
         if not e: continue
         D += I(r["Turns"]); un += (I(r["NotFound"]) + I(r["Uncited"]) + I(r["NamedClarification"])) if e == "cited" else I(r["Cited"])
     unexp = un / D * 100 if D else None
-    P(f"| 2 | Answers not what the question needed (last 28 days, typed) | {pct(unexp)} of {D:,} | {BASE['unexpected']}% | {status(unexp, BASE['unexpected'])} | §69, §71: the quality figure weighted by what the person wanted |")
+    P(f"| 2 | Typed questions with no cited answer (last 28 days; not found, uncited, or a clarification although a scheme was named) | {pct(unexp)} of {D:,} | {BASE['unexpected']}% | {status(unexp, BASE['unexpected'])} | §69, §71: by rule; the design expects a cited answer for every kind of question |")
     # 3. personal situations against other typed questions, not found
     sit = C.Counter()
     for r in QI:
@@ -135,7 +135,7 @@ def main():
         FG = next((r for r in rd("answer-figures-monthly.csv") if r["Month"] == last_full and r["URL"] == "(all)"), None)
         if FG:
             chk = I(FG["Matched"]) + I(FG["Unmatched"]); um = I(FG["Unmatched"]) / chk * 100 if chk else None; bf = BASE.get("fig_unmatched")
-            P(f"| 13 | Figures quoted that no cited page carries ({last_full}) | {pct(um)} of {chk:,} checkable figures; {pct(I(FG['Unverifiable']) / I(FG['Figures']) * 100 if I(FG['Figures']) else None, 0)} unverifiable | {pct(bf) if bf is not None else '—'} | {status(um, bf) if bf is not None else 'baseline'} | §75: an upper bound on quoted-figure error until the labelling calibrates it; employment-permit and rate pages lead |")
+            P(f"| 13 | Figures quoted that no cited page carries ({last_full}) | {pct(um)} of {chk:,} checkable figures; {pct(I(FG['Unverifiable']) / I(FG['Figures']) * 100 if I(FG['Figures']) else None, 0)} unverifiable | {pct(bf) if bf is not None else '—'} | {status(um, bf) if bf is not None else 'baseline'} | §75, §100: the number appears on no cited page, not an error rate; employment-permit and rate pages lead |")
         c_ = max((I(g(k)["NotFound"]) for k in ("cic.centre", "cic.phone") if g(k)), default=0)
         P(f"| 12 | Not-found answers naming an outside body ({last_full}) | {pct(ext)} of {nf_all:,}; {pct(I(a_['NotFound']) / nf_all * 100 if a_ and nf_all else None, 0)} name somewhere, {pct(c_ / nf_all * 100 if nf_all else None, 0)} Citizens Information's own centre or phone line | {pct(base) if base is not None else '—'} | {status(ext, base, lower_is_better=False) if base is not None else 'baseline'} | §75: the no-results wording points at the service's own centre and phone line; a theme-aware signpost is the recommendation, this column its measure |")
     P("\n## Conclusions on record (read, not measured)\n")

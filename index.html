@@ -2663,7 +2663,7 @@ function seriesSave(id,sig,hidden){try{const st=seriesStore();if(hidden.length)s
 function seriesColour(d){
   const pick=v=>Array.isArray(v)?v.find(x=>x&&x!=='transparent'):(v&&v!=='transparent'?v:null);
   const c=(d.type==='line'||(!d.type&&d.fill===false)?pick(d.borderColor):null)||pick(d.backgroundColor)||pick(d.borderColor)||C.dim;
-  return typeof c==='string'?c.slice(0,7):C.dim;
+  return typeof c==='string'?c.slice(0,9):C.dim;   // keeps a hex alpha, so a paler series keeps a paler chip
 }
 // Stacked charts: while a series is hidden the tooltip adds "Shown: X of Y" for the hovered bar. Set on the config
 // before the chart is built (Chart.js options cannot be reassigned afterwards).
@@ -3193,7 +3193,7 @@ async function loadConversationFiles(){
   await loadM('question-situation-monthly.csv',{cat:'Category',flag:'Flag'},QSIT);hasSit=Object.keys(QSIT).length>0;
   await loadM('clarification-asks-monthly.csv',{asks:'Asks',given:'Given'},QASK);hasAsk=Object.keys(QASK).length>0;
   await loadM('answer-personalisation-monthly.csv',{given:'SituationGiven',pers:'Personalised'},QPERS);
-  try{(await loadCSV('answer-figures-monthly.csv')).forEach(r=>{const m=String(r['Month']||'').trim();if(!/^\d{4}-\d{2}$/.test(m))return;(FIGM[m]||(FIGM[m]=[])).push({url:String(r['URL']||'').trim(),answers:nInt(r['Answers']),partial:nInt(r['Partial']),figures:nInt(r['Figures']),matched:nInt(r['Matched']),unmatched:nInt(r['Unmatched']),unverifiable:nInt(r['Unverifiable'])});});hasFigs=Object.keys(FIGM).length>0;}catch(e){}
+  try{(await loadCSV('answer-figures-monthly.csv')).forEach(r=>{const m=String(r['Month']||'').trim();if(!/^\d{4}-\d{2}$/.test(m))return;(FIGM[m]||(FIGM[m]=[])).push({url:String(r['URL']||'').trim(),answers:nInt(r['Answers']),partial:nInt(r['Partial']),figures:nInt(r['Figures']),matched:nInt(r['Matched']),unmatched:nInt(r['Unmatched']),unverifiable:nInt(r['Unverifiable']),...Object.fromEntries(['Euro','Pct','Year'].flatMap(k=>['Matched','Unmatched','Unverifiable'].map(x=>[k+x,r[k+x]==null?null:nInt(r[k+x])])))});});hasFigs=Object.keys(FIGM).length>0;}catch(e){}
   try{(await loadCSV('answer-signposts-monthly.csv')).forEach(r=>{const m=String(r['Month']||'').trim();if(!/^\d{4}-\d{2}$/.test(m))return;const o={org:String(r['Org']||'').trim(),cat:String(r['Category']||'').trim()};Object.entries(r).forEach(([k,v])=>{if(!['Month','Org','Category'].includes(k))o[k]=nInt(v);});(ORGSM[m]||(ORGSM[m]=[])).push(o);});hasOrgs=Object.keys(ORGSM).length>0;}catch(e){}
   // answer-next-daily.csv (tools/next_step.py, on the raw feed): ONEXT[date][class] = counts of what came after each answer
   try{(await loadCSV('answer-next-daily.csv')).forEach(r=>{const d=parseDate(r['Date']);if(!d)return;const o={};Object.entries(r).forEach(([k,v])=>{if(k!=='Date'&&k!=='Class')o[k]=nInt(v);});(ONEXT[d]||(ONEXT[d]={}))[String(r['Class']||'').trim()]=o;});}catch(e){}
@@ -3553,7 +3553,7 @@ const WC_CANDIDATES=[
   {cls:3,name:'Cited but partial',k:'partialRate',kind:'pts'},
   {cls:3,name:'Conversations that reached a cited answer',k:'reachedCited',kind:'pts'},
   {cls:3,name:'Clarification rate',k:'clarRate',kind:'pts'},
-  {cls:3,name:'Answers not what the question needed',k:'unexpectedRate',kind:'pts'},
+  {cls:3,name:'Typed questions with no cited answer',k:'unexpectedRate',kind:'pts'},
   {cls:3,name:'Dislikes per 1,000 cited answers',k:'dislikesPerK',kind:'perk'},
   {cls:3,name:'Generation cost per turn',k:'genPT',kind:'pence',cost:true},
   {cls:4,name:'Turns per day',k:'turnsPerDay',kind:'count'},
@@ -5441,7 +5441,7 @@ function renderWording(D,S){
     const named=Object.entries(agg).filter(([o])=>!o.startsWith('(')).sort((a,b)=>b[1].Turns-a[1].Turns);
     const orows=named.map(([o,a])=>`<tr style="border-bottom:1px solid var(--b2)">${td(`${escH(ORG_LABEL[o]||o)} <span style="color:var(--muted)">· ${escH(FAM[(ORG_META[o]||{}).family]||(ORG_META[o]||{}).family||'')}</span>`,{left:true})}${td(num(a.Turns))}${td(all?(a.Turns/all*100).toFixed(1)+'%':'—')}${td(num(a.NotFound))}${td(nfAll?(a.NotFound/nfAll*100).toFixed(1)+'%':'—')}${td(num(a.Partial))}${td(pAll?(a.Partial/pAll*100).toFixed(1)+'%':'—')}</tr>`).join('');
     const mrow=mons2.map(m=>{const g=k=>((ORGSM[m]||[]).find(r=>r.org===k&&r.cat==='(all)')||{});const a=g('(any)'),e=g('(external)'),n=g('(none)');const nf=(a.NotFound||0)+(n.NotFound||0);return `<tr style="border-bottom:1px solid var(--b2)">${td(fmtMonth(m),{left:true})}${td(num(nf))}${td(nf?((a.NotFound||0)/nf*100).toFixed(0)+'%':'—')}${td(nf?((e.NotFound||0)/nf*100).toFixed(1)+'%':'—')}${td(((a.Turns||0)+(n.Turns||0))?((e.Turns||0)/((a.Turns||0)+(n.Turns||0))*100).toFixed(1)+'%':'—')}</tr>`;}).join('');
-    orgCard=`<div class="card"><div class="card-title">Where the answers send people<span class="card-title-note">organisations named in the answer text · ${num(named.length)} bodies, helplines and professionals · every answer · ${spanLabel(from,to)}</span></div>
+    orgCard=`<div class="card"><div class="card-title">Organisations the answers name<span class="card-title-note">named in the answer text, a mention, not a referral · ${num(named.length)} bodies, helplines and professionals · every answer · ${spanLabel(from,to)}</span></div>
       <div class="grid4" style="margin-bottom:14px">
         ${uxTile(all?(any.Turns/all*100).toFixed(1)+'%':'—','Answers naming an organisation',`${num(any.Turns)} of ${num(all)} answers`,C.acc)}
         ${uxTile(nfAll?(any.NotFound/nfAll*100).toFixed(0)+'%':'—','Not-found answers that signpost somewhere',`${num(any.NotFound)} of ${num(nfAll)} · almost all to Citizens Information's own centre and phone line`,C.teal)}
@@ -5482,11 +5482,16 @@ function renderWording(D,S){
 }
 
 // ═══ HOME (Overview): how well, how much, what changed — one screen ═══════════
+// Outcomes over every question (brief §100, audit 0g): the cited share split into cited with no gap flagged and partial,
+// beside not found, clarification, out of scope, error, greeting and uncited, so a rise in answers the quality rates
+// leave out (out of scope, error, greeting) is visible next to them. Each value is a share of all questions.
+function outcomeSeries(){return[['citedFull','Cited, no gap flagged',C.green+'cc'],['partial','Partial (cited, gap flagged)',C.green+'55'],['notFound','Not found',C.red+'cc'],['clarification','Clarification',C.amber+'cc'],['error','Error',C.pink+'cc'],['outOfScope','Out of scope',C.purple+'cc'],['greeting','Greeting',C.dim+'cc'],['uncited','Uncited answer',C.acc+'cc']];}
+function outcomeOf(r,k){const g=x=>r.ux?.[x]||0;return k==='citedFull'?Math.max(0,g('cited')-g('partial')):g(k);}
 function outcomeMixChart(id,vd,extra={}){
   if(!document.getElementById(id))return;
-  const g=(r,k)=>r.ux?.[k]||0,sh=(r,k)=>r.queries>0?+((g(r,k))/r.queries*100).toFixed(2):null;
-  const series=[['cited','Cited answer',C.green],['notFound','Not found',C.red],['clarification','Clarification',C.amber],['error','Error',C.pink],['outOfScope','Out of scope',C.purple],['greeting','Greeting',C.dim],['uncited','Uncited answer',C.acc]];
-  mkChart(id,{type:'bar',data:{labels:vd.map(d=>d.label),datasets:series.map(([k,l,c])=>({label:l,data:vd.map(r=>sh(r,k)),backgroundColor:c+'cc',stack:'o',maxBarThickness:28}))},
+  const g=outcomeOf,sh=(r,k)=>r.queries>0?+((g(r,k))/r.queries*100).toFixed(2):null;
+  const series=outcomeSeries();
+  mkChart(id,{type:'bar',data:{labels:vd.map(d=>d.label),datasets:series.map(([k,l,c])=>({label:l,data:vd.map(r=>sh(r,k)),backgroundColor:c,stack:'o',maxBarThickness:28}))},
     options:alignY(mergeOpts(baseOpts(),{scales:{y:{stacked:true,max:100,ticks:{callback:v=>v+'%'}},x:{stacked:true}},plugins:{legend:{display:true},tooltip:{callbacks:{label:cx=>`${cx.dataset.label}: ${(+cx.parsed.y).toFixed(1)}% (${num(g(vd[cx.dataIndex],series[cx.datasetIndex][0]))})`}}},onClick:(e,els)=>{if(els.length)drillBucket(vd[els[0].index]);},...extra}))});
 }
 // Overview tile: combined click-through rate with the minimum caveat on the tile itself; opens the sub-tab.
@@ -5508,6 +5513,7 @@ function renderHome(D,S){
   if(!pd.length){el.innerHTML=emptyState('layout-dashboard','Nothing in range','Widen the date range.');renderIcons();return;}
   const cols=(D.usageQuality&&D.usageQuality.columns)||{};
   const P=perTurnStats(pd),wc=whatChanged(pd,'service'),A=wc.A||P,B=wc.B;
+  const allQ=n=>P.uturns>0&&n!=null?(n/P.uturns*100).toFixed(1)+'%':'—';   // share of every question, beside the scored rate (brief §100)
   const fc=D.hasCost&&typeof forecastMonth==='function'?forecastMonth():null;
   const turns=pd.reduce((s,d)=>s+d.queries,0),convs=pd.reduce((s,d)=>s+d.sessions,0),days=pd.filter(d=>d.queries>0).length,spend=pd.reduce((s,d)=>s+d.total,0);
   const pct=v=>v==null?'—':v.toFixed(1)+'%',secs=v=>v==null?'—':(v/1000).toFixed(1)+'s',pence=v=>v==null?'—':v.toFixed(2)+'p';
@@ -5522,9 +5528,9 @@ function renderHome(D,S){
   if(D.hasCost)parts.push(`Billed cost <b>${gbp(spend,0)}</b>${P.valid&&P.genPT!=null?`, generation ${pence(P.genPT)} per turn`:''}${fc?`; ${fc.monthName} projected at <b>${gbp(fc.forecast,0)}</b> (${fc.label})`:''}.`);
   const compare=wc.B?(wc.fallback||`compared with ${wc.rule}`)+` · ${wc.B.uspan}`:'';
   const tiles=[
-    cols.taxonomy?kpi(pct(P.citedRate),'Cited answer rate',P.uvalid?`of scored turns · ${P.uspan}`:P.uwhy,{color:C.green,delta:delta('citedRate',false,'pts')}):(cols.outcomes?kpi(pct(P.answeredShare),'Answered share',P.uvalid?`of turns · ${P.uspan}`:P.uwhy,{color:C.green,delta:delta('answeredShare',false,'pts')}):null),
-    cols.taxonomy?kpi(pct(P.notFoundRate),'Not-found rate',P.uvalid?'of scored turns':P.uwhy,{color:C.red,delta:delta('notFoundRate',true,'pts')}):null,
-    hasIntent&&P.unexpectedRate!=null?kpi(pct(P.unexpectedRate),'Not what the question needed',`of ${num(P.unexpectedN)} typed questions with a named intent · ${intentCaveat()}`,{color:C.amber,delta:delta('unexpectedRate',true,'pts')}):null,
+    cols.taxonomy?kpi(pct(P.citedRate),'Cited answer rate',P.uvalid?`of scored turns · ${allQ(P.cited)} of all questions · ${P.uspan}`:P.uwhy,{color:C.green,delta:delta('citedRate',false,'pts')}):(cols.outcomes?kpi(pct(P.answeredShare),'Answered share',P.uvalid?`of turns · ${P.uspan}`:P.uwhy,{color:C.green,delta:delta('answeredShare',false,'pts')}):null),
+    cols.taxonomy?kpi(pct(P.notFoundRate),'Not-found rate',P.uvalid?`of scored turns · ${allQ(P.notFound)} of all questions`:P.uwhy,{color:C.red,delta:delta('notFoundRate',true,'pts')}):null,
+    hasIntent&&P.unexpectedRate!=null?kpi(pct(P.unexpectedRate),'Typed questions with no cited answer',`not found, uncited, or a clarification although a scheme was named · of ${num(P.unexpectedN)} typed questions with a named kind · ${intentCaveat()}`,{color:C.amber,delta:delta('unexpectedRate',true,'pts')}):null,
     cols.latency?kpi(secs(P.latP50),'Response time p50','turn-weighted daily median',{color:C.acc,delta:delta('latP50',true,'ms')}):null,
     D.hasUsage?kpi(num(convs),'Conversations',`${num(Math.round(convs/Math.max(days,1)))} a day · ${num(turns)} turns`,{color:C.teal,delta:delta('convsPerDay',false)}):null,
     hasConv&&P.reachedCited!=null?kpi(pct(P.reachedCited),'Reached a cited answer','of mature conversations · by start day',{color:C.green,delta:delta('reachedCited',false,'pts')}):null,
@@ -6769,14 +6775,14 @@ function renderAsked(D,S){
         <div><div class="card-title" style="font-size:var(--t-xs)">Topics<span class="card-title-note">the lexicon's topic layer · longest matching keyword wins</span></div>
           ${tbl2(th('Topic',true)+th('Questions')+th('Share')+th('Not found')+th('NF rate')+th('Partial')+th('Clarif.'),topicRows2||tr(td('No topic layer for this category yet; its questions enter by page or citation only',{left:true})))}</div>
         <div><div class="card-title" style="font-size:var(--t-xs)">What kind of question</div>
-          ${tbl2(th('Intent',true)+th('Questions')+th('Share')+th('Not found')+th('Partial'),intentRows)}
+          ${tbl2(th('Kind of question',true)+th('Questions')+th('Share')+th('Not found')+th('Partial'),intentRows)}
           <div class="card-title" style="font-size:var(--t-xs);margin-top:12px">By month</div>
           ${tbl2(th('Month',true)+th('Questions')+th('Share of typed')+th('Not found')+th('Partial')+th('Clarif.'),perMonth)}</div>
       </div>
       <div class="card-title" style="font-size:var(--t-xs);margin-top:12px">Register rows for ${lab}<span class="card-title-note">${num(gaps.length)} · the register period · status on Usage › Pages</span></div>
       ${tbl2(th('Kind',true)+th('Page or topic',true)+th('Asks')+th('Owner',true),gapRows)}
       ${(()=>{if(!hasOrgs)return'';const ag={};months.forEach(m=>(ORGSM[m]||[]).forEach(r=>{if(r.cat!==ASKED_CAT)return;const a=ag[r.org]||(ag[r.org]={Turns:0,NotFound:0,Partial:0});a.Turns+=r.Turns;a.NotFound+=r.NotFound;a.Partial+=r.Partial;}));const any=ag['(any)']||{Turns:0,NotFound:0},none=ag['(none)']||{Turns:0,NotFound:0},ext=ag['(external)']||{Turns:0,NotFound:0};const allA=any.Turns+none.Turns,nfA=any.NotFound+none.NotFound;const top=Object.entries(ag).filter(([o])=>!o.startsWith('(')).sort((a,b)=>b[1].Turns-a[1].Turns).slice(0,8);if(!top.length)return'';
-        return `<div class="card-title" style="font-size:var(--t-xs);margin-top:12px">Where ${lab} answers send people<span class="card-title-note">${allA?(ext.Turns/allA*100).toFixed(1):'—'}% of ${lab} answers name an outside body · ${nfA?(ext.NotFound/nfA*100).toFixed(1):'—'}% of its not-found answers do</span></div>`+tbl2(th('Organisation',true)+th('Answers')+th('In not found')+th('In partial'),top.map(([o,a])=>tr(td(escH(o),{left:true})+td(num(a.Turns))+td(num(a.NotFound))+td(num(a.Partial)))).join(''));})()}
+        return `<div class="card-title" style="font-size:var(--t-xs);margin-top:12px">Organisations ${lab} answers name<span class="card-title-note">${allA?(ext.Turns/allA*100).toFixed(1):'—'}% of ${lab} answers name an outside body · ${nfA?(ext.NotFound/nfA*100).toFixed(1):'—'}% of its not-found answers do</span></div>`+tbl2(th('Organisation',true)+th('Answers')+th('In not found')+th('In partial'),top.map(([o,a])=>tr(td(escH(o),{left:true})+td(num(a.Turns))+td(num(a.NotFound))+td(num(a.Partial)))).join(''));})()}
       <div class="share-foot">Topic buckets are generic keywords chosen by the analyst (brief §75), each matching 20+ questions, ${derivCaveat('topics')}; a question's topic is its longest matching keyword. Only class names and counts reach this page.</div>
     </div>`;
   }
@@ -6793,8 +6799,8 @@ function renderAsked(D,S){
     ${sitCard}
     ${askCard}
     <div class="card" style="overflow-x:auto"><div class="card-title">Outcomes by what was asked<span class="card-title-note">typed questions · ${spanLabel(from,to)}${hasPrev?` · in brackets the change in points against ${escH(W.rule)} (${spanLabel(W.from,W.to)})`:' · no preceding window in the data to compare with'} · unexpected = an outcome the design does not expect for that intent</span></div>
-      <table style="width:100%;border-collapse:collapse;min-width:1000px"><thead><tr style="border-bottom:1px solid var(--b2)">${th('Intent',true)}${th('Turns')}${th('Share')}${th('Cited')}${th('Cited, not partial')}${th('Not found')}${th('Clarification')}${th('Unexpected')}${th('Personal situation')}${th('Names a scheme')}</tr></thead><tbody>${rows}</tbody></table>
-      <div class="share-foot">A cited answer is the expected outcome for every intent, including a question about the person's own claim, where the right answer explains how to check it. Unexpected = a not-found or uncited answer, or a clarification on a question that named a scheme; a clarification on "what is the benefit?" with no scheme named is the designed outcome and is not counted. Typed questions only: starter prompts and the model's own suggested follow-ups (${num(tot(AC))} turns in range) are left out, since a suggested follow-up is written to the prompt's pattern and carries an intent by construction. ${intentCaveat()}.</div></div>
+      <table style="width:100%;border-collapse:collapse;min-width:1000px"><thead><tr style="border-bottom:1px solid var(--b2)">${th('Kind of question',true)}${th('Turns')}${th('Share')}${th('Cited')}${th('Cited, not partial')}${th('Not found')}${th('Clarification')}${th('No cited answer')}${th('Personal situation')}${th('Names a scheme')}</tr></thead><tbody>${rows}</tbody></table>
+      <div class="share-foot">A cited answer is the expected outcome for every intent, including a question about the person's own claim, where the right answer explains how to check it. No cited answer = a not-found or uncited answer, or a clarification on a question that named a scheme; a clarification on "what is the benefit?" with no scheme named is the designed outcome and is not counted. Typed questions only: starter prompts and the model's own suggested follow-ups (${num(tot(AC))} turns in range) are left out, since a suggested follow-up is written to the prompt's pattern and carries an intent by construction. "What is …" also takes any question of one to five words that no other kind catches, so short questions land there; "How do I …" and "Can I …" name the question's form, not what it needs. ${intentCaveat()}.</div></div>
     <div class="grid2">
       <div class="card"><div class="card-title">Topics of failed answers, from the question<span class="card-title-note">answers that carried no topic, by the category the question named · ${spanLabel(from,to)}</span></div>
         <div class="tbl-wrap"><table style="width:100%;border-collapse:collapse"><thead><tr style="border-bottom:1px solid var(--b2)">${th('Category',true)}${th('Turns')}${th('Not found')}${th('Not-found share')}${th('Clarification')}</tr></thead><tbody${showAttr(10,topicAll.length)}>${topicRows||'<tr><td colspan="5" style="padding:10px;color:var(--muted)">none</td></tr>'}</tbody></table></div>
@@ -6807,7 +6813,7 @@ function renderAsked(D,S){
           ${uxTile(pc(tot2('nf'),apN),'Not found','the page exists and the question named it',C.red)}
         </div></div>
     </div>
-    ${hasAskw?chartBox('ask-hit-week',220,'Named-page hit rate, week by week','typed questions naming a page named 30+ times in some month · cited it = that page or one beneath a named hub · whole weeks only · weeks under the small-sample rule are gaps'):''}
+    ${hasAskw?chartBox('ask-hit-week',220,'Named-page hit rate, week by week','typed questions naming a page named 30+ times in some month · a subject word alone (income tax, pension, self employed) is not naming a page · cited it = that page or one beneath a named hub · whole weeks only · weeks under the small-sample rule are gaps'):''}
     <div class="card"><div class="card-title">Pages people name and are not answered from<span class="card-title-note">asked 30+ times in the months in range · highest not-found share first · cells under 5 shown as &lt;5</span></div>
       <div class="tbl-wrap"><table style="width:100%;border-collapse:collapse"><thead><tr style="border-bottom:1px solid var(--b2)">${th('Page named',true)}${th('Asked')}${th('Cited it (or beneath it)')}${th('Same category')}${th('Other category')}${th('Not found')}${th('Clarification')}</tr></thead><tbody${showAttr(10,ap30.length)}>${byNf.map(pageRow).join('')}</tbody></table></div>
       <div class="share-foot">A page people name that retrieval does not return is a chunking or indexing list, not a content list: the content exists. Counts are of questions, not people; a rate shows a dash under the small-sample rule.</div></div>
@@ -7126,7 +7132,7 @@ function contentLists(months,fr,td,th){
     </div>`;
   }
   // 4b. figures quoted in answers (brief §75): euro amounts, percentages and years, checked against a dated snapshot of each
-  // cited page; matched / unmatched / unverifiable, by month and by page. An upper bound on error until the labelling calibrates it.
+  // cited page; matched / unmatched / unverifiable, by month and by page. Unmatched is not an error rate (brief §100).
   if(hasFigs){
     const frF=filterRange(DATA.merged),fmons=monthsIn(frF),ansAll=frF.reduce((s,d)=>s+(d.queries||0),0);   // contentLists() has no D; the page's data is global
     const agg={};fmons.forEach(m=>(FIGM[m]||[]).forEach(r=>{const a=agg[r.url]||(agg[r.url]={answers:0,partial:0,figures:0,matched:0,unmatched:0,unverifiable:0});Object.keys(a).forEach(k=>{a[k]+=r[k]||0;});}));
@@ -7142,15 +7148,23 @@ function contentLists(months,fr,td,th){
       <div class="grid4" style="margin-bottom:12px">
         ${uxTile(pcF(A.answers,ansAll),'Answers quoting a figure',`${num(A.answers)} of ${num(ansAll)} answers · ${A.answers?(A.figures/A.answers).toFixed(1):'—'} figures each`,C.acc)}
         ${uxTile(pcF(A.matched,A.figures),'Matched on a cited page',`${num(A.matched)} figures found on the page as it was`,C.green)}
-        ${uxTile(pcF(A.unmatched,A.matched+A.unmatched),'Unmatched, of checkable figures',`${num(A.unmatched)} figures on no checkable cited page · an upper bound on error`,C.amber)}
+        ${uxTile(pcF(A.unmatched,A.matched+A.unmatched),'Unmatched, of checkable figures',`${num(A.unmatched)} figures that appear on no cited page · not an error rate`,C.amber)}
         ${uxTile(pcF(A.unverifiable,A.figures),'Unverifiable',`${num(A.unverifiable)} figures: the page changed after the answer, or nothing was cited`,C.dim)}
       </div>
+      ${(()=>{   // by kind (brief §100, audit 0h): a year or a small number matches almost any page, so each kind is shown apart
+        const K=[['Euro','Euro amounts'],['Pct','Percentages'],['Year','Years']],T={};
+        fmons.forEach(m=>{const r=(FIGM[m]||[]).find(x=>x.url==='(all)');if(!r||r.EuroMatched==null)return;K.forEach(([k])=>['Matched','Unmatched','Unverifiable'].forEach(x=>{T[k+x]=(T[k+x]||0)+(r[k+x]||0);}));});
+        if(!Object.keys(T).length)return'';
+        const rows=K.map(([k,l])=>{const m=T[k+'Matched'],u=T[k+'Unmatched'],v=T[k+'Unverifiable'];return`<tr style="border-bottom:1px solid var(--b2)">${tdF(l,{left:true})}${tdF(num(m+u+v))}${tdF(num(m))}${tdF(num(u))}${tdF(pcF(u,m+u))}${tdF(num(v))}</tr>`;}).join('');
+        return`<div class="card-title" style="font-size:var(--t-xs)">By kind of figure<span class="card-title-note">every answer · ${fmons.map(fmtMonth).join(', ')}</span></div>
+          <div class="tbl-wrap" style="margin-bottom:12px"><table style="width:100%;border-collapse:collapse"><thead><tr style="border-bottom:1px solid var(--b2)">${thF('Kind',true)}${thF('Figures')}${thF('Matched')}${thF('Unmatched')}${thF('Unmatched, of checkable')}${thF('Unverifiable')}</tr></thead><tbody>${rows}</tbody></table></div>`;
+      })()}
       <div class="grid2">
         <div><div class="card-title" style="font-size:var(--t-xs)">Pages whose answers quote figures the page does not carry<span class="card-title-note">100+ figures, 50+ checkable · highest unmatched share first</span></div>
           <div class="tbl-wrap"><table style="width:100%;border-collapse:collapse"><thead><tr style="border-bottom:1px solid var(--b2)">${thF('Page',true)}${thF('Answers')}${thF('Figures')}${thF('Matched')}${thF('Unmatched')}${thF('Unverifiable')}</tr></thead><tbody${showAttr(15,pagesAll)}>${prow||'<tr>'+tdF('No page has 50 checkable figures in range',{left:true})+'</tr>'}</tbody></table></div></div>
         <div><div class="card-title" style="font-size:var(--t-xs)">By month</div>
           <div class="tbl-wrap"><table style="width:100%;border-collapse:collapse"><thead><tr style="border-bottom:1px solid var(--b2)">${thF('Month',true)}${thF('Answers with a figure')}${thF('Share')}${thF('Matched')}${thF('Unmatched')}${thF('Unverifiable')}</tr></thead><tbody>${mrow}</tbody></table></div>
-          <div class="share-foot">A figure is matched when its number appears on a snapshot of a cited page taken at that page's last change, and only when that change predates the answer; otherwise the page has changed since and the figure is unverifiable. Unmatched fires on three things that are not errors as well as on errors: a figure from a second source, a rounding, a weekly rate the page gives annually. It is an upper bound until the labelling sheet's figure-match column calibrates it (${derivCaveat('figures')}), and the word "accuracy" is not used for it. "Matched" is loose in the other direction: a year matches any year on the page and an amount any bare number, so the matched share overstates too. Snapshots are dated from today; the back history can only be checked against pages that have not changed since.</div></div>
+          <div class="share-foot">A figure is matched when its number appears on a snapshot of a cited page taken at that page's last change, and only when that change predates the answer; otherwise the page has changed since and the figure is unverifiable. Unmatched fires on three things that are not errors as well as on errors: a figure from a second source, a rounding, a weekly rate the page gives annually. <b>Unmatched: the number appears on no cited page. Not an error rate.</b> It is not a bound either way: a figure taken from the wrong row of the right page counts as matched, and a correct total the answer worked out counts as unmatched (${derivCaveat('figures')}). "Matched" is loose: a year matches any year on the page and an amount any bare number. Snapshots are dated from today; the back history can only be checked against pages that have not changed since.</div></div>
       </div></div>`;
   }
   // 4c. the content-gap register (brief §73): evidence rows with their status, by owner
@@ -7493,6 +7507,20 @@ function uxTile(val,lbl,sub,col,key){
 let hoursMode='turns';
 function setHoursMode(m){hoursMode=m;rendered['usage']=false;renderPane('usage');}
 // Outcomes first (admin-app spec principle 1), then activity.
+// Every question by outcome (brief §100, audit 0g): the share of all questions beside the share of scored answers, so an
+// outcome the rates leave out (out of scope, error, greeting) is seen next to them.
+function outcomeAllTable(fr){
+  const sum=k=>fr.reduce((s,d)=>s+outcomeOf(d,k),0),Q=fr.reduce((s,d)=>s+d.queries,0),sc=fr.reduce((s,d)=>s+(d.ux?.scored||0),0);
+  if(!Q||!sc)return'';
+  const SCORED=new Set(['citedFull','partial','notFound','clarification','uncited']);
+  const td=(v,o={})=>`<td style="text-align:${o.left?'left':'right'};padding:7px 10px;font-family:${o.left?'inherit':"'DM Mono',monospace"};font-size:var(--t-xs)">${v}</td>`;
+  const th=(t,left)=>`<th style="text-align:${left?'left':'right'};padding:7px 10px;font-size:var(--t-xs);color:var(--muted);text-transform:uppercase;letter-spacing:.08em;white-space:nowrap">${t}</th>`;
+  const p=(a,b)=>b>0?(a/b*100).toFixed(1)+'%':'—';
+  const rows=outcomeSeries().map(([k,l,c])=>{const n=sum(k);return`<tr style="border-bottom:1px solid var(--b2)">${td(`<span class="sc-sw" style="display:inline-block;width:8px;height:8px;border-radius:2px;background:${c};margin-right:8px"></span>${l}`,{left:true})}${td(num(n))}${td(p(n,Q))}${td(SCORED.has(k)?p(n,sc):'not scored')}</tr>`;}).join('');
+  return`<div class="card-title" style="font-size:var(--t-xs);margin-top:12px">Every question, by outcome<span class="card-title-note">${num(Q)} questions · ${num(sc)} scored</span></div>
+    <div class="tbl-wrap"><table style="width:100%;border-collapse:collapse"><thead><tr style="border-bottom:1px solid var(--b2)">${th('Outcome',true)}${th('Questions')}${th('Share of all questions')}${th('Share of scored answers')}</tr></thead><tbody>${rows}</tbody></table></div>
+    <div class="share-foot">The rates above are over scored answers, which leave out out-of-scope, error and greeting answers; when those rise, the scored rates move without any answer changing. This table and the chart below are over every question. Partial = a cited answer that also says the bot could not find something; by rule, not yet reader-checked.</div>`;
+}
 function usageOutcomesHTML(fr){
   const cols=(DATA.usageQuality&&DATA.usageQuality.columns)||{};
   if(!fr.length)return'';
@@ -7520,7 +7548,8 @@ function usageOutcomesHTML(fr){
         ${T(unc,sc,'Uncited answer',num(unc)+' turns · substantive reply, no citation, no rule matched',C.acc,'uncited-answer-rate')}
       </div>
       ${uxTile(P.genPA!=null?P.genPA.toFixed(2)+'p':'—','Generation cost per cited answer',P.valid?'settled join days · '+P.span:P.why,C.acc,'generation-cost-per-answered-turn').replace('text-align:center','text-align:center;max-width:320px;margin-bottom:12px')}
-      ${chartBox('ux-outcomes',200,'Outcome mix — selected range','shares of turns, stacked to 100% · click a bar')}
+      ${outcomeAllTable(fr)}
+      ${chartBox('ux-outcomes',200,'Outcome mix over all questions — selected range','shares of all questions, stacked to 100% · click a bar')}
     </div>`;
   }else if(cols.outcomes){
     const P=perTurnStats(fr),ans=sum('answered'),un=sum('unanswered'),fl=sum('flagged');
@@ -7691,10 +7720,10 @@ function buildUsageDetailCharts(fr){
   const stacked=mergeOpts(baseOpts(),{scales:{y:{stacked:true,ticks:{callback:v=>num(v)}},x:{stacked:true}},plugins:{legend:{display:true}},onClick:(e,els)=>{if(els.length)drillBucket(vd[els[0].index]);}});
   const tax=vd.some(r=>r.ux&&r.ux.cited!=null);
   if(document.getElementById('ux-outcomes')&&tax){
-    const sh=(r,k)=>r.queries>0?+((g(r,k))/r.queries*100).toFixed(2):null;
-    const series=[['cited','Cited answer',C.green],['notFound','Not found',C.red],['clarification','Clarification',C.amber],['error','Error',C.pink],['outOfScope','Out of scope',C.purple],['greeting','Greeting',C.dim],['uncited','Uncited answer',C.acc]];
-    mkChart('ux-outcomes',{type:'bar',data:{labels,datasets:series.map(([k,l,c])=>({label:l,data:vd.map(r=>sh(r,k)),backgroundColor:c+'cc',stack:'o',maxBarThickness:28}))},
-      options:mergeOpts(stacked,{scales:{y:{max:100,ticks:{callback:v=>v+'%'}}},plugins:{tooltip:{callbacks:{label:cx=>`${cx.dataset.label}: ${(+cx.parsed.y).toFixed(1)}% (${num(g(vd[cx.dataIndex],series[cx.datasetIndex][0]))})`}}}})});
+    const sh=(r,k)=>r.queries>0?+((outcomeOf(r,k))/r.queries*100).toFixed(2):null;
+    const series=outcomeSeries();
+    mkChart('ux-outcomes',{type:'bar',data:{labels,datasets:series.map(([k,l,c])=>({label:l,data:vd.map(r=>sh(r,k)),backgroundColor:c,stack:'o',maxBarThickness:28}))},
+      options:mergeOpts(stacked,{scales:{y:{max:100,ticks:{callback:v=>v+'%'}}},plugins:{tooltip:{callbacks:{label:cx=>`${cx.dataset.label}: ${(+cx.parsed.y).toFixed(1)}% (${num(outcomeOf(vd[cx.dataIndex],series[cx.datasetIndex][0]))})`}}}})});
   }
   else if(document.getElementById('ux-outcomes'))mkChart('ux-outcomes',{type:'bar',data:{labels,datasets:[
     {label:'Answered',data:vd.map(r=>g(r,'answered')),backgroundColor:C.green+'cc',stack:'o',maxBarThickness:28},
@@ -8463,7 +8492,7 @@ function renderCaveatStrip(){
   const pd=filterRange(DATA.merged);const f=CONFIG.outcome_rules_unvalidated_from;const parts=[];
   if(f&&pd.some(d=>d.date>=f)&&!CONFIG.outcome_rules_measured)parts.push(`<b>Outcome figures from ${fmtDate(f)} are not yet checked against a reader.</b> The model and its wording changed that day; the outcome classes come from rules on the answer's wording (${(DATA.usageQuality&&DATA.usageQuality.outcomeRules)||'—'}), so a shift in wording and worse answers look alike until the labelling sheet is scored.`);
   if(hasIntent&&!(CONFIG.intent_measured&&CONFIG.intent_measured.n))parts.push(`What people ask (intent, topic, situation) is read by rule from the question${LEXICON?' ('+escH(LEXICON.version)+')':''}; reader agreement not yet measured.`);
-  if(hasFigs&&!(CONFIG.derivation_measured&&CONFIG.derivation_measured.figure_n))parts.push(`"Unmatched figures" is an upper bound on quoted-figure error, not accuracy.`);
+  if(hasFigs&&!(CONFIG.derivation_measured&&CONFIG.derivation_measured.figure_n))parts.push(`"Unmatched figures" are figures that appear on no cited page; not an error rate.`);
   // the one-sentence form for the bar: what is read by rule and not yet checked, in the same order
   const names=[];
   if(f&&pd.some(d=>d.date>=f)&&!CONFIG.outcome_rules_measured)names.push(`outcome figures from ${fmtDate(f)}`);
@@ -10226,7 +10255,7 @@ init();
       if(k==='sessions'&&sk)return{value:sumD(d=>d.ux?.[sk]),fmt:v=>num(Math.round(v)),series:rows.map(d=>d.ux?.[sk]||0),note:'conversations started on '+filter.label,intent,subj:filter.label+' conversations'};
       return{value:sumD(d=>d.ux?.[tk]),fmt:v=>num(Math.round(v)),series:rows.map(d=>d.ux?.[tk]||0),note:'turns · '+filter.label,intent,subj:filter.label+' turns'};
     }
-    if(k==='unexpected'){const P=perTurnStats(rows);return{value:P.unexpectedRate,fmt:pctF(1),series:null,note:P.unexpectedRate==null?'needs question-intent data and 50+ typed questions with a named intent':`of ${num(P.unexpectedN)} typed questions with a named intent · ${intentCaveat()}`,intent,subj:'answers not what the question needed'};}
+    if(k==='unexpected'){const P=perTurnStats(rows);return{value:P.unexpectedRate,fmt:pctF(1),series:null,note:P.unexpectedRate==null?'needs question-intent data and 50+ typed questions with a named intent':`of ${num(P.unexpectedN)} typed questions with a named intent · ${intentCaveat()}`,intent,subj:'typed questions with no cited answer'};}
     if(k==='cpc'){const P=perTurnStats(rows);return{value:P.valid?P.totPC:null,fmt:v=>v==null?'—':v.toFixed(2)+'p',series:null,note:P.valid?'allocated total cost per conversation · settled join days: '+P.span:P.why,intent,subj:'allocated cost per conversation'};}
     if(k==='weekday'){const DN=['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'],t=Array(7).fill(0),n=Array(7).fill(0);
       rows.filter(d=>d.queries>0).forEach(d=>{const w=isoDow(d.date);t[w]+=d.queries;n[w]++;});
@@ -10389,7 +10418,7 @@ init();
     AM('span','Conversations over 5 min','pct',{calc:{src:'conv',n:['Span6to15','Span16to60','SpanOver60'],d:['Span0to1','Span2to5','Span6to15','Span16to60','SpanOver60'],of:'multi-turn conversations',note:'multi-turn conversations lasting over 5 minutes, minute precision',subj:'conversations over 5 minutes'},syn:[[/\bconversations? (over|longer than|lasting( over| more than)?) (5|five) min(ute)?s?\b|\bhow long (are|do|did) conversations( last| take)?\b|\bconversation (length|duration)\b/,5,'conversations over 5 minutes'],[/how long|conversation (length|span|duration)|observed span|\bspan\b|duration/,190,'conversations over 5 minutes']],def:'Mature multi-turn conversations lasting more than 5 minutes from first to last turn, minute precision.'}),
     AM('script','Non-Latin script share','pct',{def:'Turns whose question starts with a non-Latin letter, as a share of turns with letters. A script, not a language.'}),
     AM('events','Events','list',{groupable:false,prior:false,syn:[[/\bevents?\b|milestones/,290,'events']]}),
-    AM('unexpected','Answers not what the question needed','pct',{polarity:'down',syn:[[/not what (the|their|people.s) questions? needed|unexpected (outcomes?|answers?)|wrong kind of answer|answers? (that )?(weren.t|were not|didn.t|did not) (match|fit|suit)/,700,'answers not what the question needed']],def:'Typed questions with a named intent whose outcome is not the one the design expects for it: a not-found, clarification or uncited answer where a cited answer is expected; a cited answer where the question was about the person\'s own claim and a redirect is expected. By rule from the question (brief §69).'}),
+    AM('unexpected','Typed questions with no cited answer','pct',{polarity:'down',syn:[[/not what (the|their|people.s) questions? needed|unexpected (outcomes?|answers?)|wrong kind of answer|answers? (that )?(weren.t|were not|didn.t|did not) (match|fit|suit)|(typed )?questions? (with|that got|getting) no cited answer|no cited answer/,700,'typed questions with no cited answer']],def:'Typed questions with a named kind (intent by rule) that got a not-found or uncited answer, or a clarification although the question named a scheme. The design expects a cited answer for every kind, including status and contact questions the site may not answer, so this is not a judgment of what the question needed (brief §69, §100).'}),
     AM('cpc','Allocated cost per conversation','pence',{polarity:'down',cost:true,syn:[[/\bcost (per|of a|of each) conversation\b|\b(how much|what) (does|do|did) (a|each|one|every) conversation cost\b/,30,'allocated cost per conversation']],def:'Allocated total billed cost divided by conversations, over settled billing days with turns.'}),
     AM('oos','Out-of-scope share','pct',{calc:{src:'ux',n:'outOfScope',d:'Q',of:'turns',note:'questions outside CI’s remit, declined by AskCI',subj:'out-of-scope share of turns'},polarity:'down',syn:[[/\bout[- ]of[- ]scope\b|\boutside (its|the|ci'?s) remit\b|\brefus(ed|al|als)\b|\bdeclined\b/,70,'out-of-scope share of turns']],def:'Turns AskCI declined as outside Citizens Information\'s remit, as a share of all turns.'}),
     AM('adoption','Share of site sessions (at most)','pct',{syn:[[/\b(share|percentage|proportion) of (the )?site (visitors|visits|sessions|traffic)\b|\bsite (visitors|visits|sessions) (use|using|used)\b|\badoption( rate)?\b/,110,'AskCI conversations as a share of site sessions']],def:'AskCI conversations as a share of citizensinformation.ie site sessions. At most: GA4 undercounts sessions (cookie consent) while AskCI counts every conversation.'}),

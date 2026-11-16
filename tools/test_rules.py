@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Rule tests for tools/redact_feed.py (brief §100, handoff package 0j): invented sentences, never citizen text, each with
 the class the rules should give it. Covers the outcome rules (uncited answers), the partial test (cited answers), the
-crisis theme, what a clarification asked for, and the work-status classes, including every case the 16 Nov 2026 rule
+crisis theme, what a clarification asked for, the work-status classes, figures by kind and generic lexicon phrases, including every case the 16 Nov 2026 rule
 audit found. Run: python3 tools/test_rules.py (the pre-commit hook and the deploy run it too). Prints counts and the
 failing cases' own invented sentences only.
 """
@@ -69,6 +69,18 @@ ASKS = [
     ("Can you give me more detail about your situation?", set()),
 ]
 
+# (answer, expected {kind: (matched, unmatched, unverifiable)}) with nothing cited, so every figure is unverifiable (0h)
+FIGURES = [
+    ("The rate is €232.00 a week, 10% more than in 2025.", {"Euro": (0, 0, 1), "Percent": (0, 0, 1), "Year": (0, 0, 1)}),
+    ("You can apply from 2026.", {"Euro": (0, 0, 0), "Percent": (0, 0, 0), "Year": (0, 0, 1)}),
+]
+
+# (question, expected generic flag): a subject word is not naming a page (0i; needs the lexicon in data/)
+GENERIC = [
+    ("how much income tax will I pay", True), ("I am self employed, what do I need to do", True),
+    ("how do I apply for child benefit", False), ("am I entitled to the fuel allowance", False),
+]
+
 # (question, expected work class)
 WORK = [
     ("I am not working at the moment", "unemployed"), ("I lost my job last week", "unemployed"),
@@ -95,7 +107,14 @@ def main():
     for q, want in WORK:
         got = R.situation_of(q, False)[3]
         if got != want: fails.append(("work", q, want, got))
-    n = len(UNCITED) + len(CITED) + len(CRISIS) + len(ASKS) + len(WORK)
+    for a, want in FIGURES:
+        got = R.check_figures_by_kind(a, "", "2026-10-01")
+        if got != want: fails.append(("figures", a, want, got))
+        if R.check_figures(a, "", "2026-10-01")[0] != sum(sum(x) for x in want.values()): fails.append(("figures total", a, "sum of kinds", R.check_figures(a, "", "2026-10-01")))
+    for q, want in GENERIC:
+        url, cat, n, gen = R.page_match(q)
+        if not url or gen != want: fails.append(("generic", q, want, (url[-40:], gen)))
+    n = len(UNCITED) + len(CITED) + len(CRISIS) + len(ASKS) + len(WORK) + len(FIGURES) + len(GENERIC)
     for kind, text, want, got in fails:
         print(f"FAIL {kind}: {text!r}\n   expected {want}, got {got}")
     print(f"{n - len(fails)} of {n} rule cases passed (outcome rules {R.OUTCOME_RULES_VERSION}, safety {R.SAFETY_VERSION}, derivation {R.DERIVATION_VERSION})")

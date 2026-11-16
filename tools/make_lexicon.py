@@ -19,7 +19,7 @@ from datetime import datetime
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 REPO = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 DATA = os.path.join(REPO, "data")   # the published files the page reads (brief §97)
-LEXICON_VERSION = "2026.10.24-6"
+LEXICON_VERSION = "2026.11.16-1"   # generic phrases marked (brief §100)
 MIN_CHARS = 6            # a phrase shorter than this never matches on its own ("tax" would match everything)
 CI = "https://www.citizensinformation.ie/en/"
 # What people call things → the page slug (or full path) it means. Checked against the unmatched report.
@@ -121,6 +121,8 @@ def build():
            "version": LEXICON_VERSION, "min_chars": MIN_CHARS, "intents": INTENTS,
            "derivation_version": DERIVATION_VERSION, "topics": topics_out(),
            "phrases": {p: e for p, e in sorted(entries.items(), key=lambda kv: (-len(kv[0]), kv[0]))}}
+    for p in GENERIC:   # a subject word, not the name of a page (brief §100): kept for the category, left out of named-page counts
+        if p in out["phrases"]: out["phrases"][p]["generic"] = True
     return out
 
 
@@ -129,8 +131,14 @@ def build():
 # matches (counts only) and the build refuses a keyword under TOPIC_MIN_MATCHES, so nothing rare and identifying can
 # enter this public file. A question's topic is the matching keyword that is longest; a topic marked general applies
 # only when no other does. DERIVATION_VERSION bundles this key with redact_feed.py's response rules and template list.
-DERIVATION_VERSION = "2026.11.16-1"   # bumped with redact_feed.py's (2026.11.16-1: clarification asks and work status, brief §100): -2 templates, -3 organisations, -4 figures, -5 five more topic tables, -6 layer 2, -7 the ten smaller categories
+DERIVATION_VERSION = "2026.11.16-2"   # bumped with redact_feed.py's (2026.11.16-1: clarification asks and work status; -2 figures by kind and generic aliases, brief §100): -2 templates, -3 organisations, -4 figures, -5 five more topic tables, -6 layer 2, -7 the ten smaller categories
 TOPIC_MIN_MATCHES = 20
+# Generic phrases (brief §100, handoff 0i): aliases and slugs that name a subject or a situation rather than a scheme or a
+# page. A question matching only one of these still gets the page's category, but is left out of the named-page counts
+# (the hit rate, asked-pages files and the register's retrieval rows). The analyst reviews this list.
+GENERIC = {"income tax", "pay tax", "tax refund", "tax return", "self employed", "self employment", "pension", "pensions",
+           "separated", "separation", "divorce", "inheritance", "living alone", "opt out", "means test", "means tested",
+           "redundancy", "citizenship", "irish citizen", "single parent", "lone parent"}
 TOPICS = {
     "housing": {
         "Renting: landlord and tenant": ["landlord", "landlords", "tenant", "tenants", "tenancy", "evict", "evicted", "eviction", "notice of termination", "rtb", "residential tenancies", "lease", "my deposit", "deposit back"],

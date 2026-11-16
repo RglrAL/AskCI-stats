@@ -85,9 +85,9 @@ them.
 | Step | Tool | Reads | Writes | Version it carries |
 |---|---|---|---|---|
 | 0 | `make_site_pages.py` (occasional) | a saved sitemap | `site-pages.csv` | — |
-| 1 | `make_lexicon.py --topic-counts FEEDS` | `site-pages.csv`, the raw feeds (counts only) | `question-lexicon.json`; refuses to write while any topic keyword matches under 20 questions | lexicon 2026.10.24-6, derivation 2026.11.16-1 |
+| 1 | `make_lexicon.py --topic-counts FEEDS` | `site-pages.csv`, the raw feeds (counts only) | `question-lexicon.json`; refuses to write while any topic keyword matches under 20 questions | lexicon 2026.11.16-1, derivation 2026.11.16-2 |
 | 2 | `fetch_pages.py` | `pages-cited.csv`, `site-pages.csv`, the public site (curl) | `exports/site-text/<hash>__<LastMod>.txt`, one dated snapshot per cited page per change | — |
-| 3 | `redact_feed.py FEEDS --out-dir DIR --force` | raw feeds, lexicon, snapshots | redacted feeds: the text columns dropped, 60-odd derived columns added (section 6) | rules 2026.11.16-1, style 2026.10.23-2, safety 2026.11.16-1, intent 2026.10.24-2, derivation 2026.11.16-1 |
+| 3 | `redact_feed.py FEEDS --out-dir DIR --force` | raw feeds, lexicon, snapshots | redacted feeds: the text columns dropped, 60-odd derived columns added (section 6) | rules 2026.11.16-1, style 2026.10.23-2, safety 2026.11.16-1, intent 2026.10.24-2, derivation 2026.11.16-2 |
 | 4 | `make_usage.py REDACTED --out-dir DIR` | redacted feeds, lexicon hubs and topics | 29 aggregate CSVs (section 5) | — |
 | 5 | `cache_coverage.py`, `next_step.py` | raw or redacted feeds | `repeat-questions-monthly.csv`, `answer-next-daily.csv` | — |
 | 6 | `collect_aggregates.py DIR` | the review folder | copies every aggregate CSV into the repo root, never a feed | — |
@@ -126,7 +126,7 @@ column list; this is the map.
 
 **Pages.** `citations-monthly.csv` (page, month: citations, answers, partial, dislikes), `citations-intent-monthly.csv`,
 `pages-cited.csv` (page: first and last cited, LastMod, answers after LastMod), `asked-pages-monthly.csv` and
-`asked-pages-weekly.csv` (pages the question named, and whether the answer cited them), `cited-not-found.csv` (cited
+`asked-pages-weekly.csv` (pages the question named, and whether the answer cited them; generic phrases left out), `cited-not-found.csv` (cited
 addresses that do not exist on the site: first and last cited, citations, when checked; brief §96, written by
 `tools/make_not_found_pages.py` from the page-text fetch log), `ga4/clicks-daily.csv`, `ga4/clicks-pages-daily.csv`.
 
@@ -139,7 +139,8 @@ household, work, payment on, year, shape; never crossed with each other).
 
 **The response side.** `answer-templates-daily.csv` (the fixed sentences per day), `answer-signposts-monthly.csv`
 (organisations named, by category, with `(any)`, `(external)` and `(none)` rows), `answer-figures-monthly.csv`
-(figures quoted, matched / unmatched / unverifiable, by cited page), `clarification-asks-monthly.csv` (what a
+(figures quoted, matched / unmatched / unverifiable, by cited page, and the three again for euro amounts,
+percentages and years; unmatched means on no cited page, not an error), `clarification-asks-monthly.csv` (what a
 clarification asked for and whether the question had given it), `answer-personalisation-monthly.csv`.
 
 **Reference and configuration.** `events.json` (20 events: 3 confirmed model changes, 3 candidate prompt changes
@@ -162,9 +163,13 @@ dated by the fixed wording, 4 candidate chip changes, launches and observed chan
   which is never counted as typed (brief §71).
 - **Intent**, by rule on the question: status, contact, documents, apply, rate, eligibility, timing, statement,
   definition, other (version 2026.10.24-2). The lexicon carries the outcome the design expects per intent (all
-  "cited"); **unexpected** = not found, uncited, or a clarification on a question that named a scheme.
+  "cited"); **no cited answer** (formerly "unexpected", brief §100) = not found, uncited, or a clarification on a
+  question that named a scheme. "Definition" (shown "What is …") also takes any question of one to five words no
+  other rule catches.
 - **Named a scheme**: the question contains a lexicon phrase (a page slug or alias); the page and category it
-  names are recorded. A citation of a page beneath a named hub counts as a hit.
+  names are recorded. A match that comes only from a phrase marked generic (21 subject words such as "income tax",
+  "pension", "self employed"; `GENERIC` in `make_lexicon.py`, brief §100) keeps the category but is left out of the
+  named-page files, so it does not count as naming a page. A citation of a page beneath a named hub counts as a hit.
 - **Topic**: the longest matching generic keyword from the lexicon's topic layer; a topic marked general applies only
   when no specific one does. **Category Source**: page if the question named a page, topic if its topic placed it,
   blank otherwise. The **broad cut** of a category is cited-a-page-in-it OR named-a-page-in-it OR topic-places-it;
@@ -274,7 +279,7 @@ dated by the fixed wording, 4 candidate chip changes, launches and observed chan
 | Data audit, files-only (schema, cross-file sums, bounds, floors, versions, lexicon, register, canary, privacy sweep, cost labels) | `tools/audit_data.py --files-only`, run by the workflow | 161 pass, 0 fail, 23 notes |
 | Data audit with the feed recount | `tools/audit_data.py DIR`, local | more checks; run before each refresh is committed |
 | Ask bar regression | `tools/test_ask.py`, headless Chrome, data frozen at `tests/ask_fixture_ref` (54dc360), served from `data/`; 4 minutes an attempt and one retry on a fresh profile (brief §97); fails without a browser unless `--allow-skip` | 311 pass |
-| Rule tests | `tools/test_rules.py`: invented sentences with the class each rule should give; run by the pre-commit hook when the rules change and by the deploy | 51 pass |
+| Rule tests | `tools/test_rules.py`: invented sentences with the class each rule should give; run by the pre-commit hook when the rules change and by the deploy | 57 pass |
 | Feed-text guard | `tools/hooks/test_guard.py` | 34 cases |
 | Refresh manifest | `VERSIONS.json`, written by `tools/refresh.py`; the audit checks its versions against the files and its aggregate hashes against the committed files | one per refresh |
 | Pre-commit | `tools/hooks/pre-commit` (`git config core.hooksPath tools/hooks`): canary, costs redaction, Ask bar test on the staged page | |
