@@ -262,6 +262,11 @@ dated by the fixed wording, 4 candidate chip changes, launches and observed chan
   inside the two windows. A card gives the latest confirmed model or prompt change, 28 days either side. The outcome
   mix (Overview and Quality, `outcomeMixChart`) is over all questions, weekly beyond 90 days, with a "Not cited only"
   view and numbered events.
+- **Cited, no gap flagged** (brief §102): cited minus partial over scored, on Quality as one of four shares of scored
+  answers over time (dashed before 1 Jul, when the partial phrase changed; unvalidated from 14 Sep; a model that admits
+  gaps more readily scores lower), in the era scorecard and the Ask bar; not an Overview tile until the labelling is
+  scored. Before / after carries what people did after each kind of answer, by era, from `answer-next-daily.csv`,
+  with Wilson intervals: descriptive support for the rules, not a validation.
 - **Monthly cost** (brief §98): the monthly billed total and generation bars (`monthlyCostChart`) sit on Cost › Summary
   under the daily timeline as well as on Services; every month labelled, months follow the range, never scoped by
   service. Billed total is the figure to compare with Azure Cost Management's own monthly view; checked against the

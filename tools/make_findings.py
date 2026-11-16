@@ -138,6 +138,16 @@ def main():
             P(f"| 13 | Figures quoted that no cited page carries ({last_full}) | {pct(um)} of {chk:,} checkable figures; {pct(I(FG['Unverifiable']) / I(FG['Figures']) * 100 if I(FG['Figures']) else None, 0)} unverifiable | {pct(bf) if bf is not None else '—'} | {status(um, bf) if bf is not None else 'baseline'} | §75, §100: the number appears on no cited page, not an error rate; employment-permit and rate pages lead |")
         c_ = max((I(g(k)["NotFound"]) for k in ("cic.centre", "cic.phone") if g(k)), default=0)
         P(f"| 12 | Not-found answers naming an outside body ({last_full}) | {pct(ext)} of {nf_all:,}; {pct(I(a_['NotFound']) / nf_all * 100 if a_ and nf_all else None, 0)} name somewhere, {pct(c_ / nf_all * 100 if nf_all else None, 0)} Citizens Information's own centre or phone line | {pct(base) if base is not None else '—'} | {status(ext, base, lower_is_better=False) if base is not None else 'baseline'} | §75: the no-results wording points at the service's own centre and phone line; a theme-aware signpost is the recommendation, this column its measure |")
+    # 14. behaviour cross-check (brief §102, handoff 2d/2e): conversations that ended after a not-found answer, and the
+    # next answer cited after one, from answer-next-daily.csv, in the two latest eras; recorded 16 Nov 2026: 75.8% / 18.4%
+    # (2 Jul - 13 Sep) and 79.4% / 13.3% (15 Sep - 2 Nov)
+    NX = rd("answer-next-daily.csv")
+    if NX:
+        def nxe(a, b):
+            k = [r for r in NX if r["Class"] == "notfound" and a <= r["Date"] <= b]; n = sum(I(r["Answers"]) for r in k)
+            return (sum(I(r["Ended"]) for r in k) / n * 100, sum(I(r["NextCited"]) for r in k) / n * 100, n) if n else (None, None, 0)
+        e1, c1, n1 = nxe("2026-07-02", "2026-09-13"); e2, c2, n2 = nxe("2026-09-15", "9999-12-31")
+        P(f"| 14 | After a not-found answer, the conversation ended / the next answer was cited (mature conversations) | {pct(e2)} / {pct(c2)} from 15 Sep ({n2:,} answers); {pct(e1)} / {pct(c1)} 2 Jul to 13 Sep | 79.4% / 13.3% | {status(e2, 79.4)} | §102: descriptive, supports the rules where a class behaves alike across eras; not a validation |")
     P("\n## Conclusions on record (read, not measured)\n")
     for s in ["**14 September 2026 was a model change** (§57): it matches the calibrated signature of one on every count, at twice the size of March's; the mix of what was asked accounts for none of it (§71).",
               "**The answering model applies the relevance-check instruction more readily, hardest on questions that describe a person** (§67, §71): not found rose 5 points further on personal situations than on other typed questions; retrieval cited the named page as often as before.",

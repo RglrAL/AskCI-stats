@@ -2671,3 +2671,34 @@ Ask bar 311 of 311. Then at 390 px (the page in a 390 px frame, since the browse
 themes: the numbered event key did not wrap and pushed the Overview to 415 px and Quality to 432 px; it now wraps, and
 all eleven views measure 384 px, wide tables scrolling inside their own boxes; the interval text (`--dim`) is 5.05:1 on
 the light card and 5.13:1 on the dark; the partial band reads apart from cited in both themes.
+
+## 102. Cited with no gap flagged, and what people did next, by era (16 Nov 2026)
+
+The handoff's package 2, with its audit amendment. The headline cited rate counts partial answers as cited. Partial
+is a subset of cited (confirmed in `classify_rule`: a cited answer whose wording also says the bot could not find
+something), so cited minus partial over scored is the share of answers that cite a page and flag no gap. It is named
+"Cited, no gap flagged", not "complete answers": partial means the answer itself admits a gap, so a model that admits
+gaps more readily scores lower on it, and a step at a model change may be candour, not completeness.
+
+- **Where it shows.** Quality has a line chart of four shares of scored answers over time: cited with no gap flagged,
+  partial, clarification, not found (`fourSharesChart`; weekly beyond 90 days; numbered events). The two cited lines are
+  dashed before 1 Jul, when the partial rule's deciding phrase changed (§76), and the note under the chart says no
+  before / after should be drawn across that date, that outcomes from 14 Sep are not yet checked against a reader, and
+  the candour point. The era scorecard's existing cited-not-partial column is renamed to match. The Ask bar answers
+  "complete answer rate", "cited, no gap flagged" and "not partial" (two cases recorded and read: September 68.5%,
+  14,238 of 20,790 scored turns in the frozen data). The Overview's cited tile says it includes partial. **It is not on
+  the Overview as a tile:** a rule's reading should not become the headline before the labelling sheet is scored.
+- **What people did next, by era** (2d). Before / after carries a table from `answer-next-daily.csv` (`next_step.py`'s
+  output, not rebuilt): for each answer class and each era of the scorecard, the share of answers after which the
+  conversation ended, the share rephrased and the share whose next answer cited a page, each with a 95% Wilson
+  interval, mature conversations only. Captioned as descriptive: it shows whether a class is followed alike in each era,
+  which supports the rules where it is and questions them where it is not; it does not validate them, and the file's
+  cited class leaves partial out. Reference figures reproduce: after a not-found answer the conversation ended 75.8%
+  (2 Jul – 13 Sep) and 79.4% (15 Sep – 2 Nov), the next answer was cited 18.4% and 13.3%; after a cited answer with no
+  gap flagged 51.4% / 45.5% and 53.4% / 40.6%.
+- **The not-found tile and finding** (2e). "Conversations that ended after a not-found answer" heads that table (79.4%
+  in the 5.4 era, 75.8% before), on Before / after rather than the Overview, for the same reason as above; and
+  `make_findings.py` item 14 records it with the next-cited share against these figures.
+
+Checked: the reference figures above from the published files and on the page; Quality and Before / after load with no
+errors; the wide era table scrolls inside its card and every view is 384 px wide in a 390 px frame; Ask bar 313 of 313.

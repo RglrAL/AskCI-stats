@@ -3031,6 +3031,7 @@ function parseUsage(rows){
     Q.rowsKept++;
     const ext={};let any=false;
     Object.entries(UX).forEach(([k,c])=>{if(!c)return;const v=String(row[c]||'').replace(/,/g,'').trim();if(v==='')return;ext[k]=+v||0;any=true;});
+    if(ext.cited!=null&&ext.partial!=null)ext.citedClean=Math.max(0,ext.cited-ext.partial);   // cited, no gap flagged (brief §102)
     if(rulesCol&&!outcomeRules)outcomeRules=String(row[rulesCol]||'').trim();
     bd[date]={questions:parseInt(String(row[qk]||'0').replace(/,/g,''))||0,sessions:parseInt(String(row[sk]||'0').replace(/,/g,''))||0,ext:any?ext:null};
   });
@@ -3691,6 +3692,32 @@ function eraStats(x){
   let typed=0,sit=0;rows.forEach(d=>(QINTENT[d.date]||[]).forEach(r=>{if(r.chip)return;typed+=r.Turns;sit+=r.Situation;}));
   return{...x,P,scored:sc,cleanRate:rate(cited-pa,sc),wordsPerCited:cn?cw/cn:null,pagesPerCited:cited?ci/cited:null,clicksPer100:ck.length>=7&&ckc?ckv/ckc*100:null,clickDays:ck.length,usageDays:u.length,inside,sitShare:typed?sit/typed*100:null,unexpected:P.unexpectedRate};
 }
+// What people did after each kind of answer, by era (brief §102, handoff 2d and 2e): from answer-next-daily.csv
+// (tools/next_step.py, finished conversations only), the share of answers after which the conversation ended, the
+// share rephrased, and the share whose next answer was cited, with 95% Wilson intervals; the eras of the scorecard.
+// Descriptive: whether each class behaves alike in each era. Supporting evidence for the rules, not a validation.
+function wilson(k,n){if(!n)return[null,null];const z=1.96,p=k/n,d=1+z*z/n,c=(p+z*z/(2*n))/d,h=z*Math.sqrt(p*(1-p)/n+z*z/(4*n*n))/d;return[Math.max(0,c-h),Math.min(1,c+h)];}
+function behaviourByEraHTML(){
+  if(typeof ONEXT==='undefined'||!Object.keys(ONEXT).length)return'';
+  const eras=eraSpans();if(!eras.length)return'';
+  const CL=[['cited','Cited, no gap flagged'],['partial','Partial'],['notfound','Not found'],['clarification','Clarification']];
+  const agg=x=>{const o={};Object.entries(ONEXT).forEach(([d,m])=>{if(d<x.from||d>x.to)return;CL.forEach(([k])=>{const r=m[k];if(!r)return;const a=o[k]||(o[k]={Answers:0,Ended:0,Rephrased:0,NextCited:0});['Answers','Ended','Rephrased','NextCited'].forEach(f=>a[f]+=r[f]||0);});});return o;};
+  const E=eras.map(x=>({...x,o:agg(x)})).filter(x=>Object.keys(x.o).length);
+  if(!E.length)return'';
+  const pc=(k,n)=>{if(!n||n<CONFIG.min_rate_denominator)return'<span style="color:var(--dim)">—</span>';const[lo,hi]=wilson(k,n);return`${(k/n*100).toFixed(1)}%<div style="font-size:var(--t-2xs);color:var(--dim)">${(lo*100).toFixed(0)}–${(hi*100).toFixed(0)}</div>`;};
+  const th=(t,l)=>`<th style="text-align:${l?'left':'right'};padding:6px 8px;font-size:var(--t-xs);color:var(--muted);text-transform:uppercase;letter-spacing:.06em;line-height:1.3">${t}</th>`;
+  const td=(v,l)=>`<td style="text-align:${l?'left':'right'};padding:6px 8px;font-family:${l?'inherit':"'DM Mono',monospace"};font-size:var(--t-xs);vertical-align:top">${v}</td>`;
+  const rows=CL.map(([k,l])=>`<tr style="border-bottom:1px solid var(--b2)">${td(`<b>${l}</b>`,true)}${E.map(x=>{const a=x.o[k]||{Answers:0};return td(num(a.Answers))+td(pc(a.Ended,a.Answers))+td(pc(a.Rephrased,a.Answers))+td(pc(a.NextCited,a.Answers));}).join('')}</tr>`).join('');
+  const last=E[E.length-1],prev=E[E.length-2],nf=x=>x&&x.o.notfound&&x.o.notfound.Answers?x.o.notfound.Ended/x.o.notfound.Answers*100:null;
+  const tile=nf(last)!=null?uxTile(nf(last).toFixed(1)+'%','Conversations that ended after a not-found answer',`${escH(last.name)} · ${num(last.o.notfound.Answers)} not-found answers in mature conversations${nf(prev)!=null?` · ${nf(prev).toFixed(1)}% in ${escH(prev.name)}`:''}`,C.red):'';
+  return`<div class="card" style="overflow-x:auto"><div class="card-title">After each kind of answer, by era<span class="card-title-note">mature conversations · share of answers · 95% interval beneath · descriptive</span></div>
+    ${tile?`<div class="grid4" style="margin-bottom:12px">${tile}</div>`:''}
+    <table style="width:100%;border-collapse:collapse;min-width:${300+E.length*300}px"><thead>
+      <tr>${th('',true)}${E.map(x=>`<th colspan="4" style="text-align:center;padding:6px 8px;font-size:var(--t-xs);color:var(--text);border-bottom:1px solid var(--b2)">${escH(x.name)}<div style="font-weight:400;color:var(--muted)">${spanLabel(x.from,x.to)}</div></th>`).join('')}</tr>
+      <tr style="border-bottom:2px solid var(--b2)">${th('Answer',true)}${E.map(()=>th('Answers')+th('Ended')+th('Rephrased')+th('Next answer cited')).join('')}</tr></thead>
+      <tbody>${rows}</tbody></table>
+    <div class="share-foot">From answer-next-daily.csv (tools/next_step.py): answers in mature conversations (no turn within 24 hours of the end of the data); <b>ended</b> = it was the conversation's last turn; <b>rephrased</b> = the next question was typed and shares at least half its words with this one; <b>next answer cited</b> = the next answer cited a page. "Cited, no gap flagged" here is the file's cited class, which leaves partial answers out. Descriptive: whether each kind of answer is followed the same way in each era. It supports the outcome rules where a class behaves alike across eras and questions them where it does not, but it does not validate them; that is the labelling sheet's job. No cause claimed.</div></div>`;
+}
 function eraCardHTML(){
   const eras=eraSpans().map(eraStats);
   if(!eras.length)return'';
@@ -3706,7 +3733,7 @@ function eraCardHTML(){
     return Object.keys(w).sort().map(k=>w[k].s>=CONFIG.min_rate_denominator?(w[k].c-w[k].p)/w[k].s*100:null);};
   const lines=eras.map(wkRate),flat=lines.flat().filter(v=>v!=null),lo=Math.floor(Math.min(...flat,100)),hi=Math.ceil(Math.max(...flat,0));
   const spark=v=>{const W=120,H=26,n=v.length;if(n<2||hi<=lo)return dash;let d='',pen=false;v.forEach((y,i)=>{if(y==null){pen=false;return;}d+=(pen?'L':'M')+(i/(n-1)*W).toFixed(1)+' '+(H-(y-lo)/(hi-lo)*H).toFixed(1)+' ';pen=true;});
-    return `<svg width="${W}" height="${H}" viewBox="0 0 ${W} ${H}" style="display:block;overflow:visible" role="img" aria-label="weekly cited, not partial, ${lo} to ${hi}%"><path d="${d}" fill="none" stroke="${C.green}" stroke-width="1.5" stroke-linejoin="round"/></svg>`;};
+    return `<svg width="${W}" height="${H}" viewBox="0 0 ${W} ${H}" style="display:block;overflow:visible" role="img" aria-label="weekly cited with no gap flagged, ${lo} to ${hi}%"><path d="${d}" fill="none" stroke="${C.green}" stroke-width="1.5" stroke-linejoin="round"/></svg>`;};
   const more=x=>[['Words / cited',f(x.wordsPerCited,n0)],['Pages / cited',f(x.pagesPerCited,d2)],['Dislikes / 1,000 cited',f(x.P.dislikesPerK,d1)],['Clicks / 100 cited',f(x.clicksPer100,d1)],['Turns / conversation',f(x.P.turnsPerConv,d2)],['Reached cited',f(x.P.reachedCited,pc)]]
     .concat(hasIntent?[['Personal situations',f(x.sitShare,pc)],['No cited answer (typed)',f(x.unexpected,pc)]]:[])
     .map(([k,v])=>`<div style="display:flex;justify-content:space-between;gap:12px;border-bottom:1px dashed var(--b2);padding:3px 0"><span style="color:var(--muted)">${k}</span><span style="font-family:'DM Mono',monospace">${v}</span></div>`).join('');
@@ -3722,7 +3749,7 @@ function eraCardHTML(){
   return`<div class="card" style="margin-bottom:14px;overflow-x:auto">
       <div class="card-title">Era scorecard<span class="card-title-note">one row per model or prompt era, cut at confirmed events · each era's own sums · the change day belongs to neither era</span></div>
       <table style="width:100%;border-collapse:collapse;min-width:760px">
-        <thead><tr style="border-bottom:2px solid var(--b2)">${th('Era','left')}${th('Turns')}${th('Cited')}${th('Not found')}${th('Clarifi-<br>cation')}${th('Partial,<br>of cited')}${th('Cited, not<br>partial')}${th('Response<br>p50')}${th('Generation<br>p / turn')}${th(`Cited, not partial<br>by week · ${lo}–${hi}%`,'left')}</tr></thead>
+        <thead><tr style="border-bottom:2px solid var(--b2)">${th('Era','left')}${th('Turns')}${th('Cited')}${th('Not found')}${th('Clarifi-<br>cation')}${th('Partial,<br>of cited')}${th('Cited, no gap<br>flagged')}${th('Response<br>p50')}${th('Generation<br>p / turn')}${th(`Cited, no gap flagged<br>by week · ${lo}–${hi}%`,'left')}</tr></thead>
         <tbody>${rows}</tbody></table>
       ${notes?`<ul class="wd-flags" style="margin-top:10px">${notes}</ul>`:''}
       ${nfLine}
@@ -5544,6 +5571,25 @@ function evLinesNumbered(labels){
   return{lines:evs.map((e,i)=>({label:bucketLabel(e.start,labels),color:eventColor(e),text:'● '+(i+1),dash:[]})),
     key:evs.length?evs.map((e,i)=>`<span style="display:inline-block;max-width:100%;margin-right:14px;overflow-wrap:anywhere"><span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:${eventColor(e)};margin-right:5px"></span><b>${i+1}</b> ${fmtDate(e.start)} · ${escH(e.title.length>48?e.title.slice(0,46)+'…':e.title)}</span>`).join(''):''};
 }
+// Four shares of scored answers over time (brief §102, handoff 2b and 2c): cited with no gap flagged, partial,
+// clarification, not found. Partial is a cited answer that also says something could not be found; its deciding phrase
+// changed on 1 Jul (brief §76), so both cited series are dashed before then, and outcomes from 14 Sep are unvalidated.
+// A model that admits gaps more readily scores lower on "no gap flagged": a step at a model event may be candour.
+const PARTIAL_COMPARABLE_FROM='2026-07-01';
+function fourSharesChart(id){
+  const cv=document.getElementById(id);if(!cv||!DATA)return;
+  const fr=filterRange(DATA.merged),weekly=granularity==='day'&&fr.filter(d=>d.ux).length>90;
+  const vd=rollUp(fr,weekly?'week':granularity),labels=vd.map(d=>d.label);
+  const sc=r=>r.ux?.scored||0,sh=(r,k)=>sc(r)>=CONFIG.min_rate_denominator?+((r.ux?.[k]||0)/sc(r)*100).toFixed(2):null;
+  const early=i=>{const d=vd[i];return d&&(d.to||d.date||'')<PARTIAL_COMPARABLE_FROM;};
+  const S=[['citedClean','Cited, no gap flagged',C.green,true],['partial','Partial',C.purple,true],['clarification','Clarification',C.amber,false],['notFound','Not found',C.red,false]];
+  const ev=evLinesNumbered(labels);
+  mkChart(id,{type:'line',data:{labels,datasets:S.map(([k,l,c,dash])=>({label:l,data:vd.map(r=>sh(r,k)),borderColor:c,backgroundColor:c,borderWidth:2,pointRadius:0,tension:0,spanGaps:true,
+      segment:dash?{borderDash:x=>early(x.p1DataIndex)?[5,4]:undefined}:undefined}))},
+    options:alignY(mergeOpts(baseOpts(),{scales:{y:{min:0,ticks:{callback:v=>v+'%'}}},eventLines:ev.lines,plugins:{tooltip:{callbacks:{label:cx=>`${cx.dataset.label}: ${(+cx.parsed.y).toFixed(1)}% of scored`}}},onClick:(e,els)=>{if(els.length)drillBucket(vd[els[0].index]);}}))});
+  const f=CONFIG.outcome_rules_unvalidated_from,note=document.getElementById(id+'-note');
+  if(note)note.innerHTML=`${weekly?'Weekly: the range is over 90 days. ':''}<b>Not comparable before ${fmtDate(PARTIAL_COMPARABLE_FROM)}:</b> the partial rule's deciding phrase changed that day (the wording moved from "does not provide" to "could not find"), so the two cited lines are dashed before it and no before / after should be drawn across it. <b>Not yet checked against a reader from ${fmtDate(f)}.</b> Partial means the answer itself says something is missing: a model that admits gaps more readily scores lower on "no gap flagged", so a step at a model change may be a change in candour, not in answers. By rule; no cause claimed.${ev.key?`<div style="margin-top:6px">${ev.key}</div>`:''}`;
+}
 function outcomeMixChart(id){
   const cv=document.getElementById(id);if(!cv||!DATA)return;
   const fr=filterRange(DATA.merged),weekly=granularity==='day'&&fr.filter(d=>d.ux).length>90;
@@ -5602,7 +5648,7 @@ function renderHome(D,S){
   const rangeLine=!inner||!rTurns?'':`Selected range, ${spanLabel(pd[0].date,pd[pd.length-1].date)}: ${num(rTurns)} turns in ${num(rConvs)} conversations${D.hasCost?`, billed cost ${gbp(rSpend,0)}`:''}.`;
   const compare=wc.B?`Tiles and changes: ${T.uspan}, ${(wc.fallback?'compared with the 28 days before':'compared with '+wc.rule)} (${wc.B.uspan})`:'';
   const tiles=[
-    cols.taxonomy?kpi(pct(T.citedRate),'Cited answer rate',T.uvalid?`of scored turns · ${allQ(T.cited)} of all questions${tw}`:T.uwhy,{color:C.green,delta:delta('citedRate',false,'pts')}):(cols.outcomes?kpi(pct(T.answeredShare),'Answered share',T.uvalid?`of turns${tw}`:T.uwhy,{color:C.green,delta:delta('answeredShare',false,'pts')}):null),
+    cols.taxonomy?kpi(pct(T.citedRate),'Cited answer rate',T.uvalid?`of scored turns, includes partial · ${allQ(T.cited)} of all questions${tw}`:T.uwhy,{color:C.green,delta:delta('citedRate',false,'pts')}):(cols.outcomes?kpi(pct(T.answeredShare),'Answered share',T.uvalid?`of turns${tw}`:T.uwhy,{color:C.green,delta:delta('answeredShare',false,'pts')}):null),
     cols.taxonomy?kpi(pct(T.notFoundRate),'Not-found rate',T.uvalid?`of scored turns · ${allQ(T.notFound)} of all questions${tw}`:T.uwhy,{color:C.red,delta:delta('notFoundRate',true,'pts')}):null,
     hasIntent&&T.unexpectedRate!=null?kpi(pct(T.unexpectedRate),'Typed questions with no cited answer',`not found, uncited, or a clarification although a scheme was named · of ${num(T.unexpectedN)} typed questions with a named kind${tw} · ${intentCaveat()}`,{color:C.amber,delta:delta('unexpectedRate',true,'pts')}):null,
     cols.latency?kpi(secs(T.latP50),'Response time p50',`turn-weighted daily median${tw}`,{color:C.acc,delta:delta('latP50',true,'ms')}):null,
@@ -7640,6 +7686,8 @@ function usageOutcomesHTML(fr){
       </div>
       ${uxTile(P.genPA!=null?P.genPA.toFixed(2)+'p':'—','Generation cost per cited answer',P.valid?'settled join days · '+P.span:P.why,C.acc,'generation-cost-per-answered-turn').replace('text-align:center','text-align:center;max-width:320px;margin-bottom:12px')}
       ${outcomeAllTable(fr)}
+      ${chartBox('ux-four',220,'Scored answers: cited with no gap flagged, partial, clarification, not found','shares of scored turns · dashed before 1 Jul: not comparable')}
+      <div class="share-foot" id="ux-four-note"></div>
       ${chartBox('ux-outcomes',200,'Outcome mix over all questions — selected range','click a bar')}
     </div>`;
   }else if(cols.outcomes){
@@ -7811,6 +7859,7 @@ function buildUsageDetailCharts(fr){
   const stacked=mergeOpts(baseOpts(),{scales:{y:{stacked:true,ticks:{callback:v=>num(v)}},x:{stacked:true}},plugins:{legend:{display:true}},onClick:(e,els)=>{if(els.length)drillBucket(vd[els[0].index]);}});
   const tax=vd.some(r=>r.ux&&r.ux.cited!=null);
   if(document.getElementById('ux-outcomes')&&tax)outcomeMixChart('ux-outcomes');
+  if(document.getElementById('ux-four')&&tax)fourSharesChart('ux-four');
   else if(document.getElementById('ux-outcomes'))mkChart('ux-outcomes',{type:'bar',data:{labels,datasets:[
     {label:'Answered',data:vd.map(r=>g(r,'answered')),backgroundColor:C.green+'cc',stack:'o',maxBarThickness:28},
     {label:'Unanswered',data:vd.map(r=>g(r,'unanswered')),backgroundColor:C.amber+'cc',stack:'o',maxBarThickness:28},
@@ -8120,6 +8169,7 @@ function renderImpact(D,S){
     </tr>`;
   el.innerHTML=`
     ${eraCardHTML()}
+    ${behaviourByEraHTML()}
     <div class="card" style="margin-bottom:14px;overflow-x:auto">
       <div class="card-title">Before / after confirmed events<span class="card-title-note">28 days each side, the event day (and the days to its end date) in neither · as in the change report · settled join days · sum then divide</span></div>
       <table style="width:100%;border-collapse:collapse;min-width:640px">
@@ -10483,6 +10533,7 @@ init();
     AM('notfound','Not-found rate','pct',{calc:{src:'ux',n:'notFound',d:'scored',of:'scored turns'},cat:{n:'NotFound',d:'Scored',of:'scored turns'},byf:{n:'NotFound',d:'Scored'},polarity:'down',bySource:true,syn:[[/\bfail(s|ed)? to find\b|\bcan'?t find\b|\bcannot find\b|\bcouldn'?t find\b|\bno answer found\b/,60,'not-found rate'],[/not[- ]?found/,460,'not-found rate']],def:'Answers in which AskCI says it could not find the information, as a share of scored turns. Classified by text rules (version shown in the data-quality strip).'}),
     AM('clarification','Clarification rate','pct',{calc:{src:'ux',n:'clarification',d:'scored',of:'scored turns'},cat:{n:'Clarification',d:'Scored',of:'scored turns'},polarity:'down',syn:[[/clarif/,480,'clarification rate']],def:'Answers in which AskCI asks the person to clarify, as a share of scored turns.'}),
     AM('error','Error rate','pct',{calc:{src:'ux',n:'error',d:'Q',of:'turns'},cat:{n:'Error',d:'Turns',of:'turns'},polarity:'down',syn:[[/\berrors?\b/,470,'error rate']],def:'Turns with an empty answer and 0 ms response time, as a share of all turns.'}),
+    AM('clean','Cited, no gap flagged','pct',{calc:{src:'ux',n:'citedClean',d:'scored',of:'scored turns',note:'cited answers that do not also say something could not be found · by rule; a model that admits gaps more readily scores lower, so not comparable across model changes'},polarity:'up',syn:[[/\b(complete|full|fully answered|clean)( answer)?s?( rate)?\b|no gap( flagged)?|not partial|cited,? not partial/,520,'cited, no gap flagged']],def:'Cited answers whose text does not also say something could not be found, as a share of scored turns. By rule on the wording, unvalidated from 14 Sep; the partial rule\'s deciding phrase changed on 1 Jul, so the series before then is not comparable (brief §102).'}),
     AM('partial','Cited but partial','pct',{calc:{src:'ux',n:'partial',d:'cited',of:'cited answers'},polarity:'down',syn:[[/partial/,500,'cited but partial']],def:'Cited answers whose text also says something could not be found, as a share of cited answers.'}),
     AM('dislikes','Dislikes per 1,000 cited','perk',{calc:{src:'ux',n:'dislikesCited',d:'cited',x:1000,say:'dislikes on',of:'cited answers',miss:'usage.csv has no feedback columns; regenerate it from the QA feed'},cat:{n:'DislikesOnCited',d:'Cited',x:1000,say:'dislikes on',of:'cited answers',subj:'dislikes per 1,000 cited answers'},polarity:'down',syn:[[/\bdislikes? per (1[, ]?000|thousand)( cited( answers)?)?/,429,'dislikes per 1,000 cited answers'],[/dislike/,430,'dislikes per 1,000 cited answers']],def:'Dislikes on cited answers per 1,000 cited answers.'}),
     AM('feedback','Feedback rate','pct',{calc:{src:'ux',n:['likes','dislikes'],d:'Q',of:'turns',dp:2},syn:[[/\blikes?\b|feedback/,440,'feedback rate']],def:'Turns with a like or a dislike, as a share of all turns.'}),

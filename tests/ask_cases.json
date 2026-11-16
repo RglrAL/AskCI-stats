@@ -2855,5 +2855,21 @@
    "10 subjects by not-found answers",
    "Housing, general"
   ]
+ },
+ {
+  "q": "complete answer rate last month",
+  "group": "quality",
+  "expect": [
+   "68.5% cited, no gap flagged",
+   "14,238 of 20,790 scored turns"
+  ]
+ },
+ {
+  "q": "cited no gap flagged in september",
+  "group": "quality",
+  "expect": [
+   "68.5% cited, no gap flagged",
+   "14,238 of 20,790 scored turns"
+  ]
  }
 ]
