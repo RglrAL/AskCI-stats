@@ -2634,3 +2634,37 @@ Questions, Answer wording and Quality views load with no errors, and the clarifi
 Checked: rule tests 57 of 57 (figures by kind and generic phrases added); the second refresh with the feed recount 182
 passed, 0 failed; files-only audit 162 passed; Ask bar 311 of 311; guard 34 of 34; every view loads with no errors;
 Quality's every-question table and chart and the figures card's kind table read as above.
+
+## 101. The Overview: one window per tile, billed months, a quieter What changed (16 Nov 2026)
+
+The handoff's package 1. The Overview opened on the whole year while each tile's change arrow compared the last 28
+days with the 28 before, so a tile's value and its arrow described different windows.
+
+- **One window per tile** (1a). Every tile, its change and its sub-line now describe one window, named on the tile: the
+  What changed current window when there is a comparison (the range itself when it has a preceding window; the last 28
+  days with usage data when it has none, as on All), otherwise the range. The headline follows the same window ("In the
+  latest 28 days with data, between 6 Oct and 2 Nov …"), with the selected range's own totals in a smaller line under
+  it and the comparison named in the next. The default range is still All: changing it is the analyst's call. On All,
+  the not-found tile reads 8.3% for 6 Oct – 2 Nov, +1.3 pts against 7.0%, as What changed does.
+- **A finished month is billed** (1b). `forecastMonth` now says whether every day of the month is in the cost export;
+  `monthCost` gives the figure and words wherever the month is shown (the Overview and Cost tiles, the headline, the
+  report sentence, the Ask bar): "October billed £1,059, every day in the export · 3 provisional days, may still
+  change". "Forecast" and "projected" appear only for a month still in progress.
+- **What changed by meaning** (1c). A statement is styled by its direction: worse (amber), better (green), or neither
+  for demand and product behaviour (`WC_POLARITY`). A rate is shown as changed only when it clears `CONFIG.materiality`
+  and the day-level 95% interval of the difference (`dayBootstrap`, as on Quality; `WC_RATE_PARTS` gives each rate's
+  day parts) excludes no change; its interval is printed beside it, and rates that pass the threshold but not the
+  interval are named once as within normal variation. Counts, times and per-thousand figures keep the threshold alone.
+  Only the confirmed events inside the two windows are listed, one line each; the rest sit behind "Show all N events".
+- **The latest confirmed change** (1d). A card under What changed gives the cited and not-found rates of scored answers
+  28 days either side of the latest confirmed model or prompt event (`latestChangeHTML`, the windows of Quality,
+  Before / after), with the unvalidated-from-14-Sep note and a link to Before / after; no cause is claimed. 14 Sep:
+  cited 92.3% → 81.6%, not found 2.9% → 8.5% (the handoff's 81.3% predates the §100 rule fixes).
+- **A readable outcome mix** (1e). One function draws the mix on the Overview and on Quality. At the day view a range
+  over 90 days is drawn in weeks; "Not cited only" drops the two cited series and lets the axis fit the rest; confirmed
+  events are numbered on the chart with a dated key beneath, so labels no longer collide.
+- The era scorecard's "Not what was needed" row is "No cited answer (typed)", missed in §100.
+
+Checked: on All, 1M, 3M and 7D the headline, the range line and the tiles name one window and agree with What changed;
+the done-when figures above; every view loads with no errors; both mix modes and the numbered key on the Overview;
+Ask bar 311 of 311. Not checked here: 390 px and the light theme.

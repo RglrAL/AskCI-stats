@@ -3514,8 +3514,19 @@ function forecastMonth(){
   const last=s[s.length-1].date,ym=last.slice(0,7);
   const[Y,M]=ym.split('-').map(Number),dim=daysInMonth(ym);
   const f=forecastSpan(`${ym}-01`,`${ym}-${String(dim).padStart(2,'0')}`);
-  return{...f,ym,Y,M,daysInMonth:dim,elapsed:+last.slice(8,10),mtd:f.actual,monthDays:s.filter(d=>d.month===ym),lastDate:last,
+  // Every day of the month in the cost export (brief §101, handoff 1b): the month is billed, not forecast; its days
+  // inside the settlement window are counted as provisional, and the figure is what the export holds for them.
+  const inM=DATA.merged.filter(d=>d.month===ym&&d.hasCost);
+  const complete=inM.length===dim,billed=inM.reduce((x,d)=>x+d.total,0),provDays=inM.filter(d=>d.provisional).length;
+  return{...f,ym,Y,M,daysInMonth:dim,elapsed:+last.slice(8,10),mtd:f.actual,monthDays:s.filter(d=>d.month===ym),lastDate:last,complete,billed,provDays,
     monthName:new Date(Date.UTC(Y,M-1,1)).toLocaleString('en-GB',{month:'long',timeZone:'UTC'})};
+}
+// The month's cost figure, label and sub-line wherever it is shown (tiles, headline, report, Ask bar): billed when every
+// day is in the export, otherwise the forecast (brief §101).
+function monthCost(fc){
+  if(!fc)return null;
+  if(fc.complete)return{value:fc.billed,label:`${fc.monthName} billed`,verb:'billed',sub:`every day in the export${fc.provDays?` · ${fc.provDays} provisional day${fc.provDays===1?'':'s'}, may still change`:' · all settled'}`};
+  return{value:fc.forecast,label:'Month forecast',verb:'projected',sub:`${fc.monthName} · ${fcLabel(fc)}`};
 }
 // Run-rate: the same pattern applied to the 30 calendar days after the latest settled day.
 function runRate30(){
@@ -3568,6 +3579,41 @@ const WC_CANDIDATES=[
 // set: 'service' (Overview: quality, latency, demand, product) or 'cost' (Cost tab: unit cost,
 // billed and variable cost, fixed share; at most three statements). The two are never merged.
 const WC_CLASS={1:'service failure',2:'latency',3:'quality',4:'demand',5:'product behaviour'};
+// Which way is better for each service metric (brief §101): +1 up is better, -1 down is better; absent = neither
+// (demand and product behaviour are not good or bad in themselves).
+const WC_POLARITY={notFoundRate:-1,errorRate:-1,latP50:-1,citedRate:1,partialRate:-1,reachedCited:1,clarRate:-1,unexpectedRate:-1,dislikesPerK:-1};
+// Day-level parts of each rate, for the significance test (brief §101): [numerator, denominator] for one day.
+const WC_RATE_PARTS={
+  notFoundRate:d=>[d.ux.notFound||0,d.ux.scored||0],citedRate:d=>[d.ux.cited||0,d.ux.scored||0],clarRate:d=>[d.ux.clarification||0,d.ux.scored||0],
+  partialRate:d=>[d.ux.partial||0,d.ux.cited||0],errorRate:d=>[d.ux.error||0,d.queries||0],chipsShare:d=>[d.ux.suggestedFollowup||0,d.queries||0],
+  modalShare:d=>[d.ux.modalSessions||0,(d.ux.modalSessions||0)+(d.ux.webSessions||0)],
+  reachedCited:d=>typeof CONV!=='undefined'&&CONV[d.date]?[CONV[d.date].ReachedCited||0,CONV[d.date].Mature||0]:[0,0],
+  unexpectedRate:d=>{let k=0,n=0;if(typeof QINTENT!=='undefined'&&LEXICON&&LEXICON.intents)(QINTENT[d.date]||[]).forEach(r=>{if(r.chip)return;const e=LEXICON.intents[r.intent];if(!e)return;n+=r.Turns;k+=unexpectedOf(r,e);});return[k,n];},
+};
+// null: no test for this metric (counts, times, per-thousand); otherwise the interval text when it excludes no change,
+// or false when it includes it.
+function wcSignificant(st,A,B){
+  const f=WC_RATE_PARTS[st.k];if(!f||st.kind!=='pts'||!A||!B||!A.ufrom||!B.ufrom)return null;
+  const rows=(from,to)=>DATA.merged.filter(d=>d.date>=from&&d.date<=to&&d.ux&&d.queries>0).map(f);
+  const a=rows(A.ufrom,A.uto),b=rows(B.ufrom,B.uto);
+  const r=dayBootstrap(b.map(x=>x[0]),b.map(x=>x[1]),a.map(x=>x[0]),a.map(x=>x[1]));
+  if(!r)return null;
+  const p=v=>(v>0?'+':'−')+Math.abs(v*100).toFixed(1);
+  return r.lo>0||r.hi<0?`${p(r.lo)} to ${p(r.hi)} pts`:false;
+}
+// The latest confirmed model or prompt change, 28 days either side (brief §101, handoff 1d): cited and not-found rates
+// of scored answers, from the same windows as Quality, Before / after. No cause is claimed.
+function latestChangeHTML(){
+  const ev=confirmedEvents().filter(e=>(e.kind==='model'||e.kind==='prompt')&&e.start.length===10).sort((a,b)=>a.start.localeCompare(b.start)).pop();
+  if(!ev||!DATA)return'';
+  const w=eventWindows(ev,28),sum=(from,to,k)=>DATA.merged.reduce((s,d)=>s+(d.date>=from&&d.date<=to&&d.ux?(d.ux[k]||0):0),0);
+  const r=(from,to,k)=>{const sc=sum(from,to,'scored');return sc>=CONFIG.min_rate_denominator?(sum(from,to,k)/sc*100).toFixed(1)+'%':'—';};
+  const f=CONFIG.outcome_rules_unvalidated_from;
+  return`<div class="card"><div class="card-title">Latest confirmed change<span class="card-title-note">28 days either side · of scored turns · no cause claimed</span></div>
+    <div style="font-size:var(--t-sm);line-height:1.6"><b>${escH(ev.title)}</b> (${fmtDate(ev.start)}). Cited answers <b>${r(w.bFrom,w.bTo,'cited')}</b> before, <b>${r(w.aFrom,w.aTo,'cited')}</b> after; not found <b>${r(w.bFrom,w.bTo,'notFound')}</b> before, <b>${r(w.aFrom,w.aTo,'notFound')}</b> after.
+    <button class="show-all" onclick="activateSub('impact')">Open Before / after</button></div>
+    ${f&&!CONFIG.outcome_rules_measured&&w.aTo>=f?`<div class="share-foot">Outcomes are read by rule from the answer's wording, and from ${fmtDate(f)} not yet checked against a reader: the model and its wording changed that day.</div>`:''}</div>`;
+}
 function wcChip(st){const l=st.cost?'cost':WC_CLASS[st.cls]||'';return l?`<span class="wc-chip">${l}</span> `:'';}
 function whatChanged(rangeRows,set='service'){
   const empty={statements:[],events:[],A:null,B:null,valid:false,why:'no data in range',fallback:'',rule:'',set};
@@ -3662,7 +3708,7 @@ function eraCardHTML(){
   const spark=v=>{const W=120,H=26,n=v.length;if(n<2||hi<=lo)return dash;let d='',pen=false;v.forEach((y,i)=>{if(y==null){pen=false;return;}d+=(pen?'L':'M')+(i/(n-1)*W).toFixed(1)+' '+(H-(y-lo)/(hi-lo)*H).toFixed(1)+' ';pen=true;});
     return `<svg width="${W}" height="${H}" viewBox="0 0 ${W} ${H}" style="display:block;overflow:visible" role="img" aria-label="weekly cited, not partial, ${lo} to ${hi}%"><path d="${d}" fill="none" stroke="${C.green}" stroke-width="1.5" stroke-linejoin="round"/></svg>`;};
   const more=x=>[['Words / cited',f(x.wordsPerCited,n0)],['Pages / cited',f(x.pagesPerCited,d2)],['Dislikes / 1,000 cited',f(x.P.dislikesPerK,d1)],['Clicks / 100 cited',f(x.clicksPer100,d1)],['Turns / conversation',f(x.P.turnsPerConv,d2)],['Reached cited',f(x.P.reachedCited,pc)]]
-    .concat(hasIntent?[['Personal situations',f(x.sitShare,pc)],['Not what was needed',f(x.unexpected,pc)]]:[])
+    .concat(hasIntent?[['Personal situations',f(x.sitShare,pc)],['No cited answer (typed)',f(x.unexpected,pc)]]:[])
     .map(([k,v])=>`<div style="display:flex;justify-content:space-between;gap:12px;border-bottom:1px dashed var(--b2);padding:3px 0"><span style="color:var(--muted)">${k}</span><span style="font-family:'DM Mono',monospace">${v}</span></div>`).join('');
   const rows=eras.map((x,i)=>`<tr style="border-bottom:1px solid var(--b2)">
       ${td(`<b>${escH(x.name)}</b><div style="font-size:var(--t-xs);color:var(--muted);font-weight:400;margin-top:2px">${x.kind?`<span style="color:${eventColor(x.ev)}">${escH(x.kind)}</span> · confirmed · `:''}${spanLabel(x.from,x.to,true)}</div><button type="button" class="show-all" style="margin-top:4px" aria-expanded="false" onclick="const r=this.closest('tr').nextElementSibling,o=r.hidden;r.hidden=!o;this.setAttribute('aria-expanded',String(o));this.textContent=o?'Fewer':'More figures';">More figures</button>`,{left:true})}
@@ -4651,6 +4697,7 @@ function buildReportNarrative(ctx){
     if(budget>0&&budgetStatus==='over')parts.push(`${fc.monthName} is projected at <b>${gbp(fc.forecast,0)}</b>, <span class="hl-r">${gbp(fc.forecast-budget,0)} over</span> the self-set ${gbp(budget,0)} target${tail}`);
     else if(budget>0&&budgetStatus==='near')parts.push(`${fc.monthName} is projected at <b>${gbp(fc.forecast,0)}</b>, <span class="hl-a">${(fc.forecast/budget*100).toFixed(0)}% of the self-set ${gbp(budget,0)} target</span>${tail}`);
     else if(budget>0)parts.push(`${fc.monthName} is projected at <b>${gbp(fc.forecast,0)}</b>, <span class="hl-g">within the self-set ${gbp(budget,0)} target</span>${tail}`);
+    else if(fc.complete)parts.push(`${fc.monthName} billed <b>${gbp(fc.billed,0)}</b> (${monthCost(fc).sub}).`);
     else parts.push(`${fc.monthName} is projected at <b>${gbp(fc.forecast,0)}</b>${tail}`);
   }
   if(topSvcs.length){
@@ -5487,12 +5534,32 @@ function renderWording(D,S){
 // leave out (out of scope, error, greeting) is visible next to them. Each value is a share of all questions.
 function outcomeSeries(){return[['citedFull','Cited, no gap flagged',C.green+'cc'],['partial','Partial (cited, gap flagged)',C.green+'55'],['notFound','Not found',C.red+'cc'],['clarification','Clarification',C.amber+'cc'],['error','Error',C.pink+'cc'],['outOfScope','Out of scope',C.purple+'cc'],['greeting','Greeting',C.dim+'cc'],['uncited','Uncited answer',C.acc+'cc']];}
 function outcomeOf(r,k){const g=x=>r.ux?.[x]||0;return k==='citedFull'?Math.max(0,g('cited')-g('partial')):g(k);}
-function outcomeMixChart(id,vd,extra={}){
-  if(!document.getElementById(id))return;
+// The outcome mix over all questions (brief §101, handoff 1e), on the Overview and on Quality. Ranges over 90 days at
+// the day view are drawn in weeks, since a daily stack to 100% hides movement in its top 15%; "Not cited only" drops
+// the two cited series and lets the axis fit the rest. Confirmed events are numbered on the chart with a key beneath.
+let MIX_MODE='all';
+function setMixMode(m){MIX_MODE=m==='nocite'?'nocite':'all';['home-mix','ux-outcomes'].forEach(id=>{if(document.getElementById(id))outcomeMixChart(id);});}
+function evLinesNumbered(labels){
+  const evs=confirmedEvents().filter(e=>bucketLabel(e.start,labels)).sort((a,b)=>a.start.localeCompare(b.start));
+  return{lines:evs.map((e,i)=>({label:bucketLabel(e.start,labels),color:eventColor(e),text:'● '+(i+1),dash:[]})),
+    key:evs.length?evs.map((e,i)=>`<span style="white-space:nowrap;margin-right:14px"><span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:${eventColor(e)};margin-right:5px"></span><b>${i+1}</b> ${fmtDate(e.start)} · ${escH(e.title.length>48?e.title.slice(0,46)+'…':e.title)}</span>`).join(''):''};
+}
+function outcomeMixChart(id){
+  const cv=document.getElementById(id);if(!cv||!DATA)return;
+  const fr=filterRange(DATA.merged),weekly=granularity==='day'&&fr.filter(d=>d.ux).length>90;
+  const vd=rollUp(fr,weekly?'week':granularity),labels=vd.map(d=>d.label),nocite=MIX_MODE==='nocite';
   const g=outcomeOf,sh=(r,k)=>r.queries>0?+((g(r,k))/r.queries*100).toFixed(2):null;
-  const series=outcomeSeries();
-  mkChart(id,{type:'bar',data:{labels:vd.map(d=>d.label),datasets:series.map(([k,l,c])=>({label:l,data:vd.map(r=>sh(r,k)),backgroundColor:c,stack:'o',maxBarThickness:28}))},
-    options:alignY(mergeOpts(baseOpts(),{scales:{y:{stacked:true,max:100,ticks:{callback:v=>v+'%'}},x:{stacked:true}},plugins:{legend:{display:true},tooltip:{callbacks:{label:cx=>`${cx.dataset.label}: ${(+cx.parsed.y).toFixed(1)}% (${num(g(vd[cx.dataIndex],series[cx.datasetIndex][0]))})`}}},onClick:(e,els)=>{if(els.length)drillBucket(vd[els[0].index]);},...extra}))});
+  const series=outcomeSeries().filter(([k])=>!nocite||(k!=='citedFull'&&k!=='partial'));
+  const ev=evLinesNumbered(labels);
+  mkChart(id,{type:'bar',data:{labels,datasets:series.map(([k,l,c])=>({label:l,data:vd.map(r=>sh(r,k)),backgroundColor:c,stack:'o',maxBarThickness:28}))},
+    options:alignY(mergeOpts(baseOpts(),{scales:{y:{stacked:true,...(nocite?{}:{max:100}),ticks:{callback:v=>v+'%'}},x:{stacked:true}},eventLines:ev.lines,plugins:{tooltip:{callbacks:{label:cx=>`${cx.dataset.label}: ${(+cx.parsed.y).toFixed(1)}% (${num(g(vd[cx.dataIndex],series[cx.datasetIndex][0]))})`}}},onClick:(e,els)=>{if(els.length)drillBucket(vd[els[0].index]);}}))});
+  const card=cv.closest('.card'),wrap=cv.closest('.chart-wrap')||cv.parentElement;
+  const t=card&&card.querySelector('.card-title');
+  if(t&&!t.querySelector('[data-mix]'))t.insertAdjacentHTML('beforeend',`<div class="pill-group" style="margin-left:auto;height:28px" role="group" aria-label="Outcomes shown"><button class="pill" data-mix="all" onclick="setMixMode('all')">All outcomes</button><button class="pill" data-mix="nocite" onclick="setMixMode('nocite')">Not cited only</button></div>`);
+  card&&card.querySelectorAll('[data-mix]').forEach(b=>{const on=b.dataset.mix===MIX_MODE;b.classList.toggle('active',on);b.setAttribute('aria-pressed',on);});
+  let key=document.getElementById(id+'-evkey');
+  if(!key&&wrap){key=document.createElement('div');key.id=id+'-evkey';key.style.cssText='font-size:var(--t-xs);color:var(--muted);margin-top:8px;line-height:1.8';wrap.insertAdjacentElement('afterend',key);}
+  if(key)key.innerHTML=(weekly?`<div>Weekly: the range is over 90 days, so days are summed by week. ${nocite?'Shares of all questions, cited answers left out; the axis fits the rest.':'Shares of all questions.'}</div>`:`<div>${nocite?'Shares of all questions, cited answers left out; the axis fits the rest.':'Shares of all questions.'}</div>`)+(ev.key?`<div>${ev.key}</div>`:'');
 }
 // Overview tile: combined click-through rate with the minimum caveat on the tile itself; opens the sub-tab.
 // win: the What-changed windows {a,b}, so the change is measured exactly as on the other tiles.
@@ -5513,46 +5580,70 @@ function renderHome(D,S){
   if(!pd.length){el.innerHTML=emptyState('layout-dashboard','Nothing in range','Widen the date range.');renderIcons();return;}
   const cols=(D.usageQuality&&D.usageQuality.columns)||{};
   const P=perTurnStats(pd),wc=whatChanged(pd,'service'),A=wc.A||P,B=wc.B;
-  const allQ=n=>P.uturns>0&&n!=null?(n/P.uturns*100).toFixed(1)+'%':'—';   // share of every question, beside the scored rate (brief §100)
-  const fc=D.hasCost&&typeof forecastMonth==='function'?forecastMonth():null;
-  const turns=pd.reduce((s,d)=>s+d.queries,0),convs=pd.reduce((s,d)=>s+d.sessions,0),days=pd.filter(d=>d.queries>0).length,spend=pd.reduce((s,d)=>s+d.total,0);
+  // One window per tile (brief §101, handoff 1a): every tile's value, its change and its sub-line describe the same
+  // window, T: the What changed current window when there is a comparison (the selected range itself when it has a
+  // preceding window; the last 28 days with usage data when it has none), otherwise the selected range.
+  const T=wc.valid&&wc.A?A:P,inner=T.ufrom!==P.ufrom||T.uto!==P.uto,tw=` · ${T.uspan}`;   // inner: the window is shorter than the range
+  const rowsT=!inner?pd:DATA.merged.filter(d=>d.date>=T.ufrom&&d.date<=T.uto);
+  const allQ=n=>T.uturns>0&&n!=null?(n/T.uturns*100).toFixed(1)+'%':'—';   // share of every question, beside the scored rate (brief §100)
+  const fc=D.hasCost&&typeof forecastMonth==='function'?forecastMonth():null,mc=monthCost(fc);
+  const turns=T.uturns||0,convs=T.uconvs||0,days=T.udays||0,spend=rowsT.reduce((s,d)=>s+d.total,0);
+  const rTurns=pd.reduce((s,d)=>s+d.queries,0),rConvs=pd.reduce((s,d)=>s+d.sessions,0),rSpend=pd.reduce((s,d)=>s+d.total,0);
   const pct=v=>v==null?'—':v.toFixed(1)+'%',secs=v=>v==null?'—':(v/1000).toFixed(1)+'s',pence=v=>v==null?'—':v.toFixed(2)+'p';
   const delta=(k,invert,unit='%')=>B&&A&&A[k]!=null&&B[k]!=null?{curr:A[k],prev:B[k],invert,unit}:null;
-  const ratioSub=P.valid?`settled join days · ${P.span}`:P.why;
+  const ratioSub=T.valid?`settled join days · ${T.span}`:T.why;
   const parts=[];
-  const ud=pd.filter(d=>d.queries>0);   // the range's cost days can run past the last usage day
-  if(turns>0)parts.push(`Between <b>${fmtDate(ud[0].date)}</b> and <b>${fmtDate(ud[ud.length-1].date)}</b> AskCI received <b>${num(turns)} turns</b> in ${num(convs)} conversations, about ${num(Math.round(convs/Math.max(days,1)))} a day.`);
-  if(P.uvalid&&P.citedRate!=null)parts.push(`Of scored turns, <b>${P.citedRate.toFixed(1)}%</b> were cited answers and <b>${P.notFoundRate==null?'—':P.notFoundRate.toFixed(1)+'%'}</b> not found${P.latP50!=null?`; the typical response time (median by day, weighted by turns) was <b>${secs(P.latP50)}</b>`:''}.`);
-  else if(P.uvalid&&P.answeredShare!=null)parts.push(`<b>${P.answeredShare.toFixed(1)}%</b> of turns were answered with a citation${P.latP50!=null?`; the typical response time (median by day, weighted by turns) was <b>${secs(P.latP50)}</b>`:''}.`);
-  else if(!P.uvalid)parts.push(`No outcome figure yet for this window: ${P.uwhy}.`);
-  if(D.hasCost)parts.push(`Billed cost <b>${gbp(spend,0)}</b>${P.valid&&P.genPT!=null?`, generation ${pence(P.genPT)} per turn`:''}${fc?`; ${fc.monthName} projected at <b>${gbp(fc.forecast,0)}</b> (${fc.label})`:''}.`);
-  const compare=wc.B?(wc.fallback||`compared with ${wc.rule}`)+` · ${wc.B.uspan}`:'';
+  if(turns>0)parts.push(`${inner?'In the latest 28 days with data, between':'Between'} <b>${fmtDate(T.ufrom)}</b> and <b>${fmtDate(T.uto)}</b>, AskCI received <b>${num(turns)} turns</b> in ${num(convs)} conversations, about ${num(Math.round(convs/Math.max(days,1)))} a day.`);
+  if(T.uvalid&&T.citedRate!=null)parts.push(`Of scored turns, <b>${T.citedRate.toFixed(1)}%</b> were cited answers and <b>${T.notFoundRate==null?'—':T.notFoundRate.toFixed(1)+'%'}</b> not found${T.latP50!=null?`; the typical response time (median by day, weighted by turns) was <b>${secs(T.latP50)}</b>`:''}.`);
+  else if(T.uvalid&&T.answeredShare!=null)parts.push(`<b>${T.answeredShare.toFixed(1)}%</b> of turns were answered with a citation${T.latP50!=null?`; the typical response time (median by day, weighted by turns) was <b>${secs(T.latP50)}</b>`:''}.`);
+  else if(!T.uvalid)parts.push(`No outcome figure yet for this window: ${T.uwhy}.`);
+  if(D.hasCost)parts.push(`Billed cost <b>${gbp(spend,0)}</b>${T.valid&&T.genPT!=null?`, generation ${pence(T.genPT)} per turn`:''}${mc?`; ${fc.complete?`${fc.monthName} billed <b>${gbp(mc.value,0)}</b>`:`${fc.monthName} projected at <b>${gbp(mc.value,0)}</b> (${fc.label})`}`:''}.`);
+  // the selected range's own totals, smaller, when the tiles show a window inside it
+  const rangeLine=!inner||!rTurns?'':`Selected range, ${spanLabel(pd[0].date,pd[pd.length-1].date)}: ${num(rTurns)} turns in ${num(rConvs)} conversations${D.hasCost?`, billed cost ${gbp(rSpend,0)}`:''}.`;
+  const compare=wc.B?`Tiles and changes: ${T.uspan}, ${(wc.fallback?'compared with the 28 days before':'compared with '+wc.rule)} (${wc.B.uspan})`:'';
   const tiles=[
-    cols.taxonomy?kpi(pct(P.citedRate),'Cited answer rate',P.uvalid?`of scored turns · ${allQ(P.cited)} of all questions · ${P.uspan}`:P.uwhy,{color:C.green,delta:delta('citedRate',false,'pts')}):(cols.outcomes?kpi(pct(P.answeredShare),'Answered share',P.uvalid?`of turns · ${P.uspan}`:P.uwhy,{color:C.green,delta:delta('answeredShare',false,'pts')}):null),
-    cols.taxonomy?kpi(pct(P.notFoundRate),'Not-found rate',P.uvalid?`of scored turns · ${allQ(P.notFound)} of all questions`:P.uwhy,{color:C.red,delta:delta('notFoundRate',true,'pts')}):null,
-    hasIntent&&P.unexpectedRate!=null?kpi(pct(P.unexpectedRate),'Typed questions with no cited answer',`not found, uncited, or a clarification although a scheme was named · of ${num(P.unexpectedN)} typed questions with a named kind · ${intentCaveat()}`,{color:C.amber,delta:delta('unexpectedRate',true,'pts')}):null,
-    cols.latency?kpi(secs(P.latP50),'Response time p50','turn-weighted daily median',{color:C.acc,delta:delta('latP50',true,'ms')}):null,
-    D.hasUsage?kpi(num(convs),'Conversations',`${num(Math.round(convs/Math.max(days,1)))} a day · ${num(turns)} turns`,{color:C.teal,delta:delta('convsPerDay',false)}):null,
-    hasConv&&P.reachedCited!=null?kpi(pct(P.reachedCited),'Reached a cited answer','of mature conversations · by start day',{color:C.green,delta:delta('reachedCited',false,'pts')}):null,
-    hasClicks?homeClickTile(pd,A&&B&&A.from&&B.from?{a:{from:A.from,to:A.to},b:{from:B.from,to:B.to}}:null):null,
+    cols.taxonomy?kpi(pct(T.citedRate),'Cited answer rate',T.uvalid?`of scored turns · ${allQ(T.cited)} of all questions${tw}`:T.uwhy,{color:C.green,delta:delta('citedRate',false,'pts')}):(cols.outcomes?kpi(pct(T.answeredShare),'Answered share',T.uvalid?`of turns${tw}`:T.uwhy,{color:C.green,delta:delta('answeredShare',false,'pts')}):null),
+    cols.taxonomy?kpi(pct(T.notFoundRate),'Not-found rate',T.uvalid?`of scored turns · ${allQ(T.notFound)} of all questions${tw}`:T.uwhy,{color:C.red,delta:delta('notFoundRate',true,'pts')}):null,
+    hasIntent&&T.unexpectedRate!=null?kpi(pct(T.unexpectedRate),'Typed questions with no cited answer',`not found, uncited, or a clarification although a scheme was named · of ${num(T.unexpectedN)} typed questions with a named kind${tw} · ${intentCaveat()}`,{color:C.amber,delta:delta('unexpectedRate',true,'pts')}):null,
+    cols.latency?kpi(secs(T.latP50),'Response time p50',`turn-weighted daily median${tw}`,{color:C.acc,delta:delta('latP50',true,'ms')}):null,
+    D.hasUsage?kpi(num(convs),'Conversations',`${num(Math.round(convs/Math.max(days,1)))} a day · ${num(turns)} turns${tw}`,{color:C.teal,delta:delta('convsPerDay',false)}):null,
+    hasConv&&T.reachedCited!=null?kpi(pct(T.reachedCited),'Reached a cited answer',`of mature conversations · by start day${tw}`,{color:C.green,delta:delta('reachedCited',false,'pts')}):null,
+    hasClicks?homeClickTile(rowsT,A&&B&&A.from&&B.from?{a:{from:A.from,to:A.to},b:{from:B.from,to:B.to}}:null):null,
 
     // cost last (brief §77): the Overview answers "is it working" before "what does it cost"; the Cost tab carries the detail
-    D.hasBoth?kpi(pence(P.genPT),'Generation cost per turn',ratioSub,{color:C.purple,delta:delta('genPT',true)}):null,
-    fc?kpi(gbp(fc.forecast,0),'Month forecast',`${fc.monthName} · ${fcLabel(fc)} · detail on Cost`,{color:C.amber}):null,  ].filter(Boolean);
+    D.hasBoth?kpi(pence(T.genPT),'Generation cost per turn',ratioSub,{color:C.purple,delta:delta('genPT',true)}):null,
+    mc?kpi(gbp(mc.value,0),mc.label,`${mc.sub} · detail on Cost`,{color:C.amber}):null,
+  ].filter(Boolean);
   const tileCols=tiles.length===8||tiles.length===4?4:3;
   const ins=[];
   if(!wc.valid)ins.push(insight('',`Not enough settled data to compare windows: ${wc.why}.`));
   else if(!wc.statements.length)ins.push(insight('good',`No service metric moved beyond the materiality thresholds (rates ${CONFIG.materiality.rate_pts} point, counts ${CONFIG.materiality.count_pct}%, latency ${CONFIG.materiality.latency_pct}% or ${CONFIG.materiality.latency_ms/1000} s) against ${wc.rule} (${wc.B.span}).`));
   if(wc.fallback)ins.push(insight('',`Note: ${wc.fallback}.`));
-  wc.statements.forEach(st=>ins.push(insight('warn',wcChip(st)+st.text)));
-  wc.events.forEach(e=>ins.push(insight('',`Event in range: <b>${e.title}</b>${e.detail?` — ${e.detail}`:''}`)));
+  // (brief §101, handoff 1c) a statement is styled by what it means: better, worse, or neither (demand, product
+  // behaviour); a rate counts as changed only when it clears the materiality threshold and its day-level 95% interval
+  // (dayBootstrap, as on Quality) excludes no change; the rest are named once as within normal variation.
+  const noise=[];
+  wc.statements.forEach(st=>{
+    const sig=wcSignificant(st,A,B);
+    if(sig===false){noise.push(st.name);return;}
+    const pol=WC_POLARITY[st.k],type=!pol?'':(st.d*pol>0?'good':'warn');
+    ins.push(insight(type,wcChip(st)+st.text+(sig?` <span style="color:var(--dim)">(95% interval of the change ${sig})</span>`:'')));
+  });
+  if(noise.length)ins.push(insight('',`Within normal variation: ${noise.join(', ')} moved past the threshold, but the day-level 95% interval of the change includes no change.`));
+  // events: only those inside the two windows, one line each; the rest behind a toggle
+  const wFrom=B&&B.ufrom?B.ufrom:T.ufrom,wTo=T.uto,inW=wc.events.filter(e=>e.start>=wFrom&&e.start<=wTo),outW=wc.events.filter(e=>!inW.includes(e));
+  const evLine=e=>`<div style="font-size:var(--t-xs);color:var(--muted);padding:3px 0"><span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:${eventColor(e)};margin-right:8px"></span><b style="color:var(--text)">${fmtDate(e.start)}</b> · ${escH(e.title)}</div>`;
+  const evHTML=(inW.length?`<div style="margin-top:8px"><div class="card-title" style="font-size:var(--t-xs);margin:0 0 4px">Confirmed events in the two windows</div>${inW.map(evLine).join('')}</div>`:'')
+    +(outW.length?`<details style="margin-top:6px"><summary style="cursor:pointer;font-size:var(--t-xs);color:var(--muted)">Show all ${wc.events.length} events in the range</summary>${wc.events.map(evLine).join('')}</details>`:'');
   {const oc=outcomeCaveat(pd,false);if(oc)ins.unshift(oc);}
+  const lc=latestChangeHTML();
   el.innerHTML=`
-    <div class="card"><div class="home-headline">${parts.join(' ')}</div>${compare?`<div class="home-sub">${compare}</div>`:''}</div>
+    <div class="card"><div class="home-headline">${parts.join(' ')}</div>${rangeLine?`<div class="home-sub">${rangeLine}</div>`:''}${compare?`<div class="home-sub">${compare}</div>`:''}</div>
     <div class="kpi-grid${tileCols===4?' kpi-grid-4':''}" style="margin-bottom:var(--sp-4)">${tiles.join('')}</div>
-    <div class="card"><div class="card-title">What changed<span class="card-title-note">service metrics · deterministic · no causes claimed · cost changes are on the Cost tab</span></div>${ins.join('')}</div>
+    <div class="card"><div class="card-title">What changed<span class="card-title-note">service metrics · deterministic · no causes claimed · cost changes are on the Cost tab</span></div>${ins.join('')}${evHTML}</div>
+    ${lc}
     ${D.hasUsage?chartBox('home-vol',220,cols.sources?'Conversations by source':'Conversations','per period · click a bar'):''}
-    ${cols.taxonomy?chartBox('home-mix',220,'Outcome mix','shares of turns · click a bar'):''}
+    ${cols.taxonomy?chartBox('home-mix',220,'Outcome mix over all questions','click a bar'):''}
     ${hasCatOut?`<div class="card"><div class="card-title">Organic demand by topic<span class="card-title-note"><span class="wc-chip">organic only</span> first turns that are not starter prompts, by attributed category, segmented by their outcome · top 8 plus Unknown · click a bar for the category tables</span></div><div id="home-topic-note" style="font-size:var(--t-xs);color:var(--muted);margin-bottom:6px"></div><div class="chart-wrap" style="height:260px"><canvas id="home-topic"></canvas></div></div>`:''}`;
   const vd=getViewData(),labels=vd.map(d=>d.label);
   if(document.getElementById('home-vol')){
@@ -5562,7 +5653,7 @@ function renderHome(D,S){
       :[{label:'Conversations',data:vd.map(r=>r.sessions),backgroundColor:C.acc+'cc',maxBarThickness:28}];
     mkChart('home-vol',{type:'bar',data:{labels,datasets:ds},options:alignY(mergeOpts(baseOpts(),{scales:{y:{stacked:true,ticks:{callback:v=>num(v)}},x:{stacked:true}},plugins:{legend:{display:cols.sources}},eventLines:evLines(S,labels),onClick:(e,els)=>{if(els.length)drillBucket(vd[els[0].index]);}}))});
   }
-  outcomeMixChart('home-mix',vd);
+  outcomeMixChart('home-mix');
   if(hasCatOut&&document.getElementById('home-topic')){
     const agg={};pd.forEach(d=>{const m=CATOUT[d.date];if(!m)return;Object.entries(m).forEach(([c,o])=>{const a=agg[c]||(agg[c]={});Object.entries(o).forEach(([k,v])=>{a[k]=(a[k]||0)+v;});});});
     const OUT=[['OrganicCited','Cited answer',C.green],['OrganicNotFound','Not found',C.red],['OrganicClarification','Clarification',C.amber],['OrganicOutOfScope','Out of scope',C.purple],['OrganicGreeting','Greeting',C.dim],['OrganicError','Error',C.pink],['OrganicUncited','Uncited answer',C.acc]];
@@ -7549,7 +7640,7 @@ function usageOutcomesHTML(fr){
       </div>
       ${uxTile(P.genPA!=null?P.genPA.toFixed(2)+'p':'—','Generation cost per cited answer',P.valid?'settled join days · '+P.span:P.why,C.acc,'generation-cost-per-answered-turn').replace('text-align:center','text-align:center;max-width:320px;margin-bottom:12px')}
       ${outcomeAllTable(fr)}
-      ${chartBox('ux-outcomes',200,'Outcome mix over all questions — selected range','shares of all questions, stacked to 100% · click a bar')}
+      ${chartBox('ux-outcomes',200,'Outcome mix over all questions — selected range','click a bar')}
     </div>`;
   }else if(cols.outcomes){
     const P=perTurnStats(fr),ans=sum('answered'),un=sum('unanswered'),fl=sum('flagged');
@@ -7719,12 +7810,7 @@ function buildUsageDetailCharts(fr){
   const vd=getViewData(),labels=vd.map(d=>d.label),g=(r,k)=>r.ux?.[k]||0;
   const stacked=mergeOpts(baseOpts(),{scales:{y:{stacked:true,ticks:{callback:v=>num(v)}},x:{stacked:true}},plugins:{legend:{display:true}},onClick:(e,els)=>{if(els.length)drillBucket(vd[els[0].index]);}});
   const tax=vd.some(r=>r.ux&&r.ux.cited!=null);
-  if(document.getElementById('ux-outcomes')&&tax){
-    const sh=(r,k)=>r.queries>0?+((outcomeOf(r,k))/r.queries*100).toFixed(2):null;
-    const series=outcomeSeries();
-    mkChart('ux-outcomes',{type:'bar',data:{labels,datasets:series.map(([k,l,c])=>({label:l,data:vd.map(r=>sh(r,k)),backgroundColor:c,stack:'o',maxBarThickness:28}))},
-      options:mergeOpts(stacked,{scales:{y:{max:100,ticks:{callback:v=>v+'%'}}},plugins:{tooltip:{callbacks:{label:cx=>`${cx.dataset.label}: ${(+cx.parsed.y).toFixed(1)}% (${num(outcomeOf(vd[cx.dataIndex],series[cx.datasetIndex][0]))})`}}}})});
-  }
+  if(document.getElementById('ux-outcomes')&&tax)outcomeMixChart('ux-outcomes');
   else if(document.getElementById('ux-outcomes'))mkChart('ux-outcomes',{type:'bar',data:{labels,datasets:[
     {label:'Answered',data:vd.map(r=>g(r,'answered')),backgroundColor:C.green+'cc',stack:'o',maxBarThickness:28},
     {label:'Unanswered',data:vd.map(r=>g(r,'unanswered')),backgroundColor:C.amber+'cc',stack:'o',maxBarThickness:28},
@@ -9206,7 +9292,7 @@ function rebuildKpiRow(){
       DATA.hasBoth?kpi(pence(P.genPT),'Generation cost per turn',ratioSub,{color:C.acc,trend:trendGen,delta:{curr:dGen.curr,prev:dGen.prev,invert:true}}):null,
       DATA.hasBoth?kpi(pence(P.totPT),'Allocated total cost per turn',P.valid?`${pence(P.varPT)} variable · ${ratioSub}`:ratioSub,{color:C.amber,trend:trendTot,delta:{curr:dTot.curr,prev:dTot.prev,invert:true}}):null,
       DATA.hasCost?kpi(gbp(settledSpend+provSpend,0),'Billed cost',`${gbp(settledSpend,0)} settled · ${gbp(provSpend,0)} provisional · ${rangeSpan}`,{color:C.green,trend:trendDaily,delta:{curr:dDaily.curr,prev:dDaily.prev,invert:true}}):null,
-      fc?kpi(gbp(fc.forecast,0),'Month forecast',budget>0?`${fc.monthName} · ${gbp(budget,0)} target · ${stateMeta[fcState].label}`:`${fc.monthName} · ${fcLabel(fc)}`,{color:C.purple,trend:trendDaily,budgetState:fcState,budgetMeta:stateMeta[fcState]}):null,
+      fc?kpi(gbp(monthCost(fc).value,0),monthCost(fc).label,budget>0?`${fc.monthName} · ${gbp(budget,0)} target · ${stateMeta[fcState].label}`:monthCost(fc).sub,{color:C.purple,trend:trendDaily,budgetState:fcState,budgetMeta:stateMeta[fcState]}):null,
       DATA.hasCost?kpi(fixedShare!=null?fixedShare.toFixed(0)+'%':'—','Fixed share',`fixed ${gbp(fx,0)} · variable ${gbp(vr,0)}${un>0?` · unclassified ${gbp(un,2)}`:''} · settled days`,{color:COST_COL.fixed,trend:trendFixed,secondary:true}):null,
       DATA.hasMeters?kpi(cache.overall!=null?cache.overall.toFixed(0)+'%':'—','Cached-input cost share','share of input-meter cost on cached-input meters · not a cache-hit rate',{color:C.green,secondary:true}):null,
       DATA.hasUsage?kpi(num(turns),'Total turns',`${num(convs)} conversations · ${rangeSpan}`,{color:C.teal,trend:trendQ,delta:{curr:dQ.curr,prev:dQ.prev},secondary:true}):null,
@@ -10006,7 +10092,8 @@ init();
     let f=null,label='',drill=null;
     if(intent.scope==='year'){const Y=latest.slice(0,4);f=forecastSpan(Y+'-01-01',Y+'-12-31');label='projected '+Y+' total';}
     else if(intent.scope==='week'){const ws=weekStart(latest);f=forecastSpan(ws,isoAdd(ws,6));label='projected this week';}
-    else{f=forecastMonth();if(f){label='projected '+f.monthName+' total';drill=['month',f.ym,'Open '+fmtMonth(f.ym)+' detail'];}}
+    else{f=forecastMonth();if(f){label='projected '+f.monthName+' total';drill=['month',f.ym,'Open '+fmtMonth(f.ym)+' detail'];}
+      if(f&&f.complete)return{forecast:true,value:f.billed,drill,sub:f.monthName+' billed, every day in the export'+(f.provDays?' · '+f.provDays+' provisional day'+(f.provDays===1?'':'s')+', may still change':' · all settled')+' · not a forecast: the month is over',intent};}
     if(!f)return{forecast:true,empty:true,intent};
     return{forecast:true,value:f.forecast,drill,sub:label+' · '+gbp(f.actual,0)+' settled so far + '+f.remainingDays+' day'+(f.remainingDays===1?'':'s')+' at the 28-day weekday/weekend pattern · settled to '+fmtDate(f.lastSettled),intent};
   }

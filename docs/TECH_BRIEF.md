@@ -254,6 +254,14 @@ dated by the fixed wording, 4 candidate chip changes, launches and observed chan
   items, and the caveat in one sentence; each opens the Data status panel, which lists every version string the files
   carry, the join window, rows de-duplicated and excluded, the questions and costs end dates when they differ (brief §95), and the caveats ("unvalidated from 14 Sep", "agreement not
   yet measured"), amber items first, each with its explanation in visible text. Printing shows the panel in full.
+- **The Overview** (brief §101): every tile, its change and its sub-line describe one window, named on the tile (the
+  What changed current window: the range when it has a preceding window, else the last 28 days with usage data); the
+  headline follows it, with the range's totals beneath. A month with every day in the cost export is "billed", never
+  forecast (`monthCost`). What changed styles a statement by direction (`WC_POLARITY`) and shows a rate as changed
+  only when its day-level 95% interval excludes no change (`wcSignificant`, `dayBootstrap`); events listed are those
+  inside the two windows. A card gives the latest confirmed model or prompt change, 28 days either side. The outcome
+  mix (Overview and Quality, `outcomeMixChart`) is over all questions, weekly beyond 90 days, with a "Not cited only"
+  view and numbered events.
 - **Monthly cost** (brief §98): the monthly billed total and generation bars (`monthlyCostChart`) sit on Cost › Summary
   under the daily timeline as well as on Services; every month labelled, months follow the range, never scoped by
   service. Billed total is the figure to compare with Azure Cost Management's own monthly view; checked against the
