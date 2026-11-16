@@ -370,7 +370,8 @@
   "q": "which topics are growing fastest",
   "group": "content",
   "expect": [
-   "Ranking topics by change isn’t available yet"
+   "Rising: 5 topics",
+   "Rent-a-room and lodgers · 25 → 54"
   ]
  },
  {
@@ -2870,6 +2871,30 @@
   "expect": [
    "68.5% cited, no gap flagged",
    "14,238 of 20,790 scored turns"
+  ]
+ },
+ {
+  "q": "fastest-growing topics",
+  "group": "asked",
+  "expect": [
+   "Rising: 5 topics",
+   "Rent-a-room and lodgers · 25 → 54"
+  ]
+ },
+ {
+  "q": "rising pages",
+  "group": "asked",
+  "expect": [
+   "Rising: 5 pages named",
+   "Budget 2027 · 3 → 129"
+  ]
+ },
+ {
+  "q": "which topics are falling",
+  "group": "asked",
+  "expect": [
+   "Falling: 4 topics",
+   "Neighbours, boundaries and nuisance · 47 → 34"
   ]
  }
 ]

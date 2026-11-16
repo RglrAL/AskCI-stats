@@ -139,6 +139,25 @@ def main():
         elif part >= max(cfg.get("topic_partial", 0.25), typ_t * 1.5):
             rows.append({"kind": "detail", "page": name, "category": c, "intent": "", "evidence": f"{t['n']} typed questions on this topic in the period; {part:.0%} of cited answers said something was missing, {nf:.0%} not found (topic layer, lexicon {lexv}; not yet reader-checked)",
                          "asks": t["n"], "rate": round(part, 3), "priority": round(t["n"] * part), "team": cfg["teams"]["content"]}); computed.add((c, name))
+    # rising and failing (brief §104, handoff 3e): a topic among the ten fastest risers by share (the latest complete month
+    # against the one before, 60+ questions across the two, as on the Questions view) whose not-found share in the latest
+    # month is topic_not_found+; priority = its questions now x that share
+    QM = rd("question-topics-monthly.csv"); allm2 = sorted({r["Month"] for r in QM}); lastfull = last[:7] if last[8:10] == f"{__import__('calendar').monthrange(int(last[:4]), int(last[5:7]))[1]:02d}" else None
+    cm = [m for m in allm2 if m < last[:7] or m == lastfull]
+    if len(cm) >= 2:
+        mA, mB = cm[-1], cm[-2]; ag = lambda m: {(r["Category"], r["Topic"]): (I(r["Turns"]), I(r["NotFound"])) for r in QM if r["Month"] == m}
+        a_, b_ = ag(mA), ag(mB); ta = sum(x[0] for x in a_.values()); tb = sum(x[0] for x in b_.values())
+        ris = []
+        for key in set(a_) | set(b_):
+            n1, f1 = a_.get(key, (0, 0)); n0 = b_.get(key, (0, 0))[0]
+            if n1 + n0 < 60 or not n1: continue
+            ratio = (n1 / ta) / (n0 / tb) if n0 else float("inf")
+            if ratio > 1: ris.append((ratio, key, n0, n1, f1))
+        for ratio, (c, name), n0, n1, f1 in sorted(ris, reverse=True)[:10]:
+            nf = f1 / n1
+            if nf < cfg.get("topic_not_found", 0.1): continue
+            rows.append({"kind": "rising-failing", "page": name, "category": c, "intent": "", "asks": n1, "rate": round(nf, 3), "priority": round(n1 * nf), "team": cfg["teams"]["rising-failing"],
+                         "evidence": f"{n0} questions in {mB}, {n1} in {mA}: its share of topic-placed questions x{'new' if ratio == float('inf') else f'{ratio:.1f}'}; {nf:.0%} of them not found in {mA} (rising by share, failing by rule)"})
     # seeded topic rows (register-themes.json): subjects from the housing read that the topic layer does not yet compute,
     # and the signpost rows, which no count can infer; a seeded row is dropped once a computed row of the same topic exists
     try: themes = json.load(open(os.path.join(DATA, "register-themes.json"), encoding="utf-8")).get("rows", [])

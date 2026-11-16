@@ -2734,3 +2734,42 @@ The handoff's package 3, items a to c.
 Checked: the register rebuilt (72 rows: 64 in the register, 8 old); the files-only audit 163 passed, with the new
 register check; the view at `#tab=register`, its filters, the copied table and the CSV rows; no errors; 384 px wide in a
 390 px frame; Ask bar 313 of 313.
+
+## 104. Rising and falling topics and pages (16 Nov 2026)
+
+The handoff's package 4, and the register item that waited for it (3e). Conversations a day rose 38% between the two
+latest 28-day windows, so almost every count is up; an item's movement is its **share** of all items in the same file
+and window, now against before (`risers()`, one computation for every place it shows).
+
+- **Pages named** (4b): the last four complete ISO weeks against the four before, from `asked-pages-weekly.csv` (the
+  loader now keeps each page's weekly counts, `ASKWP`), the incomplete latest week left out. Risers need 40+ asks now
+  and are ranked by share now ÷ ((count before + 3) ÷ total before); fallers need 40+ before, the mirror. The card says
+  the file holds only pages named 30+ times in some month. 5 Oct – 1 Nov against 7 Sep – 4 Oct: Budget 2027 3 → 138
+  (×17), Christmas Bonus 5 → 84 (×7.8), Minimum wage 9 → 53 (×3.3), Income tax credits and reliefs 9 → 42 (×2.6), Grants
+  for solar panels 32 → 104 (×2.2); the handoff's ratios were a little lower (16.8 for Budget 2027) because §100's
+  generic phrases have since left the totals.
+- **Topics** (4c): the latest complete month against the one before, from `question-topics-monthly.csv`, 60+ questions
+  across the two, unsmoothed ("new" when a topic had none before). October against September (16,874 and 12,313
+  topic-placed questions): Budget 9 → 252 (×20), Home grants and energy upgrades 107 → 293 (×2.0), Income tax, PAYE and
+  credits 145 → 358 (×1.8); falling: Adult, further education and training ×0.36, Contacting Citizens Information ×0.47,
+  Citizenship and naturalisation ×0.55. All as the handoff's reference.
+- **Where it shows** (4d, 4e). A "Rising and falling" card heads Questions: ten risers and ten fallers each for topics
+  and pages, with the counts before and after, the share per 1,000 now, the ratio and the not-found share now; a topic
+  opens its category in the Questions drill-down, a page opens on the site. Confirmed events in the two windows are
+  listed beside each list. The Overview shows the top three of each under the latest-change card.
+- **What it does not say** (4f): no cause, and not "seasonal": the data starts in January 2026. The windows are the
+  latest complete ones whatever the range, and the card says so.
+- **Starter prompts** (4g): under the scorecard, the five fastest-rising topics by share, beside the chips' first
+  turns, for the AskCI team to compare. No prompt is changed.
+- **The Ask bar** (4h) answers "fastest-growing topics", "rising pages", "which topics are falling" and the like as
+  ranked lists from the same computation, headed "Rising:" or "Falling:". Three cases were added and the old case "which
+  topics are growing fastest", which pinned "Ranking topics by change isn't available yet", was re-recorded on purpose;
+  each pins its headline and first row (frozen data: Rent-a-room and lodgers 25 → 54; Budget 2027 3 → 129; Neighbours,
+  boundaries and nuisance 47 → 34).
+- **Rising and failing** (3e): `make_register.py` adds the kind `rising-failing` (content team) for a topic among the
+  ten fastest risers whose not-found share in the latest month is `topic_not_found` (10%)+; priority = its questions now
+  × that share. Four rows: Income tax, PAYE and credits (10%), Budget (11%), Retirement from work (10%), Capital taxes
+  (14%).
+
+Checked: the reference figures above on the page; the Questions card, the Overview strip, the starter-prompt line and
+the register kind render with no errors; 384 px wide in a 390 px frame; files-only audit 163 passed; Ask bar 316 of 316.

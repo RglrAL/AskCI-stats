@@ -271,6 +271,10 @@ dated by the fixed wording, 4 candidate chip changes, launches and observed chan
   and CSV download. Archive pages (`archive_patterns`, past Budgets) cited for current questions are `archive-cited`
   rows for the AskCI team; an old page is stale only with a sign of a problem (partial share 1.25× typical, or 10%+ of
   its checkable figures on no cited page), otherwise kind `old`, listed apart and outside the register.
+- **Rising and falling** (brief §104): `risers()` ranks topics (latest complete month against the one before) and pages
+  named (four complete weeks against four) by the ratio of their share now to their share before, never by counts; a
+  card at the top of Questions, the top three on the Overview, a line beside the starter-prompt scorecard, and Ask bar
+  lists. The register adds `rising-failing` rows for risers with a not-found share of 10%+.
 - **Monthly cost** (brief §98): the monthly billed total and generation bars (`monthlyCostChart`) sit on Cost › Summary
   under the daily timeline as well as on Services; every month labelled, months follow the range, never scoped by
   service. Billed total is the figure to compare with Azure Cost Management's own monthly view; checked against the

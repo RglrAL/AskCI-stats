@@ -3141,7 +3141,7 @@ let FIGM={},hasFigs=false;   // figures quoted in answers, checked against dated
 let VERSIONS=null;   // VERSIONS.json: the refresh manifest (brief §76)
 let QSIT={},QASK={},QPERS={},hasSit=false,hasAsk=false;   // layer 2: what the question says about the person, what the clarification asked for, personalisation (brief §75)
 let ORULES={},OSTYLE={},ONEXT={},hasRules=false;   // outcome rule ids, the wording fingerprint and what people do next (brief §53)
-let PAGESC={},hasPagesC=false,REPEATS={},hasRepeats=false,SAFETY={},hasSafety=false,QINTENT={},ASKED={},QTOPIC={},hasIntent=false,LEXICON=null,IJOUR={},SETBI={},GAPS=[],GAPS_OLD=[],GAPSTAT={},REGCFG=null,QCATM={},QTOPM={},QICM={},hasTopics=false,ASKED_CAT='housing';   // the topic layer (brief §75)
+let PAGESC={},hasPagesC=false,REPEATS={},hasRepeats=false,SAFETY={},hasSafety=false,QINTENT={},ASKED={},QTOPIC={},hasIntent=false,LEXICON=null,IJOUR={},SETBI={},GAPS=[],GAPS_OLD=[],GAPSTAT={},ASKWP={},REGCFG=null,QCATM={},QTOPM={},QICM={},hasTopics=false,ASKED_CAT='housing';   // the topic layer (brief §75)
 let CINT={},hasCint=false,ASKW={},hasAskw=false,CONV={},CATOUT={},CITES={},JOURNEYS={},STARTERS={},LATB={},CATDAY={},hasCatDay=false,hasConv=false,hasCatOut=false,hasCites=false,hasJourneys=false,hasStarters=false,hasLatB=false;
 async function loadConversationFiles(){
   try{(await loadCSV('script-outcomes-daily.csv')).forEach(r=>{const d=parseDate(r['Date']);if(!d)return;(SCRIPTOUT[d]||(SCRIPTOUT[d]={}))[r['Script']]={t:nInt(r['Turns']),s:nInt(r['Scored']),c:nInt(r['Cited']),nf:nInt(r['NotFound']),cl:nInt(r['Clarification'])};});}catch(e){}
@@ -3152,7 +3152,8 @@ async function loadConversationFiles(){
   // citations-intent-monthly.csv (brief §89): per page and month, the answers citing it by the intent of the question, and how many said something was missing
   try{(await loadCSV('citations-intent-monthly.csv')).forEach(r=>{const m=String(r['Month']||'').trim();if(!/^\d{4}-\d{2}$/.test(m))return;(CINT[m]||(CINT[m]=[])).push({url:r['URL'],intent:r['Intent'],ans:nInt(r['Answers']),partial:nInt(r['Partial'])});});hasCint=Object.keys(CINT).length>0;}catch(e){}
   // asked-pages-weekly.csv (brief §89): summed over pages to one weekly hit rate; per page the weekly cells are too thin
-  try{(await loadCSV('asked-pages-weekly.csv')).forEach(r=>{const w=String(r['Week']||'').trim();if(!/^\d{4}-\d{2}-\d{2}$/.test(w))return;const o=ASKW[w]||(ASKW[w]={asked:0,hit:0,nf:0});o.asked+=nInt(r['Asked']);o.hit+=nInt(r['CitedIt']);o.nf+=nInt(r['NotFound']);});hasAskw=Object.keys(ASKW).length>0;}catch(e){}
+  try{(await loadCSV('asked-pages-weekly.csv')).forEach(r=>{const w=String(r['Week']||'').trim();if(!/^\d{4}-\d{2}-\d{2}$/.test(w))return;const o=ASKW[w]||(ASKW[w]={asked:0,hit:0,nf:0});o.asked+=nInt(r['Asked']);o.hit+=nInt(r['CitedIt']);o.nf+=nInt(r['NotFound']);
+    const u=String(r['URL']||'').trim();if(u){const pw=ASKWP[w]||(ASKWP[w]={});const x=pw[u]||(pw[u]={a:0,nf:0});x.a+=nInt(r['Asked']);x.nf+=nInt(r['NotFound']);}});hasAskw=Object.keys(ASKW).length>0;}catch(e){}
   // pages-cited.csv: one row per cited page over all the data, with the page's LastMod and its first citation after it (brief §62)
   try{(await loadCSV('pages-cited.csv')).forEach(r=>{const u=ciKey(r['URL']);if(!u)return;PAGESC[u]={first:r['FirstCited'],last:r['LastCited'],n:nInt(r['Citations']),ans:nInt(r['Answers']),partial:nInt(r['Partial']),dis:nInt(r['Dislikes']),mod:r['LastMod']||'',firstAfter:r['FirstCitedAfterLastMod']||'',ansAfter:nInt(r['AnswersAfterLastMod'])};});}catch(e){}
   hasPagesC=Object.keys(PAGESC).length>0;
@@ -5691,6 +5692,7 @@ function renderHome(D,S){
     <div class="kpi-grid${tileCols===4?' kpi-grid-4':''}" style="margin-bottom:var(--sp-4)">${tiles.join('')}</div>
     <div class="card"><div class="card-title">What changed<span class="card-title-note">service metrics · deterministic · no causes claimed · cost changes are on the Cost tab</span></div>${ins.join('')}${evHTML}</div>
     ${lc}
+    ${risersStripHTML()}
     ${D.hasUsage?chartBox('home-vol',220,cols.sources?'Conversations by source':'Conversations','per period · click a bar'):''}
     ${cols.taxonomy?chartBox('home-mix',220,'Outcome mix over all questions','click a bar'):''}
     ${hasCatOut?`<div class="card"><div class="card-title">Organic demand by topic<span class="card-title-note"><span class="wc-chip">organic only</span> first turns that are not starter prompts, by attributed category, segmented by their outcome · top 8 plus Unknown · click a bar for the category tables</span></div><div id="home-topic-note" style="font-size:var(--t-xs);color:var(--muted);margin-bottom:6px"></div><div class="chart-wrap" style="height:260px"><canvas id="home-topic"></canvas></div></div>`:''}`;
@@ -6682,7 +6684,7 @@ const PAGES_TOP=150,PAGES_MIN_VIEWS=200,PAGES_MIN_CITES=50,PAGES_LIST=12;
 // The content-gap register (brief §73, its own view since §103): evidence rows rebuilt by tools/make_register.py from
 // the published files, joined to the status file people edit. Filters by team, category, kind and status; sorted by
 // priority; counts by status; copy a team's rows with the definition footer, or download the filtered rows as CSV.
-const REG_KIND={detail:'Detail missing on a found page',retrieval:'Named, not returned',stale:'Old page with a sign of a problem',unknown:'No scheme named','missing-page':'No page for the subject',signpost:'An organisation, not a page','archive-cited':'Archive page cited for current questions'};
+const REG_KIND={detail:'Detail missing on a found page',retrieval:'Named, not returned',stale:'Old page with a sign of a problem',unknown:'No scheme named','missing-page':'No page for the subject',signpost:'An organisation, not a page','archive-cited':'Archive page cited for current questions','rising-failing':'Rising topic, often not found'};
 let REG_F={team:'',cat:'',kind:'',status:''};
 function regStatus(g){const x=GAPSTAT[g.kind+'|'+g.page]||{};return{status:x.status||'raised',owner:x.owner||'',x};}
 function regFiltered(){return GAPS.filter(g=>(!REG_F.team||g.team===REG_F.team)&&(!REG_F.cat||g.cat===REG_F.cat)&&(!REG_F.kind||g.kind===REG_F.kind)&&(!REG_F.status||regStatus(g).status===REG_F.status)).sort((a,b)=>b.priority-a.priority);}
@@ -6858,6 +6860,81 @@ function unexpectedOf(r,e){return e==='cited'?(r.NotFound+r.Uncited+(r.NamedClar
 function derivCaveat(k){const m=CONFIG.derivation_measured;if(!m)return 'not yet reader-checked';if(k==='figures'&&m.figure_n)return `reader agreement ${Math.round(m.figure_agreement*100)}% on ${m.figure_n} checkable answers; the bound's false alarms ${m.figure_false_unmatched!=null?Math.round(m.figure_false_unmatched*100)+'%':'—'} (${m.date})`;if(m.category_n)return `category agreement ${Math.round(m.category_agreement*100)}% on ${m.category_n} labelled questions (${m.date})`;return 'not yet reader-checked';}   // brief §75: the labelling sheet's reading of the topic layer and the figures check
 function intentCaveat(){const m=CONFIG.intent_measured;return `by rule from the question${LEXICON?' ('+escH(LEXICON.version)+')':''} · reader agreement ${m&&m.n?`${Math.round(m.agreement*100)}% on ${m.n} labelled questions`:'not yet measured'}`;}
 const INTENT_LABEL={status:'Own claim or application',contact:'Contact or office',documents:'Documents needed',apply:'How do I …',rate:'Rate or amount',eligibility:'Can I … (eligibility)',timing:'Timing',definition:'What is …',statement:'A situation, no question',other:'Other'};
+// Rising and falling (brief §104, handoff package 4): an item's share of all items in the same file and window, now
+// against before, so overall growth (conversations up 38%) does not lift every item. Pages named: the last four complete
+// ISO weeks against the four before, from asked-pages-weekly.csv, smoothed so a page from 0 does not divide by zero
+// (risers: share now ÷ ((count before + 3) ÷ total before); fallers the mirror), 40+ asks in the window that matters.
+// Topics: the latest complete month against the one before, from question-topics-monthly.csv, 60+ questions across the
+// two. Descriptive: no cause, and not "seasonal", since the data starts in January 2026. Independent of the range.
+const RISE_CFG={pageMin:40,pageSmooth:3,topicMin:60,weeks:4,top:10};
+let RISE_CACHE=null;
+function risers(){
+  if(RISE_CACHE&&RISE_CACHE.d===DATA)return RISE_CACHE.r;
+  const ud=DATA.merged.filter(d=>d.ux&&d.queries>0),last=ud.length?ud[ud.length-1].date:null,r={pages:null,topics:null};
+  if(last&&Object.keys(ASKWP).length){
+    const wk=Object.keys(ASKWP).sort().filter(w=>isoAdd(w,6)<=last),n=RISE_CFG.weeks;
+    if(wk.length>=2*n){
+      const A=wk.slice(-n),B=wk.slice(-2*n,-n),sum=ws=>{const o={};ws.forEach(w=>Object.entries(ASKWP[w]).forEach(([u,x])=>{const t=o[u]||(o[u]={a:0,nf:0});t.a+=x.a;t.nf+=x.nf;}));return o;};
+      const a=sum(A),b=sum(B),ta=Object.values(a).reduce((s,x)=>s+x.a,0),tb=Object.values(b).reduce((s,x)=>s+x.a,0),k=RISE_CFG.pageSmooth;
+      const item=(u,up)=>{const x=a[u]||{a:0,nf:0},y=b[u]||{a:0,nf:0};return{key:u,label:ciPageTitle(u),url:u,before:y.a,after:x.a,perK:ta?x.a/ta*1000:0,nf:x.a?x.nf/x.a:null,
+        ratio:up?(x.a/ta)/((y.a+k)/tb):((x.a+k)/ta)/(y.a/tb)};};
+      r.pages={from:A[0],to:isoAdd(A[n-1],6),bFrom:B[0],bTo:isoAdd(B[n-1],6),ta,tb,
+        risers:Object.keys(a).filter(u=>a[u].a>=RISE_CFG.pageMin).map(u=>item(u,true)).filter(x=>x.ratio>1).sort((p,q)=>q.ratio-p.ratio).slice(0,RISE_CFG.top),
+        fallers:Object.keys(b).filter(u=>b[u].a>=RISE_CFG.pageMin).map(u=>item(u,false)).filter(x=>x.ratio<1).sort((p,q)=>p.ratio-q.ratio).slice(0,RISE_CFG.top)};
+    }
+  }
+  if(last&&typeof QTOPM!=='undefined'){
+    const lastFull=last.slice(8,10)===String(daysInMonth(last.slice(0,7))).padStart(2,'0')?last.slice(0,7):null;
+    const ms=Object.keys(QTOPM).sort().filter(m=>m<last.slice(0,7)||m===lastFull);
+    if(ms.length>=2){
+      const mA=ms[ms.length-1],mB=ms[ms.length-2],agg=m=>{const o={};(QTOPM[m]||[]).forEach(t=>{const kk=t.cat+'|'+t.topic,x=o[kk]||(o[kk]={n:0,nf:0,cat:t.cat,topic:t.topic});x.n+=t.Turns||0;x.nf+=t.NotFound||0;});return o;};
+      const a=agg(mA),b=agg(mB),ta=Object.values(a).reduce((s,x)=>s+x.n,0),tb=Object.values(b).reduce((s,x)=>s+x.n,0);
+      const keys=[...new Set([...Object.keys(a),...Object.keys(b)])].filter(kk=>((a[kk]||{}).n||0)+((b[kk]||{}).n||0)>=RISE_CFG.topicMin);
+      const items=keys.map(kk=>{const x=a[kk]||{n:0,nf:0},y=b[kk]||{n:0,nf:0},c=(a[kk]||b[kk]).cat;return{key:kk,label:(a[kk]||b[kk]).topic,cat:c,before:y.n,after:x.n,perK:ta?x.n/ta*1000:0,nf:x.n?x.nf/x.n:null,
+        ratio:y.n?(x.n/ta)/(y.n/tb):null};});
+      r.topics={month:mA,before:mB,ta,tb,
+        risers:items.filter(x=>x.ratio==null||x.ratio>1).sort((p,q)=>(q.ratio==null?1e9:q.ratio)-(p.ratio==null?1e9:p.ratio)).slice(0,RISE_CFG.top),
+        fallers:items.filter(x=>x.ratio!=null&&x.ratio<1).sort((p,q)=>p.ratio-q.ratio).slice(0,RISE_CFG.top)};
+    }
+  }
+  RISE_CACHE={d:DATA,r};return r;
+}
+function riseRatio(x){return x.ratio==null?'new':x.ratio>=10?'×'+x.ratio.toFixed(0):'×'+x.ratio.toFixed(x.ratio<1?2:1);}
+function riseOpenTopic(cat){ASKED_CAT=cat;renderPane('asked');setTimeout(()=>{const e=document.getElementById('asked-cat');if(e)e.closest('.card').scrollIntoView({behavior:'smooth',block:'start'});},120);}
+function risersCardHTML(){
+  const R=risers();if(!R.pages&&!R.topics)return'';
+  const td=(v,o={})=>`<td style="text-align:${o.left?'left':'right'};padding:6px 8px;font-family:${o.left?"'DM Sans',sans-serif":"'DM Mono',monospace"};font-size:var(--t-xs);vertical-align:top">${v}</td>`;
+  const th=(t,l)=>`<th style="text-align:${l?'left':'right'};padding:6px 8px;font-size:var(--t-xs);color:var(--muted);text-transform:uppercase;letter-spacing:.06em;white-space:nowrap">${t}</th>`;
+  const nfp=v=>v==null?'—':(v*100).toFixed(0)+'%';
+  const head=th('',true)+th('Before')+th('After')+th('Per 1,000')+th('Share ×')+th('Not found');
+  const pRow=x=>`<tr style="border-bottom:1px solid var(--b2)">${td(`<a href="${escH(x.url)}" target="_blank" rel="noopener" style="color:${C.acc}">${escH(x.label)}</a>`,{left:true})}${td(num(x.before))}${td(num(x.after))}${td(x.perK.toFixed(1))}${td(riseRatio(x))}${td(nfp(x.nf))}</tr>`;
+  const tRow=x=>`<tr style="border-bottom:1px solid var(--b2)">${td(`<button type="button" style="all:unset;cursor:pointer;color:${C.acc};text-decoration:underline;text-underline-offset:2px" onclick="riseOpenTopic('${escH(x.cat)}')" title="Open this category in Questions">${escH(x.label)}</button> <span style="color:var(--muted)">${escH(catLabel(CAT_ALIAS[x.cat]||x.cat))}</span>`,{left:true})}${td(num(x.before))}${td(num(x.after))}${td(x.perK.toFixed(1))}${td(riseRatio(x))}${td(nfp(x.nf))}</tr>`;
+  const tbl=(rows,f,h)=>`<div class="tbl-wrap"><table style="width:100%;border-collapse:collapse"><thead><tr style="border-bottom:1px solid var(--b2)">${h}</tr></thead><tbody>${rows.length?rows.map(f).join(''):`<tr>${td('None',{left:true})}</tr>`}</tbody></table></div>`;
+  const evIn=(from,to)=>confirmedEvents().filter(e=>e.start>=from&&e.start<=to).map(e=>`${fmtDate(e.start)} · ${escH(e.title)}`);
+  const P=R.pages,T=R.topics,sub=t=>`<div class="card-title" style="font-size:var(--t-xs);margin:10px 0 4px">${t}</div>`;
+  const pEv=P?evIn(P.bFrom,P.to):[],tEv=T?evIn(T.before+'-01',T.month+'-'+String(daysInMonth(T.month)).padStart(2,'0')):[];
+  return`<div class="card"><div class="card-title">Rising and falling<span class="card-title-note">shares, not counts · the latest complete windows, whatever the range · no cause claimed</span></div>
+    <div class="grid2">
+      ${T?`<div><div class="card-title" style="font-size:var(--t-xs);margin:0">Topics: ${fmtMonth(T.month)} against ${fmtMonth(T.before)}<span class="card-title-note">${num(T.ta)} and ${num(T.tb)} topic-placed questions · ${RISE_CFG.topicMin}+ across the two</span></div>
+        ${sub('Rising')}${tbl(T.risers,tRow,head.replace(th('',true),th('Topic',true)))}${sub('Falling')}${tbl(T.fallers,tRow,head.replace(th('',true),th('Topic',true)))}
+        ${tEv.length?`<div class="share-foot">Confirmed events in these months: ${tEv.join('; ')}.</div>`:''}</div>`:''}
+      ${P?`<div><div class="card-title" style="font-size:var(--t-xs);margin:0">Pages named: ${spanLabel(P.from,P.to)} against ${spanLabel(P.bFrom,P.bTo)}<span class="card-title-note">four complete weeks each · ${RISE_CFG.pageMin}+ asks in the window that matters</span></div>
+        ${sub('Rising')}${tbl(P.risers,pRow,head.replace(th('',true),th('Page',true)))}${sub('Falling')}${tbl(P.fallers,pRow,head.replace(th('',true),th('Page',true)))}
+        ${pEv.length?`<div class="share-foot">Confirmed events in these weeks: ${pEv.join('; ')}.</div>`:''}</div>`:''}
+    </div>
+    <div class="share-foot">Each item's share of all items in its file and window, now against before; "Share ×" is the ratio, so a topic can rise while the service grows and still be named. Per 1,000 = its share now; not found = its not-found share now. Pages: the four latest complete weeks against the four before; the earlier count is smoothed (+${RISE_CFG.pageSmooth}) so a page from nothing does not divide by zero; the weekly file holds only pages named 30 or more times in some month. Topics: the latest complete month against the one before, "new" when the topic had no questions before. The events are listed for the reader to connect; no cause is claimed, and nothing here is "seasonal": the data starts in January 2026, so there is no earlier year to compare with.</div></div>`;
+}
+// The Overview's three risers (brief §104): the top three topics and pages from the same computation.
+function risersStripHTML(){
+  const R=risers();if(!R.pages&&!R.topics)return'';
+  const t=(R.topics?R.topics.risers:[]).slice(0,3),pg=(R.pages?R.pages.risers:[]).slice(0,3);
+  const li=x=>`<li style="margin:2px 0"><b>${escH(x.label)}</b> <span style="color:var(--muted)">${num(x.before)} → ${num(x.after)} · share ${riseRatio(x)}</span></li>`;
+  return`<div class="card"><div class="card-title">Rising<span class="card-title-note">shares, not counts · no cause claimed</span><button class="show-all" style="margin-left:auto" onclick="activateSub('asked')">All risers and fallers</button></div>
+    <div class="grid2" style="font-size:var(--t-sm)">
+      ${t.length?`<div><div style="font-size:var(--t-xs);color:var(--muted);text-transform:uppercase;letter-spacing:.06em">Topics · ${fmtMonth(R.topics.month)} against ${fmtMonth(R.topics.before)}</div><ol style="margin:6px 0 0 18px;padding:0">${t.map(li).join('')}</ol></div>`:''}
+      ${pg.length?`<div><div style="font-size:var(--t-xs);color:var(--muted);text-transform:uppercase;letter-spacing:.06em">Pages named · ${spanLabel(R.pages.from,R.pages.to)}</div><ol style="margin:6px 0 0 18px;padding:0">${pg.map(li).join('')}</ol></div>`:''}
+    </div></div>`;
+}
 function renderAsked(D,S){
   const el=document.getElementById('part-asked');
   const fr=filterRange(D.merged).filter(d=>QINTENT[d.date]);
@@ -6982,6 +7059,7 @@ function renderAsked(D,S){
     </div>`;
   }
   el.innerHTML=`
+    ${risersCardHTML()}
     <div class="reach-note"><i data-lucide="info" class="i-sm"></i><span><b>What people ask, from the question itself.</b> An intent by rule (what the question asks for), form flags (a year, an amount, a yes/no form, a personal situation), and the scheme the question names, matched against the site's page list. Set in the redaction step; only class names and counts reach this page. <b>${intentCaveat()}.</b> The acceptance target was four in five typed questions in a named intent; ${pc(ta-other,ta)} are, so "Other" is read as a class in its own right until the labelled sample says what it holds.</span></div>
     <div class="grid4" style="margin-bottom:14px">
       ${uxTile(pc(ta-other,ta),'Typed questions with a named intent',`${num(ta-other)} of ${num(ta)} typed turns, ${spanLabel(from,to)}`,C.acc)}
@@ -7500,6 +7578,7 @@ function renderConvs(D,S){
       <tbody>${spRows.map(([pr,o])=>`<tr style="border-bottom:1px solid var(--b2)">${td(pr+(o.intent?` <span style="color:var(--muted);font-size:var(--t-xs)">· ${INTENT_LABEL[o.intent]||o.intent}</span>`:''),C.acc,false)}${td(num(o.n))}${td(rateText(o.n,spStarted))}${td(rateText(o.cited,o.n),C.green)}${spScore?td(rateText(o.cited-o.partial,o.n),C.green)+td(rateText(o.nf,o.n),C.red)+td(rateText(o.clar,o.n),C.amber):''}${td(rateText(o.typed,o.n))}${td(rateText(o.sugg,o.n))}${spScore?td(rateText(o.ended,o.mature))+td(o.dis?num(o.dis):'0')+td(o.n?Math.round(o.words/o.n).toLocaleString():'—')+td(o.timed?(o.ms/o.timed/1000).toFixed(1)+'s':'—'):''}</tr>`).join('')}</tbody></table>
       ${spScore?(()=>{const ce=fr.reduce((a,d)=>a+(d.ux?.starterErr||0),0),cn=fr.reduce((a,d)=>a+(d.ux?.starter||0),0),oe=fr.reduce((a,d)=>a+(d.ux?.organicErr||0),0),on=fr.reduce((a,d)=>a+(d.ux?.organic||0),0);
         return cn&&on?`<div class="grid2" style="margin:12px 0 0">${uxTile(rateText(ce,cn),'Chip clicks that got an empty answer',`${num(ce)} of ${num(cn)} chip first turns in range · a standing defect in the chip path, in every month since January (brief §64)`,C.red)}${uxTile(rateText(oe,on),'Typed first questions that got an empty answer',`${num(oe)} of ${num(on)} typed first turns · the same text typed by hand is answered`,C.muted)}</div>`:'';})():''}
+      ${(()=>{const R=risers(),t=R.topics?R.topics.risers.slice(0,5):[];return t.length?`<div class="share-foot" style="margin-top:8px"><b>Topics rising now</b> (${fmtMonth(R.topics.month)} against ${fmtMonth(R.topics.before)}, by share): ${t.map(x=>`${escH(x.label)} ${riseRatio(x)}`).join(', ')}. Beside the chips' first turns above, for the AskCI team to compare; no prompt is changed here.</div>`:'';})()}
       ${hasIntent&&typedTot?`<div class="share-foot" style="margin-top:8px"><b>Kinds of question the chips cover:</b> ${[...chipIntents].map(i=>INTENT_LABEL[i]||i).join(', ')||'—'}.${uncovered.length?` <b>Typed, with no chip:</b> ${uncovered.join(', ')} of typed questions in range.`:''} A chip for the biggest uncovered kind is the one to add.</div>`:''}
       ${spScore?`<div class="share-foot">Each chip's own first-turn answer: cited (and cited without a "couldn't find" phrase), not found, clarification; what the person did next; of the mature conversations it started, the share that ended there; dislikes on the answer; answer length and mean response time. A chip is a fixed question, so a change in its row is a change in the system (brief §55). The rest of each row (not cited, not found, nor clarification) is empty answers.</div>`:''}
     </div>`:''}
@@ -10068,6 +10147,9 @@ init();
     // "the justice category" names one topic, not the topic list
     for(const[,phr]of CAT_PHRASES)for(const ph of phr)if(new RegExp('\\b'+ph.replace(/[&]/g,'\\$&')+'\\s+(category|topic)\\b').test(q))return null;
     if(/\b(percentage|share|proportion) of (the )?(ci |citizens ?information )?pages\b/.test(q))return null;
+    const riseQ=/\b(ris(ing|ers?|e)|fastest[- ]growing|growing (the )?(fastest|most)|grew (the )?most|trending|on the rise|biggest (rise|increase|growth)|falling|fallers?|declin(ing|e)|dropp(ing|ed) (the )?most|fell (the )?most|biggest (fall|drop|decline))\b/.test(q);
+    if(riseQ&&/\b(topics?|subjects?|themes?|pages?|schemes?)\b/.test(q)){const fall=/fall|declin|dropp|fell|drop/.test(q),nm2=q.match(/\b(?:top\s+)?(\d{1,2})\b/);
+      return{topn:true,raw:orig,entity:/\bpages?|schemes?\b/.test(q)?'risepage':'risetopic',N:Math.min(Math.max(nm2?+nm2[1]:5,2),10),dir:fall?'min':'max',metric:fall?'fall':'rise',category:null,period:parsePeriod(' ')};}
     if(/journeys?|transitions|category steps|from .* to .* categor|\b(ask|asked|go|move|moved|turn) (about |on |to )?(next |after)\b|\bafter\b.*\b(what|which) (topic|next)\b/.test(q))entity='journey';
     else if(/\bservices\b|cost drivers\b/.test(q))entity='service';
     else if(/\b(what|which) (kinds?|types?|sorts?) of (questions?|things?)\b|\bkinds? of questions?\b|\bintents?\b|\bwhat (do|are|did) people (ask for|want|asking for|need)\b|\bwhat (questions?|things?) (do|did|are) people ask(ing)?\b|\bquestions? by (kind|type|intent)\b/.test(q))entity='asked';   // what people ask for: the intent mix (brief §69)
@@ -10105,6 +10187,13 @@ init();
   }
   function computeTopN(intent){
     const {entity,N,dir,metric,period}=intent;
+    if(entity==='risetopic'||entity==='risepage'){   // brief §104: from risers(), the latest complete windows, whatever the period
+      const R=risers(),X=entity==='risetopic'?R.topics:R.pages;if(!X)return{topn:true,empty:true,intent};
+      const list=(metric==='fall'?X.fallers:X.risers).slice(0,N);if(!list.length)return{topn:true,empty:true,intent};
+      const items=list.map(x=>({label:x.label,act:entity==='risepage'?['url',x.url]:['sub','asked'],v:x.ratio==null?999:x.ratio,extra:` · ${num(x.before)} → ${num(x.after)} · ${x.perK.toFixed(1)} per 1,000 now · not found ${x.nf==null?'—':(x.nf*100).toFixed(0)+'%'}`+(entity==='risetopic'?' · '+catLabel(CAT_ALIAS[x.cat]||x.cat):''),title:x.url}));
+      const win=entity==='risetopic'?`${fmtMonth(X.month)} against ${fmtMonth(X.before)}`:`${spanLabel(X.from,X.to)} against ${spanLabel(X.bFrom,X.bTo)}`;
+      return{topn:true,items,fmt:v=>v>=999?'new':'×'+(v>=10?v.toFixed(0):v.toFixed(v<1?2:1)),by:`share of all ${entity==='risetopic'?'topic-placed questions':'pages named'}, ${win} · the latest complete windows · no cause claimed`,intent};
+    }
     const rows=DATA.merged.filter(d=>d.date>=period.from&&d.date<=period.to);
     if(!rows.length)return{topn:true,empty:true,intent};
     const valOf=d=>metric==='questions'?d.queries:(metric==='llm'?d.gen:d.total);
@@ -11041,13 +11130,13 @@ init();
       const at=it.act?' data-act="'+it.act[0]+'" data-arg="'+escA(it.act[1])+'"':'';
       return '<button class="ask-topn-row"'+at+(it.title?' title="'+escA(it.title)+'"':'')+'><span class="ask-topn-rank">'+(i+1)+'</span><span class="ask-topn-lbl">'+esc(it.label)+(it.extra?'<span style="color:var(--dim)">'+esc(it.extra)+'</span>':'')+'</span><span class="ask-topn-bar"><span style="width:'+pct.toFixed(1)+'%"></span></span><span class="ask-topn-val">'+fmt(it.v)+'</span></button>';
     }).join('');
-    const ent={service:'services',model:'models',day:'days',week:'weeks',month:'months',category:'categories',page:'pages',clickpage:'clicked pages',prompt:'starter prompts',journey:'journeys',asked:'kinds of question',askedpage:'pages people named',topic:'subjects'}[intent.entity];
+    const ent={service:'services',model:'models',day:'days',week:'weeks',month:'months',category:'categories',page:'pages',clickpage:'clicked pages',prompt:'starter prompts',journey:'journeys',asked:'kinds of question',askedpage:'pages people named',topic:'subjects',risetopic:'topics',risepage:'pages named'}[intent.entity];
     const caveat=(intent.entity==='asked'||intent.entity==='askedpage'||intent.entity==='topic')&&typeof intentCaveat==='function'?'<div class="ask-card-sub" style="margin-top:var(--sp-2)">'+intentCaveat()+'</div>':'';
     const by=res.by||(intent.metric==='questions'?'turns':(intent.metric==='llm'?'generation cost':'spend'));
     const where=intent.period.kind==='all'?'overall':'in '+intent.period.label;
     el.innerHTML='<div class="ask-card" style="flex-direction:column;align-items:stretch">'+
       '<div class="ask-card-q">'+esc(intent.raw)+'</div>'+
-      '<div class="ask-card-sub" style="margin-bottom:var(--sp-2)">'+esc((intent.dir==='min'?'Lowest ':'Top ')+items.length+' '+ent+' by '+by+' '+where)+'</div>'+
+      '<div class="ask-card-sub" style="margin-bottom:var(--sp-2)">'+esc((/^rise/.test(intent.entity)?(intent.dir==='min'?'Falling: ':'Rising: '):intent.dir==='min'?'Lowest ':'Top ')+items.length+' '+ent+' by '+by+(/^rise/.test(intent.entity)?'':' '+where))+'</div>'+
       '<div class="ask-topn">'+rows+'</div>'+caveat+'</div>';
     el.classList.add('show'); if(typeof renderIcons==='function')renderIcons();
   }
