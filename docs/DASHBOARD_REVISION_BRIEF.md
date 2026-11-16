@@ -2667,4 +2667,7 @@ days with the 28 before, so a tile's value and its arrow described different win
 
 Checked: on All, 1M, 3M and 7D the headline, the range line and the tiles name one window and agree with What changed;
 the done-when figures above; every view loads with no errors; both mix modes and the numbered key on the Overview;
-Ask bar 311 of 311. Not checked here: 390 px and the light theme.
+Ask bar 311 of 311. Then at 390 px (the page in a 390 px frame, since the browser window stops at 500) and in both
+themes: the numbered event key did not wrap and pushed the Overview to 415 px and Quality to 432 px; it now wraps, and
+all eleven views measure 384 px, wide tables scrolling inside their own boxes; the interval text (`--dim`) is 5.05:1 on
+the light card and 5.13:1 on the dark; the partial band reads apart from cited in both themes.

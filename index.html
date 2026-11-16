@@ -5542,7 +5542,7 @@ function setMixMode(m){MIX_MODE=m==='nocite'?'nocite':'all';['home-mix','ux-outc
 function evLinesNumbered(labels){
   const evs=confirmedEvents().filter(e=>bucketLabel(e.start,labels)).sort((a,b)=>a.start.localeCompare(b.start));
   return{lines:evs.map((e,i)=>({label:bucketLabel(e.start,labels),color:eventColor(e),text:'● '+(i+1),dash:[]})),
-    key:evs.length?evs.map((e,i)=>`<span style="white-space:nowrap;margin-right:14px"><span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:${eventColor(e)};margin-right:5px"></span><b>${i+1}</b> ${fmtDate(e.start)} · ${escH(e.title.length>48?e.title.slice(0,46)+'…':e.title)}</span>`).join(''):''};
+    key:evs.length?evs.map((e,i)=>`<span style="display:inline-block;max-width:100%;margin-right:14px;overflow-wrap:anywhere"><span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:${eventColor(e)};margin-right:5px"></span><b>${i+1}</b> ${fmtDate(e.start)} · ${escH(e.title.length>48?e.title.slice(0,46)+'…':e.title)}</span>`).join(''):''};
 }
 function outcomeMixChart(id){
   const cv=document.getElementById(id);if(!cv||!DATA)return;
