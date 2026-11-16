@@ -27,6 +27,8 @@ Outputs (all daily counts; nothing per-turn and no text crosses into the dashboa
                                                                    all answers and cited answers (needs Response Words)
                          VoiceTurns, VoiceSessions                 only when the export has an input-mode column
   usage-hours.csv      Date, Hour, Turns, Sessions   (hour of day, Irish time)
+  question-language-monthly.csv  Month, Language, Turns, Scored, Cited, NotFound, Clarification: typed questions by
+                             the language guessed from stopwords; under 5 in a month folded into Other language (§106)
   script-outcomes-monthly.csv  Month, Script, Turns, Scored, Cited, NotFound, Clarification — outcome by the alphabet;
                              a script under 5 questions or under 5 scored in a month is folded into Other (brief §105)
                        the question starts in (needs Query Script and Outcome); a script, not a language
@@ -68,7 +70,8 @@ Outputs (all daily counts; nothing per-turn and no text crosses into the dashboa
   answer-personalisation-monthly.csv  Month, SituationGiven, Personalised, Answers: cited answers by whether the question gave
                                    a detail and the answer used one ("in your case") (brief §75)
   answer-figures-monthly.csv       Month, URL, Answers, Partial, Figures, Matched, Unmatched, Unverifiable, and the same three
-                                   for euro amounts, percentages and years (EuroMatched ... YearUnverifiable, brief §100): figures quoted
+                                   for euro amounts, percentages and years (EuroMatched ... YearUnverifiable, brief §100), and
+                                   MatchedEarlier: on an earlier snapshot of a cited page, not the current one (§106): figures quoted
                                    in answers checked against dated snapshots of the cited pages; (all) and (uncited) rows (brief §75)
   answer-signposts-monthly.csv     Month, Org, Category, Turns, outcomes, Partial: organisations the answer names
                                    (redact_feed.py ORGS; (any) / (external) / (none)), by the turn's category and (all) (brief §75)
@@ -90,7 +93,7 @@ Outputs (all daily counts; nothing per-turn and no text crosses into the dashboa
                             last (brief §69)
   setback-intents-monthly.csv  Month, Setback (NF | Clar), Intent, Turns, Ended, SameIntentNext, OtherIntentNext (brief §69)
   safety-monthly.csv        Month ("(all)" = the whole period), Flag, Turns, Cited, NotFound, Clarification, Error,
-                            OutOfScope, Greeting, Uncited; a flag under 5 in its month (or the period) is left out, the
+                            OutOfScope, Greeting, Uncited, NamedHelpline, CitedNoHelpline (§106); a flag under 5 in its month (or the period) is left out, the
                             "Any identifier" total is exempt (brief §105): turns
                             flagged by redact_feed.py (identifiers typed in, injection phrasings, off-topic and
                             crisis themes) and their outcomes (brief §65)
@@ -229,6 +232,7 @@ def aggregate(files, skip_days=frozenset()):
     asks = defaultdict(int)                          # (month, ask class | (any) | (none), given 0/1) -> clarification answers
     pers = defaultdict(int)                          # (month, situation given 0/1, personalised 0/1) -> cited answers to typed questions
     safety = defaultdict(lambda: defaultdict(int))   # (date, flag) -> turns and their outcomes (brief §65)
+    langs = defaultdict(lambda: defaultdict(int))    # (month, language) -> typed questions and outcomes (brief §106)
     intent = defaultdict(lambda: defaultdict(int))   # (date, intent, chip) -> turns, outcomes, form flags (brief §66)
     asked = defaultdict(lambda: defaultdict(int))    # (month, page asked about) -> what the answer did (brief §66)
     qtopic = defaultdict(lambda: defaultdict(int))   # (date, question category) -> turns whose answer carried no topic (brief §66)
@@ -284,6 +288,14 @@ def aggregate(files, skip_days=frozenset()):
                     c["starter" if (row.get("Starter Prompt") or "").strip() else "organic"] += 1   # holds the chip text, blank when organic
                     if outcome_col and (row.get("Outcome") or "").strip() == "Error":                 # empty answers on first turns, chip and typed (brief §64)
                         c["starter_err" if (row.get("Starter Prompt") or "").strip() else "organic_err"] += 1
+                typed6 = not (row.get("Starter Prompt") or "").strip() and (row.get("Question Type") or "").strip() != "suggested_followup"
+                if "Query Language" in row and typed6 and outcome_col:   # typed questions by language (brief §106)
+                    lg = (row.get("Query Language") or "").strip() or "undetermined"; o5 = (row.get("Outcome") or "").strip()
+                    e6 = langs[(d.strftime("%Y-%m"), lg)]; e6["Turns"] += 1
+                    if o5 and o5 not in ("Greeting", "Error", "Out of scope"): e6["Scored"] += 1
+                    if o5 == "Cited answer": e6["Cited"] += 1
+                    if o5 == "Not found": e6["NotFound"] += 1
+                    if o5 == "Clarification": e6["Clarification"] += 1
                 if "Query Script" in row:
                     sc = (row.get("Query Script") or "").strip() or "None"
                     c["script:" + sc] += 1
@@ -305,9 +317,12 @@ def aggregate(files, skip_days=frozenset()):
                     flags = [k[6:] for k in SAFETY_FLAGS if (row.get(k) or "").strip() == "1"]
                     if (row.get("Query Theme") or "").strip(): flags.append("Theme " + row["Query Theme"].strip())
                     if any(f in ("PPS", "Phone", "Email", "IBAN", "Card") for f in flags): flags.append("Any identifier")
+                    hl = (row.get("Answer Helpline") or "").strip() == "1"
                     for f in flags:
                         e4 = safety[(d, f)]; e4["Turns"] += 1
                         if o4: e4["o:" + o4] += 1
+                        if hl: e4["helpline"] += 1   # the answer named a helpline or support service (brief §106)
+                        if o4 == "Cited answer" and not hl: e4["cited_nohelp"] += 1
                 if outcome_col and (row.get("Outcome Rule") or "").strip():
                     o3 = (row.get("Outcome") or "").strip()
                     rulesd[(d, row["Outcome Rule"].strip())] += 1
@@ -382,6 +397,7 @@ def aggregate(files, skip_days=frozenset()):
                     fk = {k + r: int(row.get(f"Answer Figures {K} {r}") or 0) for k, K in (("Euro", "Euro"), ("Pct", "Percent"), ("Year", "Year")) for r in ("Matched", "Unmatched", "Unverifiable")}
                     for key in (nus or ["(uncited)"]) + ["(all)"]:   # an answer's result is attributed to every page it cites
                         x9 = figs[(d.strftime("%Y-%m"), key)]; x9["answers"] += 1; x9["figures"] += int(row["Answer Figures"]); x9["matched"] += fm; x9["unmatched"] += fu; x9["unverifiable"] += fv
+                        x9["earlier"] += int(row.get("Answer Figures Matched Earlier") or 0)
                         for c, n in fk.items(): x9[c] += n
                         if is_partial: x9["partial"] += 1
                 for nu in nus:   # once per answer and page
@@ -422,9 +438,11 @@ def aggregate(files, skip_days=frozenset()):
                         ids = [x for x in (row.get("Answer Orgs") or "").split(";") if x]
                         keys = ids + (["(any)"] if ids else ["(none)"]) + (["(external)"] if any(not x.startswith("cic.") for x in ids) else [])
                         ocat = own or qc or "(none)"; mo9 = d.strftime("%Y-%m")
+                        outside = t.weekday() >= 5 or not (PHONE_HOURS[0] <= t.hour < PHONE_HOURS[1])
                         for oid in keys:
                             for c9 in (ocat, "(all)"):
                                 e9 = orgs[(mo9, oid, c9)]; e9["Turns"] += 1
+                                if outside: e9["outside"] += 1
                                 if o_rec: e9["o:" + o_rec] += 1
                                 if is_partial: e9["o:partial"] += 1
                     if chip == 0 and "Query Shape" in row:   # layer 2 (brief §75): what the question says about the person, by category; the clarification's asks against it
@@ -521,7 +539,7 @@ def aggregate(files, skip_days=frozenset()):
                         cat_dropped += sum(1 for x in slugs if x is None)
                         toks = [x for x in slugs if x]
                     for s in set(toks): cats[d][s] += 1
-    return D, sess, lat, hours, hour_sess, cats, bad, has_voice, dupes, cat_dropped, has_outcome, rules, has_starter, has_script, recs, (cites_m, cites_x, pages), latb, rulesd, (style, safety, intent, asked, qtopic, cint, askw, qtop, qcat, qic, tmpl, orgs, figs, sit, asks, pers)
+    return D, sess, lat, hours, hour_sess, cats, bad, has_voice, dupes, cat_dropped, has_outcome, rules, has_starter, has_script, recs, (cites_m, cites_x, pages), latb, rulesd, (style, safety, intent, asked, qtopic, cint, askw, qtop, qcat, qic, tmpl, orgs, figs, sit, asks, pers, langs)
 
 
 STYLE_COLS = ["Lines", "Hedges", "Apologies", "Signposts", "Questions", "Links", "Openers", "Invitations", "Absolutes", "Emphasis", "Nested", "External", "Freshness", "Signoff"]
@@ -615,13 +633,13 @@ def safety_rows(safety, min_turns=5):
     Injection, Theme <name>), the flagged turns and their outcomes (brief §65). Counts only; the flags are set by
     redact_feed.py before the text is dropped. Floored (brief §105): a flag under min_turns in its month or period is
     left out; "Any identifier", the total of the identifier flags, is exempt as a total row."""
-    keys = [src for k, src in OUTCOME_COLS if k not in ("Partial", "Scored")]
+    keys = [src for k, src in OUTCOME_COLS if k not in ("Partial", "Scored")] + ["helpline", "cited_nohelp"]
     agg = defaultdict(lambda: defaultdict(int))
     for (d, f), e in safety.items():
         for m in (d.strftime("%Y-%m"), "(all)"):
             x = agg[(m, f)]; x["Turns"] += e["Turns"]
             for k in keys: x[k] += e[k]
-    cols = ["Month", "Flag", "Turns"] + [k for k, _ in OUTCOME_COLS if k not in ("Partial", "Scored")]
+    cols = ["Month", "Flag", "Turns"] + [k for k, _ in OUTCOME_COLS if k not in ("Partial", "Scored")] + ["NamedHelpline", "CitedNoHelpline"]
     return cols, [[m, f, e["Turns"]] + [e[k] for k in keys] for (m, f), e in sorted(agg.items(), key=lambda kv: (kv[0][0] == "(all)", kv[0])) if e["Turns"] >= min_turns or f == "Any identifier"]
 
 
@@ -638,14 +656,19 @@ def tmpl_rows(tmpl):
     return cols, [[d.isoformat(), t, e["Turns"]] + [e[k] for k in OUT7_SRC] + [e["o:partial"]] for (d, t), e in sorted(tmpl.items())]
 
 
+# The Citizens Information Phone Service's hours, Monday to Friday, for OutsideHours on the signposts file (brief §106);
+# from the service's published hours, for the analyst to confirm. A question outside them could not have been phoned then.
+PHONE_HOURS = (9, 20)
+
+
 def orgs_rows(orgs, min_turns=5):
     """answer-signposts-monthly.csv: per month, organisation named in the answer (redact_feed.py ORGS; "(any)" = named
     one or more, "(external)" = named one outside Citizens Information's own channels, "(none)" = named none) and the
     turn's category ("(all)" = every category): answers and their outcomes. Category rows under min_turns left out;
     "(all)" rows always kept (brief §75)."""
-    cols = ["Month", "Org", "Category", "Turns"] + OUT7 + ["Partial"]
+    cols = ["Month", "Org", "Category", "Turns"] + OUT7 + ["Partial", "OutsideHours"]
     # the floor applies to every row naming an organisation, "(all)" rows included; the three pseudo-rows are exempt (brief §76)
-    return cols, [[m, o, c, e["Turns"]] + [e[k] for k in OUT7_SRC] + [e["o:partial"]] for (m, o, c), e in sorted(orgs.items()) if o in ("(any)", "(external)", "(none)") or e["Turns"] >= min_turns]
+    return cols, [[m, o, c, e["Turns"]] + [e[k] for k in OUT7_SRC] + [e["o:partial"], e["outside"]] for (m, o, c), e in sorted(orgs.items()) if o in ("(any)", "(external)", "(none)") or e["Turns"] >= min_turns]
 
 
 def _given(row, k):
@@ -691,8 +714,8 @@ def figs_rows(figs, min_answers=5):
     answers carrying a euro, percent or year figure, the figures, and how many matched a dated snapshot of a cited
     page, were unmatched on checkable pages, or were unverifiable (page changed since, no snapshot, nothing cited).
     An answer's result counts for every page it cites. Page rows under min_answers left out (brief §75)."""
-    cols = ["Month", "URL", "Answers", "Partial", "Figures", "Matched", "Unmatched", "Unverifiable"] + FIG_KCOLS
-    return cols, [[m, u, e["answers"], e["partial"], e["figures"], e["matched"], e["unmatched"], e["unverifiable"]] + [e[c] for c in FIG_KCOLS] for (m, u), e in sorted(figs.items()) if u.startswith("(") or e["answers"] >= min_answers]
+    cols = ["Month", "URL", "Answers", "Partial", "Figures", "Matched", "Unmatched", "Unverifiable"] + FIG_KCOLS + ["MatchedEarlier"]
+    return cols, [[m, u, e["answers"], e["partial"], e["figures"], e["matched"], e["unmatched"], e["unverifiable"]] + [e[c] for c in FIG_KCOLS] + [e["earlier"]] for (m, u), e in sorted(figs.items()) if u.startswith("(") or e["answers"] >= min_answers]
 
 
 def style_rows(style):
@@ -777,6 +800,7 @@ def conversation_pass(recs):
         # what happened after a not-found, clarification or error answer (per answer, not per conversation;
         # a later cited answer may be to a different question, so this never claims the setback was resolved)
         if any(r[4] == "Cited answer" for r in turns): c["reached_cited"] += 1
+        elif sum(1 for r in turns if r[4] in ("Not found", "Clarification")) >= 2: c["repeat_fail"] += 1   # two or more failed attempts, no cited answer (brief §106)
         for i, r in enumerate(turns):
             p = SETBACK.get(r[4])
             if not p: continue
@@ -840,7 +864,7 @@ def conversation_rows(cd):
     cols += ["ReachedCited"]
     for p in SETBACK.values(): cols += [f"{p}Turns", f"{p}LaterCited", f"{p}Ended", f"{p}NextTyped", f"{p}NextChip", f"{p}NextNew", f"{p}NextOther"]
     cols += ["WithTopic", "MultiTopic", "TopicReturn"] + [k for k, _ in GAP_COLS]
-    cols += [f"{t}Topic{k}" for t in ("Typed", "Chip", "New") for k in ("Both", "Switched")] + ["ClarThenClar"]
+    cols += [f"{t}Topic{k}" for t in ("Typed", "Chip", "New") for k in ("Both", "Switched")] + ["ClarThenClar", "RepeatedFailure"]
     out = []
     for d in sorted(cd):
         c = cd[d]
@@ -852,7 +876,7 @@ def conversation_rows(cd):
         for p in SETBACK.values():
             row += [c[p + ":turns"], c[p + ":later_cited"], c[p + ":ended"]] + [c[p + ":next:" + t] for t in ("Typed", "Chip", "New", "other")]
         row += [c["with_topic"], c["multi_topic"], c["topic_return"]] + [c[k] for _, k in GAP_COLS]
-        row += [c[f"drift:{t}:{k}"] for t in ("Typed", "Chip", "New") for k in ("both", "switched")] + [c["clar_loop"]]
+        row += [c[f"drift:{t}:{k}"] for t in ("Typed", "Chip", "New") for k in ("both", "switched")] + [c["clar_loop"], c["repeat_fail"]]
         out.append(row)
     return cols, out
 
@@ -954,6 +978,22 @@ def usage_rows(D, sess, lat, has_voice, has_outcome=False, rules="", has_starter
         if has_outcome: row += [c[k] for _, k in OUTCOME_COLS] + [rules] + [c[k] for _, k in CROSS_COLS]
         if has_words: row += [c["words"], c["words_n"], c["cwords"], c["cwords_n"]]
         out.append(row)
+    return cols, out
+
+
+def lang_rows(langs, min_turns=5):
+    """question-language-monthly.csv (brief §106): typed questions per month by the language redact_feed.py guessed from
+    stopwords (English, Irish, Polish ..., "undetermined" under four words), with outcomes. A language under min_turns
+    in a month is folded into "Other language"; English, undetermined and Other language are kept as they fall."""
+    M = defaultdict(lambda: defaultdict(lambda: defaultdict(int)))
+    for (m, lg), e in langs.items():
+        for k, v in e.items(): M[m][lg][k] += v
+    cols = ["Month", "Language", "Turns", "Scored", "Cited", "NotFound", "Clarification"]; out = []
+    for m in sorted(M):
+        o = M[m]
+        for lg in [x for x in o if x not in ("English", "undetermined", "Other language") and o[x]["Turns"] < min_turns]:
+            for k, v in o.pop(lg).items(): o["Other language"][k] += v
+        out += [[m, lg] + [o[lg][k] for k in cols[2:]] for lg in sorted(o, key=lambda x: (-o[x]["Turns"], x))]
     return cols, out
 
 
@@ -1061,7 +1101,7 @@ def main():
     # An export taken on day X contains only part of day X; skip those rows unless asked to keep them.
     export_days = {datetime.strptime(m.group(1), "%Y%m%d").date() for m in (re.search(r"(\d{8})_\d{6}", os.path.basename(f)) for f in a.files) if m}
     skip = frozenset() if (a.keep_partial or not export_days) else frozenset({max(export_days)})  # only the newest export's own day is partial
-    D, sess, lat, hours, hour_sess, cats, bad, has_voice, dupes, cat_dropped, has_outcome, rules, has_starter, has_script, recs, (cites_m, cites_x, pages), latb, rulesd, (style, safety, intent, asked, qtopic, cint, askw, qtop, qcat, qic, tmpl, orgs, figs, sit, asks, pers) = aggregate(a.files, skip)
+    D, sess, lat, hours, hour_sess, cats, bad, has_voice, dupes, cat_dropped, has_outcome, rules, has_starter, has_script, recs, (cites_m, cites_x, pages), latb, rulesd, (style, safety, intent, asked, qtopic, cint, askw, qtop, qcat, qic, tmpl, orgs, figs, sit, asks, pers, langs) = aggregate(a.files, skip)
     rules = ", ".join(sorted(r for r in rules if r))
     if skip and any(True for _ in skip): print(f"note: export day(s) {', '.join(str(x) for x in sorted(skip))} skipped as partial (--keep-partial to keep)")
     cd, co, jm, sp, cstats = conversation_pass(recs)
@@ -1105,6 +1145,7 @@ def main():
                 write(os.path.join(a.out_dir, "clarification-asks-monthly.csv"), *asks_rows(asks))
                 write(os.path.join(a.out_dir, "answer-personalisation-monthly.csv"), *pers_rows(pers))
         if safety: write(os.path.join(a.out_dir, "safety-monthly.csv"), *safety_rows(safety))
+        if langs: write(os.path.join(a.out_dir, "question-language-monthly.csv"), *lang_rows(langs))
         if intent:
             write(os.path.join(a.out_dir, "question-intent-daily.csv"), *intent_rows(intent))
             write(os.path.join(a.out_dir, "asked-pages-monthly.csv"), *asked_rows(asked))

@@ -1,6 +1,6 @@
 {
  "_comment": "The bot's fixed-wording templates (brief §75): sentences the answering model is told to use, found as sentences in 200+ answers and 50+ conversations. redact_feed.py records which an answer carries; make_usage.py counts them per day (answer-templates-daily.csv). Configuration, not citizen text.",
- "derivation_version": "2026.11.16-2",
+ "derivation_version": "2026.11.16-3",
  "templates": [
   {
    "id": "signoff.query",
@@ -152,7 +152,8 @@
   {
    "id": "agency.hse",
    "family": "agency",
-   "pattern": "\\bhse\\b|health service executive"
+   "pattern": "\\bhse\\b|health service executive",
+   "helpline": true
   },
   {
    "id": "agency.rtb",
@@ -257,12 +258,14 @@
   {
    "id": "ngo.womensaid",
    "family": "ngo",
-   "pattern": "women'?s aid|men'?s aid|safe ireland"
+   "pattern": "women'?s aid|men'?s aid|safe ireland",
+   "helpline": true
   },
   {
    "id": "ngo.samaritans",
    "family": "ngo",
-   "pattern": "samaritans|\\bpieta\\b|text about it|50808"
+   "pattern": "samaritans|\\bpieta\\b|text about it|50808",
+   "helpline": true
   },
   {
    "id": "ngo.treoir",
@@ -287,7 +290,38 @@
   {
    "id": "ngo.gp",
    "family": "ngo",
-   "pattern": "\\byour gp\\b|\\ba gp\\b|\\bdoctor\\b"
+   "pattern": "\\byour gp\\b|\\ba gp\\b|\\bdoctor\\b",
+   "helpline": true
+  },
+  {
+   "id": "ngo.emergency",
+   "family": "ngo",
+   "pattern": "(?:call|dial|phone|ring|contact)\\s+(?:the\\s+)?(?:112|999)\\b|emergency services",
+   "helpline": true
+  },
+  {
+   "id": "ngo.yourmentalhealth",
+   "family": "ngo",
+   "pattern": "yourmentalhealth|your mental health information line|1800 111 888",
+   "helpline": true
+  },
+  {
+   "id": "ngo.childline",
+   "family": "ngo",
+   "pattern": "\\bchildline\\b",
+   "helpline": true
+  },
+  {
+   "id": "ngo.aware",
+   "family": "ngo",
+   "pattern": "\\baware\\.ie\\b|aware (?:support|helpline|support line|life skills)|1800 80 48 48",
+   "helpline": true
+  },
+  {
+   "id": "ngo.jigsaw",
+   "family": "ngo",
+   "pattern": "\\bjigsaw\\b",
+   "helpline": true
   }
  ]
 }

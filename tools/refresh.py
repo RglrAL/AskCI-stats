@@ -13,7 +13,7 @@ prints each step's last line (counts and versions, never text):
   5 cache_coverage.py, next_step.py   from the raw feeds, into the repo root
   6 collect_aggregates.py     the aggregates into the repo root; make_not_found_pages.py, cited addresses not on the site
   7 audit_data.py DIR         the audit WITH the feed recount (the deploy can only run files-only)
-  8 make_register.py, make_findings.py, change_report.py --events, incidents.py, make_facts.py
+  8 make_register.py, make_findings.py, make_handoff.py, change_report.py --events, incidents.py, make_facts.py
   9 test_ask.py               the Ask bar regression (skipped with --skip-test)
  10 VERSIONS.json             the manifest: every version string, the recount's date and counts, the commit, and a
                               hash and row count of each aggregate file, so the deploy's audit can confirm the committed
@@ -66,7 +66,7 @@ def main():
         run("cited addresses not on the site", py + ["tools/make_not_found_pages.py"])   # brief §96: from the fetch log and pages-cited.csv
     r = run("audit (feed recount)", py + ["tools/audit_data.py", a.out_dir])
     passed = r.stdout.count("✓"); failed = r.stdout.count("✗")
-    run("register", py + ["tools/make_register.py"]); run("findings", py + ["tools/make_findings.py"])
+    run("register", py + ["tools/make_register.py"]); run("findings", py + ["tools/make_findings.py"]); run("handoff extract", py + ["tools/make_handoff.py"], must=False)
     run("change reports", py + ["tools/change_report.py", "--events"], must=False); run("incidents", py + ["tools/incidents.py"], must=False); run("fact sheet", py + ["tools/make_facts.py"], must=False)
     if not a.skip_test: run("ask bar test", py + ["tools/test_ask.py"])
 

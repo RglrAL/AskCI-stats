@@ -69,16 +69,38 @@ ASKS = [
     ("Can you give me more detail about your situation?", set()),
 ]
 
-# (answer, expected {kind: (matched, unmatched, unverifiable)}) with nothing cited, so every figure is unverifiable (0h)
+# (answer, expected {kind: (matched, unmatched, unverifiable, matched an earlier snapshot)}) with nothing cited, so every figure is unverifiable (0h)
 FIGURES = [
-    ("The rate is €232.00 a week, 10% more than in 2025.", {"Euro": (0, 0, 1), "Percent": (0, 0, 1), "Year": (0, 0, 1)}),
-    ("You can apply from 2026.", {"Euro": (0, 0, 0), "Percent": (0, 0, 0), "Year": (0, 0, 1)}),
+    ("The rate is €232.00 a week, 10% more than in 2025.", {"Euro": (0, 0, 1, 0), "Percent": (0, 0, 1, 0), "Year": (0, 0, 1, 0)}),
+    ("You can apply from 2026.", {"Euro": (0, 0, 0, 0), "Percent": (0, 0, 0, 0), "Year": (0, 0, 1, 0)}),
 ]
 
 # (question, expected generic flag): a subject word is not naming a page (0i; needs the lexicon in data/)
 GENERIC = [
     ("how much income tax will I pay", True), ("I am self employed, what do I need to do", True),
     ("how do I apply for child benefit", False), ("am I entitled to the fuel allowance", False),
+]
+
+# (question, its script, expected language) (brief §106: a stopword guess, offline)
+LANGUAGE = [
+    ("How do I apply for the fuel allowance", "Latin", "English"),
+    ("Conas a chuirim isteach ar an liúntas breosla", "Latin", "Irish"),
+    ("Jak mogę złożyć wniosek o zasiłek mieszkaniowy", "Latin", "Polish"),
+    ("¿Cómo puedo solicitar el subsidio de vivienda?", "Latin", "Spanish"),
+    ("Де отримати інформацію про допомогу", "Cyrillic", "Ukrainian"),
+    ("hello there", "Latin", "undetermined"),
+    # English sentences built from words other languages share must stay English
+    ("I am a carer and I care for my mother at home", "Latin", "English"),
+    ("Can I get an exemption, no one told me about it", "Latin", "English"),
+    ("I am on the pot of money for the grant", "Latin", "English"),
+]
+
+# (answer, organisation ids it must name, ids it must not) (brief §106: the support services, written narrowly)
+SUPPORT = [
+    ("You can call the Samaritans free on 116 123, day or night.", {"ngo.samaritans"}, set()),
+    ("If you are in danger, call 112 or 999 now.", {"ngo.emergency"}, set()),
+    ("Please be aware that the maximum grant is €999.", set(), {"ngo.aware", "ngo.emergency"}),
+    ("Childline is free on 1800 66 66 66.", {"ngo.childline"}, set()),
 ]
 
 # (question, expected work class)
@@ -114,7 +136,13 @@ def main():
     for q, want in GENERIC:
         url, cat, n, gen = R.page_match(q)
         if not url or gen != want: fails.append(("generic", q, want, (url[-40:], gen)))
-    n = len(UNCITED) + len(CITED) + len(CRISIS) + len(ASKS) + len(WORK) + len(FIGURES) + len(GENERIC)
+    for q, sc, want in LANGUAGE:
+        got = R.query_language(q, sc)
+        if got != want: fails.append(("language", q, want, got))
+    for a, must, mustnot in SUPPORT:
+        got = set(x for x in R.answer_orgs(a).split(";") if x)
+        if not must <= got or got & mustnot: fails.append(("support", a, (sorted(must), "not " + str(sorted(mustnot))), sorted(got)))
+    n = len(UNCITED) + len(CITED) + len(CRISIS) + len(ASKS) + len(WORK) + len(FIGURES) + len(GENERIC) + len(LANGUAGE) + len(SUPPORT)
     for kind, text, want, got in fails:
         print(f"FAIL {kind}: {text!r}\n   expected {want}, got {got}")
     print(f"{n - len(fails)} of {n} rule cases passed (outcome rules {R.OUTCOME_RULES_VERSION}, safety {R.SAFETY_VERSION}, derivation {R.DERIVATION_VERSION})")

@@ -117,7 +117,10 @@ SIGNOFF = re.compile(r"citizensinformation\.ie", re.I)   # Answer Signoff: 1 if 
 # or international phone number, an email address, an IBAN, a 16-digit card number. Injection: the usual override
 # phrasings. Themes: a few off-topic kinds the scope rules name (creative writing, code, sport, entertainment, weather)
 # and crisis language, so that what AskCI answers to it can be counted. Counts only; names say what is matched.
-SAFETY_VERSION = "2026.11.16-1"
+SAFETY_VERSION = "2026.11.16-2"
+# 2026.11.16-2 (brief §106, handoff 6a): Answer Helpline, 1 when the answer names a helpline or support service
+# (HELPLINES below, confirmed by the analyst on 16 Nov 2026), so a crisis-language question can be counted by whether
+# the answer pointed to support.
 # 2026.11.16-1 (brief §100, handoff package 0a): crisis needs the whole phrase: "end my life" or "end it all", not "end my"
 # (which matched "end my tenancy / lease / contract"); adds "killing myself", "take my (own) life", "no reason to live",
 # "better off dead", "harm(ing) myself". The list is the analyst's to confirm.
@@ -163,7 +166,11 @@ INTENT_VERSION = "2026.10.24-2"
 #                 matches almost any page; generic aliases (lexicon 2026.11.16-1): a question whose page match comes only
 #                 from a subject word ("income tax", "self employed", "pension") is marked Query Page Generic and left out
 #                 of the named-page files
-DERIVATION_VERSION = "2026.11.16-2"
+#   2026.11.16-3  (brief §106, handoff 6a-6c) five support services added to ORGS (emergency services, HSE
+#                 YourMentalHealth, Childline, Aware, Jigsaw); figures that appear on an earlier snapshot of a cited page
+#                 but not the current one counted as Answer Figures Matched Earlier, not unmatched; Query Language, a
+#                 stopword guess at the question's language (offline, "undetermined" under four words)
+DERIVATION_VERSION = "2026.11.16-3"
 
 # Layer 2 (brief §75): situation entities read from the question, published as classes only (a county name, an age band,
 # a household flag, a work status, a payment-on flag, the year asked about, a shape flag); the classes a clarification
@@ -280,25 +287,26 @@ FIG_KIND_COLS = ["Answer Figures " + k + " " + r for k in ("Euro", "Percent", "Y
 def check_figures(answer, citations, day):
     """(figures, matched, unmatched, unverifiable) for one answer on one day (ISO date)."""
     k = check_figures_by_kind(answer, citations, day)
-    m, u, v = (sum(x[i] for x in k.values()) for i in range(3))
-    return m + u + v, m, u, v
+    m, u, v, e = (sum(x[i] for x in k.values()) for i in range(4))
+    return m + u + v + e, m, u, v
 
 
 def check_figures_by_kind(answer, citations, day):
     """{"Euro" | "Percent" | "Year": (matched, unmatched, unverifiable)} for one answer on one day (brief §100)."""
-    out = {n: [0, 0, 0] for n in FIG_KIND.values()}
+    out = {n: [0, 0, 0, 0] for n in FIG_KIND.values()}   # matched, unmatched, unverifiable, matched an earlier snapshot
     figs = figures_of(answer)
     if not figs: return {n: tuple(x) for n, x in out.items()}
     pages = {k for k in (_snap_key(u) for u in FIG_URL.findall(citations or "")) if k}
-    snaps = []; unverifiable = not pages
+    snaps = []; earlier = []; unverifiable = not pages
     for k in pages:
         usable = [s for lm, s in _snapshots(k) if lm != "unknown" and lm <= day]
-        if usable: snaps.append(usable[-1])
+        if usable: snaps.append(usable[-1]); earlier.extend(usable[:-1])
         else: unverifiable = True
     for f in figs:
         x = out[FIG_KIND[f[0]]]
         if any(f in s or ("n", f[1]) in s for s in snaps): x[0] += 1
         elif unverifiable: x[2] += 1
+        elif any(f in s or ("n", f[1]) in s for s in earlier): x[3] += 1   # on an earlier version of a cited page (brief §106)
         else: x[1] += 1
     return {n: tuple(x) for n, x in out.items()}
 
@@ -347,7 +355,15 @@ ORGS = [
     ("ngo.union", "ngo", r"trade union|\bsiptu\b|\bictu\b"),
     ("ngo.solicitor", "ngo", r"\bsolicitor\b"),
     ("ngo.gp", "ngo", r"\byour gp\b|\ba gp\b|\bdoctor\b"),
+    # support services added on 16 Nov 2026 (brief §106), written narrowly: "be aware" and "€999" must not match
+    ("ngo.emergency", "ngo", r"(?:call|dial|phone|ring|contact)\s+(?:the\s+)?(?:112|999)\b|emergency services"),
+    ("ngo.yourmentalhealth", "ngo", r"yourmentalhealth|your mental health information line|1800 111 888"),
+    ("ngo.childline", "ngo", r"\bchildline\b"),
+    ("ngo.aware", "ngo", r"\baware\.ie\b|aware (?:support|helpline|support line|life skills)|1800 80 48 48"),
+    ("ngo.jigsaw", "ngo", r"\bjigsaw\b"),
 ]
+# The organisations that count as pointing to support for a crisis-language question (brief §106, the analyst's list).
+HELPLINES = {"ngo.samaritans", "ngo.womensaid", "ngo.gp", "agency.hse", "ngo.emergency", "ngo.yourmentalhealth", "ngo.childline", "ngo.aware", "ngo.jigsaw"}
 _ORX = [(oid, fam, re.compile(rx)) for oid, fam, rx in ORGS]
 
 
@@ -529,6 +545,40 @@ def query_script(q):
     return "Other"
 APOS = str.maketrans({"\u2019": "'", "\u2018": "'", "\u02bc": "'"})
 
+# The question's language (brief §106, handoff 6c): a guess from stopwords, offline, no library and no network. Latin
+# script is scored against short lists of words that are common in each language and rare in the others (none that is
+# also an everyday English word: "care", "am", "pot", "me", "an", "no", "do" were taken out after the first run); a question of
+# under four words is "undetermined". Other scripts name the language family the script implies. By rule, not checked.
+LANG_WORDS = {
+    "English": "the and is are to of in for my can how what when where do does i am have has get will would should with this that if it be".split(),
+    "Irish": "agus conas cad cén cen tá ta níl nil bhfuil mé sé sí liom leat faoi chun ar na le ach nó aon seo éigin".split(),
+    "Polish": "jak czy nie się sie jest jestem mogę moge dla że ze mam gdzie jaki jakie ile kiedy oraz jestem moja mój moj pracy".split(),
+    "Spanish": "el los las que para por con cómo como qué una del puedo mi soy estoy tengo dónde donde cuando".split(),
+    "Portuguese": "não nao para com uma como posso meu minha é da em os tenho sou estou onde quando".split(),
+    "French": "les des est pour dans avec je vous comment une du au sur pas mon ma suis ai où quand".split(),
+    "Romanian": "și si este pentru cum nu sunt să sa în cu din unde când cand".split(),
+    "Lithuanian": "ir kaip ar yra kad man kur galiu su iš į mano kada".split(),
+}
+_LANG = {k: set(v) for k, v in LANG_WORDS.items()}
+_WORD = re.compile(r"[^\W\d_]+", re.U)
+
+
+def query_language(q, script=""):
+    if script == "Cyrillic":
+        return "Ukrainian" if re.search(r"[іїєґ]", (q or "").lower()) else "Russian" if re.search(r"[ыэъё]", (q or "").lower()) else "Cyrillic, other"
+    if script in ("Arabic", "CJK", "Devanagari"):
+        return {"Arabic": "Arabic script", "CJK": "Chinese or Japanese", "Devanagari": "Devanagari script"}[script]
+    if script not in ("Latin", ""):
+        return "undetermined"
+    w = [x.lower() for x in _WORD.findall(q or "")]
+    if len(w) < 4:
+        return "undetermined"
+    score = {k: sum(1 for x in w if x in s) for k, s in _LANG.items()}
+    best = max((k for k in score if k != "English"), key=lambda k: score[k])
+    if score[best] >= 2 and score[best] > score["English"]:
+        return best
+    return "English" if score["English"] >= 1 else "undetermined"
+
 
 def classify_rule(row):
     """Return (outcome, partial, rule id) for one feed row. Text is read here and nowhere else."""
@@ -575,7 +625,7 @@ def redact(src, dst):
                                                           "Outcome Rule", "Style Version"] + list(STYLE) + ["Answer Signoff", "Safety Version"] + list(SAFETY) + ["Query Theme",
                                                           "Intent Version", "Query Intent", "Query Form", "Query Page", "Query Category", "Query Schemes",
                                                           "Derivation Version", "Query Topic", "Category Source", "Answer Templates", "Answer Orgs",
-                                                          "Answer Figures", "Answer Figures Matched", "Answer Figures Unmatched", "Answer Figures Unverifiable"] + FIG_KIND_COLS + ["Query Page Generic",
+                                                          "Answer Figures", "Answer Figures Matched", "Answer Figures Unmatched", "Answer Figures Unverifiable"] + FIG_KIND_COLS + ["Answer Figures Matched Earlier", "Answer Helpline", "Query Language", "Query Page Generic",
                                                           "Query County", "Query Age Band", "Query Household", "Query Work", "Query Payment On", "Query Year Value", "Query Shape", "Query Letter",
                                                           "Answer Asks", "Answer Asked Given", "Answer Personalised"]
         dropped = [c for c in r.fieldnames if c in DROP]
@@ -591,6 +641,7 @@ def redact(src, dst):
             nq = normalise_query(q)
             row["Starter Prompt"] = nq if (row.get("Turn #") or "").strip() == "1" and nq in STARTER_PROMPTS else ""
             row["Query Script"] = query_script(q)
+            row["Query Language"] = query_language(q, row["Query Script"])
             row["Response Words"] = len((row.get("Assistant Response") or "").split())
             row["Outcome Rule"], row["Style Version"] = rule, STYLE_VERSION
             row.update(style_counts(row))
@@ -616,19 +667,22 @@ def redact(src, dst):
             row["Answer Personalised"] = "1" if PERSONAL_RE.search(ans.translate(APOS).lower()) else ""
             # the response pass: templates, organisations and figures; a pasted letter's answer is left out of all three
             if row["Query Letter"]:
-                row["Answer Templates"], row["Answer Orgs"] = "", ""
+                row["Answer Templates"], row["Answer Orgs"], row["Answer Helpline"] = "", "", ""
                 row["Answer Figures"] = row["Answer Figures Matched"] = row["Answer Figures Unmatched"] = row["Answer Figures Unverifiable"] = 0
                 for c in FIG_KIND_COLS: row[c] = 0
+                row["Answer Figures Matched Earlier"] = 0
             else:
                 row["Answer Templates"] = answer_templates(ans)
                 row["Answer Orgs"] = answer_orgs(ans)
+                row["Answer Helpline"] = "1" if HELPLINES & set(row["Answer Orgs"].split(";")) else ""
                 try: day = datetime.strptime((row.get("Timestamp") or "").strip(), "%b %d, %Y %H:%M").date().isoformat()
                 except ValueError: day = "9999-12-31"
                 byk = check_figures_by_kind(ans, row.get("Citations"), day)
                 for kn, res in byk.items():
                     for rn, n in zip(("Matched", "Unmatched", "Unverifiable"), res): row[f"Answer Figures {kn} {rn}"] = n
-                fm, fu, fv = (sum(r[i] for r in byk.values()) for i in range(3))
-                row["Answer Figures"], row["Answer Figures Matched"], row["Answer Figures Unmatched"], row["Answer Figures Unverifiable"] = fm + fu + fv, fm, fu, fv
+                fm, fu, fv, fe = (sum(r[i] for r in byk.values()) for i in range(4))
+                row["Answer Figures"], row["Answer Figures Matched"], row["Answer Figures Unmatched"], row["Answer Figures Unverifiable"] = fm + fu + fv + fe, fm, fu, fv
+                row["Answer Figures Matched Earlier"] = fe
             if row["Starter Prompt"]: counts["(starter prompt)"] = counts.get("(starter prompt)", 0) + 1
             w.writerow(row)
             n += 1
@@ -646,7 +700,7 @@ def main():
         json.dump({"_comment": "The bot's fixed-wording templates (brief §75): sentences the answering model is told to use, found as sentences in 200+ answers and 50+ conversations. "
                                "redact_feed.py records which an answer carries; make_usage.py counts them per day (answer-templates-daily.csv). Configuration, not citizen text.",
                    "derivation_version": DERIVATION_VERSION, "templates": [{"id": t, "family": f, "pattern": p} for t, f, p in TEMPLATES],
-                   "organisations": [{"id": o, "family": f, "pattern": p} for o, f, p in ORGS]},
+                   "organisations": [{"id": o, "family": f, "pattern": p, **({"helpline": True} if o in HELPLINES else {})} for o, f, p in ORGS]},
                   open(a.write_templates, "w", encoding="utf-8"), indent=1, ensure_ascii=False); open(a.write_templates, "a").write("\n")
         print(f"wrote {a.write_templates}: {len(TEMPLATES)} templates, {len(ORGS)} organisations, derivation {DERIVATION_VERSION}"); return
     if lexicon()["derivation"] and lexicon()["derivation"] != DERIVATION_VERSION:

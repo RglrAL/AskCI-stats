@@ -49,7 +49,7 @@ SCHEMA = {
     'categories.csv': 'Month Citations',
     'citations-monthly.csv': 'Month URL Citations Answers Partial Dislikes',
     'pages-cited.csv': 'URL FirstCited LastCited Citations Answers Partial Dislikes LastMod FirstCitedAfterLastMod AnswersAfterLastMod',
-    'safety-monthly.csv': 'Month Flag Turns Cited NotFound Clarification Error OutOfScope Greeting Uncited',
+    'safety-monthly.csv': 'Month Flag Turns Cited NotFound Clarification Error OutOfScope Greeting Uncited NamedHelpline CitedNoHelpline',
     'question-intent-daily.csv': 'Date Intent Chip Turns Cited NotFound Clarification Error OutOfScope Greeting Uncited Partial Year Euro YesNo Situation WithTopic SituationCited SituationNotFound SituationPartial NamedCited NamedNotFound NamedClarification',
     'asked-pages-monthly.csv': 'Month URL Category Asked CitedSame CitedSameCategory CitedOther NotFound Clarification Other CitedUnderHub Hub',
     'question-topics-daily.csv': 'Date Category Turns Cited NotFound Clarification Error OutOfScope Greeting Uncited Partial',
@@ -62,7 +62,8 @@ SCHEMA = {
     'content-gaps.csv': 'kind page category intent evidence asks rate priority team period rules_version lexicon_version built',
     'answer-templates-daily.csv': 'Date Template Turns Cited NotFound Clarification Error OutOfScope Greeting Uncited Partial',
     'answer-signposts-monthly.csv': 'Month Org Category Turns Cited NotFound Clarification Error OutOfScope Greeting Uncited Partial',
-    'answer-figures-monthly.csv': 'Month URL Answers Partial Figures Matched Unmatched Unverifiable EuroMatched EuroUnmatched EuroUnverifiable PctMatched PctUnmatched PctUnverifiable YearMatched YearUnmatched YearUnverifiable',
+    'answer-figures-monthly.csv': 'Month URL Answers Partial Figures Matched Unmatched Unverifiable EuroMatched EuroUnmatched EuroUnverifiable PctMatched PctUnmatched PctUnverifiable YearMatched YearUnmatched YearUnverifiable MatchedEarlier',
+    'question-language-monthly.csv': 'Month Language Turns Scored Cited NotFound Clarification',
     'question-situation-monthly.csv': 'Month Category Flag Turns Cited NotFound Clarification Error OutOfScope Greeting Uncited Partial',
     'clarification-asks-monthly.csv': 'Month Asks Given Turns',
     'answer-personalisation-monthly.csv': 'Month SituationGiven Personalised Answers',
@@ -493,10 +494,10 @@ if ORG:
 FIG = rd('answer-figures-monthly.csv')
 if FIG:
     fall = {r['Month']: r for r in FIG if r['URL'] == '(all)'}
-    check('answer figures: Matched + Unmatched + Unverifiable = Figures, Partial <= Answers, Figures >= Answers, page rows <= the (all) row, Answers <= the month\'s turns',
-          all(I(r['Matched']) + I(r['Unmatched']) + I(r['Unverifiable']) == I(r['Figures']) and I(r['Partial']) <= I(r['Answers']) and I(r['Figures']) >= I(r['Answers']) for r in FIG)
+    check('answer figures: Matched + Unmatched + Unverifiable (+ MatchedEarlier, §106) = Figures, Partial <= Answers, Figures >= Answers, page rows <= the (all) row, Answers <= the month\'s turns',
+          all(I(r['Matched']) + I(r['Unmatched']) + I(r['Unverifiable']) + I(r.get('MatchedEarlier')) == I(r['Figures']) and I(r['Partial']) <= I(r['Answers']) and I(r['Figures']) >= I(r['Answers']) for r in FIG)
           and all(I(r['Answers']) <= I(fall[r['Month']]['Answers']) for r in FIG if r['Month'] in fall) and all(I(r['Answers']) <= sum(I(U[d]['Questions']) for d in U if d[:7] == m) for m, r in fall.items()),
-          str([(r['Month'], r['URL'][-40:]) for r in FIG if I(r['Matched']) + I(r['Unmatched']) + I(r['Unverifiable']) != I(r['Figures'])][:3]))
+          str([(r['Month'], r['URL'][-40:]) for r in FIG if I(r['Matched']) + I(r['Unmatched']) + I(r['Unverifiable']) + I(r.get('MatchedEarlier')) != I(r['Figures'])][:3]))
     if 'EuroMatched' in FIG[0]:
         check('answer figures by kind: euro + percent + year = Matched, Unmatched and Unverifiable on every row (brief §100)',
               all(sum(I(r[k + x]) for k in ('Euro', 'Pct', 'Year')) == I(r[x]) for r in FIG for x in ('Matched', 'Unmatched', 'Unverifiable')),
@@ -614,6 +615,19 @@ check('safety: outcomes sum to Turns at most on every row, and no flag exceeds t
 check('safety (brief §105): every flag row has 5+ turns, the Any identifier total exempt; no daily safety file remains in data/', all(I(r['Turns']) >= 5 or r['Flag'] == 'Any identifier' for r in SF) and not os.path.exists(DATA + '/safety-daily.csv'),
       str([(r['Month'], r['Flag'], r['Turns']) for r in SF if I(r['Turns']) < 5 and r['Flag'] != 'Any identifier'][:3]))
 
+if SF and 'NamedHelpline' in SF[0]:
+    check('safety (brief §106): NamedHelpline and CitedNoHelpline <= Turns, CitedNoHelpline <= Cited on every row', all(I(r['NamedHelpline']) <= I(r['Turns']) and I(r['CitedNoHelpline']) <= I(r['Cited']) for r in SF))
+LG = rd('question-language-monthly.csv')
+if LG:
+    _qt = C.Counter()
+    for r in rd('question-intent-daily.csv'):
+        if r['Chip'] == '0': _qt[r['Date'][:7]] += I(r['Turns'])
+    _lt = C.Counter()
+    for r in LG: _lt[r['Month']] += I(r['Turns'])
+    check('question language (brief §106): languages sum to the month\'s typed questions; every named language other than English, undetermined and Other language has 5+; outcomes within Scored <= Turns',
+          all(_lt[m] == _qt[m] for m in _lt) and all(r['Language'] in ('English', 'undetermined', 'Other language') or I(r['Turns']) >= 5 for r in LG)
+          and all(I(r['Cited']) + I(r['NotFound']) + I(r['Clarification']) <= I(r['Scored']) <= I(r['Turns']) for r in LG),
+          str([(m, _lt[m], _qt[m]) for m in _lt if _lt[m] != _qt[m]][:3]))
 # ── 9a2. repeat-questions-monthly.csv against usage.csv (brief §63) ───────────
 RQ = {r['Month']: r for r in rd('repeat-questions-monthly.csv')}; um = C.Counter(); usm2 = C.Counter()
 for d in days: um[d[:7]] += I(U[d]['Questions']); usm2[d[:7]] += I(U[d]['StarterPromptFirstTurns'])

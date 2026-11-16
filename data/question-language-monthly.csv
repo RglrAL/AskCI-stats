@@ -1,0 +1,94 @@
+Month,Language,Turns,Scored,Cited,NotFound,Clarification
+2026-01,English,4780,4565,4347,177,10
+2026-01,undetermined,84,24,15,4,5
+2026-02,English,3707,3663,3479,158,4
+2026-02,undetermined,58,26,14,4,8
+2026-02,Other language,1,0,0,0,0
+2026-03,English,3582,3492,3168,225,66
+2026-03,undetermined,592,547,456,37,50
+2026-03,Other language,6,5,5,0,0
+2026-03,Arabic script,5,4,4,0,0
+2026-04,English,3273,3192,2868,225,72
+2026-04,undetermined,727,678,557,42,78
+2026-04,Spanish,12,12,9,0,0
+2026-04,Other language,10,7,7,0,0
+2026-04,Ukrainian,7,7,7,0,0
+2026-04,"Cyrillic, other",5,3,3,0,0
+2026-05,English,9075,8701,7388,857,349
+2026-05,undetermined,1369,1105,862,84,140
+2026-05,Ukrainian,25,24,23,0,0
+2026-05,Arabic script,10,7,4,0,0
+2026-05,Other language,9,8,8,0,0
+2026-05,French,8,6,6,0,0
+2026-05,Russian,8,8,6,0,0
+2026-05,Romanian,7,7,6,0,0
+2026-05,Spanish,7,7,7,0,0
+2026-05,"Cyrillic, other",6,3,2,0,0
+2026-05,Polish,5,5,4,0,0
+2026-06,English,13857,13543,11337,1418,602
+2026-06,undetermined,2009,1654,1252,127,245
+2026-06,Arabic script,38,32,31,0,0
+2026-06,Russian,38,30,25,0,0
+2026-06,"Cyrillic, other",30,19,14,0,0
+2026-06,Spanish,26,25,25,0,0
+2026-06,Portuguese,14,13,10,1,0
+2026-06,Ukrainian,14,13,12,0,0
+2026-06,French,13,11,9,0,0
+2026-06,Romanian,9,9,7,0,0
+2026-06,Other language,8,7,7,0,0
+2026-06,Polish,8,8,7,0,0
+2026-07,English,11935,11663,10575,522,544
+2026-07,undetermined,1639,1334,1052,52,228
+2026-07,Arabic script,31,28,24,0,0
+2026-07,Russian,19,16,15,0,0
+2026-07,Spanish,19,15,14,0,0
+2026-07,Romanian,16,15,15,0,0
+2026-07,"Cyrillic, other",12,11,10,0,0
+2026-07,Lithuanian,11,11,11,0,0
+2026-07,Ukrainian,11,11,11,0,0
+2026-07,Portuguese,10,10,8,0,0
+2026-07,Other language,8,7,7,0,0
+2026-07,Polish,6,6,4,0,0
+2026-08,English,11989,11707,10660,464,573
+2026-08,undetermined,1767,1432,1099,57,272
+2026-08,Arabic script,21,19,19,0,0
+2026-08,Spanish,20,18,18,0,0
+2026-08,Ukrainian,18,18,17,0,0
+2026-08,"Cyrillic, other",15,10,10,0,0
+2026-08,Romanian,15,14,13,0,0
+2026-08,Irish,10,10,8,0,0
+2026-08,Portuguese,9,8,8,0,0
+2026-08,Russian,9,7,7,0,0
+2026-08,Polish,6,5,5,0,0
+2026-08,Other language,5,4,4,0,0
+2026-09,English,14468,14055,11985,1120,946
+2026-09,undetermined,2292,1888,1271,72,537
+2026-09,Arabic script,29,23,19,0,0
+2026-09,Spanish,18,16,16,0,0
+2026-09,"Cyrillic, other",12,9,9,0,0
+2026-09,Russian,12,10,10,0,0
+2026-09,French,11,6,6,0,0
+2026-09,Romanian,11,10,10,0,0
+2026-09,Polish,10,9,9,0,0
+2026-09,Portuguese,9,8,6,0,0
+2026-09,Ukrainian,9,9,9,0,0
+2026-09,Irish,6,4,4,0,0
+2026-09,Chinese or Japanese,5,5,5,0,0
+2026-09,Other language,2,1,1,0,0
+2026-10,English,19616,18937,15309,2079,1545
+2026-10,undetermined,3228,2729,1743,120,856
+2026-10,Arabic script,44,27,21,0,1
+2026-10,Spanish,31,25,24,0,0
+2026-10,Russian,25,21,16,0,0
+2026-10,Chinese or Japanese,24,22,20,0,0
+2026-10,Polish,23,23,19,0,0
+2026-10,Romanian,18,16,15,0,0
+2026-10,"Cyrillic, other",17,12,12,0,0
+2026-10,French,17,8,8,0,0
+2026-10,Irish,16,9,6,0,1
+2026-10,Ukrainian,15,12,11,0,0
+2026-10,Portuguese,9,7,6,0,0
+2026-10,Other language,4,2,2,0,0
+2026-11,English,1203,1168,944,149,75
+2026-11,undetermined,157,148,99,4,44
+2026-11,Other language,9,6,5,0,0

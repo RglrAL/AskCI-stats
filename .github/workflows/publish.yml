@@ -84,6 +84,10 @@ jobs:
       - name: Findings
         run: python3 tools/make_findings.py
 
+      # The phone service and centre extract (brief §106): answers naming them, by category, last full month
+      - name: Handoff extract
+        run: python3 tools/make_handoff.py
+
       # The content-gap register's evidence rows, rebuilt from the published files; the status file is never touched.
       - name: Content-gap register
         run: python3 tools/make_register.py

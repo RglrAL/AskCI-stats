@@ -1,8 +1,8 @@
 {
  "_comment": "Written by tools/refresh.py at the end of a data refresh (brief §76): the version strings in force, the feed recount's result, and a hash of each aggregate file as committed, which the deploy audit checks so that the published aggregates are the ones the recount passed.",
  "generated": "2026-11-16",
- "commit_before_refresh": "39849d6",
- "review_folder": "exports/askci-export-2026-11-16c",
+ "commit_before_refresh": "c1bd73f",
+ "review_folder": "exports/askci-export-2026-11-16f",
  "feeds": [
   "qa-feed_20260929_113454.csv",
   "qa-feed_20260929_113634.csv",
@@ -13,16 +13,16 @@
  "versions": {
   "outcome_rules": "2026.11.16-1",
   "style": "2026.10.23-2",
-  "safety": "2026.11.16-1",
+  "safety": "2026.11.16-2",
   "intent": "2026.10.24-2",
   "lexicon": "2026.11.16-1",
-  "derivation": "2026.11.16-2",
+  "derivation": "2026.11.16-3",
   "page_config": "2026.10.23-1"
  },
  "audit": {
   "mode": "feed recount",
   "date": "2026-11-16",
-  "passed": 184,
+  "passed": 187,
   "failed": 0
  },
  "tests": {
@@ -30,7 +30,7 @@
  },
  "aggregates": {
   "answer-figures-monthly.csv": {
-   "sha256": "83a9f9b01ab32de4",
+   "sha256": "93006fa2c65b1bda",
    "rows": 2924
   },
   "answer-personalisation-monthly.csv": {
@@ -38,8 +38,8 @@
    "rows": 44
   },
   "answer-signposts-monthly.csv": {
-   "sha256": "3d79d62dae79c14f",
-   "rows": 2755
+   "sha256": "ccb374296129f4aa",
+   "rows": 2792
   },
   "answer-style-daily.csv": {
    "sha256": "6836691dec944c10",
@@ -82,7 +82,7 @@
    "rows": 128
   },
   "conversations-daily.csv": {
-   "sha256": "15de9714d4ae39f8",
+   "sha256": "2ab59efcf7455beb",
    "rows": 306
   },
   "intent-journeys-monthly.csv": {
@@ -117,6 +117,10 @@
    "sha256": "c4eacef88e509c4f",
    "rows": 5612
   },
+  "question-language-monthly.csv": {
+   "sha256": "d12767ef9ba82cd4",
+   "rows": 93
+  },
   "question-situation-monthly.csv": {
    "sha256": "32e64f88fb78a392",
    "rows": 2055
@@ -130,7 +134,7 @@
    "rows": 1034
   },
   "safety-monthly.csv": {
-   "sha256": "4191b35087ff0243",
+   "sha256": "c9915b9b691aa93d",
    "rows": 29
   },
   "script-outcomes-monthly.csv": {

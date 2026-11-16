@@ -2807,3 +2807,41 @@ and script files; the analyst chose to apply it (5a, the recommended option).
 Checked: the refresh with the feed recount 184 passed, 0 failed; files-only audit 164 passed, with the two new floor
 checks; the safety card on All and 3M, the counties in the whole-period rows, the voice note on first click, no errors
 on any view, 384 px wide in a 390 px frame; rule tests 57; guard 34; Ask bar 316 of 316.
+
+## 106. Pipeline additions: helplines, earlier figures, language, the phone-service extract, repeated failures (16 Nov 2026)
+
+The handoff's package 6. Each addition is a derived column or count, versioned (safety 2026.11.16-2, derivation
+2026.11.16-3, mirrored in `make_lexicon.py`), declared in the catalogue, `SCHEMA` and the loader, with invented-sentence
+cases in `tools/test_rules.py` (70 cases) and counts only.
+
+- **Crisis language against helplines** (6a). The analyst confirmed the list of support services on 16 Nov:
+  Samaritans, Pieta and Text About It; Women's Aid, Men's Aid and Safe Ireland; a GP or doctor; the HSE; and five
+  added to `ORGS`, written narrowly so "be aware" and "€999" do not match: emergency services (call 112 / 999), HSE
+  YourMentalHealth, Childline, Aware, Jigsaw (`HELPLINES`, marked `helpline` in `answer-templates.json`). The redacted
+  feed carries Answer Helpline; `safety-monthly.csv` gains NamedHelpline and CitedNoHelpline. Whole period: **28 of 48
+  crisis-language answers named a helpline**; 8 cited answers named none; 5 were declined. The crisis tile reads "28 of
+  48", the table has a helpline column, and the "patterns, not judgements" note stays. A mention is not a referral.
+- **Figures that match an earlier page** (6b). A figure on no current snapshot of a cited page but on an earlier one is
+  counted as MatchedEarlier, not unmatched (`answer-figures-monthly.csv`; the audit's sum now includes it). It needs two
+  snapshots of a page, and snapshots began on 24 Oct, so the count is 0 today; the figures card says so.
+- **Language of the question** (6c). `query_language` guesses from short stopword lists (English, Irish, Polish,
+  Spanish, Portuguese, French, Romanian, Lithuanian), offline, "undetermined" under four words; Cyrillic, Arabic and CJK
+  from the script. `question-language-monthly.csv` holds typed questions by month and language, a language under five
+  in a month folded into Other language; the audit checks they sum to typed questions. The first run's lists held
+  everyday English words ("an", "no", "me", "care", "am", "pot", "do"); with them out, Irish fell from 120 to **32** and
+  Romanian from 99 to 76: they had been scoring English questions. Whole period: English 97,485, undetermined 13,922,
+  Arabic script 178, Spanish 133, Russian 111, Ukrainian 99, Romanian 76, Polish 58, Portuguese 51, French 49, Irish 32.
+  A guess, by rule, not checked. Data status adds a fact from published files: citations to Irish-language pages
+  against the Irish information pages the sitemap lists (none cited; amber).
+- **The phone service and centres** (6d). `answer-signposts-monthly.csv` gains OutsideHours, questions outside the
+  phone service's hours (Monday to Friday, 9:00 to 20:00: `PHONE_HOURS` in `make_usage.py`, **for the analyst to
+  confirm**). `tools/make_handoff.py` writes `reports/handoff-<month>.md` at each refresh and deploy: in October 4,961
+  answers named the phone service, 45% of them not-found answers, 38% of the questions outside its hours, by category.
+  A card under Answer wording shows the same for the range.
+- **Repeated failed attempts** (6e). `conversations-daily.csv` gains RepeatedFailure: mature conversations with two or
+  more not-found or clarification answers and no cited answer. 648 of 73,527 (0.9%); a tile heads Conversations.
+- The first refresh stopped at the aggregates: the language tally was not returned from `aggregate()`; fixed, and
+  nothing reached `data/` from that run.
+
+Checked: the third refresh with the feed recount 187 passed, 0 failed; files-only audit 167 passed; rule tests 70;
+guard 34; Ask bar 316 of 316; every view loads with no errors and is 384 px wide in a 390 px frame.

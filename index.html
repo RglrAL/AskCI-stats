@@ -3139,7 +3139,7 @@ let OTMPL={},TMPL_META={},hasTmpl=false;   // the bot's fixed wording per day an
 let ORGSM={},ORG_META={},hasOrgs=false;   // organisations the answers signpost to, per month and category (brief §75)
 let FIGM={},hasFigs=false;   // figures quoted in answers, checked against dated page snapshots, per month and cited page (brief §75)
 let VERSIONS=null;   // VERSIONS.json: the refresh manifest (brief §76)
-let QSIT={},QASK={},QPERS={},hasSit=false,hasAsk=false;   // layer 2: what the question says about the person, what the clarification asked for, personalisation (brief §75)
+let QSIT={},QASK={},QPERS={},hasSit=false,hasAsk=false,QLANG={},hasLang=false;   // layer 2: what the question says about the person, what the clarification asked for, personalisation (brief §75)
 let ORULES={},OSTYLE={},ONEXT={},hasRules=false;   // outcome rule ids, the wording fingerprint and what people do next (brief §53)
 let PAGESC={},hasPagesC=false,REPEATS={},hasRepeats=false,SAFETY={},hasSafety=false,QINTENT={},ASKED={},QTOPIC={},hasIntent=false,LEXICON=null,IJOUR={},SETBI={},GAPS=[],GAPS_OLD=[],GAPSTAT={},ASKWP={},REGCFG=null,QCATM={},QTOPM={},QICM={},hasTopics=false,ASKED_CAT='housing';   // the topic layer (brief §75)
 let CINT={},hasCint=false,ASKW={},hasAskw=false,CONV={},CATOUT={},CITES={},JOURNEYS={},STARTERS={},LATB={},CATDAY={},hasCatDay=false,hasConv=false,hasCatOut=false,hasCites=false,hasJourneys=false,hasStarters=false,hasLatB=false;
@@ -3193,10 +3193,11 @@ async function loadConversationFiles(){
   try{(await loadCSV('answer-templates-daily.csv')).forEach(r=>{const d=parseDate(r['Date']);if(!d)return;const o={};Object.entries(r).forEach(([k,v])=>{if(k!=='Date'&&k!=='Template')o[k]=nInt(v);});(OTMPL[d]||(OTMPL[d]={}))[String(r['Template']||'').trim()]=o;});hasTmpl=Object.keys(OTMPL).length>0;}catch(e){}
   try{const j=await(await fetch(dataURL('answer-templates.json'))).json();(j.templates||[]).forEach(t=>{TMPL_META[t.id]={family:t.family,pattern:t.pattern};});TMPL_META._version=j.derivation_version||'';(j.organisations||[]).forEach(o=>{ORG_META[o.id]={family:o.family,pattern:o.pattern};});}catch(e){}
   try{VERSIONS=await(await fetch(dataURL('VERSIONS.json'))).json();}catch(e){VERSIONS=null;}
+  await loadM('question-language-monthly.csv',{lang:'Language'},QLANG);hasLang=Object.keys(QLANG).length>0;   // brief §106
   await loadM('question-situation-monthly.csv',{cat:'Category',flag:'Flag'},QSIT);hasSit=Object.keys(QSIT).length>0;
   await loadM('clarification-asks-monthly.csv',{asks:'Asks',given:'Given'},QASK);hasAsk=Object.keys(QASK).length>0;
   await loadM('answer-personalisation-monthly.csv',{given:'SituationGiven',pers:'Personalised'},QPERS);
-  try{(await loadCSV('answer-figures-monthly.csv')).forEach(r=>{const m=String(r['Month']||'').trim();if(!/^\d{4}-\d{2}$/.test(m))return;(FIGM[m]||(FIGM[m]=[])).push({url:String(r['URL']||'').trim(),answers:nInt(r['Answers']),partial:nInt(r['Partial']),figures:nInt(r['Figures']),matched:nInt(r['Matched']),unmatched:nInt(r['Unmatched']),unverifiable:nInt(r['Unverifiable']),...Object.fromEntries(['Euro','Pct','Year'].flatMap(k=>['Matched','Unmatched','Unverifiable'].map(x=>[k+x,r[k+x]==null?null:nInt(r[k+x])])))});});hasFigs=Object.keys(FIGM).length>0;}catch(e){}
+  try{(await loadCSV('answer-figures-monthly.csv')).forEach(r=>{const m=String(r['Month']||'').trim();if(!/^\d{4}-\d{2}$/.test(m))return;(FIGM[m]||(FIGM[m]=[])).push({url:String(r['URL']||'').trim(),answers:nInt(r['Answers']),partial:nInt(r['Partial']),figures:nInt(r['Figures']),matched:nInt(r['Matched']),unmatched:nInt(r['Unmatched']),unverifiable:nInt(r['Unverifiable']),earlier:nInt(r['MatchedEarlier']),...Object.fromEntries(['Euro','Pct','Year'].flatMap(k=>['Matched','Unmatched','Unverifiable'].map(x=>[k+x,r[k+x]==null?null:nInt(r[k+x])])))});});hasFigs=Object.keys(FIGM).length>0;}catch(e){}
   try{(await loadCSV('answer-signposts-monthly.csv')).forEach(r=>{const m=String(r['Month']||'').trim();if(!/^\d{4}-\d{2}$/.test(m))return;const o={org:String(r['Org']||'').trim(),cat:String(r['Category']||'').trim()};Object.entries(r).forEach(([k,v])=>{if(!['Month','Org','Category'].includes(k))o[k]=nInt(v);});(ORGSM[m]||(ORGSM[m]=[])).push(o);});hasOrgs=Object.keys(ORGSM).length>0;}catch(e){}
   // answer-next-daily.csv (tools/next_step.py, on the raw feed): ONEXT[date][class] = counts of what came after each answer
   try{(await loadCSV('answer-next-daily.csv')).forEach(r=>{const d=parseDate(r['Date']);if(!d)return;const o={};Object.entries(r).forEach(([k,v])=>{if(k!=='Date'&&k!=='Class')o[k]=nInt(v);});(ONEXT[d]||(ONEXT[d]={}))[String(r['Class']||'').trim()]=o;});}catch(e){}
@@ -3223,7 +3224,7 @@ const clickViews=c=>c?c.embed+c.app+c.other:0;
 // against pages that exist. Optional.
 let SITEPAGES={info:new Set(),all:new Set(),asOf:'',mod:{}},hasSitePages=false;
 async function loadSitePages(){
-  try{(await loadCSV('site-pages.csv')).forEach(r=>{const u=String(r['URL']||'').toLowerCase().replace(/\/$/,'');if(!u)return;SITEPAGES.all.add(u);if(r['Kind']==='information'&&r['Language']==='en')SITEPAGES.info.add(u);if(r['LastMod'])SITEPAGES.mod[u]=String(r['LastMod']).slice(0,10);if(r['ListedOn']&&r['ListedOn']>SITEPAGES.asOf)SITEPAGES.asOf=r['ListedOn'];});}catch(e){}
+  try{(await loadCSV('site-pages.csv')).forEach(r=>{const u=String(r['URL']||'').toLowerCase().replace(/\/$/,'');if(!u)return;SITEPAGES.all.add(u);if(r['Kind']==='information'&&r['Language']==='en')SITEPAGES.info.add(u);if(r['Kind']==='information'&&r['Language']==='ga')SITEPAGES.ga=(SITEPAGES.ga||0)+1;if(r['LastMod'])SITEPAGES.mod[u]=String(r['LastMod']).slice(0,10);if(r['ListedOn']&&r['ListedOn']>SITEPAGES.asOf)SITEPAGES.asOf=r['ListedOn'];});}catch(e){}
   hasSitePages=SITEPAGES.info.size>0;
   // cited addresses that returned page-not-found when last fetched (tools/make_not_found_pages.py, brief §96)
   try{NOTFOUNDPAGES=(await loadCSV('cited-not-found.csv')).map(r=>({url:r.URL,first:r.FirstCited,last:r.LastCited,n:+r.Citations||0,checked:r.Checked}));}catch(e){}
@@ -5405,6 +5406,19 @@ function ruleWeeks(){
     return {w,c:W[w],turns:Object.values(W[w]).reduce((a,b)=>a+b,0),drift,movers,ev,after};
   });
 }
+// Answers that named the phone service or a centre (brief §106, handoff 6d): from answer-signposts-monthly.csv, the
+// months overlapping the range; not found share and the share asked outside the phone service's hours (Mon-Fri 9-20,
+// to confirm). The same figures go to reports/handoff-<month>.md at each deploy, for the two services.
+function handoffCardHTML(fr){
+  if(!hasOrgs)return'';
+  const ms=[...new Set(fr.map(d=>d.date.slice(0,7)))].sort(),pick=(o,c)=>{const a={Turns:0,NotFound:0,OutsideHours:0,has:false};ms.forEach(m=>(ORGSM[m]||[]).forEach(r=>{if(r.org===o&&r.cat===c){a.Turns+=r.Turns||0;a.NotFound+=r.NotFound||0;if(r.OutsideHours!=null){a.OutsideHours+=r.OutsideHours;a.has=true;}}}));return a;};
+  const S=[['cic.phone','The phone service'],['cic.centre','A Citizens Information centre']].map(([o,l])=>({o,l,a:pick(o,'(all)')})).filter(x=>x.a.Turns);
+  if(!S.length)return'';
+  const cats=o=>{const m={};ms.forEach(mm=>(ORGSM[mm]||[]).forEach(r=>{if(r.org===o&&r.cat!=='(all)')m[r.cat]=(m[r.cat]||0)+(r.Turns||0);}));return Object.entries(m).sort((a,b)=>b[1]-a[1]).slice(0,4).map(([c,n])=>`${catLabel(CAT_ALIAS[c]||c)} ${num(n)}`).join(' · ');};
+  return`<div class="card"><div class="card-title">Answers that sent people to the phone service or a centre<span class="card-title-note">${ms.length?fmtMonth(ms[0])+(ms.length>1?' – '+fmtMonth(ms[ms.length-1]):''):''} · months overlapping the range · counts only</span></div>
+    <div class="grid2">${S.map(x=>uxTile(num(x.a.Turns),`Answers naming ${x.l.toLowerCase()}`,`${rateText(x.a.NotFound,x.a.Turns)} were not-found answers${x.a.has?` · ${rateText(x.a.OutsideHours,x.a.Turns)} asked outside the phone service's hours`:''} · most in ${cats(x.o)}`,x.o==='cic.phone'?C.acc:C.teal)).join('')}</div>
+    <div class="share-foot">For the phone service and the centres: how often an answer named them, how often that answer was a not-found one, and how often the question came outside the phone service's hours (Monday to Friday, 9:00 to 20:00, to confirm), when phoning was not an option. The same figures by category go to reports/handoff-&lt;month&gt;.md at each deploy (brief §106). A mention, not a referral.</div></div>`;
+}
 function renderWording(D,S){
   const el=document.getElementById('pane-wording');
   const fr=filterRange(D.merged);if(!fr.length||!hasRules){el.innerHTML=emptyState('text-search','No outcome-rule data in range','Needs <code>outcome-rules-daily.csv</code> and <code>answer-style-daily.csv</code> from <code>make_usage.py</code> on feeds redacted from 23 Oct 2026.');renderIcons();return;}
@@ -5537,6 +5551,7 @@ function renderWording(D,S){
     ${tmplCard}
     ${phraseCard}
     ${orgCard}
+    ${handoffCardHTML(fr)}
     <div class="reach-note"><i data-lucide="info" class="i-sm"></i><span><b>Which phrase decided each outcome.</b> The outcome rules read each answer for set phrases; this shows which phrase fired, and how the answers are written. A shift on a date with a model change is that model’s wording. A shift with no model change in the billing points to a prompt or configuration change: the data can show <i>that</i> the wording changed, not <i>what</i> changed. It cannot say whether a label is right; that needs the hand-labelled sample.${CONFIG.outcome_rules_unvalidated_from&&!CONFIG.outcome_rules_measured?` Outcome figures from ${fmtDate(CONFIG.outcome_rules_unvalidated_from)} are unvalidated.`:''}</span></div>
     ${chartBox('wd-mix',300,'Deciding phrases, per 1,000 turns','weekly · the seven most common over all the data, besides a plain cited answer · hollow bar = part week')}
     ${chartBox('wd-drift',220,'Wording drift: phrase mix against the 4 weeks before','weekly · not-found, clarification and partial phrases · share of the mix that moved · dashed line = flag at '+(WORDING_DRIFT*100)+'% · blank = under '+WORDING_MIN+' phrases')}
@@ -7256,12 +7271,12 @@ function safetyCardHTML(fr){
     <div class="grid4" style="margin-bottom:10px">
       ${uxTile(pk('Any identifier').toFixed(2),'Identifiers typed in, per 1,000 turns',`${num(g('Any identifier').Turns)} turns · the feed holds these as typed`,C.amber)}
       ${uxTile(g('Injection').Turns<5?'—':pk('Injection').toFixed(2),'Injection phrasings, per 1,000',`${u5(g('Injection').Turns)} turns · ${g('Injection').Turns?Math.round((g('Injection').OutOfScope||0)/g('Injection').Turns*100)+'% declined':''}`,C.purple)}
-      ${uxTile(g('Theme crisis').Turns<5?'—':pk('Theme crisis').toFixed(2),'Crisis language, per 1,000',`${u5(g('Theme crisis').Turns)} turns · ${g('Theme crisis').Turns?Math.round((g('Theme crisis').Cited||0)/g('Theme crisis').Turns*100)+'% got a cited answer':''}`,C.red)}
+      ${g('Theme crisis').NamedHelpline!=null&&g('Theme crisis').Turns>=5?uxTile(`${num(g('Theme crisis').NamedHelpline)} of ${num(g('Theme crisis').Turns)}`,'Crisis-language answers that named a helpline',`Samaritans, Pieta, Women's Aid, emergency services, a GP, the HSE … · ${num(g('Theme crisis').CitedNoHelpline||0)} cited answers named none · ${num(g('Theme crisis').OutOfScope||0)} declined`,C.red):uxTile(g('Theme crisis').Turns<5?'—':pk('Theme crisis').toFixed(2),'Crisis language, per 1,000',`${u5(g('Theme crisis').Turns)} turns · ${g('Theme crisis').Turns?Math.round((g('Theme crisis').Cited||0)/g('Theme crisis').Turns*100)+'% got a cited answer':''}`,C.red)}
       ${uxTile((['Theme creative','Theme code','Theme entertainment','Theme sport','Theme weather'].reduce((s,f)=>s+g(f).Turns,0)/turns*1000).toFixed(2),'Off-topic themes, per 1,000','creative writing, code, entertainment, sport, weather',C.muted)}
     </div>
-    <div class="tbl-wrap"><table style="width:100%;border-collapse:collapse"><thead><tr style="border-bottom:1px solid var(--b2)">${th('Flag',true)}${th('Turns')}${th('Per 1,000')}${th('Cited answer')}${th('Declined (out of scope)')}${th('Not found')}${th('Clarification')}</tr></thead>
-      <tbody>${rows.map(([f,l])=>{const a=g(f),small=a.Turns<5&&f!=='Any identifier';return`<tr style="border-bottom:1px solid var(--b2)">${td(l,{left:true})}${td(small?'under 5':num(a.Turns))}${td(small?'—':pk(f).toFixed(2))}${td(small?'—':out(a,'Cited'))}${td(small?'—':out(a,'OutOfScope'))}${td(small?'—':out(a,'NotFound'))}${td(small?'—':out(a,'Clarification'))}</tr>`;}).join('')}</tbody></table></div>
-    <div class="share-foot">${whole?'The whole period: each flag counted over all months, shown when five or more.':'By month: a flag with fewer than five questions in a month is not published for that month, so a month-range total can be lower than the whole-period one.'} The identifier types (PPS, phone, email, IBAN, card) are always inside the "Any identifier" total; a type under five is shown as "under 5" (brief §105).</div>
+    <div class="tbl-wrap"><table style="width:100%;border-collapse:collapse"><thead><tr style="border-bottom:1px solid var(--b2)">${th('Flag',true)}${th('Turns')}${th('Per 1,000')}${th('Cited answer')}${th('Declined (out of scope)')}${th('Not found')}${th('Clarification')}${th('Named a helpline')}</tr></thead>
+      <tbody>${rows.map(([f,l])=>{const a=g(f),small=a.Turns<5&&f!=='Any identifier';return`<tr style="border-bottom:1px solid var(--b2)">${td(l,{left:true})}${td(small?'under&nbsp;5':num(a.Turns))}${td(small?'—':pk(f).toFixed(2))}${td(small?'—':out(a,'Cited'))}${td(small?'—':out(a,'OutOfScope'))}${td(small?'—':out(a,'NotFound'))}${td(small?'—':out(a,'Clarification'))}${td(small||a.NamedHelpline==null?'—':out(a,'NamedHelpline'))}</tr>`;}).join('')}</tbody></table></div>
+    <div class="share-foot">${whole?'The whole period: each flag counted over all months, shown when five or more.':'By month: a flag with fewer than five questions in a month is not published for that month, so a month-range total can be lower than the whole-period one.'} The identifier types (PPS, phone, email, IBAN, card) are always inside the "Any identifier" total; a type under five is shown as "under 5" (brief §105). A helpline is any of the support services the analyst listed (brief §106): Samaritans, Pieta and Text About It, Women's Aid, Men's Aid and Safe Ireland, emergency services (112, 999), HSE YourMentalHealth, Childline, Aware, Jigsaw, a GP or doctor, and the HSE; it is a mention in the answer, matched by name.</div>
     <div class="share-foot">Patterns, not judgements: a 16-digit number may be a reference, "film" may be a film classification question, and "overdose" may be a medical one. What matters is the order of magnitude and what the system did: an identifier typed in is a data-protection point for the feed itself; an injection that got a cited answer and a crisis message that got a plain information page are the rows to read.</div></div>`;
 }
 
@@ -7413,7 +7428,7 @@ function contentLists(months,fr,td,th){
   // cited page; matched / unmatched / unverifiable, by month and by page. Unmatched is not an error rate (brief §100).
   if(hasFigs){
     const frF=filterRange(DATA.merged),fmons=monthsIn(frF),ansAll=frF.reduce((s,d)=>s+(d.queries||0),0);   // contentLists() has no D; the page's data is global
-    const agg={};fmons.forEach(m=>(FIGM[m]||[]).forEach(r=>{const a=agg[r.url]||(agg[r.url]={answers:0,partial:0,figures:0,matched:0,unmatched:0,unverifiable:0});Object.keys(a).forEach(k=>{a[k]+=r[k]||0;});}));
+    const agg={};fmons.forEach(m=>(FIGM[m]||[]).forEach(r=>{const a=agg[r.url]||(agg[r.url]={answers:0,partial:0,figures:0,matched:0,unmatched:0,unverifiable:0,earlier:0});Object.keys(a).forEach(k=>{a[k]+=r[k]||0;});}));
     const A=agg['(all)']||{answers:0,figures:0,matched:0,unmatched:0,unverifiable:0};
     const pcF=(k,n)=>n?(k/n*100).toFixed(1)+'%':'—';
     const tdF=(v,o={})=>`<td style="text-align:${o.left?'left':'right'};padding:7px 10px;font-family:${o.left?'inherit':"'DM Mono',monospace"};font-size:var(--t-xs)">${v}</td>`;
@@ -7428,6 +7443,7 @@ function contentLists(months,fr,td,th){
         ${uxTile(pcF(A.matched,A.figures),'Matched on a cited page',`${num(A.matched)} figures found on the page as it was`,C.green)}
         ${uxTile(pcF(A.unmatched,A.matched+A.unmatched),'Unmatched, of checkable figures',`${num(A.unmatched)} figures that appear on no cited page · not an error rate`,C.amber)}
         ${uxTile(pcF(A.unverifiable,A.figures),'Unverifiable',`${num(A.unverifiable)} figures: the page changed after the answer, or nothing was cited`,C.dim)}
+        ${A.earlier!=null?uxTile(num(A.earlier||0),'Matched an earlier version of the page',`on an older snapshot of a cited page but not the one current when answered: an out-of-date amount · needs two snapshots of a page, and they began on 24 Oct`,C.purple):''}
       </div>
       ${(()=>{   // by kind (brief §100, audit 0h): a year or a small number matches almost any page, so each kind is shown apart
         const K=[['Euro','Euro amounts'],['Pct','Percentages'],['Year','Years']],T={};
@@ -7465,6 +7481,13 @@ function contentLists(months,fr,td,th){
   return h;
 }
 
+// Conversations with two or more not-found or clarification answers and no cited answer (brief §106, handoff 6e),
+// of mature conversations, from conversations-daily.csv RepeatedFailure.
+function repeatFailTile(fr){
+  const c=fr.filter(d=>CONV[d.date]&&CONV[d.date].RepeatedFailure!=null);if(!c.length)return'';
+  const k=c.reduce((s,d)=>s+CONV[d.date].RepeatedFailure,0),n=c.reduce((s,d)=>s+(CONV[d.date].Mature||0),0);
+  return uxTile(rateText(k,n),'Two or more failed attempts, no cited answer',`${num(k)} of ${num(n)} mature conversations: two or more not-found or clarification answers and none cited · by rule`,C.red);
+}
 function renderConvs(D,S){
   const el=document.getElementById('pane-convs');
   const fr=filterRange(D.merged).filter(d=>CONV[d.date]);
@@ -7545,7 +7568,8 @@ function renderConvs(D,S){
       ${chartBox('cv-gap',190,'Pace between questions',`${rateText(sum('Gap0to1')+sum('Gap2to5'),gapTot,0)} of follow-up questions came within 5 minutes · ${num(gapTot)} gaps`)}
     </div>`;
   }
-  el.innerHTML=`${outHTML}
+  const rf=repeatFailTile(fr);
+  el.innerHTML=`${rf?`<div class="grid4" style="margin-bottom:var(--sp-4)">${rf}</div>`:''}${outHTML}
     <div class="grid2">
       <div class="card"><div class="card-title">Turns per conversation${cohort}</div>
         <div style="font-size:1.4rem;font-weight:700;font-family:'DM Mono',monospace;color:${C.acc}">${rateText(single,mature)} <span style="font-size:var(--t-xs);font-weight:400;color:var(--muted);font-family:'DM Sans',sans-serif">ended after first turn · mean ${mature?(mt/mature).toFixed(2):'—'} turns</span></div>
@@ -7896,6 +7920,14 @@ function usageDetailHTML(fr,part='all'){
         ${uxTile(rateText(nonLatin,tot,2),'Non-Latin script',num(nonLatin)+' of '+num(tot)+' turns',C.purple,'non-latin-share')}
         ${keys.filter(([k])=>k!=='scLatin'&&k!=='scNone').map(([k,l,c])=>uxTile(sum(k)<5?'under 5':num(sum(k)),l,sum(k)<5?'fewer than five in range':rateText(sum(k),tot,2)+' of turns',c)).join('')}
       </div>
+      ${hasLang?(()=>{   // the question's language (brief §106): a stopword guess, typed questions, months overlapping the range
+        const L={};monthsIn(fr).forEach(m=>(QLANG[m]||[]).forEach(r=>{const a=L[r.lang]||(L[r.lang]={Turns:0,Scored:0,Cited:0,NotFound:0});['Turns','Scored','Cited','NotFound'].forEach(k=>a[k]+=r[k]||0);}));
+        const T=Object.values(L).reduce((x,a)=>x+a.Turns,0);if(!T)return'';
+        const tdL=(v,l)=>`<td style="text-align:${l?'left':'right'};padding:6px 10px;font-family:${l?'inherit':"'DM Mono',monospace"};font-size:var(--t-xs)">${v}</td>`,thL=(t,l)=>`<th style="text-align:${l?'left':'right'};padding:6px 10px;font-size:var(--t-xs);color:var(--muted);text-transform:uppercase;letter-spacing:.08em">${t}</th>`;
+        return `<div class="card-title" style="font-size:var(--t-xs);margin-top:14px">Language of the question<span class="card-title-note">typed questions · a guess from common words, offline · by rule, not checked</span></div>
+          <div class="tbl-wrap"><table style="width:100%;border-collapse:collapse"><thead><tr style="border-bottom:1px solid var(--b2)">${thL('Language',true)}${thL('Questions')}${thL('Share')}${thL('Cited')}${thL('Not found')}</tr></thead><tbody>
+          ${Object.entries(L).sort((a,b)=>b[1].Turns-a[1].Turns).map(([k,a])=>`<tr style="border-bottom:1px solid var(--b2)">${tdL(escH(k),true)}${tdL(num(a.Turns))}${tdL(rateText(a.Turns,T,2))}${tdL(rateText(a.Cited,a.Scored))}${tdL(rateText(a.NotFound,a.Scored))}</tr>`).join('')}</tbody></table></div>
+          <div class="share-foot">Each typed question is scored against short lists of words common in a language and rare in others (English, Irish, Polish, Spanish, Portuguese, French, Romanian, Lithuanian); a question under four words is undetermined; Cyrillic, Arabic and CJK are named from the script. A language under five questions in a month is counted under Other language. A guess: a question mixing languages goes to the one with more listed words (brief §106).</div>`;})():''}
       ${hasScriptOut?(()=>{
         // Outcome by script: do questions written in other alphabets get cited answers as often? Rates over scored turns.
         const so={};monthsIn(fr).forEach(m=>Object.entries(SCRIPTOUT[m]||{}).forEach(([k,o])=>{const a=so[k]||(so[k]={t:0,s:0,c:0,nf:0,cl:0});a.t+=o.t;a.s+=o.s;a.c+=o.c;a.nf+=o.nf;a.cl+=o.cl;}));   // months overlapping the range (brief §105)
@@ -9411,6 +9443,8 @@ function renderDqStrip(){
       const lastAny=NOTFOUNDPAGES.reduce((m,r)=>r.last>m?r.last:m,'');
       return item('cited addresses not on the site',recent.length?`${recent.length} cited in the last 28 days`:`none in the last 28 days${NOTFOUNDPAGES.length?` · ${NOTFOUNDPAGES.length} earlier, last ${fmtDate(lastAny)}`:''}`,
         {amber:recent.length>0,title:`addresses AskCI cited that returned page not found when last checked${checked?' ('+fmtDate(checked)+')':''}`+(recent.length?': '+recent.slice(0,5).map(r=>r.url.replace(/^https?:\/\/www\.citizensinformation\.ie/,'')).join(', '):'')});})():'',
+    hasCites&&SITEPAGES.ga?(()=>{let all=0,ga=0;Object.values(CITES).forEach(rs=>rs.forEach(r=>{all+=r.n;if(/citizensinformation\.ie\/ga\//.test(r.url))ga+=r.n;}));
+      return item('Irish-language pages',`${num(ga)} of ${num(all)} citations · ${num(SITEPAGES.ga)} Irish information pages on the site`,{amber:ga===0,title:'Citations to pages under citizensinformation.ie/ga/ against all citations (citations-monthly.csv), beside the Irish information pages the sitemap lists (site-pages.csv). Whether the index is meant to leave them out is a question for the AskCI team (brief §106).'});})():'',
     item('events awaiting confirmation',cands,{amber:cands>0,title:'candidate events in events.json plus model events detected from billing'}),
     Q.badDates?item('cost dates rejected',Q.badDates,{amber:true,title:list(Q.badDateSamples)}):'',
     U.badDates?item('usage dates rejected',U.badDates,{amber:true,title:list(U.badDateSamples)}):'',
