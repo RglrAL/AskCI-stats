@@ -6,7 +6,12 @@ Four kinds of gap, each from counts only, over the last `months` full months in 
              split says what was missing (rate → a figure, timing → a date, eligibility → a condition)  [content team]
   retrieval  typed questions named the page min_asks_month+ times in a month and a share ended not found: the page
              exists and was named, so this is a chunking or index item                                   [AskCI team]
-  stale      the page was cited min_answers+ times and its LastMod is before stale_before                [content team]
+  stale      the page was cited min_answers+ times, its LastMod is before stale_before, and it shows a sign of a
+             problem: a partial share stale_partial_ratio x typical or more, or stale_unmatched+ of its checkable
+             figures on no cited page (stale_min_checkable+ checkable); priority answers x that rate      [content team]
+             (an old page with no such sign is written as kind "old": outside the register, listed for reference)
+  archive-cited  an archive page (archive_patterns, e.g. a past year's Budget) cited in min_answers+ answers: the page
+             is right to be old; the gap is that AskCI cites it for current questions                    [AskCI team]
   unknown    not-found answers to questions naming no scheme the site has, by the category the question named: the
              count is published, the subjects only after a local read                                 [analyst]
 Priority = asks (or answers) × the rate that raised the row, so volume counts.
@@ -18,7 +23,7 @@ joins the two on page and kind.
 Usage:
     python3 tools/make_register.py
 """
-import csv, json, os, collections as C
+import csv, json, os, re, collections as C
 from datetime import date
 
 REPO = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -50,8 +55,21 @@ def main():
     CI = [r for r in rd("citations-intent-monthly.csv") if r["Month"] in full]; AI = C.defaultdict(lambda: C.defaultdict(C.Counter))
     for r in CI: AI[r["URL"].rstrip("/")][r["Intent"]]["ans"] += I(r["Answers"]); AI[r["URL"].rstrip("/")][r["Intent"]]["p"] += I(r["Partial"])
     typ = sum(a["p"] for a in A.values()) / max(sum(a["ans"] for a in A.values()), 1)
+    # archive pages (brief §103): a pattern's year group before the data's year makes a page an archive page; it is
+    # raised as archive-cited, never as detail or stale
+    yr = int(last[:4])
+    def archive(u):
+        for ap in cfg.get("archive_patterns", []):
+            m = re.search(ap["pattern"], u)
+            if m and (not ap.get("year_before_data") or int(m.group(1)) < yr): return True
+        return False
+    for u, a in sorted(A.items()):
+        if a["ans"] < cfg["min_answers"] or not archive(u): continue
+        rows.append({"kind": "archive-cited", "page": u, "category": u.split("/en/")[-1].split("/")[0] if "/en/" in u else "", "intent": "",
+                     "evidence": f"an archive page cited in {a['ans']} answers in the period ({a['p'] / a['ans']:.0%} said something was missing): the page is right to be old; AskCI cites it for current questions",
+                     "asks": a["ans"], "rate": 1.0, "priority": a["ans"], "team": cfg["teams"]["archive-cited"]})
     for u, a in A.items():
-        if a["ans"] < cfg["min_answers"]: continue
+        if a["ans"] < cfg["min_answers"] or archive(u): continue
         share = a["p"] / a["ans"]
         if share < max(cfg.get("page_partial", 0.3), typ * 1.5): continue   # the page-detail floor lives in register-config.json (brief §76)
         byi = sorted(((e["p"], i, e["ans"]) for i, e in AI[u].items() if e["ans"] >= 5), reverse=True)
@@ -72,13 +90,27 @@ def main():
         if nf < cfg["retrieval_not_found"] and reached >= cfg["retrieval_reached"]: continue
         rows.append({"kind": "retrieval", "page": u, "category": u.split("/en/")[-1].split("/")[0] if "/en/" in u else "", "intent": "", "evidence": f"named in {n['Asked']} typed questions; the answer cited it {hit:.0%}, a sibling in the same category {n['CitedSameCategory'] / n['Asked']:.0%}, not found {nf:.0%}",
                      "asks": n["Asked"], "rate": round(nf, 3), "priority": round(n["Asked"] * max(nf, 1 - reached)), "team": cfg["teams"]["retrieval"]})
-    # stale: cited pages last changed before this year
+    # stale (brief §103): a cited page last changed before stale_before AND showing a sign of a problem, a partial share
+    # at least stale_partial_ratio x the typical share, or stale_unmatched+ of its checkable figures on no cited page;
+    # age alone raises nothing. An old page with no sign is written as kind "old", outside the register
     site = {r["URL"].rstrip("/").lower(): r.get("LastMod", "")[:10] for r in rd("site-pages.csv")}; y0 = cfg.get("stale_before", last[:4] + "-01-01")
+    FG = C.defaultdict(C.Counter)
+    for r in rd("answer-figures-monthly.csv"):
+        if r["Month"] in full and not r["URL"].startswith("("): FG[r["URL"].rstrip("/")]["m"] += I(r["Matched"]); FG[r["URL"].rstrip("/")]["u"] += I(r["Unmatched"])
     for u, a in A.items():
         lm = site.get(u.lower(), "")
-        if a["ans"] < cfg["min_answers"] or not lm or lm >= y0: continue
-        rows.append({"kind": "stale", "page": u, "category": u.split("/en/")[-1].split("/")[0] if "/en/" in u else "", "intent": "", "evidence": f"cited in {a['ans']} answers; last changed {lm}; {a['p'] / a['ans']:.0%} of its answers said something was missing",
-                     "asks": a["ans"], "rate": round(a["p"] / a["ans"], 3), "priority": round(a["ans"] * (1 + (last[:4] > lm[:4]) * 0.5)), "team": cfg["teams"]["stale"]})
+        if a["ans"] < cfg["min_answers"] or not lm or lm >= y0 or archive(u): continue
+        part = a["p"] / a["ans"]; f = FG.get(u, C.Counter()); chk = f["m"] + f["u"]; um = f["u"] / chk if chk >= cfg.get("stale_min_checkable", 30) else None
+        sign_p = part >= cfg.get("stale_partial_ratio", 1.25) * typ; sign_f = um is not None and um >= cfg.get("stale_unmatched", 0.1)
+        base = {"page": u, "category": u.split("/en/")[-1].split("/")[0] if "/en/" in u else "", "intent": "", "asks": a["ans"]}
+        figs = f"{um:.0%} of {chk} checkable figures on no cited page" if um is not None else "too few checkable figures"
+        if sign_p or sign_f:
+            rate = max(part if sign_p else 0, um if sign_f else 0)
+            rows.append({**base, "kind": "stale", "evidence": f"cited in {a['ans']} answers; last changed {lm}; {part:.0%} of its answers said something was missing (typical {typ:.0%}); {figs}",
+                         "rate": round(rate, 3), "priority": round(a["ans"] * rate), "team": cfg["teams"]["stale"]})
+        else:
+            rows.append({**base, "kind": "old", "evidence": f"cited in {a['ans']} answers; last changed {lm}; {part:.0%} said something was missing (typical {typ:.0%}); {figs}: old, no sign of a problem",
+                         "rate": round(part, 3), "priority": 0, "team": cfg["teams"]["old"]})
     # unknown: not-found answers naming no scheme, by the category the question named (question-topics) and the residue
     QT = [r for r in rd("question-topics-daily.csv") if r["Date"][:7] in full]; QI = [r for r in rd("question-intent-daily.csv") if r["Chip"] == "0" and r["Date"][:7] in full]
     nf_all = sum(I(r["NotFound"]) for r in QI); nf_named = sum(I(r["NamedNotFound"]) for r in QI)
@@ -127,7 +159,7 @@ def main():
             w = csv.writer(fh); w.writerow(["kind", "page", "owner", "status", "raised", "expected_effect", "changed", "closed", "note"])
             w.writerow(["_comment", "", cfg["owners"]["status"], "", "", "one row per gap, keyed by kind and page as in content-gaps.csv; status one of " + " / ".join(cfg["statuses"]) + "; write the expected effect when the row is raised", "", "", "evidence file: " + cfg["owners"]["evidence"]])
         print("created content-gaps-status.csv")
-    k = C.Counter(r["kind"] for r in rows)
+    k = C.Counter(r["kind"] for r in rows)   # "old" rows are outside the register: the page lists them apart
     print(f"wrote content-gaps.csv: {len(rows)} rows over {period} ({dict(k)}); rules {rules}, lexicon {lexv}")
 
 

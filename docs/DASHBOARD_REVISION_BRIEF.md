@@ -2702,3 +2702,35 @@ gaps more readily scores lower on it, and a step at a model change may be candou
 
 Checked: the reference figures above from the published files and on the page; Quality and Before / after load with no
 errors; the wide era table scrolls inside its card and every view is 384 px wide in a 390 px frame; Ask bar 313 of 313.
+
+## 103. The register as its own view; archive pages and the stale rule (16 Nov 2026)
+
+The handoff's package 3, items a to c.
+
+- **Archive pages are not stale pages** (3b). `register-config.json` has `archive_patterns`: regexes on a cited page's
+  address; with `year_before_data` the first group is a year and the page is an archive page when that year is before
+  the data's year, so the list needs no yearly edit. It starts with past Budget pages
+  (`money-and-tax/budgets/(supplementary-)budget-YYYY`, before 2026: Budget 2026 is in force this year). An archive page
+  cited in 100+ answers is raised as the new kind `archive-cited` for the AskCI team as a retrieval item (the page is
+  right to be old; AskCI cites it for current questions), never as stale or detail. Budget 2023, 2024 and 2025 moved
+  from the content team's stale and detail rows to archive-cited (277, 236 and 171 answers). Other candidates in
+  `site-pages.csv`, **for the analyst to confirm, not added**: the five "bought before November 2022" consumer pages,
+  `state-pension-contributory-pre-2025`, and dated "What's new" items from 2024 and 2025.
+- **Age alone does not raise a row** (3c). A page last changed before `stale_before` is stale only with a sign of a
+  problem: a partial share at least `stale_partial_ratio` (1.25) × the typical share, or `stale_unmatched` (10%)+ of its
+  `stale_min_checkable` (30)+ checkable figures on no cited page. Priority is answers × that rate (it was answers × 1.5).
+  An old page with neither is written as kind `old`, outside the register, and listed on the view under "Old, no sign of
+  a problem". Of nine old pages, one stays stale (Coming to work in Ireland: 30% of 54 checkable figures on no cited
+  page); eight are old with no sign, among them Redundancy Payments (8% partial against a typical 23%), the two
+  medical-card means tests and the Fair Deal scheme. The audit checks that no archive page is stale or detail, every
+  archive-cited row is an archive page, and old rows carry priority 0.
+- **Its own view** (3a). Usage › Register (`#tab=register`, `renderRegister`): counts by status at the top, filters by
+  team, category, kind and status, rows by priority with "Show all", "Copy these rows" (or "Copy rows for this team"
+  when a team is chosen) through the copy-with-definition footer, "Download CSV" of the filtered rows, and the old pages
+  collapsed beneath. Pages keeps a one-line pointer; the Questions drill-down keeps "Register rows for this category".
+- Not done: measuring a fix's effect (3d) waits for status rows with a changed date (none yet, no owner named);
+  rising-and-failing topics (3e) follows package 4. The Ask bar has no register answers, so no pinned case changed.
+
+Checked: the register rebuilt (72 rows: 64 in the register, 8 old); the files-only audit 163 passed, with the new
+register check; the view at `#tab=register`, its filters, the copied table and the CSV rows; no errors; 384 px wide in a
+390 px frame; Ask bar 313 of 313.

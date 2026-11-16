@@ -267,6 +267,10 @@ dated by the fixed wording, 4 candidate chip changes, launches and observed chan
   gaps more readily scores lower), in the era scorecard and the Ask bar; not an Overview tile until the labelling is
   scored. Before / after carries what people did after each kind of answer, by era, from `answer-next-daily.csv`,
   with Wilson intervals: descriptive support for the rules, not a validation.
+- **The register** (brief §103): its own view, Usage › Register (`#tab=register`), with filters, status counts, copy
+  and CSV download. Archive pages (`archive_patterns`, past Budgets) cited for current questions are `archive-cited`
+  rows for the AskCI team; an old page is stale only with a sign of a problem (partial share 1.25× typical, or 10%+ of
+  its checkable figures on no cited page), otherwise kind `old`, listed apart and outside the register.
 - **Monthly cost** (brief §98): the monthly billed total and generation bars (`monthlyCostChart`) sit on Cost › Summary
   under the daily timeline as well as on Services; every month labelled, months follow the range, never scoped by
   service. Billed total is the figure to compare with Azure Cost Management's own monthly view; checked against the

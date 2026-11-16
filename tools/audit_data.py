@@ -588,6 +588,17 @@ except (OSError, ValueError): _kinds = set()
 check('content gaps: every kind has a team in register-config.json; missing-page and signpost rows carry a topic (not a URL), a category and asks > 0',
       all(r['kind'] in _kinds for r in GAPSF) and all(r['page'] and not r['page'].startswith('http') and r['category'] and I(r['asks']) > 0 for r in GAPSF if r['kind'] in ('missing-page', 'signpost')),
       str([(r['kind'], r['page'][:40]) for r in GAPSF if r['kind'] not in _kinds][:3]))
+if GAPSF and '_rc' in dir():
+    import re as _re
+    _yr = max((r['period'][-7:-3] for r in GAPSF if r.get('period')), default='9999')
+    def _arch(u):
+        for ap in _rc.get('archive_patterns', []):
+            m = _re.search(ap['pattern'], u)
+            if m and (not ap.get('year_before_data') or int(m.group(1)) < int(_yr)): return True
+        return False
+    check('content gaps (brief §103): no archive page is raised as stale or detail, every archive-cited row is an archive page, old rows carry priority 0',
+          not any(_arch(r['page']) for r in GAPSF if r['kind'] in ('stale', 'detail')) and all(_arch(r['page']) for r in GAPSF if r['kind'] == 'archive-cited') and all(I(r['priority']) == 0 for r in GAPSF if r['kind'] == 'old'),
+          str([(r['kind'], r['page'][-40:]) for r in GAPSF if (r['kind'] in ('stale', 'detail') and _arch(r['page'])) or (r['kind'] == 'archive-cited' and not _arch(r['page']))][:3]))
 IJ = rd('intent-journeys-monthly.csv'); SBI = rd('setback-intents-monthly.csv')
 ends = C.Counter(r['Month'] for r in IJ for _ in range(I(r['Turns'])) if r['To'] == 'END'); cvm = C.Counter()
 for d, r in CV.items(): cvm[d[:7]] += I(r['Mature'])

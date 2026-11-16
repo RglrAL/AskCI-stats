@@ -2059,6 +2059,7 @@ Date,Questions,Sessions
       <section class="part" id="sec-reach"><div class="part-head"><i data-lucide="globe" class="i-sm"></i>Reach<span class="part-head-note">AskCI beside the site's own traffic, by day</span></div><div id="part-reach"></div></section>
     </div>
     <div id="pane-wording"     class="pane"></div>
+    <div id="pane-register"    class="pane"></div>
     <div id="pane-asked"       class="pane"><div class="part-nav" id="partnav-asked"></div>
       <section class="part" id="sec-asked"><div id="part-asked"></div></section>
       <section class="part" id="sec-categories"><div class="part-head"><i data-lucide="shapes" class="i-sm"></i>Categories<span class="part-head-note">what the answers cited, by category of the page</span></div><div id="part-categories"></div></section>
@@ -3140,7 +3141,7 @@ let FIGM={},hasFigs=false;   // figures quoted in answers, checked against dated
 let VERSIONS=null;   // VERSIONS.json: the refresh manifest (brief §76)
 let QSIT={},QASK={},QPERS={},hasSit=false,hasAsk=false;   // layer 2: what the question says about the person, what the clarification asked for, personalisation (brief §75)
 let ORULES={},OSTYLE={},ONEXT={},hasRules=false;   // outcome rule ids, the wording fingerprint and what people do next (brief §53)
-let PAGESC={},hasPagesC=false,REPEATS={},hasRepeats=false,SAFETY={},hasSafety=false,QINTENT={},ASKED={},QTOPIC={},hasIntent=false,LEXICON=null,IJOUR={},SETBI={},GAPS=[],GAPSTAT={},REGCFG=null,QCATM={},QTOPM={},QICM={},hasTopics=false,ASKED_CAT='housing';   // the topic layer (brief §75)
+let PAGESC={},hasPagesC=false,REPEATS={},hasRepeats=false,SAFETY={},hasSafety=false,QINTENT={},ASKED={},QTOPIC={},hasIntent=false,LEXICON=null,IJOUR={},SETBI={},GAPS=[],GAPS_OLD=[],GAPSTAT={},REGCFG=null,QCATM={},QTOPM={},QICM={},hasTopics=false,ASKED_CAT='housing';   // the topic layer (brief §75)
 let CINT={},hasCint=false,ASKW={},hasAskw=false,CONV={},CATOUT={},CITES={},JOURNEYS={},STARTERS={},LATB={},CATDAY={},hasCatDay=false,hasConv=false,hasCatOut=false,hasCites=false,hasJourneys=false,hasStarters=false,hasLatB=false;
 async function loadConversationFiles(){
   try{(await loadCSV('script-outcomes-daily.csv')).forEach(r=>{const d=parseDate(r['Date']);if(!d)return;(SCRIPTOUT[d]||(SCRIPTOUT[d]={}))[r['Script']]={t:nInt(r['Turns']),s:nInt(r['Scored']),c:nInt(r['Cited']),nf:nInt(r['NotFound']),cl:nInt(r['Clarification'])};});}catch(e){}
@@ -3179,7 +3180,7 @@ async function loadConversationFiles(){
   try{(await loadCSV('setback-intents-monthly.csv')).forEach(r=>{const m=String(r['Month']||'').trim();if(!/^\d{4}-\d{2}$/.test(m))return;(SETBI[m]||(SETBI[m]=[])).push({sb:r['Setback'],intent:String(r['Intent']||'other'),n:nInt(r['Turns']),ended:nInt(r['Ended']),same:nInt(r['SameIntentNext']),other:nInt(r['OtherIntentNext'])});});}catch(e){}
   hasIntent=Object.keys(QINTENT).length>0;
   // the content-gap register (brief §73): evidence rows rebuilt by tools/make_register.py, a status file people edit, one config
-  try{GAPS=(await loadCSV('content-gaps.csv')).filter(r=>r['kind']).map(r=>({kind:r['kind'],page:r['page']||'',cat:r['category']||'',intent:r['intent']||'',evidence:r['evidence']||'',asks:nInt(r['asks']),rate:parseFloat(r['rate'])||0,priority:nInt(r['priority']),team:r['team']||'',period:r['period']||'',rules:r['rules_version']||'',lex:r['lexicon_version']||'',built:r['built']||''}));}catch(e){}
+  try{GAPS=(await loadCSV('content-gaps.csv')).filter(r=>r['kind']).map(r=>({kind:r['kind'],page:r['page']||'',cat:r['category']||'',intent:r['intent']||'',evidence:r['evidence']||'',asks:nInt(r['asks']),rate:parseFloat(r['rate'])||0,priority:nInt(r['priority']),team:r['team']||'',period:r['period']||'',rules:r['rules_version']||'',lex:r['lexicon_version']||'',built:r['built']||''}));GAPS_OLD=GAPS.filter(g=>g.kind==='old');GAPS=GAPS.filter(g=>g.kind!=='old');}catch(e){}   // old: outside the register (brief §103)
   try{(await loadCSV('content-gaps-status.csv')).forEach(r=>{if(!r['kind']||r['kind']==='_comment')return;GAPSTAT[r['kind']+'|'+(r['page']||'')]={owner:r['owner']||'',status:r['status']||'',raised:r['raised']||'',expected:r['expected_effect']||'',changed:r['changed']||'',closed:r['closed']||'',note:r['note']||''};});}catch(e){}
   try{const r=await fetch(dataURL('register-config.json'));if(r.ok)REGCFG=await r.json();}catch(e){}
   try{(await loadCSV('categories-daily.csv')).forEach(r=>{const d=parseDate(r['Date']);if(!d)return;(CATDAY[d]||(CATDAY[d]={}))[String(r['Category']||'').trim()]=nInt(r['Citations']);});}catch(e){}
@@ -3898,6 +3899,7 @@ const TAB_GROUPS=[
     {id:'quality',  label:'Quality',       icon:'badge-check', when:()=>partLive('quality')||partLive('impact')},
     {id:'asked',    label:'Questions',     icon:'help-circle', when:()=>partLive('asked')||partLive('categories')},
     {id:'pages',    label:'Pages',         icon:'file-text',   when:()=>partLive('pages')||partLive('clicks')||partLive('reach')},
+    {id:'register', label:'Register',      icon:'clipboard-list', when:()=>GAPS.length>0},
     {id:'convs',    label:'Conversations', icon:'messages-square', when:()=>hasConv},
     {id:'wording',  label:'Answer wording',icon:'text-search', when:()=>hasRules},
     {id:'usage',    label:'Volume',        icon:'users'}]},
@@ -5343,6 +5345,7 @@ function renderPane(id){
     if(pid==='clicks')     renderClicks(D,S);
     if(pid==='pages')      renderPages(D,S);
     if(pid==='wording')    renderWording(D,S);
+    if(pid==='register')   renderRegister(D,S);
     if(pid==='asked')      renderAsked(D,S);
     if(pid==='categories') renderCategories(D,S);
     if(pid==='convs')      renderConvs(D,S);
@@ -6676,6 +6679,61 @@ const ciKey=u=>String(u||'').toLowerCase().replace(/[?#].*$/,'').replace(/\/$/,'
 const ciPageTitle=u=>catLabel(ciKey(u).split('/').pop()||'').replace(/\bAnd\b/g,'and');
 const ciPageSection=u=>{const m=ciKey(u).match(/citizensinformation\.ie\/en\/([^/]+)/);return m?catLabel(CAT_ALIAS[m[1]]||m[1]):'';};
 const PAGES_TOP=150,PAGES_MIN_VIEWS=200,PAGES_MIN_CITES=50,PAGES_LIST=12;
+// The content-gap register (brief §73, its own view since §103): evidence rows rebuilt by tools/make_register.py from
+// the published files, joined to the status file people edit. Filters by team, category, kind and status; sorted by
+// priority; counts by status; copy a team's rows with the definition footer, or download the filtered rows as CSV.
+const REG_KIND={detail:'Detail missing on a found page',retrieval:'Named, not returned',stale:'Old page with a sign of a problem',unknown:'No scheme named','missing-page':'No page for the subject',signpost:'An organisation, not a page','archive-cited':'Archive page cited for current questions'};
+let REG_F={team:'',cat:'',kind:'',status:''};
+function regStatus(g){const x=GAPSTAT[g.kind+'|'+g.page]||{};return{status:x.status||'raised',owner:x.owner||'',x};}
+function regFiltered(){return GAPS.filter(g=>(!REG_F.team||g.team===REG_F.team)&&(!REG_F.cat||g.cat===REG_F.cat)&&(!REG_F.kind||g.kind===REG_F.kind)&&(!REG_F.status||regStatus(g).status===REG_F.status)).sort((a,b)=>b.priority-a.priority);}
+function setRegF(k,v){REG_F[k]=v;rendered['register']=false;renderPane('register');}
+function regTable(rows){
+  const cols=['Page or topic','Kind','Category','Team','Priority','Asks or answers','Evidence','Status','Owner'];
+  return{cols,rows:rows.map(g=>{const s2=regStatus(g);return[g.page||g.cat,REG_KIND[g.kind]||g.kind,g.cat,g.team,String(g.priority),String(g.asks),g.evidence,s2.status,s2.owner];})};
+}
+async function regCopy(){
+  const rows=regFiltered();if(!rows.length)return;
+  const pack={title:'Content-gap register'+(REG_F.team?': '+REG_F.team:''),figure:num(rows.length)+' rows',sentence:`over ${GAPS[0].period}, sorted by priority`+(REG_F.cat||REG_F.kind||REG_F.status?` · filtered: ${[REG_F.cat,REG_F.kind&&(REG_KIND[REG_F.kind]||REG_F.kind),REG_F.status].filter(Boolean).join(', ')}`:''),
+    table:regTable(rows),definition:'Evidence rows rebuilt each month from the published counts by tools/make_register.py; priority = asks (or answers) × the rate that raised the row. Status and owner come from the status file people keep.',
+    caveats:['Outcomes are read by rule from the answer wording and are not yet checked against a reader.'],footer:reportFooter({outcome:true})};
+  const c=copyPack(pack);const ok=await writeClipboard(c.text,c.html);
+  const b=document.getElementById('reg-copy');if(b){const t=b.innerHTML;b.textContent=ok?'Copied':'Copy failed';setTimeout(()=>{b.innerHTML=t;renderIcons();},1600);}
+}
+function regCSV(){
+  const T=regTable(regFiltered()),q=v=>/[",\n]/.test(String(v))?'"'+String(v).replace(/"/g,'""')+'"':String(v);
+  const csv=[T.cols,...T.rows].map(r=>r.map(q).join(',')).join('\n')+'\n';
+  const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([csv],{type:'text/csv'}));
+  a.download='content-gaps'+(REG_F.team?'-'+REG_F.team.split(/[ :(]/)[0].toLowerCase():'')+'.csv';document.body.appendChild(a);a.click();setTimeout(()=>{URL.revokeObjectURL(a.href);a.remove();},500);
+}
+function renderRegister(D,S){
+  const el=document.getElementById('pane-register');if(!el)return;
+  if(!GAPS.length){el.innerHTML=emptyState('clipboard-list','No register rows','Run tools/make_register.py.');renderIcons();return;}
+  const counts={};GAPS.forEach(g=>{const s2=regStatus(g).status;counts[s2]=(counts[s2]||0)+1;});
+  const statuses=(REGCFG&&REGCFG.statuses)||['raised'];
+  const opt=(k,vals,lbl)=>`<label style="font-size:var(--t-xs);color:var(--muted);display:inline-flex;flex-direction:column;gap:4px">${lbl}<select onchange="setRegF('${k}',this.value)" style="font:inherit;font-size:var(--t-xs);padding:4px 6px;background:var(--s2);color:var(--text);border:1px solid var(--b2);border-radius:6px;max-width:220px"><option value="">All</option>${vals.map(v=>`<option value="${escH(v[0])}"${REG_F[k]===v[0]?' selected':''}>${escH(v[1])}</option>`).join('')}</select></label>`;
+  const uniq=f=>[...new Set(GAPS.map(f))].filter(Boolean).sort();
+  const rows=regFiltered(),link=u=>u.startsWith('http')?`<a href="${escH(u)}" target="_blank" rel="noopener" style="color:${C.acc}">${escH(ciPageTitle?ciPageTitle(u):u.split('/').pop())}</a>`:`<b>${escH(u)}</b>`;
+  const td=(v,o={})=>`<td style="text-align:${o.left?'left':'right'};padding:7px 8px;font-family:'DM Sans',sans-serif;font-size:var(--t-xs);vertical-align:top;${o.style||''}">${v}</td>`;
+  const th=(t,l)=>`<th style="text-align:${l?'left':'right'};padding:7px 8px;font-size:var(--t-xs);color:var(--muted);text-transform:uppercase;letter-spacing:.06em;white-space:nowrap">${t}</th>`;
+  const catL=c=>!c||c.startsWith('(')?c:catLabel(CAT_ALIAS[c]||c);
+  const body=rows.map(g=>{const s2=regStatus(g);return`<tr style="border-bottom:1px solid var(--b2)">${td(g.page?link(g.page):`<b>${escH(catL(g.cat))}</b>`,{left:true})}${td(escH(REG_KIND[g.kind]||g.kind),{left:true})}${td(escH(catL(g.cat))||'—',{left:true})}${td(escH(g.team),{left:true})}${td(num(g.priority),{style:"font-family:'DM Mono',monospace"})}${td(escH(g.evidence),{left:true,style:'min-width:280px'})}${td(s2.status==='raised'&&!s2.owner?'<span style="color:var(--amber)">raised, no owner</span>':escH(s2.status)+(s2.owner?' · '+escH(s2.owner):''),{left:true})}</tr>`;}).join('');
+  const T=REGCFG||{};
+  el.innerHTML=`
+    <div class="reach-note"><i data-lucide="info" class="i-sm"></i><span><b>The content-gap register.</b> Evidence rows rebuilt each month from the published counts, over ${escH(GAPS[0].period)}; status and owner from the status file. Rebuilt ${fmtDate(GAPS[0].built)} · rules ${escH(GAPS[0].rules)}, lexicon ${escH(GAPS[0].lex)}.</span></div>
+    <div class="grid4" style="margin-bottom:var(--sp-4)">${statuses.map(st=>uxTile(num(counts[st]||0),st,st===REG_F.status?'filtered':'rows with this status',st==='raised'?C.amber:st==='closed'?C.green:C.acc)).join('')}</div>
+    <div class="card"><div class="card-title">Rows<span class="card-title-note">${num(rows.length)} of ${num(GAPS.length)} · highest priority first</span></div>
+      <div style="display:flex;flex-wrap:wrap;gap:10px;align-items:flex-end;margin-bottom:12px">
+        ${opt('team',uniq(g=>g.team).map(v=>[v,v]),'Team')}${opt('cat',uniq(g=>g.cat).map(v=>[v,catLabel?catLabel(CAT_ALIAS[v]||v):v]),'Category')}${opt('kind',uniq(g=>g.kind).map(v=>[v,REG_KIND[v]||v]),'Kind')}${opt('status',statuses.map(v=>[v,v]),'Status')}
+        <button type="button" class="copy-btn" id="reg-copy" onclick="regCopy()" title="The filtered rows with the definition footer, ready to paste"><i data-lucide="copy" class="i-sm"></i><span>${REG_F.team?'Copy rows for this team':'Copy these rows'}</span></button>
+        <button type="button" class="copy-btn" onclick="regCSV()" title="Download the filtered rows as a CSV file"><i data-lucide="download" class="i-sm"></i><span>Download CSV</span></button>
+      </div>
+      <div class="tbl-wrap"><table style="width:100%;border-collapse:collapse;min-width:900px"><thead><tr style="border-bottom:2px solid var(--b2)">${th('Page or topic',true)}${th('Kind',true)}${th('Category',true)}${th('Team',true)}${th('Priority')}${th('Evidence',true)}${th('Status · owner',true)}</tr></thead><tbody${showAttr(25,rows.length)}>${body||`<tr>${td('No rows match these filters',{left:true})}</tr>`}</tbody></table></div>
+      <div class="share-foot">Priority = asks (or answers) × the rate that raised the row, so volume counts. A named page that is not returned, and an archive page cited for current questions, go to the AskCI team as retrieval items; a partial on a found page, a subject with no page, and an old page with a sign of a problem go to the content team; a not-found with no scheme named waits for the themes step. <b>Old is not stale by itself:</b> a page last changed before ${escH(T.stale_before||'the stale date')} is raised only when its partial share is ${T.stale_partial_ratio||1.25}× the typical share or more, or ${Math.round((T.stale_unmatched||0.1)*100)}%+ of its checkable figures (${T.stale_min_checkable||30}+) are on no cited page. Archive pages (a past year's Budget) are right to be old; the gap is that AskCI cites them. Closure is a content event on the page, measured on the same cut that raised the row.</div></div>
+    ${GAPS_OLD.length?`<details class="card"><summary class="card-title" style="cursor:pointer">Old, no sign of a problem<span class="card-title-note">${num(GAPS_OLD.length)} pages last changed before ${escH(T.stale_before||'')} · cited ${T.min_answers||100}+ times · outside the register</span></summary>
+      <div class="tbl-wrap"><table style="width:100%;border-collapse:collapse"><tbody>${GAPS_OLD.sort((a,b)=>b.asks-a.asks).map(g=>`<tr style="border-bottom:1px solid var(--b2)">${td(link(g.page),{left:true})}${td(escH(g.evidence),{left:true,style:'min-width:280px'})}</tr>`).join('')}</tbody></table></div></details>`:''}`;
+  applyShowAll&&applyShowAll(el);
+  renderIcons();
+}
 function renderPages(D,S){
   const el=document.getElementById('part-pages');
   const fr=filterRange(D.merged),months=monthsIn(fr).filter(m=>PAGEVIEW[m]&&CITES[m]);
@@ -6916,7 +6974,7 @@ function renderAsked(D,S){
           <div class="card-title" style="font-size:var(--t-xs);margin-top:12px">By month</div>
           ${tbl2(th('Month',true)+th('Questions')+th('Share of typed')+th('Not found')+th('Partial')+th('Clarif.'),perMonth)}</div>
       </div>
-      <div class="card-title" style="font-size:var(--t-xs);margin-top:12px">Register rows for ${lab}<span class="card-title-note">${num(gaps.length)} · the register period · status on Usage › Pages</span></div>
+      <div class="card-title" style="font-size:var(--t-xs);margin-top:12px">Register rows for ${lab}<span class="card-title-note">${num(gaps.length)} · the register period · status on Usage › Registeres</span></div>
       ${tbl2(th('Kind',true)+th('Page or topic',true)+th('Asks')+th('Owner',true),gapRows)}
       ${(()=>{if(!hasOrgs)return'';const ag={};months.forEach(m=>(ORGSM[m]||[]).forEach(r=>{if(r.cat!==ASKED_CAT)return;const a=ag[r.org]||(ag[r.org]={Turns:0,NotFound:0,Partial:0});a.Turns+=r.Turns;a.NotFound+=r.NotFound;a.Partial+=r.Partial;}));const any=ag['(any)']||{Turns:0,NotFound:0},none=ag['(none)']||{Turns:0,NotFound:0},ext=ag['(external)']||{Turns:0,NotFound:0};const allA=any.Turns+none.Turns,nfA=any.NotFound+none.NotFound;const top=Object.entries(ag).filter(([o])=>!o.startsWith('(')).sort((a,b)=>b[1].Turns-a[1].Turns).slice(0,8);if(!top.length)return'';
         return `<div class="card-title" style="font-size:var(--t-xs);margin-top:12px">Organisations ${lab} answers name<span class="card-title-note">${allA?(ext.Turns/allA*100).toFixed(1):'—'}% of ${lab} answers name an outside body · ${nfA?(ext.NotFound/nfA*100).toFixed(1):'—'}% of its not-found answers do</span></div>`+tbl2(th('Organisation',true)+th('Answers')+th('In not found')+th('In partial'),top.map(([o,a])=>tr(td(escH(o),{left:true})+td(num(a.Turns))+td(num(a.NotFound))+td(num(a.Partial)))).join(''));})()}
@@ -7304,16 +7362,8 @@ function contentLists(months,fr,td,th){
           <div class="share-foot">A figure is matched when its number appears on a snapshot of a cited page taken at that page's last change, and only when that change predates the answer; otherwise the page has changed since and the figure is unverifiable. Unmatched fires on three things that are not errors as well as on errors: a figure from a second source, a rounding, a weekly rate the page gives annually. <b>Unmatched: the number appears on no cited page. Not an error rate.</b> It is not a bound either way: a figure taken from the wrong row of the right page counts as matched, and a correct total the answer worked out counts as unmatched (${derivCaveat('figures')}). "Matched" is loose: a year matches any year on the page and an amount any bare number. Snapshots are dated from today; the back history can only be checked against pages that have not changed since.</div></div>
       </div></div>`;
   }
-  // 4c. the content-gap register (brief §73): evidence rows with their status, by owner
-  if(GAPS.length){
-    const st=g=>GAPSTAT[g.kind+'|'+g.page]||{};const counts={};GAPS.forEach(g=>{const x=st(g).status||'raised';counts[x]=(counts[x]||0)+1;});
-    const KIND={detail:'Detail missing on a found page',retrieval:'Named, not returned',stale:'Stale page',unknown:'No scheme named'};
-    const row=g=>{const x=st(g);return`<tr style="border-bottom:1px solid var(--b2)">${td(g.page?link(g.page):`<b>${escH(g.cat)}</b>`,{left:true})}${td(KIND[g.kind]||g.kind,{left:true,style:'font-size:var(--t-xs)'})}${td(g.intent||'—',{left:true,style:'font-size:var(--t-xs);color:var(--muted)'})}${td(num(g.priority))}${td(escH(g.evidence),{left:true,style:'font-size:var(--t-xs);white-space:normal'})}${td(x.status?escH(x.status)+(x.owner?' · '+escH(x.owner):''):'<span style="color:var(--amber)">raised, no owner</span>',{left:true,style:'font-size:var(--t-xs)'})}</tr>`;};
-    const teams=[...new Set(GAPS.map(g=>g.team))];
-    h+=`<div class="card"><div class="card-title">Content-gap register<span class="card-title-note">${num(GAPS.length)} gaps over ${escH(GAPS[0].period)} · rebuilt ${fmtDate(GAPS[0].built)} · rules ${escH(GAPS[0].rules)}, lexicon ${escH(GAPS[0].lex)}${REGCFG?` · thresholds ${REGCFG.min_asks_month} asks a month (retrieval), ${REGCFG.min_answers} answers (content)`:''} · status: ${Object.entries(counts).map(([k,v])=>`${escH(k)} ${v}`).join(', ')}</span></div>
-      ${teams.map(t=>`<div style="font-size:var(--t-xs);color:var(--muted);text-transform:uppercase;letter-spacing:.08em;margin:12px 0 6px">${escH(t)} · ${num(GAPS.filter(g=>g.team===t).length)}</div><div class="tbl-wrap"><table style="width:100%;border-collapse:collapse"><thead><tr style="border-bottom:1px solid var(--b2)">${['Page or topic','Kind','Intent','Priority','Evidence','Status · owner'].map((h2,i)=>th(h2,i!==3)).join('')}</tr></thead><tbody>${GAPS.filter(g=>g.team===t).sort((a,b)=>b.priority-a.priority).slice(0,8).map(row).join('')}</tbody></table></div>`).join('')}
-      <div class="share-foot">A register, not a list: the evidence rows are rebuilt each month from the published files (${REGCFG?'the last '+REGCFG.months+' full months':'the last two full months'}) and carry their rules and lexicon versions; the status and owner come from the status file the information team keeps. Priority = asks × the rate that raised the row. A named page that is not returned goes to the AskCI team as a chunking or index item; a partial on a found page, or a stale page, goes to the content team; a not-found with no scheme named waits for the themes step. Closure is a content event on the page, measured on the same cut that raised the row.</div></div>`;
-  }
+  // 4c. the content-gap register has its own view since brief §103: a pointer stays here
+  if(GAPS.length)h+=`<div class="card"><div class="card-title">Content-gap register<span class="card-title-note">${num(GAPS.length)} gaps over ${escH(GAPS[0].period)}</span></div><div style="font-size:var(--t-sm)">The register has its own view, with filters by team, category, kind and status. <button class="show-all" onclick="activateSub('register')">Open the register</button></div></div>`;
   // 5. index lag: pages changed on the site and when AskCI first cited the changed page
   if(hasPagesC){
     const last=fr[fr.length-1]?.date||'',since=isoAdd(last,-60),settled=isoAdd(last,-7);
