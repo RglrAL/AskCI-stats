@@ -116,7 +116,7 @@ def main():
         if r["Flag"] == "Theme crisis":
             for k in ("Turns", "Cited", "OutOfScope"): cr[k] += I(r[k])
     allt = sum(I(U[d]["Questions"]) for d in days); crk = cr["Turns"] / allt * 1000 if allt else None; crc = cr["Cited"] / cr["Turns"] * 100 if cr["Turns"] else None
-    P(f"| 9 | Crisis language (all data) | {crk:.2f} per 1,000 turns; {pct(crc, 0)} got an ordinary cited answer | {BASE['crisis_per_k']} / {BASE['crisis_cited']}% | {status(crc, BASE['crisis_cited'], moved=5)} | §65: a question for the service on signposting, about two turns a week |")
+    P(f"| 9 | Crisis language (all data) | {crk:.2f} per 1,000 turns; {pct(crc, 0)} got an ordinary cited answer | {BASE['crisis_per_k']} / {BASE['crisis_cited']}% (old rule) | not comparable: the crisis rule was narrowed on 16 Nov (safety 2026.11.16-1, §100; it had matched ‘end my tenancy, lease, contract’) | §65: a question for the service on signposting, about one turn a week under the narrowed rule |")
     # 10. named intent share
     nm = (T - mix["other"]) / T * 100 if T else None
     P(f"| 10 | Typed questions with a named intent ({', '.join(months)}) | {pct(nm)} (target 80%) | {BASE['intent_named']}% | {status(nm, BASE['intent_named'], lower_is_better=False)} | §71: the acceptance point still short; by rule until the labelling |")

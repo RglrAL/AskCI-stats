@@ -50,6 +50,10 @@ jobs:
       - name: Audit the data files
         run: python3 tools/audit_data.py --files-only
 
+      # Invented sentences with the class each rule should give them (brief §100); no feed is needed
+      - name: Rule tests
+        run: python3 tools/test_rules.py
+
       - name: Ask bar regression test
         run: python3 tools/test_ask.py
 

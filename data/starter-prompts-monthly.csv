@@ -22,27 +22,27 @@ Month,Prompt,Count,Cited,FollowedByTyped,FollowedBySuggested,Partial,NotFound,Cl
 2026-06,how much is maternity benefit,146,126,11,30,0,0,0,0,11626,126,1042373,146,96,rate
 2026-06,how do i renew my passport,1,1,0,0,0,0,0,0,274,1,12060,1,1,apply
 2026-07,what is auto-enrolment,157,143,5,11,0,0,0,1,18937,143,1355300,157,112,definition
-2026-07,can i get help with low pay,138,122,15,15,1,0,4,0,26996,126,1635400,138,96,eligibility
+2026-07,can i get help with low pay,138,122,15,15,2,0,4,0,26996,126,1635400,138,96,eligibility
 2026-07,how much is maternity benefit,107,100,8,18,0,0,0,1,6660,100,879645,107,74,rate
 2026-07,what are the housing assistance payment (hap) limits,58,54,8,16,0,0,0,0,11015,54,604141,58,33,rate
 2026-07,how do i apply for the back to school clothing and footwear allowance,55,48,2,13,0,0,0,0,10547,48,535467,55,36,apply
 2026-07,how do i renew my passport,44,41,5,2,0,0,0,0,10721,41,504928,44,26,apply
 2026-08,what is auto-enrolment,119,114,6,10,0,0,0,1,14502,114,1029368,119,81,definition
-2026-08,what are the housing assistance payment (hap) limits,116,111,9,33,2,0,0,0,25407,111,1283961,116,66,rate
+2026-08,what are the housing assistance payment (hap) limits,116,111,9,33,3,0,0,0,25407,111,1283961,116,66,rate
 2026-08,can i get help with low pay,106,100,15,16,0,0,1,1,24938,101,1304555,106,65,eligibility
 2026-08,how do i apply for the back to school clothing and footwear allowance,96,84,3,23,0,0,0,0,17562,84,908612,96,58,apply
 2026-08,how do i renew my passport,68,61,2,10,0,0,0,0,15841,61,735213,68,48,apply
 2026-08,how much is maternity benefit,59,56,3,9,0,0,0,0,3840,56,482236,59,45,rate
 2026-09,how do i renew my passport,238,218,15,21,0,0,0,0,62338,218,3150648,238,175,apply
-2026-09,what are the housing assistance payment (hap) limits,228,212,14,45,51,3,0,0,48072,215,2876670,228,157,rate
+2026-09,what are the housing assistance payment (hap) limits,228,212,14,45,49,3,0,0,48072,215,2876670,228,157,rate
 2026-09,how do i apply for the back to school clothing and footwear allowance,165,145,6,13,0,0,0,0,30825,145,1670307,165,130,apply
 2026-09,what is auto-enrolment,40,37,0,4,0,0,0,0,4831,37,339377,40,31,definition
 2026-09,can i get help with low pay,34,31,4,6,0,0,1,0,8131,32,445147,34,23,eligibility
 2026-09,how much is maternity benefit,33,30,0,7,0,0,0,0,2169,30,257593,33,24,rate
-2026-09,how do i apply for the household benefits package,2,2,1,0,1,0,0,0,287,2,19907,2,1,apply
+2026-09,how do i apply for the household benefits package,2,2,1,0,0,0,0,0,287,2,19907,2,1,apply
 2026-10,how do i apply for the household benefits package,465,453,17,154,0,0,0,0,47707,453,3991870,465,264,apply
 2026-10,how do i renew my passport,439,386,13,36,2,0,0,0,113529,386,5555555,439,324,apply
-2026-10,what are the housing assistance payment (hap) limits,379,355,22,73,100,1,0,0,78692,356,4753064,379,245,rate
+2026-10,what are the housing assistance payment (hap) limits,379,355,22,73,106,1,0,0,78692,356,4753064,379,245,rate
 2026-10,how do i apply for the back to school clothing and footwear allowance,89,76,0,13,1,0,0,0,16061,76,853014,89,68,apply
 2026-11,how do i apply for the household benefits package,42,41,0,19,0,0,0,0,3956,41,302512,17,10,apply
 2026-11,how do i renew my passport,27,25,0,5,0,0,0,0,7392,25,277846,9,7,apply

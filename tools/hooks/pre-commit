@@ -4,6 +4,7 @@
 #  2. A staged index.html must pass the Ask bar regression test (tools/test_ask.py), when Chrome is installed.
 #     Set SKIP_ASK_TESTS=1 to skip it for one commit.
 #  3. No staged file may carry the system-prompt canary line (the prompts live in the git-ignored review folder).
+#  4. A staged tools/redact_feed.py or tools/test_rules.py must pass the rule tests (tools/test_rules.py, brief §100).
 STAGED=$(git diff --cached --name-only --diff-filter=ACM)
 CANARY="ASKCI-PROMPT-""CANARY"
 for f in $STAGED; do
@@ -28,6 +29,15 @@ for CF in data/costs.csv costs.csv; do   # data/ since brief §97; the root, sho
     fi
   fi
 done
+
+if echo "$STAGED" | grep -qxE 'tools/redact_feed.py|tools/test_rules.py'; then
+  if ! "$PY" "$ROOT/tools/test_rules.py" >"$TMP/rules.log" 2>&1; then
+    cat "$TMP/rules.log" >&2
+    echo "pre-commit: the rule tests failed (tools/test_rules.py). A rule changed on purpose needs its case changed with it." >&2
+    exit 1
+  fi
+  tail -1 "$TMP/rules.log" >&2
+fi
 
 if echo "$STAGED" | grep -qxE 'index.html|tests/ask_cases.json|tests/ask_fixture_ref' && [ "$SKIP_ASK_TESTS" != "1" ]; then
   git show :index.html > "$TMP/index.html"

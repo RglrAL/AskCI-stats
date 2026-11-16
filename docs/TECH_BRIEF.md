@@ -85,9 +85,9 @@ them.
 | Step | Tool | Reads | Writes | Version it carries |
 |---|---|---|---|---|
 | 0 | `make_site_pages.py` (occasional) | a saved sitemap | `site-pages.csv` | — |
-| 1 | `make_lexicon.py --topic-counts FEEDS` | `site-pages.csv`, the raw feeds (counts only) | `question-lexicon.json`; refuses to write while any topic keyword matches under 20 questions | lexicon 2026.10.24-6, derivation 2026.10.24-7 |
+| 1 | `make_lexicon.py --topic-counts FEEDS` | `site-pages.csv`, the raw feeds (counts only) | `question-lexicon.json`; refuses to write while any topic keyword matches under 20 questions | lexicon 2026.10.24-6, derivation 2026.11.16-1 |
 | 2 | `fetch_pages.py` | `pages-cited.csv`, `site-pages.csv`, the public site (curl) | `exports/site-text/<hash>__<LastMod>.txt`, one dated snapshot per cited page per change | — |
-| 3 | `redact_feed.py FEEDS --out-dir DIR --force` | raw feeds, lexicon, snapshots | redacted feeds: the text columns dropped, 60-odd derived columns added (section 6) | rules 2026.10.23-2, style 2026.10.23-2, safety 2026.10.24-1, intent 2026.10.24-2, derivation 2026.10.24-7 |
+| 3 | `redact_feed.py FEEDS --out-dir DIR --force` | raw feeds, lexicon, snapshots | redacted feeds: the text columns dropped, 60-odd derived columns added (section 6) | rules 2026.11.16-1, style 2026.10.23-2, safety 2026.11.16-1, intent 2026.10.24-2, derivation 2026.11.16-1 |
 | 4 | `make_usage.py REDACTED --out-dir DIR` | redacted feeds, lexicon hubs and topics | 29 aggregate CSVs (section 5) | — |
 | 5 | `cache_coverage.py`, `next_step.py` | raw or redacted feeds | `repeat-questions-monthly.csv`, `answer-next-daily.csv` | — |
 | 6 | `collect_aggregates.py DIR` | the review folder | copies every aggregate CSV into the repo root, never a feed | — |
@@ -149,9 +149,12 @@ dated by the fixed wording, 4 candidate chip changes, launches and observed chan
 
 ## 6. The definitions that matter
 
-- **Outcome** of an answer, by rule on its wording (`redact_feed.py` `RULES`, version 2026.10.23-2): Cited answer,
+- **Outcome** of an answer, by rule on its wording (`redact_feed.py` `RULES`, version 2026.11.16-1): Cited answer,
   Not found, Clarification, Error (empty), Out of scope, Greeting, Uncited answer. **Partial**: a cited answer that
-  also says something is missing. The rules were checked against the system prompts of 28 August (brief §60) and are
+  also says the bot could not find something (`PARTIAL`: the not-found phrases in which the bot speaks of its own
+  search; "unable to find" only after "I", "does not provide" only with the information as subject, brief §100).
+  "More detail" and "which scheme / payment" make a clarification only in a sentence ending in a question mark.
+  Every rule has invented-sentence cases in `tools/test_rules.py`. The rules were checked against the system prompts of 28 August (brief §60) and are
   unvalidated against a reader since 14 September; the page says so wherever an outcome figure appears. The partial
   series changed what it measures on 1 July, when the deciding phrase moved from "does not provide" to "could not
   find" with that day's wording change and the count quadrupled (brief §76); Answer wording shows partials by phrase.
@@ -170,8 +173,12 @@ dated by the fixed wording, 4 candidate chip changes, launches and observed chan
 - **Situation flags** (layer 2): county, age band (16–24, 25–44, 45–65, 66+), household (children, partner, alone),
   work status, a payment already received (first-person receiving phrase plus a social-welfare page named), the year
   asked about, shape (pasted letter: 80+ words with letter markers; more than one question; a link). **Asks**: what a
-  clarification asked for (county, age, payment, status, household, employment, dates, scheme); **given** when the
-  question already carried that class.
+  clarification asked for (county, age, payment, status, household, employment, dates, scheme: which scheme or option;
+  a clarification naming none is (none), shown as unspecified, brief §100); **given** when the question already carried
+  that class. Work status "unemployed" from "not working" needs the first person. The page calls these "details
+  mentioned in the question": a county or an age may be someone else's.
+- **Crisis language** (safety 2026.11.16-1): whole phrases only ("end my life", "end it all", "take my own life",
+  "killing myself", "no reason to live" …), not "end my", which matched tenancies, leases and contracts (brief §100).
 - **Fixed wording**: 18 sentences the prompt prescribes, found as sentences in 200+ answers and 50+ conversations;
   a month-on-month step in a sentence's share of answers dates a wording change, read against the model events.
 - **Organisations**: 39 bodies, helplines and professionals matched by name in the answer; `(external)` = outside
@@ -267,10 +274,11 @@ dated by the fixed wording, 4 candidate chip changes, launches and observed chan
 | Data audit, files-only (schema, cross-file sums, bounds, floors, versions, lexicon, register, canary, privacy sweep, cost labels) | `tools/audit_data.py --files-only`, run by the workflow | 161 pass, 0 fail, 23 notes |
 | Data audit with the feed recount | `tools/audit_data.py DIR`, local | more checks; run before each refresh is committed |
 | Ask bar regression | `tools/test_ask.py`, headless Chrome, data frozen at `tests/ask_fixture_ref` (54dc360), served from `data/`; 4 minutes an attempt and one retry on a fresh profile (brief §97); fails without a browser unless `--allow-skip` | 311 pass |
+| Rule tests | `tools/test_rules.py`: invented sentences with the class each rule should give; run by the pre-commit hook when the rules change and by the deploy | 51 pass |
 | Feed-text guard | `tools/hooks/test_guard.py` | 34 cases |
 | Refresh manifest | `VERSIONS.json`, written by `tools/refresh.py`; the audit checks its versions against the files and its aggregate hashes against the committed files | one per refresh |
 | Pre-commit | `tools/hooks/pre-commit` (`git config core.hooksPath tools/hooks`): canary, costs redaction, Ask bar test on the staged page | |
-| Deploy | `.github/workflows/publish.yml`: move a root costs.csv into `data/`, redact costs, audit, test, stamp, fact sheet, change reports, incidents, findings, register, Pages | every step green at `76c25be` |
+| Deploy | `.github/workflows/publish.yml`: move a root costs.csv into `data/`, redact costs, audit, rule tests, Ask bar test, stamp, fact sheet, change reports, incidents, findings, register, Pages | every step green at `76c25be` |
 
 Visual checks are screenshots from headless Chrome against a local `http.server`; the headless `--dump-dom` path
 does not render the panes.

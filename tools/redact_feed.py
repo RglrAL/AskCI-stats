@@ -12,11 +12,12 @@ feed mostly uses U+2019, which is why its printed not-found pattern under-counts
   Error          empty response and 0 ms
   Cited answer   at least one citation URL
   Not found      "couldn't find", "no specific information", "does not (currently) provide" ...
-  Clarification  "could you clarify", "what you mean", "more detail", "which scheme/payment"
+  Clarification  "could you clarify", "what you mean", "more detail ...?", "which scheme/payment ...?"
   Out of scope   refusal phrases, else the feed's Flagged = Yes (after Greeting)
   Greeting       "hello"/"hi" opening, "how can I help", "glad to help" ...
   Uncited answer anything else
-Partial = a Cited answer whose text also matches the not-found pattern.
+Partial = a Cited answer whose text also says the bot could not find something (PARTIAL below: the not-found phrases
+in which the bot speaks of its own search; since 2026.11.16-1 not "unable to find" or "does not provide" on their own).
 
 Two more derived columns, both read from the query text before it is dropped:
   Starter Prompt  the matched chip text when a first turn's normalised query (lower case,
@@ -45,7 +46,13 @@ import re
 DROP = ["User Query", "Assistant Response", "Report Subject", "Report Description"]
 csv.field_size_limit(min(sys.maxsize, 2**31 - 1))
 
-OUTCOME_RULES_VERSION = "2026.10.23-2"
+OUTCOME_RULES_VERSION = "2026.11.16-1"
+# 2026.11.16-1 (brief §100, handoff package 0b and 0d): the partial test has its own list, PARTIAL: the not-found phrases
+# in which the bot speaks of its own search. "unable to find" counts only after I / I was / I am / I've been, and "does not
+# (currently) provide / have" only when the information or content is the subject, so "unable to find work" and "does not
+# provide cover" no longer make a cited answer partial. The not-found test for uncited answers is unchanged. Two
+# clarification phrases need a question: "more detail" and "which scheme / payment" count only in a sentence that ends
+# in a question mark, so "For more detail, contact your local Intreo centre." is no longer a clarification.
 # Each pattern is a list of (rule id, alternative), joined in order; the named group that matched says which phrase
 # decided the outcome (brief §53). 2026.10.23-2 (brief §60) checked the rules against the system prompts of 28 Aug 2026
 # and added the phrases the prompts prescribe that the feed shows: the fixed no-results sentence (nf.template, listed
@@ -57,7 +64,7 @@ RULES = {
                   ("nf.unable_to_find", r"unable to find"), ("nf.no_specific_info", r"no specific information"), ("nf.not_find_specific", r"not find specific"),
                   ("nf.dont_have_info", r"don't have (specific )?information"), ("nf.does_not_provide", r"does not (currently )?(provide|have)")],
     "clarification": [("cl.could_you", r"could you (please )?(clarify|tell me|let me know)"), ("cl.what_you_mean", r"what you mean"),
-                      ("cl.more_detail", r"more detail"), ("cl.which_scheme", r"which (scheme|payment)")],
+                      ("cl.more_detail", r"more detail[^.?!\n]*\?"), ("cl.which_scheme", r"which (scheme|payment)[^.?!\n]*\?")],
     "out_of_scope": [("oos.specialise", r"specialise in providing information"), ("oos.specialize", r"specialize in providing information"),
                      ("oos.cant_help_topic", r"can't help with that (particular )?topic"), ("oos.not_able_topic", r"not able to help with that topic"),
                      ("oos.outside_scope", r"outside (the )?scope"), ("oos.not_covered", r"isn't covered by the information i can provide"),
@@ -66,8 +73,14 @@ RULES = {
     "greeting": [("gr.hello", r"^(hello|hi)\b"), ("gr.how_can_i_help", r"how can i help"), ("gr.what_would_you_like", r"what would you like information about"), ("gr.welcome", r"you're welcome"), ("gr.glad_to_help", r"glad to help"),
                  ("gr.glad_to_hear", r"glad to hear"), ("gr.glad_you", r"glad you"), ("gr.glad_i_could", r"glad i could")],
 }
+# The partial test (brief §100): a cited answer is partial when it says the bot could not find something. The not-found
+# phrases that can also be ordinary content ("unable to find work", "does not provide cover") count here only in the
+# forms where the bot speaks of its own search; the ids are kept, so the rule counts stay comparable by phrase.
+PARTIAL = [(rid, alt) for rid, alt in RULES["not_found"] if rid not in ("nf.unable_to_find", "nf.does_not_provide")] + [
+    ("nf.unable_to_find", r"\bi(?:'ve been| have been| was| am|'m)? unable to find"),
+    ("nf.does_not_provide", r"(?:information|content|sources?|details?)(?: (?:available|i have|i can access))?(?: to me)? does not (currently )?(provide|have|include|cover)")]
 GID = lambda rid: rid.replace(".", "__")
-RX = {k: re.compile("|".join(f"(?P<{GID(rid)}>{alt})" for rid, alt in v), re.I) for k, v in RULES.items()}
+RX = {k: re.compile("|".join(f"(?P<{GID(rid)}>{alt})" for rid, alt in v), re.I) for k, v in list(RULES.items()) + [("partial", PARTIAL)]}
 
 
 def rule_of(m):
@@ -104,7 +117,10 @@ SIGNOFF = re.compile(r"citizensinformation\.ie", re.I)   # Answer Signoff: 1 if 
 # or international phone number, an email address, an IBAN, a 16-digit card number. Injection: the usual override
 # phrasings. Themes: a few off-topic kinds the scope rules name (creative writing, code, sport, entertainment, weather)
 # and crisis language, so that what AskCI answers to it can be counted. Counts only; names say what is matched.
-SAFETY_VERSION = "2026.10.24-1"
+SAFETY_VERSION = "2026.11.16-1"
+# 2026.11.16-1 (brief §100, handoff package 0a): crisis needs the whole phrase: "end my life" or "end it all", not "end my"
+# (which matched "end my tenancy / lease / contract"); adds "killing myself", "take my (own) life", "no reason to live",
+# "better off dead", "harm(ing) myself". The list is the analyst's to confirm.
 SAFETY = {
     "Query PPS": re.compile(r"(?<![\dA-Za-z])\d{7}[A-Za-z]{1,2}(?![\dA-Za-z])"),
     "Query Phone": re.compile(r"(?<!\d)(?:\+353|00353|0)\s?(?:[1-9]\d{0,2})[\s-]?\d{3}[\s-]?\d{3,4}(?!\d)"),
@@ -118,7 +134,7 @@ THEMES = [("creative", re.compile(r"\b(?:write|tell|compose|make up|sing)\b.{0,3
           ("sport", re.compile(r"\b(?:premier league|champions league|all-ireland|gaa (?:match|final)|who won the (?:match|game|final)|football (?:score|result)s?|rugby (?:score|result)s?)\b", re.I)),
           ("entertainment", re.compile(r"\b(?:netflix|movie|film|tv show|series to watch|taylor swift|song lyrics|eurovision|celebrity)\b", re.I)),
           ("weather", re.compile(r"\b(?:weather (?:today|tomorrow|forecast|this week)|will it rain|forecast for)\b", re.I)),
-          ("crisis", re.compile(r"\b(?:suicid\w*|kill (?:myself|me)|end (?:my|it all|my life)|self[- ]harm|want to die|don'?t want to (?:live|be here)|overdos\w*)\b", re.I))]
+          ("crisis", re.compile(r"\b(?:suicid\w*|kill(?:ing)? (?:myself|me)|end(?:ing)? (?:my (?:own )?life|it all)|take my (?:own )?life|self[- ]harm\w*|harm(?:ing)? myself|want to die|don'?t want to (?:live|be here)|no reason to live|better off dead|overdos\w*)\b", re.I))]
 
 
 # What people ask (brief §66): an intent class by rule, form flags, and the scheme the question names, from
@@ -138,7 +154,11 @@ INTENT_VERSION = "2026.10.24-2"
 #                 answers to pasted letters excluded from every phrase extraction
 #   2026.10.24-7  topic tables for the ten smaller categories (travel, family, education, justice, consumer, death,
 #                 returning to Ireland, government, environment, about); lexicon 2026.10.24-6
-DERIVATION_VERSION = "2026.10.24-7"
+#   2026.11.16-1  (brief §100, handoff 0c and 0e) what a clarification asked for: "scheme" only when it asks which scheme
+#                 or option ("which scheme / one / of these / type of", "do you mean", "are you asking about"), not every
+#                 "could you clarify" or "more detail"; a clarification naming no class counts as (none), shown as
+#                 unspecified. Work status "unemployed" needs the first person for "not working" (not "my heating is not working")
+DERIVATION_VERSION = "2026.11.16-1"
 
 # Layer 2 (brief §75): situation entities read from the question, published as classes only (a county name, an age band,
 # a household flag, a work status, a payment-on flag, the year asked about, a shape flag); the classes a clarification
@@ -153,7 +173,7 @@ HOUSEHOLD = [("children", re.compile(r"\bmy (?:child|children|son|daughter|kids|
              ("partner", re.compile(r"\bmy (?:husband|wife|partner|spouse|fianc[eé]e?|boyfriend|girlfriend)\b|\bwe are married\b|\bi am married\b|\bi'm married\b|\bim married\b|\bcohabit")),
              ("alone", re.compile(r"\blive alone\b|\bliving alone\b|\bon my own\b|\bby myself\b|\bwidow(?:ed|er)?\b|\bseparated\b|\bdivorced\b|\bsingle person\b"))]
 WORK = [("self-employed", re.compile(r"\bself[- ]?employed\b|\bsole trader\b|\bmy (?:own )?business\b|\bfreelanc")),
-        ("unemployed", re.compile(r"\bunemployed\b|\blost my job\b|\bout of work\b|\bmade redundant\b|\bno job\b|\bnot working\b|\bon jobseekers\b|\bon the dole\b")),
+        ("unemployed", re.compile(r"\bunemployed\b|\blost my job\b|\bout of work\b|\bmade redundant\b|\bno job\b|\b(?:i am|i'm|im|i've been|i have been) (?:currently |still )?not working\b|\bon jobseekers\b|\bon the dole\b")),
         ("student", re.compile(r"\bi am a student\b|\bi'm a student\b|\bim a student\b|\bin college\b|\bat university\b|\bstudying\b|\bmy course\b|\bfull[- ]time student\b")),
         ("retired", re.compile(r"\bretired\b|\bi am a pensioner\b|\bpensioner\b|\bon the (?:state )?pension\b")),
         ("working", re.compile(r"\bi (?:work|am working|am employed|have a job)\b|\bmy (?:job|employer|boss|salary|wages|work contract)\b|\bfull[- ]time\b|\bpart[- ]time\b|\bi earn\b"))]
@@ -167,7 +187,7 @@ ASKS = [("county", re.compile(r"which county|what county|local authority (?:are 
         ("household", re.compile(r"(?:do you have|have you|any) (?:children|dependents|dependants|a child)|are you (?:married|single|cohabiting|living with|a lone parent)|your (?:spouse|partner|husband|wife|children|household|family)|live alone|who (?:do you )?live with")),
         ("employment", re.compile(r"are you (?:currently )?(?:employed|working|self[- ]employed|an employee|in employment)|your (?:employer|employment|job|work|working hours|contract|hours)|do you work|how many hours")),
         ("dates", re.compile(r"when did you|when do you|what date|how long (?:have|had|were|are) you|since when|how many (?:years|months|weeks)|date (?:did|of|you)")),
-        ("scheme", re.compile(r"which (?:scheme|one|of these|of the following|type of)|do you mean|are you asking about|could you (?:please )?(?:clarify|specify|tell me|let me know)|what (?:exactly |specifically )?(?:do you|are you) (?:mean|asking|looking for|trying)|more detail|more information about (?:your|what)|bit more about"))]
+        ("scheme", re.compile(r"which (?:scheme|one|of these|of the following|type of|option)|do you mean|are you asking about"))]
 GIVEN_FOR = {"county": 0, "age": 1, "household": 2, "employment": 3, "payment": 4}   # ask class -> index in the situation tuple
 PERSONAL_RE = re.compile(r"\bin your (?:case|situation|circumstances)\b|\bsince you (?:are|have|mentioned|said|were)\b|\bas you (?:mentioned|said|are|have|described)\b|\bgiven (?:that )?you\b|\bbecause you (?:are|have|were)\b|\bbased on (?:what you|your situation|your circumstances)\b|\bfrom what you(?:'ve| have)? (?:said|described)\b")
 YEAR_RE = re.compile(r"\b(20[12]\d)\b")
@@ -495,7 +515,7 @@ def classify_rule(row):
         return "Error", "", "err.empty"
     cites = len(URL_RE.findall(row.get("Citations") or ""))
     if cites >= 1:
-        m = RX["not_found"].search(resp)
+        m = RX["partial"].search(resp)
         return "Cited answer", ("Yes" if m else ""), ("cited.partial." + rule_of(m) if m else "cited")
     for k, outcome in (("not_found", "Not found"), ("clarification", "Clarification"), ("out_of_scope", "Out of scope"), ("greeting", "Greeting")):
         m = RX[k].search(resp)

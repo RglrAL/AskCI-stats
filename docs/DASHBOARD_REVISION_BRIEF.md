@@ -2553,3 +2553,45 @@ Two fixes the chips showed up, the same day: the 5.4 model family was a second g
 (#3fb950) and is now teal (#2dd4bf); the services timeline's By service / Fixed-variable switch sat in the top-right
 corner under the chart/table icons that appear on hover, and now sits on the left. Storage (#388bfd) was a second blue beside
 Foundry Models (#58a6ff) and is now pink (#f778ba).
+
+## 100. Rule fixes from the 16 November audit (16 Nov 2026)
+
+An audit of `tools/redact_feed.py` on 16 Nov, done with invented sentences, found five rules that matched more, or
+something other, than their labels say (the handoff's package 0, items a to e). Each was confirmed here on invented
+sentences before it was changed, and each now has cases in a new test, `tools/test_rules.py` (51 cases: outcome rules,
+the partial test, the crisis theme, what a clarification asked for, work status). The old rules fail 19 of them, the
+audit's findings exactly. The test runs in the pre-commit hook when the rules or the test change, and in the deploy.
+
+- **Crisis language** (safety 2026.11.16-1). "end (my|it all|my life)" matched "end my tenancy / lease / contract"; it now
+  needs "end my life" or "end it all", and adds "killing myself", "take my (own) life", "no reason to live", "better off
+  dead", "harm(ing) myself". The list is the analyst's to confirm. **82 questions became 48**: 34 were not crisis
+  language. The findings report no longer compares the count with the §72 record, which was read under the old rule.
+- **Partial** (outcome rules 2026.11.16-1). The partial test has its own list (`PARTIAL`): "unable to find" counts only
+  after "I" ("unable to find work" is content), and "does not (currently) provide / have" only with the information as
+  subject ("does not provide cover" is content). The not-found test for uncited answers is unchanged. Partials
+  16,211 → 15,044 (−1,167): `nf.does_not_provide` 2,433 → 1,233, `nf.unable_to_find` 6 → 0; the rest moved between
+  phrases where an answer carried two. Cited answers are unchanged (123,318), so cited-with-no-gap-flagged rises by the
+  same amount: from 15 Sep to 2 Nov it is 61.8% of scored answers (was 60.6%), partial 20.7% (21.7%); 2 Jul to 13 Sep
+  80.1% (79.1%), partial 12.0% (12.9%). The handoff's reference figures predate this and move accordingly.
+- **Clarification** (same version). "more detail" and "which scheme / payment" count only in a sentence ending in a
+  question mark, so "For more detail, contact your local Intreo centre." is no longer a clarification. Clarifications
+  7,644 → 7,432 (−212): `cl.more_detail` 349 → 7, `cl.which_scheme` 14 → 6, and some answers moved to the phrase they
+  also carried. The 212 went to out of scope (+143, the feed's own flag) and uncited (+68); scored answers fell by 144.
+- **What a clarification asked for** (derivation 2026.11.16-1). "scheme" repeated the clarification rule's own phrases,
+  so 7,424 of 7,427 counted as asking which scheme. It now means which scheme or option ("which scheme / one / of these
+  / type of / option", "do you mean", "are you asking about"): 5,006 of 7,251 (69%). A clarification naming no class was
+  already counted as `(none)`; the page now shows it as "unspecified" (1,981, 27%). The handoff proposed a new
+  `unspecified` class; the existing `(none)` row is that class, so no column changed.
+- **Work status** (same version). "not working" needs the first person ("I am / I'm / I've been not working"), so "my
+  heating is not working" no longer reads as unemployed: 1,416 → 1,259 questions over the whole period. The page's
+  card "What people say about themselves" is now "Details mentioned in the question", since a county or an age in a
+  question may be someone else's.
+
+The page's phrase labels on Answer wording say where a partial phrase is narrowed. Versions: outcome rules, safety and
+derivation are 2026.11.16-1 (`make_lexicon.py` mirrors the derivation); intent and style unchanged. Package 0's other
+items (0f to 0i, page labels, the all-questions denominator, figures by kind, generic aliases) follow separately.
+
+Checked: `tools/test_rules.py` 51 of 51, and 32 of 51 against the previous rules; the refresh on the five feeds
+(fetch skipped: no page text changed) with the audit's feed recount 181 passed, 0 failed; files-only audit 161 passed;
+Ask bar 311 of 311; guard 34 of 34; the before and after counts above from the committed and refreshed files; the
+Questions, Answer wording and Quality views load with no errors, and the clarification card shows the unspecified row.

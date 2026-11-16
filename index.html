@@ -5293,9 +5293,9 @@ function renderPane(id){
 // answers (list lines, hedges, signposting, question marks, links). A shift in the phrase mix on a date with a model
 // change is the model's new wording; a shift with no model change in the billing is the trace of a prompt change.
 // It shows THAT the wording changed, not whether the outcome labels are right: that needs the hand-labelled sample.
-const RULE_TXT={'nf.couldnt_find':'“couldn’t find”','nf.could_not_find':'“could not find”','nf.wasnt_able':'“wasn’t able to find”','nf.unable_to_find':'“unable to find”',
-  'nf.no_specific_info':'“no specific information”','nf.not_find_specific':'“not find specific”','nf.dont_have_info':'“don’t have (specific) information”','nf.does_not_provide':'“does not (currently) provide / have”',
-  'cl.could_you':'“could you clarify / tell me / let me know”','cl.what_you_mean':'“what you mean”','cl.more_detail':'“more detail”','cl.which_scheme':'“which scheme / payment”',
+const RULE_TXT={'nf.couldnt_find':'“couldn’t find”','nf.could_not_find':'“could not find”','nf.wasnt_able':'“wasn’t able to find”','nf.unable_to_find':'“unable to find” (a partial only after “I”)',
+  'nf.no_specific_info':'“no specific information”','nf.not_find_specific':'“not find specific”','nf.dont_have_info':'“don’t have (specific) information”','nf.does_not_provide':'“does not (currently) provide / have” (a partial only with the information as subject)',
+  'cl.could_you':'“could you clarify / tell me / let me know”','cl.what_you_mean':'“what you mean”','cl.more_detail':'“more detail …?”','cl.which_scheme':'“which scheme / payment …?”',
   'oos.specialise':'“specialise in providing information”','oos.specialize':'“specialize in providing information”','oos.cant_help_topic':'“can’t help with that topic”','oos.not_able_topic':'“not able to help with that topic”','oos.outside_scope':'“outside (the) scope”','oos.flagged':'flagged by AskCI, no phrase',
   'gr.hello':'opens “hello” / “hi”','gr.how_can_i_help':'“how can I help”','gr.welcome':'“you’re welcome”','gr.glad_to_help':'“glad to help”','gr.glad_to_hear':'“glad to hear”','gr.glad_you':'“glad you”','gr.glad_i_could':'“glad I could”',
   'err.empty':'empty response','uncited':'no citation and no rule phrase','cited':'cited, no not-found phrase'};
@@ -6692,7 +6692,7 @@ function renderAsked(D,S){
   const pageRow=([u,o])=>`<tr style="border-bottom:1px solid var(--b2)">${td(`<a href="${u}" target="_blank" rel="noopener" title="${u}" style="color:${C.acc};text-decoration:none">${ciPageTitle(u)}</a> <span style="color:var(--muted)">· ${o.cat}${o.isHub?' · hub':''}</span>`,{left:true})}${td(num(o.n))}${td(cell(o.same,o.n))}${td(cell(o.sameCat,o.n))}${td(cell(o.other,o.n))}${td(cell(o.nf,o.n),{style:o.n&&o.nf/o.n>=0.15?'color:var(--red);font-weight:600':''})}${td(cell(o.cl,o.n))}</tr>`;
   const ap30=apRows.filter(([,o])=>o.n>=30),byNf=[...ap30].sort((x,y)=>y[1].nf/y[1].n-x[1].nf/x[1].n).slice(0,ROW_CAP),byMiss=[...ap30].sort((x,y)=>x[1].same/x[1].n-y[1].same/y[1].n).slice(0,ROW_CAP);
   const tot2=k=>apRows.reduce((s,[,o])=>s+o[k],0);
-  // Layer 2 (brief §75): what people say about themselves, and what the clarification asked for against it
+  // Layer 2 (brief §75): details mentioned in the question (a county or an age may be someone else's; brief §100), and what the clarification asked for against it
   let sitCard='',askCard='';
   const tr3=cells=>`<tr style="border-bottom:1px solid var(--b2)">${cells}</tr>`;
   const tbl3=(head,body)=>`<div class="tbl-wrap"><table style="width:100%;border-collapse:collapse"><thead><tr style="border-bottom:1px solid var(--b2)">${head}</tr></thead><tbody>${body}</tbody></table></div>`;
@@ -6704,7 +6704,7 @@ function renderAsked(D,S){
     const HH={children:'children at home',partner:'a partner or spouse',alone:'living alone, widowed or separated'},SH={letter:'a pasted letter or form',multi:'more than one question',url:'a link pasted in'};
     const sections=[['A county named',grp('county:').slice(0,10).map(([f,a])=>row3(catLabel(f.slice(7)),a))],['An age given',grp('age:').map(([f,a])=>row3(f.slice(4),a))],['Household',grp('household:').map(([f,a])=>row3(HH[f.slice(10)]||f,a))],['Work',grp('work:').map(([f,a])=>row3(f.slice(5),a))],['A payment they already receive',S3.payment_on?[row3('names a payment they are on',S3.payment_on)]:[]],['The year asked about',grp('year:').map(([f,a])=>row3(f.slice(5),a))],['How the question was written',grp('shape:').map(([f,a])=>row3(SH[f.slice(6)]||f,a))]];
     const secHtml=sections.map(([h,rows])=>rows.length?`<tr><td colspan="6" style="padding:10px 10px 2px;font-size:var(--t-xs);color:var(--muted);text-transform:uppercase;letter-spacing:.08em">${h}</td></tr>`+rows.join(''):'').join('');
-    sitCard=`<div class="card"><div class="card-title">What people say about themselves<span class="card-title-note">classes read from the typed question, never the words · ${spanLabel(from,to)}</span></div>
+    sitCard=`<div class="card"><div class="card-title">Details mentioned in the question<span class="card-title-note">classes read from the typed question, never the words · ${spanLabel(from,to)}</span></div>
       <div class="grid4" style="margin-bottom:12px">
         ${uxTile(pc(anyS.Turns,typedT),'Questions giving a personal detail',`${num(anyS.Turns)} of ${num(typedT)} typed questions · a county, an age, a household, a work status or a payment`,C.acc)}
         ${uxTile(pc(anyS.NotFound,anyS.Turns),'Not found, when a detail was given',`against ${pc(noS.NotFound,noS.Turns)} when none was`,C.red)}
@@ -6717,8 +6717,9 @@ function renderAsked(D,S){
   if(hasAsk){
     const A3={};months.forEach(m=>(QASK[m]||[]).forEach(r=>{const a=A3[r.asks]||(A3[r.asks]={0:0,1:0});a[+r.given]+=r.Turns||0;}));
     const any=A3['(any)']||{0:0,1:0},none=A3['(none)']||{0:0,1:0},clar=any[0]+any[1]+none[0]+none[1];
-    const LBLA={county:'where they live',age:'their age',payment:'their payment or income',status:'their immigration status or nationality',household:'their household',employment:'their work',dates:'a date or duration',scheme:'which scheme they mean'},GIVABLE=new Set(['county','age','payment','household','employment']);
-    const rowsA=Object.entries(A3).filter(([k])=>!k.startsWith('(')).sort((a,b)=>(b[1][0]+b[1][1])-(a[1][0]+a[1][1])).map(([k,a])=>{const n=a[0]+a[1];return tr3(td(LBLA[k]||k,{left:true})+td(num(n))+td(pc(n,clar))+td(GIVABLE.has(k)?num(a[1]):'—')+td(GIVABLE.has(k)?pc(a[1],n):'—'));}).join('');
+    const LBLA={county:'where they live',age:'their age',payment:'their payment or income',status:'their immigration status or nationality',household:'their household',employment:'their work',dates:'a date or duration',scheme:'which scheme or option they mean'},GIVABLE=new Set(['county','age','payment','household','employment']);
+    const rowsA=Object.entries(A3).filter(([k])=>!k.startsWith('(')).sort((a,b)=>(b[1][0]+b[1][1])-(a[1][0]+a[1][1])).map(([k,a])=>{const n=a[0]+a[1];return tr3(td(LBLA[k]||k,{left:true})+td(num(n))+td(pc(n,clar))+td(GIVABLE.has(k)?num(a[1]):'—')+td(GIVABLE.has(k)?pc(a[1],n):'—'));}).join('')
+      +(none[0]+none[1]?tr3(td('unspecified: no detail the classes name',{left:true})+td(num(none[0]+none[1]))+td(pc(none[0]+none[1],clar))+td('—')+td('—')):'');
     const giv=Object.entries(A3).filter(([k])=>GIVABLE.has(k)),givAsk=giv.reduce((s,[,a])=>s+a[0]+a[1],0),givYes=giv.reduce((s,[,a])=>s+a[1],0);
     const P3={};months.forEach(m=>(QPERS[m]||[]).forEach(r=>{P3[r.given+r.pers]=(P3[r.given+r.pers]||0)+(r.Answers||0);}));
     const pg=(P3['11']||0)/Math.max((P3['10']||0)+(P3['11']||0),1),pn=(P3['01']||0)/Math.max((P3['00']||0)+(P3['01']||0),1);
