@@ -107,7 +107,10 @@ refresh; the single commands remain for repairs.
 Also local, not part of a refresh: `make_label_sample.py` and `score_labels.py` (the labelling sheet and its scoring,
 section 9), `answer_templates.py --discover` and `--org-counts` (finding fixed sentences and counting organisations,
 counts only), `prompt_fingerprint.py` and `check_rules_vs_prompts.py` (the prompts, local), `same_question.py`,
-`make_clicks.py` (GA4 click exports to the two click files), `redact_costs.py` (run by the workflow too).
+`make_clicks.py` (GA4 click exports to the two click files), `redact_costs.py` and `clean_ga4.py` (a cost or analytics
+export is redacted or cleaned before it is committed; the hook and the deploy refuse one that is not, brief §108),
+`history_scan.py` (every file version in the history, by path and count) and `history_rewrite.py` (the analyst's
+history clean-up, brief §108).
 
 **The derivation changelog** (one line per bump, in `redact_feed.py`): 2026.10.24-1 topic layer, housing; -2 fixed
 wording; -3 organisations; -4 figures against snapshots; -5 five more topic tables; -6 layer 2 (situation, asks,
@@ -310,14 +313,16 @@ dated by the fixed wording, 4 candidate chip changes, launches and observed chan
 
 | Check | Where | Count at this commit |
 |---|---|---|
-| Data audit, files-only (schema, cross-file sums, bounds, floors, versions, lexicon, register, canary, privacy sweep, cost labels) | `tools/audit_data.py --files-only`, run by the workflow | 161 pass, 0 fail, 23 notes |
+| Data audit, files-only (schema, cross-file sums, bounds, floors, versions, lexicon, register, canary, privacy sweep, cost labels, published-file hygiene) | `tools/audit_data.py --files-only`, run by the workflow | 172 pass, 0 fail, 23 notes |
 | Data audit with the feed recount | `tools/audit_data.py DIR`, local | more checks; run before each refresh is committed |
-| Ask bar regression | `tools/test_ask.py`, headless Chrome, data frozen at `tests/ask_fixture_ref` (54dc360), served from `data/`; 4 minutes an attempt and one retry on a fresh profile (brief §97); fails without a browser unless `--allow-skip` | 311 pass |
-| Rule tests | `tools/test_rules.py`: invented sentences with the class each rule should give; run by the pre-commit hook when the rules change and by the deploy | 57 pass |
+| Ask bar regression | `tools/test_ask.py`, headless Chrome, data frozen at `tests/ask_fixture_ref` (54dc360), served from `data/`; 4 minutes an attempt and one retry on a fresh profile (brief §97); fails without a browser unless `--allow-skip` | 316 pass |
+| Rule tests | `tools/test_rules.py`: invented sentences with the class each rule should give; run by the pre-commit hook when the rules change and by the deploy | 70 pass |
+| Injection test | `tools/test_inject.py`: markup planted in every text value and address of every data file, every view rendered in headless Chrome; nothing may run or become an element (brief §108) | 2 passes clean |
+| Published-file scan | `tools/history_scan.py --head` in the deploy (the current tree); without `--head`, every version in the history | nothing flagged in the tree |
 | Feed-text guard | `tools/hooks/test_guard.py` | 34 cases |
 | Refresh manifest | `VERSIONS.json`, written by `tools/refresh.py`; the audit checks its versions against the files and its aggregate hashes against the committed files | one per refresh |
-| Pre-commit | `tools/hooks/pre-commit` (`git config core.hooksPath tools/hooks`): canary, costs redaction, Ask bar test on the staged page | |
-| Deploy | `.github/workflows/publish.yml`: move a root costs.csv into `data/`, redact costs, audit, rule tests, Ask bar test, stamp, fact sheet, change reports, incidents, findings, register, Pages | every step green at `76c25be` |
+| Pre-commit | `tools/hooks/pre-commit` (`git config core.hooksPath tools/hooks`): canary, costs redaction, analytics clean, Ask bar test on the staged page, rule tests | |
+| Deploy | `.github/workflows/publish.yml`: published files clean (cost redaction check, analytics clean check, tree scan; nothing is redacted after commit any more), audit, rule tests, Ask bar test, injection test, stamp, fact sheet, change reports, incidents, findings, register, Pages | every step green at `76c25be` |
 
 Visual checks are screenshots from headless Chrome against a local `http.server`; the headless `--dump-dom` path
 does not render the panes.

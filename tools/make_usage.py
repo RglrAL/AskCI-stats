@@ -178,7 +178,18 @@ def norm_url(u):
     if host == "citizensinformation.ie":
         host = "www.citizensinformation.ie"
     path = m.group(3).rstrip("/") or "/"
-    return f"https://{host}{path}"
+    out = f"https://{host}{path}"
+    if not SAFE_ADDR.match(out):   # markup, quotes or spaces in a cited address (brief §108, handoff 9c): never published
+        MALFORMED[0] += 1
+        return MALFORMED_ADDR
+    return out
+
+
+# An address is published only when it is a plain https address: host letters, digits, dots and hyphens; a path with
+# none of the characters markup or an attribute needs. Anything else is counted under one label.
+SAFE_ADDR = re.compile(r'^https://[A-Za-z0-9.-]+(?::\d+)?(?:/[^\s"\x27<>\\`{}|^]*)?$')
+MALFORMED_ADDR = "(malformed address)"
+MALFORMED = [0]
 # Category from a cited URL: citizensinformation.ie only, /en/<slug>/ or the old-site /<slug>/ with
 # underscores; the slug must be a known category or the hit is dropped (and counted).
 CAT_SEG_RE = re.compile(r'^https?://(?:www\.)?citizensinformation\.ie/(?:en/)?([^/?#]+)')
@@ -1115,6 +1126,7 @@ def main():
     hcols, hrows = hours_rows(hours, hour_sess)
     (ccols, crows), (dcols, drows) = categories_rows(cats)
     days = sorted(D)
+    print(f"cited addresses dropped as malformed (brief §108): {MALFORMED[0]}")
     print(f"{len(days)} days, {days[0]} to {days[-1]}, {sum(r[1] for r in urows)} turns, {sum(r[2] for r in urows)} conversations"
           + (", input-mode column found (voice columns included)" if has_voice else ", no input-mode column (voice columns omitted)")
           + (f", outcome columns included (rules {rules})" if has_outcome else ", no Outcome column (redact first for the outcome taxonomy)"))

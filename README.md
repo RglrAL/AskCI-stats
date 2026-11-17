@@ -27,11 +27,13 @@ On the analyst's machine only (git-ignored, never published):
 **Viewing it locally.** The page fetches its data, so it needs a server: `python3 -m http.server` in the repo, then
 open <http://localhost:8000/>. Opened straight from disk it offers to load files from the computer instead.
 
-**Publishing.** A push to `main` runs `.github/workflows/publish.yml`: it moves a root `costs.csv` into `data/` and
-removes the Azure subscription ID, audits the data files and runs the Ask bar test, and deploys to GitHub Pages only
-if both pass.
+**Publishing.** A push to `main` runs `.github/workflows/publish.yml`: it checks that every tracked cost file is
+redacted, audits the data files, runs the rule and Ask bar tests, and deploys to GitHub Pages only if all pass.
 
-**A new Azure cost export** goes to `data/costs.csv`. One uploaded to the repo root is moved there by the deploy.
+**A new Azure cost export** is redacted on the analyst's machine before it is committed:
+`python3 tools/redact_costs.py <export.csv> -o data/costs.csv`. **Never upload a raw export through the GitHub web
+page**: that skips the pre-commit hook, and once committed the file is public in the history even though the deploy
+then fails. Website analytics exports are cleaned the same way before commit (`tools/clean_ga4.py`).
 
 **A data refresh** runs on the analyst's machine with `tools/refresh.py`, given the feed exports (see
 `docs/TECH_BRIEF.md`, section 4). The feed exports and review folders under `exports/` are git-ignored.

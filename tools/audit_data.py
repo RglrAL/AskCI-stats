@@ -657,6 +657,34 @@ check('events.json: valid statuses and kinds', all(e['status'] in ('confirmed', 
 launch = [e for e in E if e['kind'] == 'launch' and e['status'] == 'confirmed']
 print('confirmed launch events:', [(e['start'], e['title']) for e in launch])
 
+# ── 10b. published-file hygiene (brief §108, handoff 9a-9c) ──────────────────
+sys.path.insert(0, REPO + '/tools')
+import redact_costs as _RC, clean_ga4 as _CG
+_SAFE_ADDR = re.compile(r'^https://[A-Za-z0-9.-]+(?::\d+)?(?:[/?#][^\s"\x27<>\\`{}|^]*)?$')
+_LABEL = re.compile(r'^\([a-z ]+\)$')
+_unsafe, _markup, _ncols = [], [], 0
+for _f in sorted(glob.glob(DATA + '/**/*.csv', recursive=True)):
+    if '/ga4/Ask-ci-click-throughs' in _f: continue   # raw exports with comment lines; checked by clean_ga4 below
+    _rel = os.path.relpath(_f, DATA)
+    for _r in csv.DictReader(open(_f, encoding='utf-8-sig')):
+        for _k, _v in _r.items():
+            if _v is None or _k is None: continue
+            if re.search(r'[<>"`\\]', _v): _markup.append(_rel)
+            if re.fullmatch(r'(?i)url|page|address|link', _k.strip()) and _v and re.match(r'^\s*(?:[a-z][a-z0-9+.-]*:(?!\s)|(?:javascript|data|vbscript)\s*:)', _v, re.I) and not _SAFE_ADDR.match(_v):
+                _unsafe.append(_rel)
+check('no CSV value carries markup or attribute characters (< > " ` \\): the page relies on it (brief §108)', not _markup,
+      ', '.join(f'{f} ({n})' for f, n in C.Counter(_markup).most_common(5)))
+check('every address in an address column is a plain https address or a label (brief §108)', not _unsafe,
+      ', '.join(f'{f} ({n})' for f, n in C.Counter(_unsafe).most_common(5)))
+_ga = [r['Page path and screen class'] for r in rd('ga4/categories-and-views.csv')]
+check('analytics paths: each is a plain /en/ or /ga/ address or "(other paths)" (brief §108, run tools/clean_ga4.py)',
+      all(p == _CG.OTHER or _CG.PLAIN_PATH.match(p) for p in _ga), f'{sum(1 for p in _ga if not (p == _CG.OTHER or _CG.PLAIN_PATH.match(p)))} paths')
+_dirty = [os.path.basename(f) for f in glob.glob(DATA + '/ga4/Ask-ci-click-throughs*.csv') if _CG.clean(f)[0] != _CG.clean(f)[1]]
+check('click-through exports: page locations carry no tracking IDs or non-site paths (brief §108)', not _dirty, ', '.join(_dirty))
+_costs = [f for f in glob.glob(DATA + '/*.csv') if 'cost' in os.path.basename(f).lower()]
+_bad_costs = [os.path.basename(f) for f in _costs if subprocess.run([sys.executable, REPO + '/tools/redact_costs.py', f, '--check'], capture_output=True).returncode]
+check('cost files are redacted: no subscription ID or resource name (brief §108)', not _bad_costs, ', '.join(_bad_costs))
+
 # ── 11. Sanity: outliers ─────────────────────────────────────────────────────
 for d in days:
     u = U[d]; q = I(u['Questions'])

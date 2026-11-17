@@ -5,6 +5,7 @@
 #     Set SKIP_ASK_TESTS=1 to skip it for one commit.
 #  3. No staged file may carry the system-prompt canary line (the prompts live in the git-ignored review folder).
 #  4. A staged tools/redact_feed.py or tools/test_rules.py must pass the rule tests (tools/test_rules.py, brief §100).
+#  5. A staged website analytics export must hold plain site addresses only (tools/clean_ga4.py, brief §108).
 STAGED=$(git diff --cached --name-only --diff-filter=ACM)
 CANARY="ASKCI-PROMPT-""CANARY"
 for f in $STAGED; do
@@ -29,6 +30,16 @@ for CF in data/costs.csv costs.csv; do   # data/ since brief §97; the root, sho
     fi
   fi
 done
+
+echo "$STAGED" | grep -E '^data/ga4/(categories-and-views|Ask-ci-click-throughs.*)\.csv$' | while IFS= read -r GF; do
+  mkdir -p "$TMP/ga4"; G="$TMP/ga4/$(basename "$GF")"
+  git show ":$GF" > "$G"   # the staged version
+  if ! "$PY" "$ROOT/tools/clean_ga4.py" --check "$G" >/dev/null 2>&1; then
+    echo "pre-commit: staged $GF holds paths that are not plain site addresses, or tracking IDs." >&2
+    echo "  Run: python3 tools/clean_ga4.py \"$GF\" && git add \"$GF\"" >&2
+    exit 1
+  fi
+done || exit 1
 
 if echo "$STAGED" | grep -qxE 'tools/redact_feed.py|tools/test_rules.py'; then
   if ! "$PY" "$ROOT/tools/test_rules.py" >"$TMP/rules.log" 2>&1; then

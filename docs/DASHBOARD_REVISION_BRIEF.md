@@ -2881,3 +2881,7 @@ Checked: every view in the new groups at 1440 and 390 px (384 px wide), no error
 impact, categories, projections and register land in the right group and scroll to their part; the fold and its button;
 no "turn" left in any view's text; the glossary centred, scrolling and keeping its own word; the fact sheet builds;
 files-only audit clean; Ask bar 316 of 316.
+
+## 108. Published files and data strings on the page (17 Nov 2026)
+
+Cost and website analytics exports are cleaned before commit and checked at deploy; data strings are cleaned at load and escaped where the page writes links and labels; an injection test runs at deploy (`tools/test_inject.py`). The full entry is kept locally and follows once a follow-up step is done.

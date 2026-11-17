@@ -1,10 +1,8 @@
-# Publish the dashboard to GitHub Pages with the Azure subscription ID redacted from data/costs.csv,
-# and only when the data audit and the Ask bar regression test pass: a failing check blocks the deploy
+# Publish the dashboard to GitHub Pages only when the data passes its checks: a failing check blocks the deploy
 # and the last good version stays live (the cause is in the run's log).
-# Runs on every push to main, including "Add files via upload" from the web, which skips the
-# local pre-commit hook. The site is deployed from the redacted tree, so it never serves the ID;
-# the redacted file is then committed back so the repo's current costs.csv is clean too.
-# (Pushes made with GITHUB_TOKEN do not trigger workflows, so the commit-back does not loop.)
+# Cost exports are redacted before commit (tools/redact_costs.py, enforced by the local pre-commit hook). The workflow
+# no longer redacts after the fact: a raw file committed here is already public in the history, so the deploy fails
+# instead and the file has to be redacted and the commit removed (brief §108, handoff 9a).
 name: Publish site
 
 on:
@@ -13,7 +11,7 @@ on:
   workflow_dispatch:
 
 permissions:
-  contents: write
+  contents: read
   pages: write
   id-token: write
 
@@ -32,18 +30,19 @@ jobs:
         with:
           fetch-depth: 0   # the Ask bar test reads its frozen data from an earlier commit
 
-      # The cost export lives in data/ (brief §97). One uploaded to the repo root, the old place, is moved there first
-      # and replaces the one in data/; the move is committed back with the redaction below.
-      - name: Move a costs.csv uploaded to the root into data/
-        id: move
+      # Nothing that must not be public is in the tree (brief §108, handoff 9a-9b): every tracked cost export is
+      # redacted and none sits at the repo root, analytics exports hold plain site addresses only, and the scan finds
+      # no subscription ID, email address, IP address, local path or feed text column. Counts only, never the text.
+      - name: Published files are clean
         run: |
-          if [ -f costs.csv ]; then git mv -f costs.csv data/costs.csv; echo "moved=true" >> "$GITHUB_OUTPUT"; echo "moved costs.csv into data/"; else echo "moved=false" >> "$GITHUB_OUTPUT"; fi
-
-      - name: Redact subscription ID from data/costs.csv
-        id: redact
-        run: |
-          python3 tools/redact_costs.py data/costs.csv
-          if git diff --quiet -- data/costs.csv && [ "${{ steps.move.outputs.moved }}" != "true" ]; then echo "changed=false" >> "$GITHUB_OUTPUT"; else echo "changed=true" >> "$GITHUB_OUTPUT"; fi
+          python3 tools/history_scan.py --head
+          python3 tools/clean_ga4.py --check
+          fail=0
+          if git ls-files --error-unmatch costs.csv >/dev/null 2>&1; then echo "::error::costs.csv at the repo root: redact it locally and commit it to data/"; fail=1; fi
+          for f in $(git ls-files '*.csv' | grep -i 'cost'); do
+            if ! python3 tools/redact_costs.py "$f" --check >/dev/null 2>&1; then echo "::error::$f is not redacted: run tools/redact_costs.py on it locally"; fail=1; fi
+          done
+          exit $fail
 
       # Every file the dashboard reads has the columns it reads, and the files agree with each other
       # (the feed recount needs the feed, which never leaves the analyst's machine).
@@ -56,6 +55,10 @@ jobs:
 
       - name: Ask bar regression test
         run: python3 tools/test_ask.py
+
+      # Markup planted in every data file must not run or become an element on any view (brief §108, handoff 9c)
+      - name: Injection test
+        run: python3 tools/test_inject.py
 
       # Copied figures carry the commit of the page and of the data that made them (footer of "Copy with definition");
       # the deployed commit is the cache key for the data files.
@@ -98,13 +101,3 @@ jobs:
           path: .
       - id: deploy
         uses: actions/deploy-pages@v4
-
-      # Runs even when a check above failed, so an unredacted upload never stays in the repo.
-      - name: Commit the moved or redacted costs.csv back to main
-        if: ${{ !cancelled() && steps.redact.outputs.changed == 'true' }}
-        run: |
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add data/costs.csv   # the move, when there was one, is already staged; nothing else is (the stamp is not)
-          git commit -m "Move costs.csv into data/ and redact the Azure subscription ID (automatic)"
-          git push origin HEAD:main

@@ -2957,8 +2957,30 @@ function parseText(text){const c=text.replace(/^\uFEFF/,'');
 let _cacheKey=null;
 function cacheKey(){if(_cacheKey==null){const b=buildStamp();_cacheKey=b.build&&b.build!=='local'?b.build:String(Date.now());}return _cacheKey;}
 const dataURL=path=>'data/'+path+'?v='+cacheKey();   // the published files live in data/ (brief §97)
-async function loadCSV(path){const r=await fetch(dataURL(path));if(!r.ok)throw new Error(r.status);return parseText(await r.text())}
-function readFile(file){return new Promise((res,rej)=>{const r=new FileReader();r.onload=e=>parseText(e.target.result).then(res).catch(rej);r.onerror=rej;r.readAsText(file)})}
+// Data strings are untrusted (brief §108, handoff 9c): cited addresses come from AskCI's answers and analytics paths from
+// whatever a browser reported. Every CSV value loses the characters markup or an attribute needs (< > " ` \ and an
+// entity's &), none of which a real value carries, and a value in an address column that has a scheme but is not a
+// plain https address becomes "(malformed address)". JSON strings get the same, except regular-expression patterns.
+// The places that write HTML escape as well: escH for text and attributes, safeURL for links, jsArg for handler arguments.
+function cleanStr(v){return typeof v==='string'?v.replace(/[<>"`\\]/g,'').replace(/&(?=#|[A-Za-z][A-Za-z0-9]*;)/g,''):v}
+function safeURL(u){const s=String(u==null?'':u).trim();return /^https:\/\/[A-Za-z0-9.-]+(?::\d+)?(?:[\/?#][^\s"'<>\\`{}|^]*)?$/.test(s)?s:'#'}
+function jsArg(v){return escH(JSON.stringify(String(v==null?'':v)))}
+const ADDR_COL=/^(?:url|page|address|link)$/i;
+// a value is an address when it starts with a scheme: letters then a colon with no space after it (a title such as
+// "Schools: enrolment" is not), or a scripting scheme however it is spaced
+const HAS_SCHEME=/^\s*(?:[a-z][a-z0-9+.-]*:(?!\s)|(?:javascript|data|vbscript)\s*:)/i;
+function cleanRows(rows){
+  for(const r of rows)for(const k in r){let v=cleanStr(r[k]);
+    if(ADDR_COL.test(k)&&HAS_SCHEME.test(v||'')&&safeURL(v)==='#')v='(malformed address)';r[k]=v;}
+  return rows}
+function cleanDeep(o,k){
+  if(typeof o==='string')return /pattern|regex/i.test(k||'')?o:cleanStr(o);
+  if(Array.isArray(o))return o.map(x=>cleanDeep(x,k));
+  if(o&&typeof o==='object'){const r={};for(const kk in o)r[kk]=cleanDeep(o[kk],kk);return r}
+  return o}
+async function loadCSV(path){const r=await fetch(dataURL(path));if(!r.ok)throw new Error(r.status);return cleanRows(await parseText(await r.text()))}
+async function loadJSON(path){const r=await fetch(dataURL(path));if(!r.ok)throw new Error(r.status);return cleanDeep(await r.json())}
+function readFile(file){return new Promise((res,rej)=>{const r=new FileReader();r.onload=e=>parseText(e.target.result).then(rows=>res(cleanRows(rows))).catch(rej);r.onerror=rej;r.readAsText(file)})}
 
 function parseCosts(rows){
   const daily={},meters={},svcTotals={},svcClass={},resources={};
@@ -3208,7 +3230,7 @@ async function loadConversationFiles(){
   await loadM('question-categories-monthly.csv',{cat:'Category',source:'Source'},QCATM);hasTopics=Object.keys(QCATM).length>0;
   await loadM('question-topics-monthly.csv',{cat:'Category',topic:'Topic'},QTOPM);
   await loadM('question-intent-category-monthly.csv',{cat:'Category',intent:'Intent'},QICM);
-  try{const r=await fetch(dataURL('question-lexicon.json'));if(r.ok){const j=await r.json();if(j&&j.intents)LEXICON={version:j.version,intents:j.intents,phrases:Object.keys(j.phrases||{}).length};}}catch(e){}
+  try{{const j=await loadJSON('question-lexicon.json');if(j&&j.intents)LEXICON={version:j.version,intents:j.intents,phrases:Object.keys(j.phrases||{}).length};}}catch(e){}
   // intent journeys and what follows a setback, by the question's intent (brief §69)
   try{(await loadCSV('intent-journeys-monthly.csv')).forEach(r=>{const m=String(r['Month']||'').trim();if(!/^\d{4}-\d{2}$/.test(m))return;(IJOUR[m]||(IJOUR[m]=[])).push({from:String(r['From']||'other'),to:String(r['To']||'other'),n:nInt(r['Turns'])});});}catch(e){}
   try{(await loadCSV('setback-intents-monthly.csv')).forEach(r=>{const m=String(r['Month']||'').trim();if(!/^\d{4}-\d{2}$/.test(m))return;(SETBI[m]||(SETBI[m]=[])).push({sb:r['Setback'],intent:String(r['Intent']||'other'),n:nInt(r['Turns']),ended:nInt(r['Ended']),same:nInt(r['SameIntentNext']),other:nInt(r['OtherIntentNext'])});});}catch(e){}
@@ -3216,7 +3238,7 @@ async function loadConversationFiles(){
   // the content-gap register (brief §73): evidence rows rebuilt by tools/make_register.py, a status file people edit, one config
   try{GAPS=(await loadCSV('content-gaps.csv')).filter(r=>r['kind']).map(r=>({kind:r['kind'],page:r['page']||'',cat:r['category']||'',intent:r['intent']||'',evidence:r['evidence']||'',asks:nInt(r['asks']),rate:parseFloat(r['rate'])||0,priority:nInt(r['priority']),team:r['team']||'',period:r['period']||'',rules:r['rules_version']||'',lex:r['lexicon_version']||'',built:r['built']||''}));GAPS_OLD=GAPS.filter(g=>g.kind==='old');GAPS=GAPS.filter(g=>g.kind!=='old');}catch(e){}   // old: outside the register (brief §103)
   try{(await loadCSV('content-gaps-status.csv')).forEach(r=>{if(!r['kind']||r['kind']==='_comment')return;GAPSTAT[r['kind']+'|'+(r['page']||'')]={owner:r['owner']||'',status:r['status']||'',raised:r['raised']||'',expected:r['expected_effect']||'',changed:r['changed']||'',closed:r['closed']||'',note:r['note']||''};});}catch(e){}
-  try{const r=await fetch(dataURL('register-config.json'));if(r.ok)REGCFG=await r.json();}catch(e){}
+  try{REGCFG=await loadJSON('register-config.json');}catch(e){}
   try{(await loadCSV('categories-daily.csv')).forEach(r=>{const d=parseDate(r['Date']);if(!d)return;(CATDAY[d]||(CATDAY[d]={}))[String(r['Category']||'').trim()]=nInt(r['Citations']);});}catch(e){}
   hasCatDay=Object.keys(CATDAY).length>0;
   try{(await loadCSV('latency-buckets-daily.csv')).forEach(r=>{const d=parseDate(r['Date']);if(!d)return;const k=r['Kind'],b=r['Bucket'];const o=LATB[d]||(LATB[d]={});(o[k]||(o[k]={}))[b]={t:nInt(r['Turns']),sum:nInt(r['LatencySumMs'])};});}catch(e){}
@@ -3224,8 +3246,8 @@ async function loadConversationFiles(){
   try{(await loadCSV('outcome-rules-daily.csv')).forEach(r=>{const d=parseDate(r['Date']);if(!d)return;(ORULES[d]||(ORULES[d]={}))[String(r['Rule']||'').trim()]=nInt(r['Turns']);});}catch(e){}
   try{(await loadCSV('answer-style-daily.csv')).forEach(r=>{const d=parseDate(r['Date']);if(!d)return;const o={};Object.entries(r).forEach(([k,v])=>{if(k!=='Date'&&k!=='Outcome')o[k]=nInt(v);});(OSTYLE[d]||(OSTYLE[d]={}))[String(r['Outcome']||'').trim()]=o;});}catch(e){}
   try{(await loadCSV('answer-templates-daily.csv')).forEach(r=>{const d=parseDate(r['Date']);if(!d)return;const o={};Object.entries(r).forEach(([k,v])=>{if(k!=='Date'&&k!=='Template')o[k]=nInt(v);});(OTMPL[d]||(OTMPL[d]={}))[String(r['Template']||'').trim()]=o;});hasTmpl=Object.keys(OTMPL).length>0;}catch(e){}
-  try{const j=await(await fetch(dataURL('answer-templates.json'))).json();(j.templates||[]).forEach(t=>{TMPL_META[t.id]={family:t.family,pattern:t.pattern};});TMPL_META._version=j.derivation_version||'';(j.organisations||[]).forEach(o=>{ORG_META[o.id]={family:o.family,pattern:o.pattern};});}catch(e){}
-  try{VERSIONS=await(await fetch(dataURL('VERSIONS.json'))).json();}catch(e){VERSIONS=null;}
+  try{const j=await loadJSON('answer-templates.json');(j.templates||[]).forEach(t=>{TMPL_META[t.id]={family:t.family,pattern:t.pattern};});TMPL_META._version=j.derivation_version||'';(j.organisations||[]).forEach(o=>{ORG_META[o.id]={family:o.family,pattern:o.pattern};});}catch(e){}
+  try{VERSIONS=await loadJSON('VERSIONS.json');}catch(e){VERSIONS=null;}
   await loadM('question-language-monthly.csv',{lang:'Language'},QLANG);hasLang=Object.keys(QLANG).length>0;   // brief §106
   await loadM('question-situation-monthly.csv',{cat:'Category',flag:'Flag'},QSIT);hasSit=Object.keys(QSIT).length>0;
   await loadM('clarification-asks-monthly.csv',{asks:'Asks',given:'Given'},QASK);hasAsk=Object.keys(QASK).length>0;
@@ -3288,19 +3310,19 @@ let EVENTS={confirmed:[],candidate:[],rejected:[],detected:[]};
 function normEvent(e){
   let start=String(e.start||'').trim(),end=String(e.end||'').trim();
   if(/^\d{4}-\d{2}$/.test(start)){end=end||`${start}-${daysInMonth(start)}`;start=`${start}-01`;}
+  if(end&&!/^\d{4}-\d{2}-\d{2}$/.test(end))end='';   // an event's dates go into handlers; anything else is dropped (brief §108)
   return{...e,start,end,kind:e.kind||'other',status:e.status||'candidate',title:e.title||'(untitled)'};
 }
 // prompts.json: a set-level fingerprint of the system prompts the outcome rules were checked against (brief §60). The
 // prompts themselves stay on the analyst's machine; the page shows the snapshot date and whether it is known current.
 let PROMPTS=null;
 async function loadPrompts(){
-  try{const r=await fetch(dataURL('prompts.json'));if(!r.ok)return;const j=await r.json();if(j&&j.snapshot)PROMPTS=j;}catch(e){}
+  try{const j=await loadJSON('prompts.json');if(j&&j.snapshot)PROMPTS=j;}catch(e){}
 }
 async function loadEvents(){
   try{
-    const r=await fetch(dataURL('events.json'));if(!r.ok)return;
-    const j=await r.json();
-    const list=(Array.isArray(j)?j:(j.events||[])).map(normEvent).sort((a,b)=>a.start.localeCompare(b.start));
+    const j=await loadJSON('events.json');
+    const list=(Array.isArray(j)?j:(j.events||[])).map(normEvent).filter(e=>/^\d{4}-\d{2}-\d{2}$/.test(e.start)).sort((a,b)=>a.start.localeCompare(b.start));
     EVENTS.confirmed=list.filter(e=>e.status==='confirmed');
     EVENTS.candidate=list.filter(e=>e.status==='candidate');
     EVENTS.rejected=list.filter(e=>e.status==='rejected');
@@ -4383,24 +4405,24 @@ function toggleEventsPopover(evt){
 function renderEventsList(){
   const list=document.getElementById('events-list');if(!list)return;
   const shortD=iso=>iso?`${String(+iso.slice(8)).padStart(2,'0')} ${MON_S[+iso.slice(5,7)-1]}`:'';
-  const tip=e=>((e.detail||'')+(e.evidence?' · evidence: '+e.evidence:'')).replace(/"/g,'&quot;');
+  const tip=e=>escH((e.detail||'')+(e.evidence?' · evidence: '+e.evidence:''));
   const sec=(title,rows)=>rows?`<div class="events-sec-title">${title}</div>${rows}`:'';
   const shared=confirmedEvents().map(e=>`<div class="event-row" title="${tip(e)}">
       <div class="event-swatch" style="background:${eventColor(e)}"></div>
       <div class="event-date">${shortD(e.start)}${e.end&&e.end!==e.start?'–'+shortD(e.end):''}</div>
-      <div class="event-label" title="${e.title}">${e.title}</div>
+      <div class="event-label" title="${escH(e.title)}">${escH(e.title)}</div>
       <span class="event-kind">${e.kind}</span>
     </div>`).join('');
   const cands=[...(EVENTS.candidate||[]),...((DATA&&DATA.detected)||[])].sort((a,b)=>a.start.localeCompare(b.start)).map(e=>`<div class="event-row" title="${tip(e)}">
       <div class="event-swatch" style="background:transparent;border:1.5px dashed ${eventColor(e)}"></div>
       <div class="event-date">${shortD(e.start)}</div>
-      <div class="event-label" title="${e.title}">${e.title}</div>
+      <div class="event-label" title="${escH(e.title)}">${escH(e.title)}</div>
       <span class="event-kind">${e.status==='detected'?'detected':'candidate'}</span>
     </div>`).join('');
   const mine=PREFS.annotations.map(a=>`<div class="event-row">
       <div class="event-swatch" style="background:${annoColor(a.color)}"></div>
       <div class="event-date">${shortD(a.date)}</div>
-      <div class="event-label" title="${a.label}">${a.label}</div>
+      <div class="event-label" title="${escH(a.label)}">${escH(a.label)}</div>
       <button class="event-del" onclick="removeAnnotationFromUI('${a.id}')" aria-label="Delete event"><i data-lucide="x" class="i-sm" style="width:12px;height:12px"></i></button>
     </div>`).join('');
   list.innerHTML=sec('Shared · confirmed · from events.json',shared||'<div class="events-empty">none loaded</div>')
@@ -5904,7 +5926,7 @@ function renderOverview(D,S){
   else if(!wc.statements.length)ins.push(insight('good',`No candidate metric moved beyond the materiality thresholds (ratios ${CONFIG.materiality.ratio_pct}% or ${CONFIG.materiality.ratio_pence}p per turn; totals ${CONFIG.materiality.total_pct}%) between ${wc.A.span} and ${wc.B.span}.`));
   if(wc.fallback)ins.push(insight('',`Note: ${wc.fallback}.`));
   wc.statements.forEach(s=>ins.push(insight('warn',wcChip(s)+s.text)));
-  wc.events.forEach(e=>ins.push(insight('',`Event in range: <b>${e.title}</b>${e.detail?` — ${e.detail}`:''}`)));
+  wc.events.forEach(e=>ins.push(insight('',`Event in range: <b>${escH(e.title)}</b>${e.detail?` — ${escH(e.detail)}`:''}`)));
   if(S.fixedShare!=null)ins.push(insight('',`Fixed share over all settled days: <span class="hl-b">${S.fixedShare.toFixed(0)}%</span> — fixed ${gbp(S.fixedTotal,0)}, variable ${gbp(S.variableTotal,0)}${S.unclassifiedTotal>0?`, unclassified ${gbp(S.unclassifiedTotal,2)}`:''}.`));
   document.getElementById('ov-ins').innerHTML=ins.join('');
 }
@@ -5991,8 +6013,8 @@ function renderTimeline(D,S,chartTarget,detailTarget){
       const dayEvs=evByDate[d.date]||[];
       const dayAnnos=(PREFS.annotations||[]).filter(a=>a.date===d.date);
       const badges=[];
-      dayEvs.forEach(e=>badges.push(`<span class="row-badge" style="background:${eventColor(e)}22;color:${eventColor(e)};border-color:${eventColor(e)}44" title="${e.title}">${e.title.length>14?e.title.slice(0,12)+'…':e.title}</span>`));
-      dayAnnos.forEach(a=>badges.push(`<span class="row-badge" style="background:${annoColor(a.color)}22;color:${annoColor(a.color)};border-color:${annoColor(a.color)}44" title="${a.label}">${a.label.length>14?a.label.slice(0,12)+'…':a.label}</span>`));
+      dayEvs.forEach(e=>badges.push(`<span class="row-badge" style="background:${eventColor(e)}22;color:${eventColor(e)};border-color:${eventColor(e)}44" title="${escH(e.title)}">${escH(e.title.length>14?e.title.slice(0,12)+'…':e.title)}</span>`));
+      dayAnnos.forEach(a=>badges.push(`<span class="row-badge" style="background:${annoColor(a.color)}22;color:${annoColor(a.color)};border-color:${annoColor(a.color)}44" title="${escH(a.label)}">${escH(a.label.length>14?a.label.slice(0,12)+'…':a.label)}</span>`));
       const status=!d.hasCost?'<span style="color:var(--dim)">no billing</span>':d.settled?'settled':`<span style="color:${C.amber}">provisional</span>`;
       return`<tr class="${badges.length?'event-row':''}" onclick="openDayPanel('${d.date}')" style="cursor:pointer" title="Click to see day detail">
         <td class="col-date"><div class="date-cell"><span class="date-label">${d.label}</span>${badges.length?`<span class="date-badges">${badges.join('')}</span>`:''}</div></td>
@@ -6525,7 +6547,7 @@ function appendCategoryDetail(D){
     const short=u=>u.replace(/^https?:\/\/(www\.)?citizensinformation\.ie\/en\//,'').replace(/^https?:\/\//,'');
     h+=`<div class="card"><div class="card-title">Top cited pages<span class="card-title-note">months overlapping the range (${months.map(fmtMonth).join(', ')}) · ${num(internal.length)} distinct citizensinformation.ie pages cited · external citations ${rateText(ext,total,2)} (${Object.entries(domains).sort((a,b)=>b[1]-a[1]).slice(0,4).map(([d,n])=>d+' '+num(n)).join(', ')||'none'})</span></div>
       <div class="tbl-wrap"><table style="width:100%;border-collapse:collapse"><thead><tr style="border-bottom:1px solid var(--b2)">${th('Page',false)}${th('Category',false)}${th('Citations')}${th('Share')}</tr></thead>
-      <tbody${showAttr(10,list.length)}>${list.slice(0,ROW_CAP).map(([u,o])=>`<tr style="border-bottom:1px solid var(--b2)">${td(`<a href="${u}" target="_blank" rel="noopener" style="color:${C.acc};text-decoration:none">${short(u)}</a>`,'',false)}${td(o.cat?catLabel(CAT_ALIAS[o.cat]||o.cat):'','var(--muted)',false)}${td(num(o.n))}${td(rateText(o.n,total,2))}</tr>`).join('')}</tbody></table></div>
+      <tbody${showAttr(10,list.length)}>${list.slice(0,ROW_CAP).map(([u,o])=>`<tr style="border-bottom:1px solid var(--b2)">${td(`<a href="${escH(safeURL(u))}" target="_blank" rel="noopener" style="color:${C.acc};text-decoration:none">${escH(short(u))}</a>`,'',false)}${td(o.cat?catLabel(CAT_ALIAS[o.cat]||o.cat):'','var(--muted)',false)}${td(num(o.n))}${td(rateText(o.n,total,2))}</tr>`).join('')}</tbody></table></div>
     </div>`;
   }
   if(hasJourneys){
@@ -6745,7 +6767,7 @@ function renderClicks(D,S){
     return{pts,rate:N?K/N*100:0,win:`${fmtMonth(ms[0])}${ms.length>1?' to '+fmtMonth(ms[ms.length-1]):''}${ms[ms.length-1]===l0.slice(0,7)?', to '+fmtDate(l0):''}`};})()||{pts:[],rate:0,win:''};
   const pageRows=prow.map(r=>{const rr=r.cited?r.clicks/r.cited*100:null,flag=r.cited>=MINC&&r.clicks===0,gone=!onSite(r.u);
     return`<tr style="border-bottom:1px solid var(--b2)">
-      ${td(`<a href="${r.u}" target="_blank" rel="noopener" style="color:${C.acc};text-decoration:none">${shortCiUrl(r.u)}</a>${gone?` <span class="clk-badge" title="This address is not on the site's page list of ${fmtDate(SITEPAGES.asOf)}: an old or moved address, or a link the model got slightly wrong. Visits may be logged under the page's current address.">not on the site's page list</span>`:flag?` <span class="clk-badge" title="Cited ${num(r.cited)} times with no recorded click.">no clicks recorded</span>`:''}`,{left:true})}
+      ${td(`<a href="${escH(safeURL(r.u))}" target="_blank" rel="noopener" style="color:${C.acc};text-decoration:none">${escH(shortCiUrl(r.u))}</a>${gone?` <span class="clk-badge" title="This address is not on the site's page list of ${fmtDate(SITEPAGES.asOf)}: an old or moved address, or a link the model got slightly wrong. Visits may be logged under the page's current address.">not on the site's page list</span>`:flag?` <span class="clk-badge" title="Cited ${num(r.cited)} times with no recorded click.">no clicks recorded</span>`:''}`,{left:true})}
       ${td(r.cat?catLabel(CAT_ALIAS[r.cat]||r.cat):'—',{left:true,col:'var(--muted)'})}
       ${td(r.cited?num(r.cited):'—')}${td(num(r.clicks))}
       <td style="padding:7px 10px;min-width:120px"><div class="cell-bar"><span style="width:${rr==null?0:Math.max(2,(r.clicks/r.cited)/maxR*100)}%"></span><b>${r.cited>=MINC||rateOK(r.clicks,r.cited).ok?(rr==null?'—':rr.toFixed(1)):'—'}</b></div></td></tr>`;}).join('');
@@ -6841,7 +6863,7 @@ function renderRegister(D,S){
   const statuses=(REGCFG&&REGCFG.statuses)||['raised'];
   const opt=(k,vals,lbl)=>`<label style="font-size:var(--t-xs);color:var(--muted);display:inline-flex;flex-direction:column;gap:4px">${lbl}<select onchange="setRegF('${k}',this.value)" style="font:inherit;font-size:var(--t-xs);padding:4px 6px;background:var(--s2);color:var(--text);border:1px solid var(--b2);border-radius:6px;max-width:220px"><option value="">All</option>${vals.map(v=>`<option value="${escH(v[0])}"${REG_F[k]===v[0]?' selected':''}>${escH(v[1])}</option>`).join('')}</select></label>`;
   const uniq=f=>[...new Set(GAPS.map(f))].filter(Boolean).sort();
-  const rows=regFiltered(),link=u=>u.startsWith('http')?`<a href="${escH(u)}" target="_blank" rel="noopener" style="color:${C.acc}">${escH(ciPageTitle?ciPageTitle(u):u.split('/').pop())}</a>`:`<b>${escH(u)}</b>`;
+  const rows=regFiltered(),link=u=>u.startsWith('http')?`<a href="${escH(safeURL(u))}" target="_blank" rel="noopener" style="color:${C.acc}">${escH(ciPageTitle?ciPageTitle(u):u.split('/').pop())}</a>`:`<b>${escH(u)}</b>`;
   const td=(v,o={})=>`<td style="text-align:${o.left?'left':'right'};padding:7px 8px;font-family:'DM Sans',sans-serif;font-size:var(--t-xs);vertical-align:top;${o.style||''}">${v}</td>`;
   const th=(t,l)=>`<th style="text-align:${l?'left':'right'};padding:7px 8px;font-size:var(--t-xs);color:var(--muted);text-transform:uppercase;letter-spacing:.06em;white-space:nowrap">${t}</th>`;
   const catL=c=>!c||c.startsWith('(')?c:catLabel(CAT_ALIAS[c]||c);
@@ -6889,7 +6911,7 @@ function renderPages(D,S){
   const td=(v,o={})=>`<td style="text-align:${o.left?'left':'right'};padding:7px 10px;font-family:${o.left?'inherit':"'DM Mono',monospace"};font-size:var(--t-xs)">${v}</td>`;
   const th=(t,left)=>`<th style="text-align:${left?'left':'right'};padding:7px 10px;font-size:var(--t-xs);color:var(--muted);text-transform:uppercase;letter-spacing:.08em;white-space:nowrap">${t}</th>`;
   const table=list=>`<div class="tbl-wrap"><table style="width:100%;border-collapse:collapse"><thead><tr style="border-bottom:1px solid var(--b2)">${th('Page',true)}${th('Site views')}${th('AskCI citations')}${th('Per 1,000 views')}${th('vs typical')}</tr></thead><tbody>${
-    list.slice(0,PAGES_LIST).map(r=>`<tr style="border-bottom:1px solid var(--b2)">${td(`<a href="${r.u}" target="_blank" rel="noopener" title="${r.u}" style="color:${C.acc};text-decoration:none">${ciPageTitle(r.u)}</a> <span style="color:var(--muted)">· ${ciPageSection(r.u)}</span>`,{left:true})}${td(num(r.v))}${td(num(r.c))}${td(r.r==null?'—':r.r.toFixed(1))}${td(r.r==null||!typ?'—':fx(r.r/typ))}</tr>`).join('')}</tbody></table></div>`;
+    list.slice(0,PAGES_LIST).map(r=>`<tr style="border-bottom:1px solid var(--b2)">${td(`<a href="${escH(safeURL(r.u))}" target="_blank" rel="noopener" title="${escH(r.u)}" style="color:${C.acc};text-decoration:none">${escH(ciPageTitle(r.u))}</a> <span style="color:var(--muted)">· ${escH(ciPageSection(r.u))}</span>`,{left:true})}${td(num(r.v))}${td(num(r.c))}${td(r.r==null?'—':r.r.toFixed(1))}${td(r.r==null||!typ?'—':fx(r.r/typ))}</tr>`).join('')}</tbody></table></div>`;
   el.innerHTML=`
     <div class="reach-note"><i data-lucide="info" class="i-sm"></i><span><b>Where AskCI and the site differ.</b> Site views are GA4 page views (visitors who accept analytics cookies, so a minimum); citations count every AskCI answer. Both are monthly, so this covers <b>${span}</b>, the months overlapping the range. A low or high ratio is a place to look, not a verdict: some pages are browsed for a quick fact rather than asked about.</span></div>
     <div class="grid4" style="margin-bottom:14px">${tiles}</div>
@@ -7034,8 +7056,8 @@ function risersCardHTML(){
   const th=(t,l)=>`<th style="text-align:${l?'left':'right'};padding:6px 8px;font-size:var(--t-xs);color:var(--muted);text-transform:uppercase;letter-spacing:.06em;white-space:nowrap">${t}</th>`;
   const nfp=v=>v==null?'—':(v*100).toFixed(0)+'%';
   const head=th('',true)+th('Before')+th('After')+th('Per 1,000')+th('Share ×')+th('Not found');
-  const pRow=x=>`<tr style="border-bottom:1px solid var(--b2)">${td(`<a href="${escH(x.url)}" target="_blank" rel="noopener" style="color:${C.acc}">${escH(x.label)}</a>`,{left:true})}${td(num(x.before))}${td(num(x.after))}${td(x.perK.toFixed(1))}${td(riseRatio(x))}${td(nfp(x.nf))}</tr>`;
-  const tRow=x=>`<tr style="border-bottom:1px solid var(--b2)">${td(`<button type="button" style="all:unset;cursor:pointer;color:${C.acc};text-decoration:underline;text-underline-offset:2px" onclick="riseOpenTopic('${escH(x.cat)}')" title="Open this category in Questions">${escH(x.label)}</button> <span style="color:var(--muted)">${escH(catLabel(CAT_ALIAS[x.cat]||x.cat))}</span>`,{left:true})}${td(num(x.before))}${td(num(x.after))}${td(x.perK.toFixed(1))}${td(riseRatio(x))}${td(nfp(x.nf))}</tr>`;
+  const pRow=x=>`<tr style="border-bottom:1px solid var(--b2)">${td(`<a href="${escH(safeURL(x.url))}" target="_blank" rel="noopener" style="color:${C.acc}">${escH(x.label)}</a>`,{left:true})}${td(num(x.before))}${td(num(x.after))}${td(x.perK.toFixed(1))}${td(riseRatio(x))}${td(nfp(x.nf))}</tr>`;
+  const tRow=x=>`<tr style="border-bottom:1px solid var(--b2)">${td(`<button type="button" style="all:unset;cursor:pointer;color:${C.acc};text-decoration:underline;text-underline-offset:2px" onclick="riseOpenTopic(${jsArg(x.cat)})" title="Open this category in Questions">${escH(x.label)}</button> <span style="color:var(--muted)">${escH(catLabel(CAT_ALIAS[x.cat]||x.cat))}</span>`,{left:true})}${td(num(x.before))}${td(num(x.after))}${td(x.perK.toFixed(1))}${td(riseRatio(x))}${td(nfp(x.nf))}</tr>`;
   const tbl=(rows,f,h)=>`<div class="tbl-wrap"><table style="width:100%;border-collapse:collapse"><thead><tr style="border-bottom:1px solid var(--b2)">${h}</tr></thead><tbody>${rows.length?rows.map(f).join(''):`<tr>${td('None',{left:true})}</tr>`}</tbody></table></div>`;
   const evIn=(from,to)=>confirmedEvents().filter(e=>e.start>=from&&e.start<=to).map(e=>`${fmtDate(e.start)} · ${escH(e.title)}`);
   const P=R.pages,T=R.topics,sub=t=>`<div class="card-title" style="font-size:var(--t-xs);margin:10px 0 4px">${t}</div>`;
@@ -7097,7 +7119,7 @@ function renderAsked(D,S){
   const months=monthsIn(fr),ap={};months.forEach(m=>(ASKED[m]||[]).forEach(r=>{const o=ap[r.url]||(ap[r.url]={cat:r.cat,n:0,same:0,sameCat:0,other:0,nf:0,cl:0,oth:0});['n','same','sameCat','other','nf','cl','oth'].forEach(k=>{o[k]+=r[k];});}));
   const apRows=Object.entries(ap),apN=apRows.reduce((s,[,o])=>s+o.n,0);
   const cell=(k,n)=>num(k)+(n?` <span style="color:var(--muted)">${rateOK(k,n).ok?Math.round(k/n*100)+'%':'—'}</span>`:'');
-  const pageRow=([u,o])=>`<tr style="border-bottom:1px solid var(--b2)">${td(`<a href="${u}" target="_blank" rel="noopener" title="${u}" style="color:${C.acc};text-decoration:none">${ciPageTitle(u)}</a> <span style="color:var(--muted)">· ${o.cat}${o.isHub?' · hub':''}</span>`,{left:true})}${td(num(o.n))}${td(cell(o.same,o.n))}${td(cell(o.sameCat,o.n))}${td(cell(o.other,o.n))}${td(cell(o.nf,o.n),{style:o.n&&o.nf/o.n>=0.15?'color:var(--red);font-weight:600':''})}${td(cell(o.cl,o.n))}</tr>`;
+  const pageRow=([u,o])=>`<tr style="border-bottom:1px solid var(--b2)">${td(`<a href="${escH(safeURL(u))}" target="_blank" rel="noopener" title="${escH(u)}" style="color:${C.acc};text-decoration:none">${escH(ciPageTitle(u))}</a> <span style="color:var(--muted)">· ${o.cat}${o.isHub?' · hub':''}</span>`,{left:true})}${td(num(o.n))}${td(cell(o.same,o.n))}${td(cell(o.sameCat,o.n))}${td(cell(o.other,o.n))}${td(cell(o.nf,o.n),{style:o.n&&o.nf/o.n>=0.15?'color:var(--red);font-weight:600':''})}${td(cell(o.cl,o.n))}</tr>`;
   const ap30=apRows.filter(([,o])=>o.n>=30),byNf=[...ap30].sort((x,y)=>y[1].nf/y[1].n-x[1].nf/x[1].n).slice(0,ROW_CAP),byMiss=[...ap30].sort((x,y)=>x[1].same/x[1].n-y[1].same/y[1].n).slice(0,ROW_CAP);
   const tot2=k=>apRows.reduce((s,[,o])=>s+o[k],0);
   // Layer 2 (brief §75): details mentioned in the question (a county or an age may be someone else's; brief §100), and what the clarification asked for against it
@@ -7161,7 +7183,7 @@ function renderAsked(D,S){
     const intents=INTENT_ORDER.map(i=>[i,sum(months.flatMap(m=>(QICM[m]||[]).filter(r=>r.cat===ASKED_CAT&&r.intent===i)))]).filter(([,x])=>x.Turns);
     const intentRows=intents.map(([i,x])=>tr(td(INTENT_LABEL[i]||i,{left:true})+td(num(x.Turns))+td(pc(x.Turns,T.Turns))+td(pc(x.NotFound,x.Turns))+td(pc(x.Partial,x.Cited)))).join('');
     const gaps=GAPS.filter(g=>g.cat===ASKED_CAT).sort((a,b)=>b.asks-a.asks);
-    const gapRows=gaps.length?gaps.map(g=>tr(td(escH(g.kind),{left:true})+td(g.page.startsWith('http')?`<a href="${g.page}" target="_blank" rel="noopener" title="${g.page}" style="color:${C.acc};text-decoration:none">${ciPageTitle(g.page)}</a>`:escH(g.page||(g.kind==='unknown'?'named a scheme, no page cited':g.evidence.slice(0,80))),{left:true})+td(num(g.asks))+td(escH(g.team),{left:true}))).join(''):tr(td('No register rows for this category in the register period',{left:true}));
+    const gapRows=gaps.length?gaps.map(g=>tr(td(escH(g.kind),{left:true})+td(g.page.startsWith('http')?`<a href="${escH(safeURL(g.page))}" target="_blank" rel="noopener" title="${escH(g.page)}" style="color:${C.acc};text-decoration:none">${escH(ciPageTitle(g.page))}</a>`:escH(g.page||(g.kind==='unknown'?'named a scheme, no page cited':g.evidence.slice(0,80))),{left:true})+td(num(g.asks))+td(escH(g.team),{left:true}))).join(''):tr(td('No register rows for this category in the register period',{left:true}));
     const options=cats.map(c=>`<option value="${c}"${c===ASKED_CAT?' selected':''}>${catLabel(CAT_ALIAS[c]||c)}</option>`).join('');
     const lab=catLabel(CAT_ALIAS[ASKED_CAT]||ASKED_CAT);
     const tbl2=(head,body)=>`<div class="tbl-wrap"><table style="width:100%;border-collapse:collapse"><thead><tr style="border-bottom:1px solid var(--b2)">${head}</tr></thead><tbody>${body}</tbody></table></div>`;
@@ -7450,7 +7472,7 @@ function contentLists(months,fr,td,th){
   const A={};months.forEach(m=>(CITES[m]||[]).forEach(r=>{if(!/citizensinformation\.ie/.test(r.url))return;const u=ciKey(r.url),a=A[u]||(A[u]={n:0,ans:0,partial:0,dis:0});a.n+=r.n;a.ans+=r.ans||0;a.partial+=r.partial||0;a.dis+=r.dis||0;}));
   const hasAns=Object.values(A).some(a=>a.ans>0);
   const span=months.length>1?fmtMonth(months[0])+' to '+fmtMonth(months[months.length-1]):fmtMonth(months[0]);
-  const link=u=>`<a href="${u}" target="_blank" rel="noopener" title="${u}" style="color:${C.acc};text-decoration:none">${ciPageTitle(u)}</a> <span style="color:var(--muted)">· ${ciPageSection(u)}</span>`;
+  const link=u=>`<a href="${escH(safeURL(u))}" target="_blank" rel="noopener" title="${escH(u)}" style="color:${C.acc};text-decoration:none">${escH(ciPageTitle(u))}</a> <span style="color:var(--muted)">· ${escH(ciPageSection(u))}</span>`;
   const tbl=(heads,rows,show,total)=>`<div class="tbl-wrap"><table style="width:100%;border-collapse:collapse"><thead><tr style="border-bottom:1px solid var(--b2)">${heads.map((h,i)=>th(h,i===0)).join('')}</tr></thead><tbody${show?showAttr(show,total||rows.length):''}>${rows.map(r=>`<tr style="border-bottom:1px solid var(--b2)">${r.map((v,i)=>td(v,{left:i===0})).join('')}</tr>`).join('')||`<tr><td colspan="${heads.length}" style="padding:10px;color:var(--muted);font-size:var(--t-xs)">none</td></tr>`}</tbody></table></div>`;
   let h='';
   // 1. answers that say something is missing, by page
@@ -7499,7 +7521,7 @@ function contentLists(months,fr,td,th){
     const y0=(fr[fr.length-1]?.date||'').slice(0,4)+'-01-01',oldN=dated.filter(x=>x[0]<y0).reduce((s,x)=>s+x[1],0),datedN=dated.reduce((s,x)=>s+x[1],0);
     h+=`<div class="card"><div class="card-title">Addresses off the site's list, and old pages<span class="card-title-note">${span} · page list as of ${SITEPAGES.asOf?fmtDate(SITEPAGES.asOf):'—'}</span></div>
       <div class="grid2">
-        <div><div style="font-size:var(--t-xs);color:var(--muted);text-transform:uppercase;letter-spacing:.08em;margin-bottom:6px">Not on the page list · ${num(offN)} citations to ${num(off.length)} addresses (${tot?(offN/tot*100).toFixed(2):'—'}%)</div>${tbl(['Address','Citations'],off.slice(0,ROW_CAP).map(([u,a])=>[`<a href="${u}" target="_blank" rel="noopener" style="color:${C.amber};text-decoration:none;word-break:break-all">${u.replace(/^https?:\/\/www\.citizensinformation\.ie/,'')||'/ (the site root)'}</a>`,num(a.n)]),6,off.length)}</div>
+        <div><div style="font-size:var(--t-xs);color:var(--muted);text-transform:uppercase;letter-spacing:.08em;margin-bottom:6px">Not on the page list · ${num(offN)} citations to ${num(off.length)} addresses (${tot?(offN/tot*100).toFixed(2):'—'}%)</div>${tbl(['Address','Citations'],off.slice(0,ROW_CAP).map(([u,a])=>[`<a href="${escH(safeURL(u))}" target="_blank" rel="noopener" style="color:${C.amber};text-decoration:none;word-break:break-all">${u.replace(/^https?:\/\/www\.citizensinformation\.ie/,'')||'/ (the site root)'}</a>`,num(a.n)]),6,off.length)}</div>
         <div><div style="font-size:var(--t-xs);color:var(--muted);text-transform:uppercase;letter-spacing:.08em;margin-bottom:6px">Oldest pages cited 50+ times · ${datedN?(oldN/datedN*100).toFixed(0):'—'}% of these citations go to pages last changed before ${y0.slice(0,4)}</div>${tbl(['Page','Last changed','Citations'],dated.slice(0,ROW_CAP).map(([lm,n,u])=>[link(u),fdY(lm),num(n)]),6,dated.length)}</div>
       </div>
       <div class="share-foot">An address off the list is a moved or retired page that the index still holds. "Last changed" is the site's own LastMod; an old date on a rates page is a content question, on a procedure page it may be fine.</div></div>`;
@@ -7548,7 +7570,7 @@ function contentLists(months,fr,td,th){
     const thF=(t,left)=>`<th style="text-align:${left?'left':'right'};padding:7px 10px;font-size:var(--t-xs);color:var(--muted);text-transform:uppercase;letter-spacing:.08em;white-space:nowrap">${t}</th>`;
     const pages=Object.entries(agg).filter(([u,a])=>!u.startsWith('(')&&a.figures>=100&&a.matched+a.unmatched>=50).sort((x,y)=>y[1].unmatched/(y[1].matched+y[1].unmatched)-x[1].unmatched/(x[1].matched+x[1].unmatched));
     const pagesAll=pages.length;pages.splice(ROW_CAP);
-    const prow=pages.map(([u,a])=>`<tr style="border-bottom:1px solid var(--b2)">${tdF(`<a href="${u}" target="_blank" rel="noopener" title="${u}" style="color:${C.acc};text-decoration:none">${ciPageTitle(u)}</a>`,{left:true})}${tdF(num(a.answers))}${tdF(num(a.figures))}${tdF(pcF(a.matched,a.figures))}${tdF(pcF(a.unmatched,a.matched+a.unmatched))}${tdF(pcF(a.unverifiable,a.figures))}</tr>`).join('');
+    const prow=pages.map(([u,a])=>`<tr style="border-bottom:1px solid var(--b2)">${tdF(`<a href="${escH(safeURL(u))}" target="_blank" rel="noopener" title="${escH(u)}" style="color:${C.acc};text-decoration:none">${escH(ciPageTitle(u))}</a>`,{left:true})}${tdF(num(a.answers))}${tdF(num(a.figures))}${tdF(pcF(a.matched,a.figures))}${tdF(pcF(a.unmatched,a.matched+a.unmatched))}${tdF(pcF(a.unverifiable,a.figures))}</tr>`).join('');
     const mrow=fmons.map(m=>{const r=(FIGM[m]||[]).find(x=>x.url==='(all)')||{answers:0,figures:0,matched:0,unmatched:0,unverifiable:0};const q=frF.filter(d=>d.date.slice(0,7)===m).reduce((s,d)=>s+(d.queries||0),0);return `<tr style="border-bottom:1px solid var(--b2)">${tdF(fmtMonth(m),{left:true})}${tdF(num(r.answers))}${tdF(pcF(r.answers,q))}${tdF(pcF(r.matched,r.figures))}${tdF(pcF(r.unmatched,r.matched+r.unmatched))}${tdF(pcF(r.unverifiable,r.figures))}</tr>`;}).join('');
     h+=`<div class="card"><div class="card-title">Figures quoted in answers<span class="card-title-note">euro amounts, percentages and years, checked against a dated snapshot of each cited page · ${spanLabel(frF[0].date,frF[frF.length-1].date)}</span></div>
       <div class="grid4" style="margin-bottom:12px">
@@ -7867,7 +7889,7 @@ function renderOutcomeTrend(fr){
   const boots={};metrics.forEach(([k])=>{boots[k]=W?dayBootstrap(dB.map(d=>d.ux[k]||0),dB.map(scored),dA.map(d=>d.ux[k]||0),dA.map(scored)):null;});
   const sgn=v=>(v>=0?'+':'−')+Math.abs(v*100).toFixed(1);
   const short=e=>e.title.length>30?e.title.slice(0,28)+'…':e.title;
-  const picker=evs.length?`<div class="pill-group" role="tablist" aria-label="Event to compare around" style="margin:8px 0 10px">${evs.map(e=>`<button type="button" class="pill${ev&&e.start===ev.start?' active':''}" role="tab" aria-selected="${ev&&e.start===ev.start}" onclick="setQualTrendEvent('${e.start}')" title="${e.title.replace(/"/g,'&quot;')}"><span style="width:7px;height:7px;border-radius:50%;background:${eventColor(e)};display:inline-block"></span>${fmtDate(e.start)} · ${short(e)}</button>`).join('')}</div>`:'';
+  const picker=evs.length?`<div class="pill-group" role="tablist" aria-label="Event to compare around" style="margin:8px 0 10px">${evs.map(e=>`<button type="button" class="pill${ev&&e.start===ev.start?' active':''}" role="tab" aria-selected="${ev&&e.start===ev.start}" onclick="setQualTrendEvent('${e.start}')" title="${escH(e.title)}"><span style="width:7px;height:7px;border-radius:50%;background:${eventColor(e)};display:inline-block"></span>${fmtDate(e.start)} · ${short(e)}</button>`).join('')}</div>`:'';
   const line=(k,lbl)=>{const t=boots[k];if(!W)return'';if(!t)return`<div><b>${lbl}</b>: a window has fewer than 7 days with ${num(min)}+ scored turns inside the selected range, so no comparison.</div>`;
     return`<div><b>${lbl}</b>: before ${spanLabel(dB[0].date,dB[dB.length-1].date,false)} (${t.before.days} days) <b>${(t.before.p*100).toFixed(1)}%</b> · after ${spanLabel(dA[0].date,dA[dA.length-1].date,false)} (${t.after.days} days) <b>${(t.after.p*100).toFixed(1)}%</b> · <b>${sgn(t.d)} pts</b> (day-level 95%: ${sgn(t.lo)} to ${sgn(t.hi)})</div>`;};
   host.innerHTML=`<div class="card">
@@ -8896,7 +8918,7 @@ function dayClicksHTML(day){
   return`<div class="day-section"><div class="day-section-title">Click-throughs <span style="font-weight:400;text-transform:none;letter-spacing:0;color:var(--dim)">· GA4, consenting visitors, a minimum</span></div>
     ${row('Click-throughs',`${num(clickViews(c))} <span style="color:var(--dim)">(pop-up ${num(c.embed)} · standalone ${num(c.app)})</span>`)}
     ${row('Per 100 cited answers',x&&x.den>0?(x.n/x.den*100).toFixed(1)+` <span style="color:var(--dim)">(${num(x.n)} of ${num(x.den)})</span>`:'not measured this day')}
-    ${top.map(([u,n])=>row(`<a href="${u}" target="_blank" rel="noopener" style="color:${C.acc};text-decoration:none">${shortCiUrl(u)}</a>`,num(n))).join('')}
+    ${top.map(([u,n])=>row(`<a href="${escH(safeURL(u))}" target="_blank" rel="noopener" style="color:${C.acc};text-decoration:none">${escH(shortCiUrl(u))}</a>`,num(n))).join('')}
   </div>`;
 }
 // Note shown wherever outcome-based figures cover days on or after CONFIG.outcome_rules_unvalidated_from.
@@ -8936,7 +8958,7 @@ function renderDayPanel(day){
     // Any existing annotations for this date?
     const dayAnnos=(PREFS.annotations||[]).filter(a=>a.date===day.date);
     const annoChips=dayAnnos.map(a=>
-      `<span style="display:inline-flex;align-items:center;gap:4px;background:${annoColor(a.color)}22;color:${annoColor(a.color)};padding:2px 8px;border-radius:3px;font-size:var(--t-2xs);font-weight:500;font-family:'DM Mono',monospace;border:1px solid ${annoColor(a.color)}55">◆ ${a.label}<button onclick="event.stopPropagation();removeAnnotationFromUI('${a.id}');renderDayPanel(DATA.merged[currentDayIndex])" style="background:transparent;border:none;color:inherit;cursor:pointer;padding:0;margin-left:2px;display:inline-flex;align-items:center;opacity:.6" title="Delete event"><i data-lucide="x" class="i-sm" style="width:10px;height:10px"></i></button></span>`
+      `<span style="display:inline-flex;align-items:center;gap:4px;background:${annoColor(a.color)}22;color:${annoColor(a.color)};padding:2px 8px;border-radius:3px;font-size:var(--t-2xs);font-weight:500;font-family:'DM Mono',monospace;border:1px solid ${annoColor(a.color)}55">◆ ${escH(a.label)}<button onclick="event.stopPropagation();removeAnnotationFromUI('${a.id}');renderDayPanel(DATA.merged[currentDayIndex])" style="background:transparent;border:none;color:inherit;cursor:pointer;padding:0;margin-left:2px;display:inline-flex;align-items:center;opacity:.6" title="Delete event"><i data-lucide="x" class="i-sm" style="width:10px;height:10px"></i></button></span>`
     ).join('');
     dateEl.innerHTML=`<div>${fmt}</div>${annoChips?`<div style="display:flex;flex-wrap:wrap;gap:4px;margin-top:6px">${annoChips}<button onclick="addEventForCurrentDay()" style="background:transparent;border:1px dashed var(--border);border-radius:3px;color:var(--muted);padding:2px 8px;font-size:var(--t-2xs);cursor:pointer;font-family:inherit;display:inline-flex;align-items:center;gap:4px" title="Add another event"><i data-lucide="plus" class="i-sm" style="width:11px;height:11px"></i>Add</button></div>`:`<button onclick="addEventForCurrentDay()" style="background:transparent;border:1px dashed var(--border);border-radius:3px;color:var(--muted);padding:3px 9px;font-size:var(--t-2xs);cursor:pointer;font-family:inherit;display:inline-flex;align-items:center;gap:4px;margin-top:6px" title="Add an event for this day"><i data-lucide="plus" class="i-sm" style="width:11px;height:11px"></i>Add event marker</button>`}`;
     renderIcons();
@@ -10386,7 +10408,7 @@ init();
     }else if(entity==='askedpage'){
       if(!hasIntent||!Object.keys(ASKED).length)return{topn:true,empty:true,intent};
       const months=[...new Set(rows.map(d=>d.month))],agg={};months.forEach(m=>(ASKED[m]||[]).forEach(r=>{if(intent.category&&(CAT_ALIAS[r.cat]||r.cat)!==intent.category)return;const a=agg[r.url]||(agg[r.url]={n:0,same:0,nf:0,cat:r.cat});a.n+=r.n;a.same+=r.same;a.nf+=r.nf;}));
-      items=Object.entries(agg).map(([u,o])=>({label:ciPageName(u),act:['url',u],v:o.n,extra:` · ${ciPageSection(u)} · cited it ${rateText(o.same,o.n)} · not found ${rateText(o.nf,o.n)}`,title:u}));
+      items=Object.entries(agg).map(([u,o])=>({label:ciPageName(u),act:['url',u],v:o.n,extra:` · ${escH(ciPageSection(u))} · cited it ${rateText(o.same,o.n)} · not found ${rateText(o.nf,o.n)}`,title:u}));
       fmt=v=>num(v);by='questions naming the page (months overlapping the period)'+(intent.category?' · '+catLabel(CAT_ALIAS[intent.category]||intent.category):'');
     }else if(entity==='page'){
       if(!hasCites)return{topn:true,empty:true,intent};

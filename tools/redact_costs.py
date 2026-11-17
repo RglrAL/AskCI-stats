@@ -16,7 +16,8 @@ Usage:
     python3 tools/redact_costs.py export.csv -o costs.csv
     python3 tools/redact_costs.py costs.csv --check    # exit 1 if a subscription ID or an unredacted name remains
 
-The pre-commit hook in tools/hooks runs --check on a staged costs.csv, and the publish workflow runs the rewrite.
+The pre-commit hook in tools/hooks runs --check on a staged costs.csv, and the publish workflow fails the deploy
+when any tracked cost file fails --check (brief §108): redaction happens before commit, never after.
 Enable the hook once per clone: git config core.hooksPath tools/hooks
 """
 import argparse, csv, io, re, sys, collections as C
